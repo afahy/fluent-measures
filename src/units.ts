@@ -60,3 +60,12 @@ export function lbToKg(value: number): number {
 export function kgToLb(value: number): number {
   return value / 0.45359237;
 }
+
+export const unitConversions: Record<string, Record<string, (value: number) => number>> = {
+  ft: { in: ftToIn, cm: ftToCm },
+  in: { ft: inToFt, cm: inToCm },
+  cm: { in: cmToIn, ft: cmToFt, m: cmToM },
+  m: { cm: mToCm },
+  lb: { kg: lbToKg },
+  kg: { lb: kgToLb },
+};
