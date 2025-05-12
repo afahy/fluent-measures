@@ -37,7 +37,7 @@
     "size": "size-limit",
     "size:why": "size-limit --why",
     "changeset": "changeset",
-    "prepare": "husky install",
+    "prepare": "husky",
     "prerelease": "pnpm clean && pnpm install && pnpm test:types && pnpm test && pnpm build",
     "release": "release-it",
     "validate": "pnpm lint && pnpm test:types && pnpm test:coverage && pnpm size",
