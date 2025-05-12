@@ -57,9 +57,6 @@ fluent-measures/
 ├── docs/                 # Documentation
 │   └── index.html        # Main documentation page
 │
-├── bench/                # Benchmarks
-│   └── index.ts          # Benchmark tests
-│
 └── [configuration files]
 ```
 
@@ -95,9 +92,6 @@ pnpm format
 
 # Generate documentation
 pnpm docs
-
-# Run benchmarks
-pnpm benchmark
 ```
 
 ## Pull Request Process
@@ -187,12 +181,6 @@ This library is designed to be lightweight and performant. When contributing, ke
 1. **Bundle Size**: Avoid adding dependencies when possible
 2. **Algorithmic Complexity**: Be mindful of performance in parsing algorithms
 3. **Memory Usage**: Avoid unnecessary object creation in hot paths
-
-You can run benchmarks to check performance:
-
-```bash
-pnpm benchmark
-```
 
 ## Any contributions you make will be under the MIT Software License
 
