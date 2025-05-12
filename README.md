@@ -1,9 +1,9 @@
 # fluent-measures
 
-[![CI](https://github.com/username/fluent-measures/actions/workflows/ci.yml/badge.svg)](https://github.com/username/fluent-measures/actions/workflows/ci.yml)
+[![CI](https://github.com/afahy/fluent-measures/actions/workflows/ci.yml/badge.svg)](https://github.com/afahy/fluent-measures/actions/workflows/ci.yml)
 [![npm version](https://badge.fury.io/js/fluent-measures.svg)](https://badge.fury.io/js/fluent-measures)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://makeapullrequest.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
 
 A TypeScript library that uses natural language to parse height and weight measurements. Built with a focus on developer experience, type safety, and performance.
 
@@ -246,7 +246,7 @@ const { parseMeasurement } = require('fluent-measures');
 
 ```bash
 # Clone the repository
-git clone https://github.com/username/fluent-measures.git
+git clone https://github.com/afahy/fluent-measures.git
 cd fluent-measures
 
 # Install dependencies
