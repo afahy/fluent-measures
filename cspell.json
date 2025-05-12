@@ -1,0 +1,29 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "words": [],
+  "flagWords": [],
+  "ignorePaths": [
+    ".npmignore",
+    ".gitignore",
+    ".prettierignore",
+    "node_modules/**",
+    "dist/**",
+    "coverage/**",
+    "*.log",
+    "*.tsbuildinfo",
+    "pnpm-lock.yaml"
+  ],
+  "patterns": [
+    {
+      "name": "npmignore-like",
+      "pattern": "/^#.*$/gm",
+      "description": "Ignore comments in .npmignore and similar files"
+    },
+    {
+      "name": "gitignore-like",
+      "pattern": "/^#.*$/gm",
+      "description": "Ignore comments in .gitignore and similar files"
+    }
+  ]
+}

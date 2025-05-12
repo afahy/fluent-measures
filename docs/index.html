@@ -1,0 +1,788 @@
+<!doctype html>
+<html lang="en" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Natural Measurements - TypeScript Measurement Library</title>
+    <meta
+      name="description"
+      content="A TypeScript library for parsing natural language measurements of height and weight with support for both metric and imperial units"
+    />
+    <meta name="theme-color" content="#0366d6" />
+
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Natural Measurements - TypeScript Measurement Library" />
+    <meta
+      property="og:description"
+      content="A TypeScript library for parsing natural language measurements of height and weight with support for both metric and imperial units"
+    />
+    <meta property="og:site_name" content="Natural Measurements" />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css"
+      rel="stylesheet"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.11/clipboard.min.js"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: '#0366d6',
+              'primary-dark': '#0256b9',
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      .text-link {
+        position: relative;
+        text-decoration: none !important;
+      }
+
+      .text-link::after {
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 1px;
+        bottom: -2px;
+        left: 0;
+        background-color: #0366d6;
+        opacity: 0;
+        transition: opacity 0.15s ease-in-out;
+      }
+
+      .text-link:hover::after {
+        opacity: 1;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50">
+    <a
+      href="#main-content"
+      class="sr-only focus:not-sr-only focus:fixed focus:top-0 focus:left-0 focus:z-50 focus:px-4 focus:py-2 focus:bg-white focus:text-primary"
+    >
+      Skip to main content
+    </a>
+
+    <!-- SVG Sprite -->
+    <svg xmlns="http://www.w3.org/2000/svg" class="hidden">
+      <symbol
+        id="icon-copy"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"
+        />
+      </symbol>
+      <symbol
+        id="icon-success"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+      >
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+      </symbol>
+    </svg>
+
+    <div class="min-h-screen">
+      <nav class="bg-white shadow-sm" aria-label="Main navigation">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="flex justify-between h-16">
+            <div class="flex items-center">
+              <span class="text-xl font-semibold text-gray-900">Natural Measurements</span>
+            </div>
+            <div class="flex items-center gap-4">
+              <a
+                href="https://github.com/afahy/natural-measurements"
+                class="text-primary text-link inline-flex items-center gap-1"
+                target="_blank"
+                rel="noopener noreferrer"
+                >GitHub <span class="sr-only">(opens in new tab)</span></a
+              >
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <main id="main-content" aria-labelledby="page-title">
+        <div class="max-w-4xl mx-auto py-10 px-4 lg:px-8 flex flex-col gap-10">
+          <div class="flex flex-col gap-10">
+            <div class="flex flex-col items-center gap-4 text-center max-w-xl mx-auto">
+              <h1 id="page-title" class="text-4xl font-extrabold text-gray-900 sm:text-5xl">
+                Natural Measurements
+              </h1>
+              <p class="text-base text-gray-500 sm:text-lg md:text-xl">
+                Parse natural language measurements of height and weight with intelligent unit
+                detection and flexible options
+              </p>
+              <div class="flex gap-4">
+                <a
+                  href="https://github.com/afahy/natural-measurements"
+                  class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark transition-all duration-150 ease-in-out"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  View on GitHub <span class="sr-only">(opens in new tab)</span>
+                </a>
+              </div>
+
+              <nav aria-label="Table of Contents" class="w-full max-w-2xl mx-auto hidden">
+                <ul class="flex flex-wrap justify-center gap-6 text-sm">
+                  <li>
+                    <a href="#prerequisites" class="text-primary text-link">Prerequisites</a>
+                  </li>
+                  <li>
+                    <a href="#quick-start" class="text-primary text-link">Quick Start</a>
+                  </li>
+                  <li>
+                    <a href="#api-reference" class="text-primary text-link">API Reference</a>
+                  </li>
+                  <li>
+                    <a href="#examples" class="text-primary text-link">Examples</a>
+                  </li>
+                  <li>
+                    <a href="#troubleshooting" class="text-primary text-link">Troubleshooting</a>
+                  </li>
+                </ul>
+              </nav>
+            </div>
+
+            <div class="grid grid-cols-1 gap-8 md:grid-cols-3">
+              <dl class="bg-white overflow-hidden shadow rounded-lg p-6 flex flex-col gap-4">
+                <dt class="text-lg font-medium text-gray-900 flex flex-row gap-1 items-center">
+                  <span class="text-2xl" aria-hidden="true">🎯</span>
+                  Smart Parsing
+                </dt>
+                <dd class="text-gray-500">
+                  Intelligently parses height and weight measurements in both metric and imperial
+                  units with fuzzy matching.
+                </dd>
+              </dl>
+              <dl class="bg-white overflow-hidden shadow rounded-lg p-6 flex flex-col gap-4">
+                <dt class="text-lg font-medium text-gray-900 flex flex-row gap-1 items-center">
+                  <span class="text-2xl" aria-hidden="true">⚡</span>
+                  Flexible Options
+                </dt>
+                <dd class="text-gray-500">
+                  Supports unqualified values, unit inference, and customizable fuzziness for
+                  measurement parsing.
+                </dd>
+              </dl>
+              <dl class="bg-white overflow-hidden shadow rounded-lg p-6 flex flex-col gap-4">
+                <dt class="text-lg font-medium text-gray-900 flex flex-row gap-1 items-center">
+                  <span class="text-2xl" aria-hidden="true">🛡️</span>
+                  Type-Safe
+                </dt>
+                <dd class="text-gray-500">
+                  Built with TypeScript for complete type safety and excellent IDE support, with
+                  zero dependencies.
+                </dd>
+              </dl>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-12">
+            <section id="prerequisites" class="flex flex-col gap-4">
+              <h2 class="text-3xl font-extrabold text-gray-900">Prerequisites</h2>
+              <div class="prose prose-slate max-w-none">
+                <ul class="list-disc pl-5 text-gray-600 space-y-2">
+                  <li>
+                    <a
+                      href="https://nodejs.org"
+                      class="text-primary text-link"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      >Node.js</a
+                    >
+                    16.x or higher
+                  </li>
+                  <li>
+                    Package manager (<a
+                      href="https://www.npmjs.com"
+                      class="text-primary text-link"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      >npm</a
+                    >,
+                    <a
+                      href="https://yarnpkg.com"
+                      class="text-primary text-link"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      >yarn</a
+                    >, or
+                    <a
+                      href="https://pnpm.io"
+                      class="text-primary text-link"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      >pnpm</a
+                    >)
+                  </li>
+                  <li>
+                    <a
+                      href="https://www.typescriptlang.org"
+                      class="text-primary text-link"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      >TypeScript</a
+                    >
+                    4.7+ (for TypeScript users)
+                  </li>
+                  <li>Basic understanding of measurement units (metric/imperial)</li>
+                </ul>
+              </div>
+            </section>
+
+            <section class="flex flex-col gap-4">
+              <h2 id="quick-start" class="text-3xl font-extrabold text-gray-900">Quick Start</h2>
+              <div class="flex flex-col gap-4">
+                <div class="relative" role="region" aria-label="NPM installation example">
+                  <div class="flex items-center justify-between px-4 py-2 bg-gray-700 rounded-t-lg">
+                    <span class="text-gray-200" id="npm-label">npm</span>
+                    <button
+                      class="copy-button relative p-2 text-gray-300 hover:text-white transition-all duration-150 ease-in-out"
+                      data-clipboard-text="npm install natural-measurements"
+                      aria-label="Copy NPM installation command"
+                      aria-describedby="npm-label"
+                    >
+                      <svg
+                        class="w-5 h-5 block transition-opacity duration-150 group-[.copied]:hidden"
+                        aria-hidden="true"
+                      >
+                        <use href="#icon-copy" />
+                      </svg>
+                      <svg
+                        class="w-5 h-5 hidden transition-opacity duration-150 group-[.copied]:block"
+                        aria-hidden="true"
+                      >
+                        <use href="#icon-success" />
+                      </svg>
+                    </button>
+                  </div>
+                  <pre
+                    class="!m-0 !rounded-t-none"
+                    aria-label="NPM installation command"
+                    tabindex="0"
+                  ><code class="language-bash">npm install natural-measurements</code></pre>
+                </div>
+
+                <div class="relative" role="region" aria-label="Yarn installation example">
+                  <div class="flex items-center justify-between px-4 py-2 bg-gray-700 rounded-t-lg">
+                    <span class="text-gray-200" id="yarn-label">yarn</span>
+                    <button
+                      class="copy-button relative p-2 text-gray-300 hover:text-white transition-all duration-150 ease-in-out"
+                      data-clipboard-text="yarn add natural-measurements"
+                      aria-label="Copy Yarn installation command"
+                      aria-describedby="yarn-label"
+                    >
+                      <svg
+                        class="w-5 h-5 block transition-opacity duration-150 group-[.copied]:hidden"
+                        aria-hidden="true"
+                      >
+                        <use href="#icon-copy" />
+                      </svg>
+                      <svg
+                        class="w-5 h-5 hidden transition-opacity duration-150 group-[.copied]:block"
+                        aria-hidden="true"
+                      >
+                        <use href="#icon-success" />
+                      </svg>
+                    </button>
+                  </div>
+                  <pre
+                    class="!m-0 !rounded-t-none"
+                    aria-label="Yarn installation command"
+                    tabindex="0"
+                  ><code class="language-bash">yarn add natural-measurements</code></pre>
+                </div>
+
+                <div class="relative" role="region" aria-label="PNPM installation example">
+                  <div class="flex items-center justify-between px-4 py-2 bg-gray-700 rounded-t-lg">
+                    <span class="text-gray-200" id="pnpm-label">pnpm</span>
+                    <button
+                      class="copy-button relative p-2 text-gray-300 hover:text-white transition-all duration-150 ease-in-out"
+                      data-clipboard-text="pnpm add natural-measurements"
+                      aria-label="Copy PNPM installation command"
+                      aria-describedby="pnpm-label"
+                    >
+                      <svg
+                        class="w-5 h-5 block transition-opacity duration-150 group-[.copied]:hidden"
+                        aria-hidden="true"
+                      >
+                        <use href="#icon-copy" />
+                      </svg>
+                      <svg
+                        class="w-5 h-5 hidden transition-opacity duration-150 group-[.copied]:block"
+                        aria-hidden="true"
+                      >
+                        <use href="#icon-success" />
+                      </svg>
+                    </button>
+                  </div>
+                  <pre
+                    class="!m-0 !rounded-t-none"
+                    aria-label="PNPM installation command"
+                    tabindex="0"
+                  ><code class="language-bash">pnpm add natural-measurements</code></pre>
+                </div>
+              </div>
+            </section>
+
+            <section class="flex flex-col gap-4">
+              <h2 id="api-reference" class="text-3xl font-extrabold text-gray-900">
+                API Reference
+              </h2>
+              <div class="flex flex-col gap-8">
+                <div class="flex flex-col gap-4">
+                  <h3 class="text-2xl font-bold text-gray-800">
+                    parseMeasurement(input, options?): ParsedValue | null
+                  </h3>
+                  <div class="prose prose-slate max-w-none">
+                    <p class="text-gray-600">
+                      Parse a string input into a structured measurement object. Handles both metric
+                      and imperial units for height and weight with smart unit detection.
+                    </p>
+
+                    <h4 id="parameters" class="text-lg font-semibold text-gray-800 mt-4">
+                      Parameters
+                    </h4>
+                    <ul class="list-disc pl-5 text-gray-600">
+                      <li>
+                        <code class="text-sm bg-gray-100 px-1.5 py-0.5 rounded">input: string</code>
+                        - The measurement string to parse (e.g., "6 ft", "150 lbs", "180 cm")
+                      </li>
+                      <li>
+                        <code class="text-sm bg-gray-100 px-1.5 py-0.5 rounded"
+                          >options?: ParseOptions</code
+                        >
+                        - Optional configuration object
+                      </li>
+                    </ul>
+                    <h4 id="options" class="text-lg font-semibold text-gray-800 mt-4">
+                      ParseOptions
+                    </h4>
+                    <ul class="list-disc pl-5 text-gray-600">
+                      <li>
+                        <code class="text-sm bg-gray-100 px-1.5 py-0.5 rounded"
+                          >type?: 'height' | 'weight'</code
+                        >
+                        - Specify the measurement type to parse
+                      </li>
+                      <li>
+                        <code class="text-sm bg-gray-100 px-1.5 py-0.5 rounded"
+                          >fuzziness?: number</code
+                        >
+                        - Tolerance level for fuzzy unit matching
+                      </li>
+                      <li>
+                        <code class="text-sm bg-gray-100 px-1.5 py-0.5 rounded"
+                          >allowUnqualified?: boolean</code
+                        >
+                        - Allow parsing numbers without explicit units
+                      </li>
+                      <li>
+                        <code class="text-sm bg-gray-100 px-1.5 py-0.5 rounded"
+                          >inferUnit?: 'metric' | 'imperial'</code
+                        >
+                        - System to use when inferring units for unqualified values
+                      </li>
+                      <li>
+                        <code class="text-sm bg-gray-100 px-1.5 py-0.5 rounded"
+                          >normalizedUnit?: Unit</code
+                        >
+                        - Convert all components to this unit in the output
+                      </li>
+                      <li>
+                        <code class="text-sm bg-gray-100 px-1.5 py-0.5 rounded"
+                          >returnComponents?: boolean</code
+                        >
+                        - Include the individual components in the output
+                      </li>
+                    </ul>
+
+                    <h4 id="options" class="text-lg font-semibold text-gray-800 mt-4">
+                      ParsedValue
+                    </h4>
+                    <ul class="list-disc pl-5 text-gray-600">
+                      <li>
+                        <code class="text-sm bg-gray-100 px-1.5 py-0.5 rounded">value: number</code>
+                        - The numeric value of the measurement (normalized if normalizedUnit is
+                        specified)
+                      </li>
+                      <li>
+                        <code class="text-sm bg-gray-100 px-1.5 py-0.5 rounded">unit: Unit</code> -
+                        The unit of measurement (normalized if normalizedUnit is specified)
+                      </li>
+                      <li>
+                        <code class="text-sm bg-gray-100 px-1.5 py-0.5 rounded"
+                          >type: MeasurementType</code
+                        >
+                        - The type of measurement ('height' or 'weight')
+                      </li>
+                      <li>
+                        <code class="text-sm bg-gray-100 px-1.5 py-0.5 rounded"
+                          >components?: ParsedComponent[]</code
+                        >
+                        - Array of individual measurement components (when returnComponents is true)
+                      </li>
+                      <li>
+                        <code class="text-sm bg-gray-100 px-1.5 py-0.5 rounded">raw: string</code> -
+                        The complete input string
+                      </li>
+                    </ul>
+
+                    <h4 id="options" class="text-lg font-semibold text-gray-800 mt-4">
+                      ParsedComponent
+                    </h4>
+                    <ul class="list-disc pl-5 text-gray-600">
+                      <li>
+                        <code class="text-sm bg-gray-100 px-1.5 py-0.5 rounded">value: number</code>
+                        - The numeric value of this component
+                      </li>
+                      <li>
+                        <code class="text-sm bg-gray-100 px-1.5 py-0.5 rounded"
+                          >unit: Unit | null</code
+                        >
+                        - The unit of this component
+                      </li>
+                      <li>
+                        <code class="text-sm bg-gray-100 px-1.5 py-0.5 rounded">match: string</code>
+                        - The original text that matched this component
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div class="flex flex-col gap-4">
+                  <h3 id="examples" class="text-2xl font-bold text-gray-800">Example Usage</h3>
+                  <p class="text-gray-600 mb-4">
+                    Here are common usage patterns with expected results:
+                  </p>
+                  <div class="relative" role="region" aria-label="TypeScript example code">
+                    <div
+                      class="flex items-center justify-between px-4 py-2 bg-gray-700 rounded-t-lg"
+                    >
+                      <span class="text-gray-200" id="typescript-label">TypeScript</span>
+                    </div>
+                    <pre
+                      class="!m-0 !rounded-t-none"
+                      aria-label="TypeScript example code"
+                      tabindex="0"
+                    ><code class="language-typescript">// example.ts
+import { parseMeasurement } from 'natural-measurements';
+
+// --- Basic Usage ---
+
+// Height measurements
+// Simple height measurement
+const heightFt = parseMeasurement('6 ft');
+// ✓ Returns: { value: 6, unit: 'ft', type: 'height', raw: '6 ft' }
+
+// Complex height with components and normalization to centimeters
+const heightCm = parseMeasurement('5\' 11"', {
+  type: 'height',
+  returnComponents: true,
+  normalizedUnit: 'cm'
+});
+/* ✓ Returns:
+{
+  value: 180.34,
+  unit: 'cm',
+  type: 'height',
+  components: [
+    { value: 5, unit: 'ft', match: '5\'' },
+    { value: 11, unit: 'in', match: '11"' }
+  ],
+  raw: '5\' 11"'
+}
+*/
+
+// Same height with components but normalized to inches
+const heightIn = parseMeasurement('5\' 11"', {
+  type: 'height',
+  returnComponents: true,
+  normalizedUnit: 'in'
+});
+/* ✓ Returns:
+{
+  value: 71,
+  unit: 'in',
+  type: 'height',
+  components: [
+    { value: 5, unit: 'ft', match: '5\'' },
+    { value: 11, unit: 'in', match: '11"' }
+  ],
+  raw: '5\' 11"'
+}
+*/
+
+// Weight measurement in pounds
+const weightLbs = parseMeasurement('150 lbs');
+// ✓ Returns: { value: 150, unit: 'lb', type: 'weight', raw: '150 lbs' }
+
+// Weight in kilograms with spelled-out text
+const weightKg = parseMeasurement('eighty kilograms', { type: 'weight' });
+// ✓ Returns: { value: 80, unit: 'kg', type: 'weight', raw: 'eighty kilograms' }
+
+// Convert weight to kilograms
+const weightConverted = parseMeasurement('150 lbs', {
+  type: 'weight',
+  normalizedUnit: 'kg'
+});
+// ✓ Returns: { value: 68.04, unit: 'kg', type: 'weight', raw: '150 lbs' }
+
+// Unit inference for unqualified values
+const inferredHeight = parseMeasurement('72', {
+  type: 'height',
+  allowUnqualified: true,
+  inferUnit: 'imperial'
+});
+// ✓ Returns: { value: 72, unit: 'in', type: 'height', raw: '72' }
+  type: 'height',
+  returnComponents: true,
+  normalizedUnit: 'cm'
+});
+/* ✓ Returns:
+{
+  value: 177.8,
+  unit: 'cm',
+  type: 'height',
+  components: [
+    { value: 5, unit: 'ft', match: '5 foot' },
+    { value: 10, unit: 'in', match: '10 inches' }
+  ],
+  raw: '5 foot 10 inches'
+}
+*/
+
+// Fuzzy matching for complex inputs
+const fuzzyHeight = parseMeasurement('5 foot 10 inches', { fuzziness: 1 });
+// ✓ Returns: { value: 70, unit: 'in', type: 'height', raw: '5 foot 10 inches' }
+
+// --- Error Handling ---
+
+// Invalid input string
+const invalidInput = parseMeasurement('not a measurement');
+// ✗ Returns: null
+
+// Unsupported unit
+const unsupportedUnit = parseMeasurement('100 miles');
+// ✗ Returns: null (miles are not a supported unit for this library)</code></pre>
+                  </div>
+                </div>
+
+                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mt-4 mb-8">
+                  <div class="flex gap-3">
+                    <div class="flex-shrink-0">⚠️</div>
+                    <p class="text-sm text-yellow-700">
+                      For CommonJS environments, use the
+                      <code class="text-xs bg-yellow-100 px-1 rounded">require()</code> syntax:
+                      <code class="text-xs bg-yellow-100 px-1 rounded"
+                        >const { parseMeasurement } = require('natural-measurements');</code
+                      >
+                    </p>
+                  </div>
+                </div>
+
+                <div class="flex flex-col gap-4">
+                  <h3 id="supported-units" class="text-2xl font-bold text-gray-800">
+                    Supported Units
+                  </h3>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-white p-6 rounded-lg shadow">
+                      <h4 class="text-lg font-semibold text-gray-800 mb-3">Height Units</h4>
+                      <ul class="list-disc pl-5 text-gray-600">
+                        <li>Feet (ft, feet, foot, '')</li>
+                        <li>Inches (in, inch, inches, ")</li>
+                        <li>Centimeters (cm, centimeter, centimeters)</li>
+                        <li>Meters (m, meter, meters)</li>
+                      </ul>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow">
+                      <h4 class="text-lg font-semibold text-gray-800 mb-3">Weight Units</h4>
+                      <ul class="list-disc pl-5 text-gray-600">
+                        <li>Pounds (lb, lbs, pound, pounds)</li>
+                        <li>Kilograms (kg, kilogram, kilograms, kilos)</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="flex flex-col gap-4">
+                  <h3 id="troubleshooting" class="text-2xl font-bold text-gray-800">
+                    Troubleshooting
+                  </h3>
+                  <div class="prose prose-slate max-w-none">
+                    <div class="space-y-6">
+                      <div class="space-y-4">
+                        <div>
+                          <h5 class="text-base font-medium text-gray-800">Null Return Values</h5>
+                          <p class="text-gray-600 mt-1">
+                            If <code>parseMeasurement()</code> returns <code>null</code>, check:
+                          </p>
+                          <ul class="list-disc pl-5 text-gray-600 mt-2">
+                            <li>Input string format matches supported patterns</li>
+                            <li>Units are supported (see Supported Units section)</li>
+                            <li>Numbers are valid and not out of reasonable range</li>
+                          </ul>
+                        </div>
+
+                        <div>
+                          <h5 class="text-base font-medium text-gray-800">Unexpected Unit Types</h5>
+                          <p class="text-gray-600 mt-1">When getting unexpected unit types:</p>
+                          <ul class="list-disc pl-5 text-gray-600 mt-2">
+                            <li>Specify the <code>type</code> option explicitly</li>
+                            <li>Check for ambiguous unit abbreviations</li>
+                            <li>Ensure proper spacing between number and unit</li>
+                          </ul>
+                        </div>
+                      </div>
+
+                      <div class="bg-white p-6 rounded-lg shadow">
+                        <h4 class="text-lg font-semibold text-gray-800 mb-3">
+                          Tips & Best Practices
+                        </h4>
+                        <ul class="list-disc pl-5 text-gray-600">
+                          <li>Always handle null returns in your code</li>
+                          <li>
+                            Use the fuzziness option carefully - higher values may lead to incorrect
+                            matches
+                          </li>
+                          <li>
+                            When working with unqualified values, always set both
+                            <code>allowUnqualified</code> and <code>inferUnit</code> options
+                          </li>
+                          <li>Consider input sanitization for user-provided values</li>
+                        </ul>
+                      </div>
+
+                      <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
+                        <div class="flex">
+                          <div class="flex-shrink-0">
+                            <span class="text-blue-400">💡</span>
+                          </div>
+                          <div class="ml-3">
+                            <p class="text-sm text-blue-700">
+                              Need more help? Check our
+                              <a
+                                href="https://github.com/afahy/natural-measurements/issues"
+                                class="font-medium underline"
+                              >
+                                GitHub Issues
+                              </a>
+                              or open a new issue if you've found a bug.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </main>
+
+      <footer class="bg-white">
+        <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+          <p class="text-center text-gray-400 text-sm">
+            Released under the
+            <a
+              href="https://github.com/afahy/natural-measurements/blob/main/LICENSE"
+              class="text-primary text-link"
+              >MIT License</a
+            >
+          </p>
+        </div>
+      </footer>
+    </div>
+
+    <!-- Toast Containers -->
+    <div
+      id="success-toast"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      aria-hidden="true"
+      data-visible="false"
+      class="fixed transition-all duration-150 ease-out pointer-events-none left-1/2 -translate-x-1/2 bottom-[env(safe-area-inset-bottom,_20px)] z-50 mb-4 px-6 py-3 text-sm font-medium rounded-lg shadow-lg bg-gray-900 text-white opacity-0 translate-y-2 data-[visible=true]:opacity-100 data-[visible=true]:translate-y-0"
+    >
+      <span class="sr-only">Success:</span>
+      <span aria-hidden="true">✓</span>
+      Copied to clipboard!
+    </div>
+    <div
+      id="error-toast"
+      role="alert"
+      aria-live="assertive"
+      aria-atomic="true"
+      aria-hidden="true"
+      data-visible="false"
+      class="fixed transition-all duration-150 ease-out pointer-events-none left-1/2 -translate-x-1/2 bottom-[env(safe-area-inset-bottom,_20px)] z-50 mb-4 px-6 py-3 text-sm font-medium rounded-lg shadow-lg bg-red-700 text-white opacity-0 translate-y-2 data-[visible=true]:opacity-100 data-[visible=true]:translate-y-0"
+    >
+      <span class="sr-only">Error:</span>
+      <span aria-hidden="true">⚠</span>
+      Failed to copy text
+    </div>
+
+    <script>
+      const TIMER_DURATION = 2000;
+
+      document.addEventListener('DOMContentLoaded', function () {
+        const clipboard = new ClipboardJS('.copy-button');
+        const successToast = document.getElementById('success-toast');
+        const errorToast = document.getElementById('error-toast');
+        const TOASTS = [successToast, errorToast];
+        let currentTimeout;
+
+        function hideAllToasts() {
+          TOASTS.forEach(toast => {
+            toast.dataset.visible = 'false';
+            toast.setAttribute('aria-hidden', 'true');
+          });
+        }
+
+        function showToast(element) {
+          if (currentTimeout) clearTimeout(currentTimeout);
+
+          hideAllToasts();
+          element.dataset.visible = 'true';
+          element.setAttribute('aria-hidden', 'false');
+
+          currentTimeout = setTimeout(() => hideAllToasts(), TIMER_DURATION);
+        }
+
+        clipboard.on('success', function (e) {
+          const button = e.trigger;
+          button.classList.add('copied', 'group', 'text-green-400');
+          showToast(successToast);
+
+          setTimeout(() => {
+            button.classList.remove('copied', 'group', 'text-green-400');
+          }, TIMER_DURATION);
+
+          e.clearSelection();
+        });
+
+        clipboard.on('error', function (e) {
+          showToast(errorToast);
+        });
+      });
+    </script>
+  </body>
+</html>

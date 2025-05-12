@@ -1,0 +1,25 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["./src/index.ts"],
+  "out": "docs",
+  "excludeInternal": true,
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "includeVersion": true,
+  "githubPages": true,
+  "readme": "README.md",
+  "plugin": ["typedoc-plugin-markdown"],
+  "theme": "default",
+  "cleanOutputDir": true,
+  "hideGenerator": true,
+  "searchInComments": true,
+  "sidebarLinks": {
+    "GitHub": "https://github.com/YOUR_USERNAME/natural-measurements",
+    "NPM": "https://www.npmjs.com/package/natural-measurements"
+  },
+  "navigation": {
+    "includeGroups": true
+  },
+  "categorizeByGroup": true,
+  "categoryOrder": ["Core", "Types", "*"]
+}
