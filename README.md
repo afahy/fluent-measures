@@ -1,11 +1,11 @@
-# Natural Measurements
+# fluent-measures
 
-[![CI](https://github.com/username/natural-measurements/actions/workflows/ci.yml/badge.svg)](https://github.com/username/natural-measurements/actions/workflows/ci.yml)
-[![npm version](https://badge.fury.io/js/natural-measurements.svg)](https://badge.fury.io/js/natural-measurements)
+[![CI](https://github.com/username/fluent-measures/actions/workflows/ci.yml/badge.svg)](https://github.com/username/fluent-measures/actions/workflows/ci.yml)
+[![npm version](https://badge.fury.io/js/fluent-measures.svg)](https://badge.fury.io/js/fluent-measures)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://makeapullrequest.com)
 
-A TypeScript library for handling natural measurements and conversions. Built with a focus on developer experience, type safety, and performance.
+A TypeScript library that uses natural language to parse height and weight measurements. Built with a focus on developer experience, type safety, and performance.
 
 ## Features
 
@@ -20,17 +20,17 @@ A TypeScript library for handling natural measurements and conversions. Built wi
 ## Installation
 
 ```bash
-npm install natural-measurements
+npm install fluent-measures
 # or
-yarn add natural-measurements
+yarn add fluent-measures
 # or
-pnpm add natural-measurements
+pnpm add fluent-measures
 ```
 
 ## Usage
 
 ```typescript
-import { add } from 'natural-measurements';
+import { add } from 'fluent-measures';
 
 const result = add(1, 2); // 3
 ```
@@ -46,8 +46,8 @@ const result = add(1, 2); // 3
 
 ```bash
 # Clone the repository
-git clone https://github.com/username/natural-measurements.git
-cd natural-measurements
+git clone https://github.com/username/fluent-measures.git
+cd fluent-measures
 
 # Install dependencies
 pnpm install
@@ -72,4 +72,4 @@ Please note that this project is released with a [Code of Conduct](CODE_OF_CONDU
 
 ## License
 
-[MIT](LICENSE) © 2025 Natural Measurements
+[MIT](LICENSE) © 2025 fluent-measures

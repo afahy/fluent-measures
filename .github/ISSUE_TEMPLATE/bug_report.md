@@ -24,7 +24,7 @@ A clear and concise description of what you expected to happen.
 
 ```typescript
 // A minimal code example that demonstrates the issue
-import { yourFunction } from 'natural-measurements';
+import { yourFunction } from 'fluent-measures';
 
 // Example code demonstrating the issue
 const result = yourFunction(/* params */);

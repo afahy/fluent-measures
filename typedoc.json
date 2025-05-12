@@ -14,8 +14,8 @@
   "hideGenerator": true,
   "searchInComments": true,
   "sidebarLinks": {
-    "GitHub": "https://github.com/YOUR_USERNAME/natural-measurements",
-    "NPM": "https://www.npmjs.com/package/natural-measurements"
+    "GitHub": "https://github.com/YOUR_USERNAME/fluent-measures",
+    "NPM": "https://www.npmjs.com/package/fluent-measures"
   },
   "navigation": {
     "includeGroups": true

@@ -1,6 +1,6 @@
-# Contributing to Natural Measurements
+# Contributing to fluent-measures
 
-We love your input! We want to make contributing to Natural Measurements as easy and transparent as possible.
+We love your input! We want to make contributing to fluent-measures as easy and transparent as possible.
 
 ## Development Process
 
@@ -48,7 +48,7 @@ Examples:
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/natural-measurements.git
+git clone https://github.com/your-username/fluent-measures.git
 
 # Install dependencies
 pnpm install
@@ -72,4 +72,4 @@ pnpm dev
 
 ## Any contributions you make will be under the MIT Software License
 
-In short, all your submissions to Natural Measurements will be under the same [MIT License](LICENSE) that covers the project.
+In short, all your submissions to fluent-measures will be under the same [MIT License](LICENSE) that covers the project.
