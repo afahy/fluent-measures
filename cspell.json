@@ -16,14 +16,9 @@
   ],
   "patterns": [
     {
-      "name": "npmignore-like",
+      "name": "config-comments",
       "pattern": "/^#.*$/gm",
-      "description": "Ignore comments in .npmignore and similar files"
-    },
-    {
-      "name": "gitignore-like",
-      "pattern": "/^#.*$/gm",
-      "description": "Ignore comments in .gitignore and similar files"
+      "description": "Ignore comments in configuration files (git/npm/etc)"
     }
   ]
 }

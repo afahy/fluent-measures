@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+branch="$(git rev-parse --abbrev-ref HEAD)"
+
+# Run lint-staged (quick checks: formatting, linting, related tests)
+pnpm exec lint-staged

@@ -1,0 +1,16 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Get previous and current HEADs
+prevHEAD=$1
+newHEAD=$2
+checkoutType=$3
+
+# Only run on branch checkout (checkoutType=1) or pull
+if [ "$checkoutType" = 1 ]; then
+  # Check if package.json or pnpm-lock.yaml changed between the two heads
+  if git diff --name-only "$prevHEAD" "$newHEAD" | grep --quiet "^package.json\|^pnpm-lock.yaml"; then
+    echo "📦 Package files changed. Running pnpm install..."
+    pnpm install
+  fi
+fi

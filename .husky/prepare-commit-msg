@@ -1,0 +1,17 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+branch="$(git rev-parse --abbrev-ref HEAD)"
+
+# Skip for main, master, or when amending/rebasing
+if [ "$branch" = "main" ] || [ "$branch" = "master" ] || [ -n "$HUSKY_SKIP_HOOKS" ]; then
+  exit 0
+fi
+
+# Check if a changeset file exists in the staged files
+if ! git diff --cached --name-only | grep -q "^\.changeset/.*\.md$"; then
+  echo "⚠️  Warning: No changeset file detected."
+  echo "📝 Run 'pnpm changeset' to create one if you've made notable changes."
+  echo "   Press enter to continue anyway, or Ctrl+C to abort."
+  read -r
+fi
