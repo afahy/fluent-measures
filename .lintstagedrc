@@ -1,11 +1,7 @@
 {
-  "*.{js,jsx,ts,tsx}": [
-    "prettier --write",
-    "eslint --fix",
-    "cspell --no-must-find-files --exclude \"tests/**/*\""
-  ],
-  "*.{json,md,yml,yaml}": [
-    "prettier --write",
-    "cspell --no-must-find-files --exclude \"tests/**/*\""
-  ]
+  "*.{js,jsx,ts,tsx}": ["prettier --write", "eslint --fix"],
+  "*.{json,yml,yaml}": ["prettier --write"],
+  "*.md": ["prettier --write", "cspell --no-must-find-files"],
+  "*.github/**/*.md": ["prettier --write", "cspell --no-must-find-files"],
+  "docs/**/*.html": ["prettier --write", "cspell --no-must-find-files"]
 }

@@ -3,17 +3,9 @@
   "language": "en",
   "words": [],
   "flagWords": [],
-  "ignorePaths": [
-    ".npmignore",
-    ".gitignore",
-    ".prettierignore",
-    "node_modules/**",
-    "dist/**",
-    "coverage/**",
-    "*.log",
-    "*.tsbuildinfo",
-    "pnpm-lock.yaml"
-  ],
+  "useGitignore": true,
+  "files": ["**/*.md", "docs/**/*.html", ".github/**/*.md"],
+  "ignorePaths": ["coverage/**", "src/**", "tests/**", "bench/**"],
   "patterns": [
     {
       "name": "config-comments",
