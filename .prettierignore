@@ -1,0 +1,20 @@
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Coverage directory
+coverage/
+
+# Changesets
+.changeset/
+
+# Package manager files
+pnpm-lock.yaml
+
+# Cache
+.eslintcache

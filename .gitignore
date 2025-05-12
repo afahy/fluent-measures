@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+
+# Test and coverage
+coverage/
+.nyc_output/
+.vitest/
+
+# Cache
+*.tsbuildinfo
+.tscache/
+.eslintcache
+
+# IDE settings
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Logs and temporary files
+*.log
+pnpm-debug.log*
+*.swp
+
+# System files
+.DS_Store
+Thumbs.db

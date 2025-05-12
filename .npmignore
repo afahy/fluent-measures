@@ -1,0 +1,61 @@
+# Source code
+src/
+
+# Tests
+tests/
+bench/
+coverage/
+*.test.ts
+vitest.config.ts
+
+# Config files
+.eslintrc.json
+eslint.config.js
+.prettierrc
+.prettierignore
+tsconfig.json
+tsup.config.ts
+commitlint.config.js
+commitlint.config.mjs
+typedoc.json
+.size-limit.js
+.changeset/
+cspell.json
+
+# CI/CD
+.github/
+
+# Development files
+examples/
+docs/
+CONTRIBUTING.md
+CHANGELOG.md.draft
+.editorconfig
+node_modules/
+pnpm-lock.yaml
+*.tsbuildinfo
+.vscode/
+.idea/
+
+# Build artifacts
+dist/**/*.map
+*.map
+
+# Temp files
+*.tmp
+*~
+
+# Documentation drafts and work in progress
+*.md.draft
+TODO.md
+NOTES.md
+
+# Local development
+.env.local
+.env.development
+.env.test
+
+# Misc
+.DS_Store
+*.log
+.env*
