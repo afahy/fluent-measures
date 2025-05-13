@@ -2,4 +2,4 @@
 '@afahy/fluent-measures': patch
 ---
 
-Documentation updates
+Updates documentation, changeset config
