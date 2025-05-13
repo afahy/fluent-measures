@@ -5,16 +5,28 @@ describe('parseMeasurement', () => {
   it('parses simple weight with unit', () => {
     const result = parseMeasurement('180 lbs', { type: 'weight' });
     expect(result).toEqual({
-      value: 180,
-      unit: 'lb',
-      type: 'weight',
+      matches: [
+        {
+          unit: 'lb',
+          value: 180,
+        },
+      ],
       raw: '180 lbs',
+      type: 'weight',
+      unit: 'lb',
+      value: 180,
     });
   });
 
   it('parses spelled-out weight', () => {
     const result = parseMeasurement('eighty kilograms', { type: 'weight' });
     expect(result).toEqual({
+      matches: [
+        {
+          unit: 'kg',
+          value: 80,
+        },
+      ],
       value: 80,
       unit: 'kg',
       type: 'weight',
@@ -24,6 +36,12 @@ describe('parseMeasurement', () => {
 
   it('parses height with feet only', () => {
     expect(parseMeasurement('six feet', { type: 'height' })).toEqual({
+      matches: [
+        {
+          unit: 'ft',
+          value: 6,
+        },
+      ],
       value: 6,
       unit: 'ft',
       type: 'height',
@@ -31,6 +49,12 @@ describe('parseMeasurement', () => {
     });
 
     expect(parseMeasurement('six feet')).toEqual({
+      matches: [
+        {
+          unit: 'ft',
+          value: 6,
+        },
+      ],
       value: 6,
       unit: 'ft',
       type: 'height',
@@ -38,6 +62,12 @@ describe('parseMeasurement', () => {
     });
 
     expect(parseMeasurement("6'")).toEqual({
+      matches: [
+        {
+          unit: 'ft',
+          value: 6,
+        },
+      ],
       value: 6,
       unit: 'ft',
       type: 'height',
@@ -48,16 +78,15 @@ describe('parseMeasurement', () => {
   it('parses height with feet and inches', () => {
     const result = parseMeasurement('5 feet 11 inches', {
       type: 'height',
-      returnComponents: true,
       normalizedUnit: 'in',
     });
     expect(result).toEqual({
       value: 71,
       unit: 'in',
       type: 'height',
-      components: [
-        { value: 5, unit: 'ft', match: '5 feet' },
-        { value: 11, unit: 'in', match: '11 inches' },
+      matches: [
+        { value: 5, unit: 'ft' },
+        { value: 11, unit: 'in' },
       ],
       raw: '5 feet 11 inches',
     });
@@ -66,16 +95,15 @@ describe('parseMeasurement', () => {
   it('parses height with feet and inches using symbols', () => {
     const result = parseMeasurement('5\' 11"', {
       type: 'height',
-      returnComponents: true,
       normalizedUnit: 'in',
     });
     expect(result).toEqual({
       value: 71,
       unit: 'in',
       type: 'height',
-      components: [
-        { value: 5, unit: 'ft', match: "5'" },
-        { value: 11, unit: 'in', match: '11"' },
+      matches: [
+        { value: 5, unit: 'ft' },
+        { value: 11, unit: 'in' },
       ],
       raw: '5\' 11"',
     });
@@ -84,16 +112,15 @@ describe('parseMeasurement', () => {
   it('normalizes to centimeters', () => {
     const result = parseMeasurement('5\' 11"', {
       type: 'height',
-      returnComponents: true,
       normalizedUnit: 'cm',
     });
     expect(result).toEqual({
       value: 180.34,
       unit: 'cm',
       type: 'height',
-      components: [
-        { value: 5, unit: 'ft', match: "5'" },
-        { value: 11, unit: 'in', match: '11"' },
+      matches: [
+        { value: 5, unit: 'ft' },
+        { value: 11, unit: 'in' },
       ],
       raw: '5\' 11"',
     });
@@ -106,6 +133,12 @@ describe('parseMeasurement', () => {
       inferUnit: 'metric',
     });
     expect(result).toEqual({
+      matches: [
+        {
+          unit: 'kg',
+          value: 180,
+        },
+      ],
       value: 180,
       unit: 'kg',
       type: 'weight',
@@ -120,6 +153,12 @@ describe('parseMeasurement', () => {
 
   it('parses decimal weights', () => {
     expect(parseMeasurement('72.5 kg')).toEqual({
+      matches: [
+        {
+          unit: 'kg',
+          value: 72.5,
+        },
+      ],
       value: 72.5,
       unit: 'kg',
       type: 'weight',
@@ -127,6 +166,12 @@ describe('parseMeasurement', () => {
     });
 
     expect(parseMeasurement('158.5 pounds')).toEqual({
+      matches: [
+        {
+          unit: 'lb',
+          value: 158.5,
+        },
+      ],
       value: 158.5,
       unit: 'lb',
       type: 'weight',
@@ -136,6 +181,12 @@ describe('parseMeasurement', () => {
 
   it('parses height in metric units', () => {
     expect(parseMeasurement('175cm', { type: 'height' })).toEqual({
+      matches: [
+        {
+          unit: 'cm',
+          value: 175,
+        },
+      ],
       value: 175,
       unit: 'cm',
       type: 'height',
@@ -143,6 +194,12 @@ describe('parseMeasurement', () => {
     });
 
     expect(parseMeasurement('1.75 meters', { type: 'height' })).toEqual({
+      matches: [
+        {
+          unit: 'm',
+          value: 1.75,
+        },
+      ],
       value: 1.75,
       unit: 'm',
       type: 'height',
@@ -152,6 +209,12 @@ describe('parseMeasurement', () => {
 
   it('handles various unit spellings and abbreviations', () => {
     expect(parseMeasurement('180 pounds', { type: 'weight' })).toEqual({
+      matches: [
+        {
+          unit: 'lb',
+          value: 180,
+        },
+      ],
       value: 180,
       unit: 'lb',
       type: 'weight',
@@ -159,6 +222,12 @@ describe('parseMeasurement', () => {
     });
 
     expect(parseMeasurement('180 lb.', { type: 'weight' })).toEqual({
+      matches: [
+        {
+          unit: 'lb',
+          value: 180,
+        },
+      ],
       value: 180,
       unit: 'lb',
       type: 'weight',
@@ -166,6 +235,12 @@ describe('parseMeasurement', () => {
     });
 
     expect(parseMeasurement('six foot', { type: 'height' })).toEqual({
+      matches: [
+        {
+          unit: 'ft',
+          value: 6,
+        },
+      ],
       value: 6,
       unit: 'ft',
       type: 'height',
@@ -175,6 +250,16 @@ describe('parseMeasurement', () => {
 
   it('handles mixed case input', () => {
     expect(parseMeasurement('Six Feet Two Inches', { type: 'height' })).toEqual({
+      matches: [
+        {
+          unit: 'ft',
+          value: 6,
+        },
+        {
+          unit: 'in',
+          value: 2,
+        },
+      ],
       value: 74,
       unit: 'in',
       type: 'height',
@@ -182,6 +267,12 @@ describe('parseMeasurement', () => {
     });
 
     expect(parseMeasurement('EIGHTY KG', { type: 'weight' })).toEqual({
+      matches: [
+        {
+          unit: 'kg',
+          value: 80,
+        },
+      ],
       value: 80,
       unit: 'kg',
       type: 'weight',
@@ -191,6 +282,10 @@ describe('parseMeasurement', () => {
 
   it('handles various whitespace patterns', () => {
     expect(parseMeasurement('5\'   11"', { type: 'height' })).toEqual({
+      matches: [
+        { value: 5, unit: 'ft' },
+        { value: 11, unit: 'in' },
+      ],
       value: 71,
       unit: 'in',
       type: 'height',
@@ -198,6 +293,12 @@ describe('parseMeasurement', () => {
     });
 
     expect(parseMeasurement('   180    lbs   ', { type: 'weight' })).toEqual({
+      matches: [
+        {
+          unit: 'lb',
+          value: 180,
+        },
+      ],
       value: 180,
       unit: 'lb',
       type: 'weight',

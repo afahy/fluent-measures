@@ -4,13 +4,17 @@ import { tokenize } from './tokenize';
 
 import { NORMALIZED_UNITS, unitConversions } from './units';
 
-import { ParseOptions, ParsedValue, MeasurementType, ParsedComponent } from './types';
+import { ParseOptions, ParsedValue, MeasurementType, Match } from './types';
 
 export function parseMeasurement(input: string, options: ParseOptions = {}): ParsedValue | null {
-  if (!input?.trim()) return null;
+  if (!input?.trim()) {
+    return null;
+  }
 
   const tokens = tokenize(input);
-  if (!tokens.length) return null;
+  if (!tokens.length) {
+    return null;
+  }
 
   const raw = input;
   const fuzziness = options.fuzziness ?? 0;
@@ -21,9 +25,8 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
 
   const typesToCheck: MeasurementType[] = options.type ? [options.type] : ['height', 'weight'];
 
-  // Try each measurement type
   for (const type of typesToCheck) {
-    const components: ParsedComponent[] = [];
+    const matches: Match[] = [];
     let hasMatch = false;
     const remainingTokens = [...tokens];
 
@@ -32,10 +35,14 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       const word = remainingTokens[i];
 
       // Skip empty tokens
-      if (!word) continue;
+      if (!word) {
+        continue;
+      }
 
       const unit = matchUnit(word, type, fuzziness);
-      if (!unit) continue;
+      if (!unit) {
+        continue;
+      }
 
       // Look for number in adjacent tokens (before or after)
       let num: number | null = null;
@@ -53,19 +60,13 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         num = parseNumberToken(numberToken);
       }
 
-      if (num === null) continue;
+      if (num === null) {
+        continue;
+      }
 
-      const matchStr =
-        unit === 'ft' && word === "'"
-          ? `${numberToken}'`
-          : unit === 'in' && word === '"'
-            ? `${numberToken}"`
-            : `${numberToken} ${word}`;
-
-      components.push({
+      matches.push({
         value: num,
         unit,
-        match: matchStr.trim(),
       });
 
       hasMatch = true;
@@ -81,18 +82,15 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
 
     // If we found any matches for this type
     if (hasMatch) {
-      // Return components in left-to-right order and filter out any with invalid values
-      components.sort((a, b) => raw.indexOf(a.match) - raw.indexOf(b.match));
-
       // For height measurements with multiple components, always normalize to inches
       // For other cases, use the input unit unless normalization is requested
       const targetUnit =
         options.normalizedUnit ||
-        (type === 'height' && components.length > 1 ? 'in' : components[0].unit) ||
+        (type === 'height' && matches.length > 1 ? 'in' : matches[0].unit) ||
         NORMALIZED_UNITS[type]['imperial'];
       let totalValue = 0;
 
-      for (const component of components) {
+      for (const component of matches) {
         if (!component.unit) continue;
 
         let convertedValue: number;
@@ -116,7 +114,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         unit: targetUnit,
         type,
         raw,
-        ...(options.returnComponents ? { components } : {}),
+        matches,
       };
     }
   }
@@ -130,6 +128,12 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       const unit = NORMALIZED_UNITS[options.type][isMetric ? 'metric' : 'imperial'];
 
       return {
+        matches: [
+          {
+            value: num,
+            unit,
+          },
+        ],
         value: num,
         unit,
         type: options.type,

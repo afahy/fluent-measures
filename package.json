@@ -5,7 +5,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "description": "A TypeScript library that parses natural language height and weight measurements with unit conversion support",
+  "description": "Parses natural language height and weight descriptions into structured data. Lightweight, fast, and flexible enough to handle imperfect or inconsistent input",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",

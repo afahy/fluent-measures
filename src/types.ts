@@ -8,19 +8,17 @@ export interface ParseOptions {
   allowUnqualified?: boolean;
   inferUnit?: 'metric' | 'imperial';
   normalizedUnit?: Unit; // The unit to normalize the final value to
-  returnComponents?: boolean; // Whether to return the individual components
 }
 
-export interface ParsedComponent {
+export interface Match {
   value: number;
   unit: Unit | null;
-  match: string;
 }
 
 export interface ParsedValue {
   value: number;
   unit: Unit | null;
   type: MeasurementType;
-  components?: ParsedComponent[];
+  matches: Match[];
   raw: string;
 }

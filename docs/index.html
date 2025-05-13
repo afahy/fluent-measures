@@ -125,8 +125,8 @@
                 fluent-measures
               </h1>
               <p class="text-base text-gray-500 sm:text-lg md:text-xl">
-                Parse natural language measurements of height and weight with intelligent unit
-                detection and flexible options
+                Parses everyday height and weight descriptions into structured data. Lightweight,
+                fast, and flexible enough to handle imperfect or inconsistent input
               </p>
               <div class="flex gap-4">
                 <a
@@ -404,13 +404,7 @@
                         <code class="text-sm bg-gray-100 px-1.5 py-0.5 rounded"
                           >normalizedUnit?: Unit</code
                         >
-                        - Convert all components to this unit in the output
-                      </li>
-                      <li>
-                        <code class="text-sm bg-gray-100 px-1.5 py-0.5 rounded"
-                          >returnComponents?: boolean</code
-                        >
-                        - Include the individual components in the output
+                        - Convert all matches to this unit in the output
                       </li>
                     </ul>
 
@@ -435,9 +429,9 @@
                       </li>
                       <li>
                         <code class="text-sm bg-gray-100 px-1.5 py-0.5 rounded"
-                          >components?: ParsedComponent[]</code
+                          >matches: Match[]</code
                         >
-                        - Array of individual measurement components (when returnComponents is true)
+                        - Array of individual measurement components
                       </li>
                       <li>
                         <code class="text-sm bg-gray-100 px-1.5 py-0.5 rounded">raw: string</code> -
@@ -445,9 +439,7 @@
                       </li>
                     </ul>
 
-                    <h4 id="options" class="text-lg font-semibold text-gray-800 mt-4">
-                      ParsedComponent
-                    </h4>
+                    <h4 id="options" class="text-lg font-semibold text-gray-800 mt-4">Match</h4>
                     <ul class="list-disc pl-5 text-gray-600">
                       <li>
                         <code class="text-sm bg-gray-100 px-1.5 py-0.5 rounded">value: number</code>
@@ -458,10 +450,6 @@
                           >unit: Unit | null</code
                         >
                         - The unit of this component
-                      </li>
-                      <li>
-                        <code class="text-sm bg-gray-100 px-1.5 py-0.5 rounded">match: string</code>
-                        - The original text that matched this component
                       </li>
                     </ul>
                   </div>
@@ -490,12 +478,11 @@ import { parseMeasurement } from '@afahy/fluent-measures';
 // Height measurements
 // Simple height measurement
 const heightFt = parseMeasurement('6 ft');
-// ✓ Returns: { value: 6, unit: 'ft', type: 'height', raw: '6 ft' }
+// ✓ Returns: { value: 6, unit: 'ft', type: 'height', matches: [{ value: 6, unit: 'ft' }], raw: '6 ft' }
 
 // Complex height with components and normalization to centimeters
 const heightCm = parseMeasurement('5\' 11"', {
   type: 'height',
-  returnComponents: true,
   normalizedUnit: 'cm'
 });
 /* ✓ Returns:
@@ -503,7 +490,7 @@ const heightCm = parseMeasurement('5\' 11"', {
   value: 180.34,
   unit: 'cm',
   type: 'height',
-  components: [
+  matches: [
     { value: 5, unit: 'ft', match: '5\'' },
     { value: 11, unit: 'in', match: '11"' }
   ],
@@ -514,7 +501,6 @@ const heightCm = parseMeasurement('5\' 11"', {
 // Same height with components but normalized to inches
 const heightIn = parseMeasurement('5\' 11"', {
   type: 'height',
-  returnComponents: true,
   normalizedUnit: 'in'
 });
 /* ✓ Returns:
@@ -522,7 +508,7 @@ const heightIn = parseMeasurement('5\' 11"', {
   value: 71,
   unit: 'in',
   type: 'height',
-  components: [
+  matches: [
     { value: 5, unit: 'ft', match: '5\'' },
     { value: 11, unit: 'in', match: '11"' }
   ],
@@ -530,20 +516,20 @@ const heightIn = parseMeasurement('5\' 11"', {
 }
 */
 
-// Weight measurement in pounds
+// Basic weight measurement in pounds
 const weightLbs = parseMeasurement('150 lbs');
-// ✓ Returns: { value: 150, unit: 'lb', type: 'weight', raw: '150 lbs' }
+// ✓ Returns: { value: 150, unit: 'lb', type: 'weight', matches: [{ value: 150, unit: 'lb' }], raw: '150 lbs' }
 
 // Weight in kilograms with spelled-out text
 const weightKg = parseMeasurement('eighty kilograms', { type: 'weight' });
-// ✓ Returns: { value: 80, unit: 'kg', type: 'weight', raw: 'eighty kilograms' }
+// ✓ Returns: { value: 80, unit: 'kg', type: 'weight', matches: [{ value: 80, unit: 'kg' }], raw: 'eighty kilograms' }
 
 // Convert weight to kilograms
 const weightConverted = parseMeasurement('150 lbs', {
   type: 'weight',
   normalizedUnit: 'kg'
 });
-// ✓ Returns: { value: 68.04, unit: 'kg', type: 'weight', raw: '150 lbs' }
+// ✓ Returns: { value: 68.04, unit: 'kg', type: 'weight', matches: [{ value: 150, unit: 'lb' }], raw: '150 lbs' }
 
 // Unit inference for unqualified values
 const inferredHeight = parseMeasurement('72', {
@@ -551,37 +537,8 @@ const inferredHeight = parseMeasurement('72', {
   allowUnqualified: true,
   inferUnit: 'imperial'
 });
-// ✓ Returns: { value: 72, unit: 'in', type: 'height', raw: '72' }
-  type: 'height',
-  returnComponents: true,
-  normalizedUnit: 'cm'
-});
-/* ✓ Returns:
-{
-  value: 177.8,
-  unit: 'cm',
-  type: 'height',
-  components: [
-    { value: 5, unit: 'ft', match: '5 foot' },
-    { value: 10, unit: 'in', match: '10 inches' }
-  ],
-  raw: '5 foot 10 inches'
-}
-*/
-
-// Fuzzy matching for complex inputs
-const fuzzyHeight = parseMeasurement('5 foot 10 inches', { fuzziness: 1 });
-// ✓ Returns: { value: 70, unit: 'in', type: 'height', raw: '5 foot 10 inches' }
-
-// --- Error Handling ---
-
-// Invalid input string
-const invalidInput = parseMeasurement('not a measurement');
-// ✗ Returns: null
-
-// Unsupported unit
-const unsupportedUnit = parseMeasurement('100 miles');
-// ✗ Returns: null (miles are not a supported unit for this library)</code></pre>
+// ✓ Returns: { value: 72, unit: 'in', type: 'height', matches: [{ value: 72, unit: 'in' }], raw: '72' }
+</code></pre>
                   </div>
                 </div>
 
@@ -743,7 +700,7 @@ const unsupportedUnit = parseMeasurement('100 miles');
     <script>
       const TIMER_DURATION = 2000;
 
-      document.addEventListener('DOMContentLoaded', function () {
+      document.addEventListener('DOMContentLoaded', () => {
         const clipboard = new ClipboardJS('.copy-button');
         const successToast = document.getElementById('success-toast');
         const errorToast = document.getElementById('error-toast');
@@ -758,16 +715,18 @@ const unsupportedUnit = parseMeasurement('100 miles');
         }
 
         function showToast(element) {
-          if (currentTimeout) clearTimeout(currentTimeout);
+          if (currentTimeout) {
+            clearTimeout(currentTimeout);
+          }
 
           hideAllToasts();
           element.dataset.visible = 'true';
           element.setAttribute('aria-hidden', 'false');
 
-          currentTimeout = setTimeout(() => hideAllToasts(), TIMER_DURATION);
+          currentTimeout = setTimeout(hideAllToasts, TIMER_DURATION);
         }
 
-        clipboard.on('success', function (e) {
+        clipboard.on('success', e => {
           const button = e.trigger;
           button.classList.add('copied', 'group', 'text-green-400');
           showToast(successToast);
@@ -779,7 +738,7 @@ const unsupportedUnit = parseMeasurement('100 miles');
           e.clearSelection();
         });
 
-        clipboard.on('error', function (e) {
+        clipboard.on('error', e => {
           showToast(errorToast);
         });
       });

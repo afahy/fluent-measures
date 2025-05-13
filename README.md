@@ -5,29 +5,33 @@
 [![Bundle Size](https://img.shields.io/bundlephobia/minzip/@afahy/fluent-measures)](https://bundlephobia.com/package/@afahy/fluent-measures)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/afahy/fluent-measures/blob/main/LICENSE)
 
-A TypeScript library that uses natural language to parse height and weight measurements. Built with a focus on developer experience, type safety, and performance.
+A lightweight TypeScript library that converts everyday height and weight descriptions into structured data.
+
+Use this library to process user-generated text containing anthropometric measurements, such as in health apps, fitness trackers, or web forms. It handles input like "5' 11"" or "five feet eleven inches" and supports both metric and imperial units.
+
+The parser can handle common spelling mistakes and phrasing variations using Levenshtein distance for fuzzy matching. It returns reliable, normalized output suitable for computation or display.
 
 ## Features
 
-- Smart parsing of height and weight measurements in both metric and imperial units
-- Support for complex notations like `5' 11"` or `five feet eleven inches`
-- Spelled-out number parsing (`one hundred fifty pounds` → 150 lb)
-- Conversion between units (imperial ↔ metric)
-- Fuzzy matching for more flexible input handling
-- Comprehensive TypeScript typings
+- Parses height and weight in both metric and imperial units (`lb`, `kg`, `ft`, `in`, `cm`, `m`)
+- Handles numeric and written-out expressions (`5' 11"`, `five feet eleven inches`, or `one hundred fifty pounds`)
+- Supports both strict and fuzzy matching to accommodate exact or loosely formatted input (`5 foot 11 inc` → `71 in`)
+- Normalizes output for consistent downstream use (e.g. math, display, storage)
 - Zero dependencies
 - Tree-shakeable
-- ESM and CommonJS support
-- Thoroughly tested with 100% coverage
-- Small bundle size (<1KB)
+- Supports both ESM and CommonJS
 
 ## Installation
 
 ```bash
 npm install @afahy/fluent-measures
-# or
+```
+
+```bash
 yarn add @afahy/fluent-measures
-# or
+```
+
+```bash
 pnpm add @afahy/fluent-measures
 ```
 
@@ -35,65 +39,77 @@ pnpm add @afahy/fluent-measures
 
 ```typescript
 import { parseMeasurement } from '@afahy/fluent-measures';
+```
 
-// Height measurements
+Basic height measurement
+
+```typescript
 const heightFt = parseMeasurement('6 ft');
-// { value: 6, unit: 'ft', type: 'height', raw: '6 ft' }
+/* { value: 6, unit: 'ft', type: 'height', matches: [{ value: 6, unit: 'ft' }], raw: '6 ft' } */
+```
 
-// Complex height with components and normalization to centimeters
+Complex height with multiple unit matches and normalization to centimeters
+
+```typescript
 const heightCm = parseMeasurement('5\' 11"', {
   type: 'height',
-  returnComponents: true,
   normalizedUnit: 'cm',
 });
-/* Returns:
-{
-  value: 180.34,
-  unit: 'cm',
-  type: 'height',
-  components: [
-    { value: 5, unit: 'ft', match: '5\'' },
-    { value: 11, unit: 'in', match: '11"' }
-  ],
-  raw: '5\' 11"'
-}
-*/
+/* { value: 180.34, unit: 'cm', type: 'height', matches: [{ value: 5, unit: 'ft' }, { value: 11, unit: 'in' }], raw: '5\' 11"' } */
+```
 
-// Weight measurement
+Basic weight measurement
+
+```typescript
 const weightLbs = parseMeasurement('150 lbs');
-// { value: 150, unit: 'lb', type: 'weight', raw: '150 lbs' }
+/* { value: 150, unit: 'lb', type: 'weight', matches: [{ value: 150, unit: 'lb' }], raw: '150 lbs' } */
+```
 
-// Weight with spelled-out text
+Weight with spelled-out text
+
+```typescript
 const weightKg = parseMeasurement('eighty kilograms', { type: 'weight' });
-// { value: 80, unit: 'kg', type: 'weight', raw: 'eighty kilograms' }
+/* { value: 80, unit: 'kg', type: 'weight', matches: [{ value: 80, unit: 'kg' }], raw: 'eighty kilograms' } */
+```
 
-// Convert weight from pounds to kilograms
+Convert weight from pounds to kilograms
+
+```typescript
 const weightConverted = parseMeasurement('150 lbs', {
   type: 'weight',
   normalizedUnit: 'kg',
 });
-// { value: 68.04, unit: 'kg', type: 'weight', raw: '150 lbs' }
+/* { value: 68.04, unit: 'kg', type: 'weight', matches: [{ value: 150, unit: 'lb' }], raw: '150 lbs' } */
+```
 
-// Handle unqualified values with unit inference
+Handle unqualified values with unit inference
+
+```typescript
 const inferredHeight = parseMeasurement('72', {
   type: 'height',
   allowUnqualified: true,
   inferUnit: 'imperial',
 });
-// { value: 72, unit: 'in', type: 'height', raw: '72' }
+/* { value: 72, unit: 'in', type: 'height', raw: '72' } */
+```
 
-// Use fuzzy matching for greater flexibility
+Use fuzzy matching for greater flexibility
+
+```typescript
 const fuzzyHeight = parseMeasurement('5 foot 10 inches', { fuzziness: 1 });
-// { value: 70, unit: 'in', type: 'height', raw: '5 foot 10 inches' }
+/* { value: 70, unit: 'in', type: 'height', raw: '5 foot 10 inches' } */
+```
 
-// Error handling
+No matches found
+
+```typescript
 const invalidInput = parseMeasurement('not a measurement');
 // null
 ```
 
 ## API Reference
 
-### parseMeasurement(input, options?): ParsedValue | null
+### `parseMeasurement(input, options?): ParsedValue | null`
 
 Parse a string input into a structured measurement object.
 
@@ -102,7 +118,7 @@ Parse a string input into a structured measurement object.
 - `input: string` - The measurement string to parse (e.g., "6 ft", "150 lbs", "180 cm")
 - `options?: ParseOptions` - Optional configuration object
 
-#### ParseOptions
+#### `ParseOptions`
 
 ```typescript
 interface ParseOptions {
@@ -120,13 +136,10 @@ interface ParseOptions {
 
   // Convert all components to this unit in the output
   normalizedUnit?: 'ft' | 'in' | 'cm' | 'm' | 'lb' | 'kg';
-
-  // Include the individual components in the output
-  returnComponents?: boolean;
 }
 ```
 
-#### ParsedValue
+#### `ParsedValue`
 
 ```typescript
 interface ParsedValue {
@@ -136,13 +149,16 @@ interface ParsedValue {
   // The unit of measurement
   unit: 'ft' | 'in' | 'cm' | 'm' | 'lb' | 'kg' | null;
 
-  // The type of measurement
+  // The type of measurement (height or weight)
   type: 'height' | 'weight';
 
-  // Array of individual measurement components (when returnComponents is true)
-  components?: ParsedComponent[];
+  // Array of individual component matches for complex measurements
+  matches: Array<{
+    value: number;
+    unit: 'ft' | 'in' | 'cm' | 'm' | 'lb' | 'kg' | null;
+  }>;
 
-  // The complete input string
+  // The original input string
   raw: string;
 }
 ```
@@ -167,9 +183,8 @@ interface ParsedValue {
 // Handle complex formats like 5'11" (feet and inches)
 const heightMixed = parseMeasurement('5\'11"', {
   type: 'height',
-  returnComponents: true,
 });
-// Returns components for both feet and inches with total in inches
+// Returns matches for both feet and inches with total in inches
 
 // Handle written-out formats
 const height = parseMeasurement('five foot ten', { type: 'height' });
