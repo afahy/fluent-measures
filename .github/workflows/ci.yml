@@ -26,10 +26,13 @@ jobs:
         run: pnpm install
 
       - name: Lint
-        run: pnpm check:lint
+        run: pnpm lint:eslint
 
-      - name: Test
-        run: pnpm test
+      - name: Unit tests
+        run: pnpm test:unit
+
+      - name: Type check
+        run: pnpm test:types
 
       - name: Build
         run: pnpm build

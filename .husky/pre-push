@@ -6,4 +6,4 @@ echo "📝 Checking types..."
 pnpm test:types || exit 1
 
 echo "📦 Checking bundle size..."
-pnpm size || exit 1
+pnpm check:size || exit 1
