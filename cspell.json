@@ -1,7 +1,7 @@
 {
   "version": "0.2",
   "language": "en",
-  "words": [],
+  "words": ["afahy"],
   "flagWords": [],
   "useGitignore": true,
   "files": ["**/*.md", "docs/**/*.html", ".github/**/*.md"],

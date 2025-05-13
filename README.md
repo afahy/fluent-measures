@@ -24,17 +24,17 @@ A TypeScript library that uses natural language to parse height and weight measu
 ## Installation
 
 ```bash
-npm install fluent-measures
+npm install @afahy/fluent-measures
 # or
-yarn add fluent-measures
+yarn add @afahy/fluent-measures
 # or
-pnpm add fluent-measures
+pnpm add @afahy/fluent-measures
 ```
 
 ## Usage
 
 ```typescript
-import { parseMeasurement } from 'fluent-measures';
+import { parseMeasurement } from '@afahy/fluent-measures';
 
 // Height measurements
 const heightFt = parseMeasurement('6 ft');
