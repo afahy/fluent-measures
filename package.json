@@ -1,7 +1,7 @@
 {
   "type": "module",
   "name": "fluent-measures",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "A TypeScript library that parses natural language height and weight measurements with unit conversion support",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
