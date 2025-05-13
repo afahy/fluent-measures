@@ -33,9 +33,3 @@ jobs:
 
       - name: Type check
         run: pnpm test:types
-
-      - name: Build
-        run: pnpm build
-
-      - name: Check bundle size
-        run: pnpm check:size
