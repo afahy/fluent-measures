@@ -16,10 +16,8 @@
       "require": "./dist/index.js"
     }
   },
-  "readme": "packages/README.md",
   "files": [
     "dist",
-    "packages/README.md",
     "LICENSE"
   ],
   "sideEffects": false,

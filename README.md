@@ -2,8 +2,8 @@
 
 [![CI](https://github.com/afahy/fluent-measures/actions/workflows/ci.yml/badge.svg)](https://github.com/afahy/fluent-measures/actions/workflows/ci.yml)
 [![npm version](https://badge.fury.io/js/%40afahy%2Ffluent-measures.svg)](https://badge.fury.io/js/%40afahy%2Ffluent-measures)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
+[![Bundle Size](https://img.shields.io/bundlephobia/minzip/@afahy/fluent-measures)](https://bundlephobia.com/package/@afahy/fluent-measures)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/afahy/fluent-measures/blob/main/LICENSE)
 
 A TypeScript library that uses natural language to parse height and weight measurements. Built with a focus on developer experience, type safety, and performance.
 
@@ -262,14 +262,8 @@ pnpm build
 pnpm dev
 ```
 
-## Contributing
-
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
-
-## Code of Conduct
-
-Please note that this project is released with a [Code of Conduct](CODE_OF_CONDUCT.md). By participating in this project you agree to abide by its terms.
-
 ## License
 
-[MIT](LICENSE) © 2025 fluent-measures
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/afahy/fluent-measures/blob/main/LICENSE) file in the repository for details.
+
+© 2025 Adam Fahy (afahy)
