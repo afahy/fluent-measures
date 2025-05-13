@@ -1,7 +1,7 @@
 # fluent-measures
 
 [![CI](https://github.com/afahy/fluent-measures/actions/workflows/ci.yml/badge.svg)](https://github.com/afahy/fluent-measures/actions/workflows/ci.yml)
-[![npm version](https://badge.fury.io/js/fluent-measures.svg)](https://badge.fury.io/js/fluent-measures)
+[![npm version](https://badge.fury.io/js/%40afahy%2Ffluent-measures.svg)](https://badge.fury.io/js/%40afahy%2Ffluent-measures)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
 
@@ -239,7 +239,7 @@ For CommonJS environments:
 
 ```javascript
 // Use require instead of import
-const { parseMeasurement } = require('fluent-measures');
+const { parseMeasurement } = require('@afahy/fluent-measures');
 ```
 
 ## Development

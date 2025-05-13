@@ -1,6 +1,6 @@
 # fluent-measures
 
-[![npm version](https://badge.fury.io/js/fluent-measures.svg)](https://badge.fury.io/js/fluent-measures)
+[![npm version](https://badge.fury.io/js/%40afahy%2Ffluent-measures.svg)](https://badge.fury.io/js/%40afahy%2Ffluent-measures)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
 A TypeScript library that uses natural language to parse height and weight measurements. Built with a focus on developer experience, type safety, and performance.

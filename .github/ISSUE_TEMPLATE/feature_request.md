@@ -19,7 +19,7 @@ A clear and concise description of what you want to happen.
 How would you like to use this feature in code?
 
 ```typescript
-import { newFeature } from 'fluent-measures';
+import { newFeature } from '@afahy/fluent-measures';
 
 // Example of how you'd like to use the feature
 const result = newFeature(/* params */);
