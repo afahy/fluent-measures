@@ -10,7 +10,7 @@ We love your input! We want to make contributing to fluent-measures as easy and 
 4. Add tests if applicable
 5. Run tests with `pnpm test`
 6. Make sure your code lints with `pnpm lint`
-7. Format your code with `pnpm format`
+7. Format your code with `pnpm lint:format:fix`
 8. Create a changeset using `pnpm changeset`
 9. Submit your pull request
 
@@ -88,7 +88,7 @@ pnpm dev
 pnpm lint
 
 # Format code
-pnpm format
+pnpm lint:format:fix
 
 # Generate documentation
 pnpm docs
@@ -99,7 +99,7 @@ pnpm docs
 1. Update the README.md with details of changes if needed
 2. Add tests for any new functionality
 3. Make sure all tests pass (`pnpm test`) and types check (`pnpm test:types`)
-4. Run linting and formatting (`pnpm lint` and `pnpm format`)
+4. Run linting and formatting (`pnpm lint` and `pnpm lint:format:fix`)
 5. Create a changeset describing your changes (`pnpm changeset`)
 6. The PR will be merged once you have the sign-off of at least one maintainer
 
