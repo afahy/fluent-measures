@@ -1,7 +1,3 @@
-# Repository instructions for coding agents
-
-<!-- cspell:ignore CODEOWNERS -->
-
 ## Commands
 
 Run these commands from the repository root:
