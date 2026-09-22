@@ -1,0 +1,8 @@
+.github/**              @afahy
+package.json            @afahy
+pnpm-lock.yaml          @afahy
+vitest.config.ts        @afahy
+stryker.config.json     @afahy
+.changeset/config.json  @afahy
+.husky/**               @afahy
+CLAUDE.md               @afahy
