@@ -1,4 +1,5 @@
 .github/**              @afahy
+AGENTS.md               @afahy
 package.json            @afahy
 pnpm-lock.yaml          @afahy
 vitest.config.ts        @afahy
