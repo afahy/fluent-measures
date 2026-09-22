@@ -44,6 +44,9 @@ Examples:
 - `docs: update API documentation`
 - `test: add more test cases for edge values`
 
+Pull request titles must use the same format. CI validates both every commit in the pull
+request and its title with the rules in `commitlint.config.js`.
+
 ## Project Structure
 
 ```
@@ -101,7 +104,8 @@ pnpm docs
 3. Make sure all tests pass (`pnpm test`) and types check (`pnpm test:types`)
 4. Run linting and formatting (`pnpm lint` and `pnpm lint:format:fix`)
 5. Create a changeset describing your changes (`pnpm changeset`)
-6. The PR will be merged once you have the sign-off of at least one maintainer
+6. Fill in every section of the pull request template (`.github/pull_request_template.md`), including the related issue or Linear ticket and the tests you ran. Don't replace the template with a different format
+7. The PR will be merged once you have the sign-off of at least one maintainer
 
 ## Key Modules
 

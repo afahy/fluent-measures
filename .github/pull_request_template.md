@@ -2,7 +2,7 @@
 
 Please include a summary of the change and which issue is fixed. Please also include relevant motivation and context.
 
-Fixes # (issue)
+Fixes # (GitHub issue or Linear ticket, for example `Fixes AFA-22`)
 
 ## Type of change
 
@@ -22,6 +22,7 @@ Please describe the tests that you ran to verify your changes. Provide instructi
 
 ## Checklist:
 
+- [ ] My pull request title follows the Conventional Commits format
 - [ ] My code follows the style guidelines of this project
 - [ ] I have performed a self-review of my own code
 - [ ] I have commented my code, particularly in hard-to-understand areas
