@@ -8,6 +8,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
+      include: ['src/**'],
       exclude: ['coverage/**', 'dist/**', '**/[.]**', 'commitlint.config.js', 'tests/**'],
       thresholds: {
         branches: 80,
