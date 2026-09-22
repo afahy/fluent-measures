@@ -6,3 +6,11 @@ stryker.config.json     @afahy
 .changeset/config.json  @afahy
 .husky/**               @afahy
 CLAUDE.md               @afahy
+tsconfig.json           @afahy
+eslint.config.js        @afahy
+tsup.config.ts          @afahy
+.size-limit.cjs         @afahy
+.prettierignore         @afahy
+cspell.json             @afahy
+commitlint.config.js    @afahy
+.lintstagedrc           @afahy
