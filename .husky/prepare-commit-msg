@@ -9,6 +9,4 @@ fi
 if ! git diff --cached --name-only | grep -q "^\.changeset/.*\.md$"; then
   echo "⚠️  Warning: No changeset file detected."
   echo "📝 Run 'pnpm changeset' to create one if you've made notable changes."
-  echo "   Press enter to continue anyway, or Ctrl+C to abort."
-  read -r
 fi
