@@ -5,31 +5,46 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [22, 24]
     steps:
       - uses: actions/checkout@v4
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 10
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
 
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ matrix.node-version }}
           cache: 'pnpm'
 
       - name: Install dependencies
         run: pnpm install
 
       - name: Lint
-        run: pnpm lint:eslint
+        run: pnpm lint
 
-      - name: Unit tests
-        run: pnpm test:unit
+      - name: Unit tests with coverage
+        run: pnpm test:unit:coverage
 
       - name: Type check
         run: pnpm test:types
+
+      - name: Build
+        run: pnpm build
+
+  ci-ok:
+    if: always()
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check all CI jobs passed
+        run: test "${{ needs.test.result }}" = success
