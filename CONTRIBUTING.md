@@ -44,6 +44,9 @@ Examples:
 - `docs: update API documentation`
 - `test: add more test cases for edge values`
 
+Pull request titles must use the same format. CI validates both every commit in the pull
+request and its title with the rules in `commitlint.config.js`.
+
 ## Project Structure
 
 ```
