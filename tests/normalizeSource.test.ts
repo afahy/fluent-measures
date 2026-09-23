@@ -31,6 +31,22 @@ describe('normalizeSource', () => {
       '/// <reference types="node" preserve="true" />\nconst x = 1;',
     ],
     ['a type check directive', 'const x = 1;', '// @ts-nocheck\nconst x = 1;'],
+    [
+      'a JSX pragma',
+      '/** @jsxImportSource old */\nconst x = 1;',
+      '/** @jsxImportSource new */\nconst x = 1;',
+    ],
+    ['a @ts-ignore comment', 'const x: number = 1;', '// @ts-ignore\nconst x: number = 1;'],
+    [
+      '@ts-ignore and @ts-expect-error',
+      '// @ts-ignore\nconst x: number = 1;',
+      '// @ts-expect-error\nconst x: number = 1;',
+    ],
+    [
+      'the line a @ts-ignore applies to',
+      '// @ts-ignore\nconst x = 1;\nconst y = 2;',
+      'const x = 1;\n// @ts-ignore\nconst y = 2;',
+    ],
   ])('treats a change to %s as a change', (_, before, after) => {
     expect(same(before, after)).toBe(false);
   });

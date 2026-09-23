@@ -22,28 +22,37 @@ const IGNORED_PROPERTIES = new Set([
 // The node flags that are syntax: `let`, `const`, `using` and `declare global`. The other flags
 // record things like attached JSDoc comments or parse errors.
 const SYNTAX_FLAGS = ts.NodeFlags.BlockScoped | ts.NodeFlags.GlobalAugmentation;
-// Source file properties that hold directive comments, such as `/// <reference types="node" />`
-// and `// @ts-nocheck`. They change the emitted typings or the type check, so unlike other
-// comments they count. The other source file properties hold the file's name, text and caches.
-const DIRECTIVES = [
-  'referencedFiles',
-  'typeReferenceDirectives',
-  'libReferenceDirectives',
-  'hasNoDefaultLib',
-  'amdDependencies',
-  'moduleName',
-  'checkJsDirective',
-];
 
 /** A JSON.stringify replacer that leaves out positions. */
 const withoutPositions = (key, value) => (key === 'pos' || key === 'end' ? undefined : value);
 
+/**
+ * Returns the comments in a file that TypeScript reads as directives: pragmas such as
+ * `/// <reference types="node" />`, `// @ts-nocheck` and `@jsxImportSource`, and each
+ * `@ts-ignore` or `@ts-expect-error` with the line of code it applies to. They can change
+ * the emitted code, the emitted typings or the type check, so unlike other comments they count.
+ * TypeScript doesn't export the source file properties that hold them, so
+ * tests/normalizeSource.test.ts fails if a TypeScript release removes them.
+ *
+ * @param {ts.SourceFile} file
+ * @returns {string}
+ */
+function directives(file) {
+  const pragmas = [...(file.pragmas ?? [])].map(([name, value]) => [
+    name,
+    [value].flat().map(pragma => pragma.arguments),
+  ]);
+  const comments = (file.commentDirectives ?? []).map(({ range, type }) => [
+    type,
+    file.text.slice(range.end).trimStart().split('\n')[0].trim(),
+  ]);
+  return JSON.stringify({ pragmas, comments }, withoutPositions);
+}
+
 function shape(node) {
   let result = `(${node.kind}`;
   if (node.kind === ts.SyntaxKind.SourceFile) {
-    for (const key of DIRECTIVES) {
-      result += ` ${key}=${JSON.stringify(node[key], withoutPositions)}`;
-    }
+    result += directives(node);
   } else {
     // Identifier text is a getter, not an own property, so read it directly.
     if (typeof node.text === 'string') result += JSON.stringify(node.text);
@@ -63,10 +72,10 @@ function shape(node) {
 
 /**
  * Returns a string that is the same for two versions of a file when they differ only in
- * comments or formatting. For code, that is the syntax tree without positions, plus directive
- * comments such as `/// <reference types="node" />`. Other comments, including JSDoc, aren't
- * child nodes, so they don't appear in it. JSON is compared after parsing, and any other file
- * as plain text.
+ * comments or formatting. For code, that is the syntax tree without positions, plus the
+ * comments that TypeScript reads as directives, such as `/// <reference types="node" />` and
+ * `// @ts-ignore`. Other comments, including JSDoc, aren't child nodes, so they don't appear in
+ * it. JSON is compared after parsing, and any other file as plain text.
  *
  * @param {string} path The file's path, which decides how it is parsed.
  * @param {string} text The file's contents.
