@@ -41,6 +41,9 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Check bundle size
+        run: pnpm check:size
+
   package:
     runs-on: ubuntu-latest
     timeout-minutes: 10
