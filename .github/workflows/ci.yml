@@ -4,6 +4,8 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+    # edited: regression-test depends on the PR title, so re-run when it changes.
+    types: [opened, synchronize, reopened, edited]
 
 permissions:
   contents: read
