@@ -68,4 +68,8 @@ describe('wordsToNumber', () => {
     expect(wordsToNumber('twenty  one')).toEqual(21);
     expect(wordsToNumber('one   hundred   twenty')).toEqual(120);
   });
+
+  it('parses "dozen" as 12', () => {
+    expect(wordsToNumber('dozen')).toEqual(12);
+  });
 });
