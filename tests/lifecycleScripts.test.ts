@@ -1,7 +1,9 @@
 import { execFileSync, spawnSync, type SpawnSyncReturns } from 'node:child_process';
 import {
   copyFileSync,
+  cpSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   symlinkSync,
@@ -34,6 +36,19 @@ function createRepository({ withDependencies }: { withDependencies: boolean }): 
   }
 
   return repository;
+}
+
+// Copies what `pnpm pack` needs to build the package, without dist/.
+function createPackage(): string {
+  const directory = createDirectory('fluent-measures-pack-');
+
+  for (const file of ['package.json', 'tsconfig.json', 'tsup.config.ts', 'LICENSE', 'README.md']) {
+    copyFileSync(resolve(file), resolve(directory, file));
+  }
+  cpSync(resolve('src'), resolve(directory, 'src'), { recursive: true });
+  symlinkSync(resolve('node_modules'), resolve(directory, 'node_modules'), 'dir');
+
+  return directory;
 }
 
 function runPrepare(
@@ -101,5 +116,25 @@ describe('package lifecycle scripts', () => {
 
     expect(result.status, result.stdout + result.stderr).toBe(0);
     expect(hooksPath(repository)).toBe('.husky/_');
+  });
+
+  // A fresh clone has no dist/. Without prepack, `pnpm pack` ships a tarball with no code.
+  it('builds dist/ when pnpm packs a checkout without it', { timeout: 60_000 }, () => {
+    const directory = createPackage();
+    const destination = createDirectory('fluent-measures-tarball-');
+
+    const result = spawnSync('pnpm', ['pack', '--pack-destination', destination], {
+      cwd: directory,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+
+    expect(result.status, result.stdout + result.stderr).toBe(0);
+    const [tarball] = readdirSync(destination);
+    const files = execFileSync('tar', ['-tzf', resolve(destination, tarball)], {
+      encoding: 'utf8',
+    }).split('\n');
+    expect(files).toContain('package/dist/index.js');
+    expect(files).toContain('package/dist/index.cjs');
   });
 });
