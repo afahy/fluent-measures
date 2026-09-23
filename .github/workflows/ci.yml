@@ -68,9 +68,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Build
-        run: pnpm build
-
+      # pnpm pack runs the prepack script, which cleans dist/ and builds, so this step tests it too.
       - name: Pack
         id: pack
         run: pnpm pack --pack-destination "$RUNNER_TEMP/pack"
