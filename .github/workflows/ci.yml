@@ -117,9 +117,22 @@ jobs:
         if: ${{ !cancelled() && steps.pack.outcome == 'success' && matrix.node-version == 24 }}
         run: npx @arethetypeswrong/cli@0.18.5 "$RUNNER_TEMP"/pack/*.tgz
 
+  mutation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup
+        with:
+          node-version: 22
+
+      - name: Mutation tests
+        run: pnpm test:mutation
+
   ci-ok:
     if: always()
-    needs: [test, package]
+    needs: [test, package, mutation]
     runs-on: ubuntu-latest
     steps:
       - name: Check all CI jobs passed

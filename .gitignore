@@ -13,6 +13,8 @@ esbuild-why*.html
 coverage/
 .nyc_output/
 .vitest/
+/reports/
+/.stryker-tmp/
 
 # Cache
 *.tsbuildinfo
