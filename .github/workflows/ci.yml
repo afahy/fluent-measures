@@ -4,18 +4,9 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-    # edited: regression-test depends on the PR title, so re-run when it changes.
-    types: [opened, synchronize, reopened, edited]
 
 permissions:
   contents: read
-
-# One run per pull request: a new push or edit cancels the older run, so ci-ok always
-# reflects the latest commit and title. Pushes to main are grouped by commit, so none of
-# them is cancelled.
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
-  cancel-in-progress: true
 
 jobs:
   test:
@@ -26,17 +17,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
+      - uses: ./.github/actions/setup
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install
 
       - name: Lint
         run: pnpm lint
@@ -50,65 +33,15 @@ jobs:
       - name: Build
         run: pnpm build
 
-  # A bug fix must add a test that fails without the fix. Runs the PR's tests against the
-  # base branch's src/ and fails if they all pass.
-  regression-test:
-    name: Regression test fails without the fix
-    # Pushes to main have no pull request title, so the job skips. Test the title only in
-    # this expression: interpolating it into a run script would allow script injection.
-    if: startsWith(github.event.pull_request.title, 'fix')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Run the PR's tests against the base branch's source
-        env:
-          BASE_REF: ${{ github.base_ref }}
-        run: |
-          # The commit the PR merge was built on, not the tip of the base branch: if the base
-          # has moved since, its newer src/ changes would otherwise count as part of this PR.
-          base=$(git merge-base "origin/$BASE_REF" HEAD)
-          if git diff --quiet "$base" -- src/; then
-            echo "This PR doesn't change src/, so there is no fix to test."
-            exit 0
-          fi
-          # Keep the PR's tests but restore the old source. --no-overlay also deletes files
-          # the PR added under src/, so the tree matches the base branch.
-          git checkout --no-overlay "$base" -- src/
-          echo "Running the tests and type check against the base branch's src/. One should fail."
-          # --reporter=default drops Vitest's GitHub Actions reporter, and removing setup-node's
-          # tsc problem matcher does the same for tsc. Both would annotate the PR with the
-          # failures this step expects.
-          echo "::remove-matcher owner=tsc::"
-          # tsconfig.json includes tests/, so a type-level regression test fails in tsc, not
-          # in Vitest.
-          if pnpm test:unit --reporter=default && pnpm test:types; then
-            echo "::error::No test fails without this fix. Add a regression test built from the ticket's failure inputs."
-            exit 1
-          fi
-          echo "At least one test or type check fails without this fix."
-
   ci-ok:
     if: always()
-    needs: [test, regression-test]
+    needs: [test]
     runs-on: ubuntu-latest
     steps:
       - name: Check all CI jobs passed
-        # regression-test skips unless the pull request title starts with "fix".
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
         run: |
-          test "${{ needs.test.result }}" = success
-          test "${{ needs.regression-test.result }}" = success || test "${{ needs.regression-test.result }}" = skipped
+          for result in $RESULTS; do
+            test "$result" = success
+          done

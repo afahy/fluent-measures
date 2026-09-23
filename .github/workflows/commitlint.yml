@@ -16,17 +16,9 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
+      - uses: ./.github/actions/setup
         with:
           node-version: 22
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
 
       - name: Validate commit messages
         env:
