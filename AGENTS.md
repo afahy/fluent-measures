@@ -24,7 +24,8 @@ Run these commands from the repository root:
 4. Add a changeset with `pnpm changeset` for any change to `src/` or to `package.json`
    fields that affect consumers.
 5. Commit messages and PR titles follow Conventional Commits, as configured in
-   `commitlint.config.js`. CI checks both. Write PR titles as `type: summary`, for example
+   `commitlint.config.js`. CI checks both, and checks titles against
+   `commitlint.pr-title.config.js` as well. Write PR titles as `type: summary`, for example
    `fix: make the changeset reminder non-blocking`. Allowed types are `feat`, `fix`,
    `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore` and `revert`. A
    scope is optional, and the only allowed scopes are `core`, `docs`, `deps`, `ci` and
