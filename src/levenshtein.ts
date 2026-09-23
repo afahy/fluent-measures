@@ -1,3 +1,4 @@
+/** Returns the Levenshtein distance between two strings. */
 export function levenshtein(a: string, b: string): number {
   const dp = Array.from({ length: a.length + 1 }, () => Array(b.length + 1).fill(0));
   for (let i = 0; i <= a.length; i++) dp[i][0] = i;
