@@ -15,6 +15,9 @@ coverage/
 *.tsbuildinfo
 .tscache/
 .eslintcache
+# pnpm points TMPDIR at the project while running `prepare` during install,
+# so Node writes its compile cache here (https://github.com/pnpm/pnpm/issues/9718)
+node-compile-cache/
 
 # IDE settings
 .vscode/

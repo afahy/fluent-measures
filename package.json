@@ -27,9 +27,6 @@
     "LICENSE"
   ],
   "sideEffects": false,
-  "prepare": "pnpm release:lifecycle:prepare",
-  "prepublishOnly": "pnpm release:lifecycle:prepublish",
-  "prepack": "pnpm release:lifecycle:prepack",
   "scripts": {
     "build": "tsup",
     "check": "pnpm lint && pnpm test && pnpm check:size",
@@ -47,6 +44,9 @@
     "lint:format:fix": "prettier --write .",
     "lint:spell": "cspell",
     "lint:spell:fix": "cspell --show-suggestions",
+    "prepack": "pnpm release:lifecycle:prepack",
+    "prepare": "pnpm release:lifecycle:prepare",
+    "prepublishOnly": "pnpm release:lifecycle:prepublish",
     "release": "pnpm release:validate && pnpm release:publish",
     "release:changeset": "changeset",
     "release:lifecycle:prepare": "husky",
