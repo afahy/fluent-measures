@@ -89,14 +89,18 @@ jobs:
           # Keep the PR's tests but restore the old source. --no-overlay also deletes files
           # the PR added under src/, so the tree matches the base branch.
           git checkout --no-overlay "$base" -- src/
-          echo "Running the tests against the base branch's src/. At least one should fail."
-          # --reporter=default drops Vitest's GitHub Actions reporter, which would annotate
-          # the PR with the failures this step expects.
-          if pnpm test:unit --reporter=default; then
+          echo "Running the tests and type check against the base branch's src/. One should fail."
+          # --reporter=default drops Vitest's GitHub Actions reporter, and removing setup-node's
+          # tsc problem matcher does the same for tsc. Both would annotate the PR with the
+          # failures this step expects.
+          echo "::remove-matcher owner=tsc::"
+          # tsconfig.json includes tests/, so a type-level regression test fails in tsc, not
+          # in Vitest.
+          if pnpm test:unit --reporter=default && pnpm test:types; then
             echo "::error::No test fails without this fix. Add a regression test built from the ticket's failure inputs."
             exit 1
           fi
-          echo "At least one test fails without this fix."
+          echo "At least one test or type check fails without this fix."
 
   ci-ok:
     if: always()
