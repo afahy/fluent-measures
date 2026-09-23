@@ -10,6 +10,13 @@ on:
 permissions:
   contents: read
 
+# One run per pull request: a new push or edit cancels the older run, so ci-ok always
+# reflects the latest commit and title. Pushes to main are grouped by commit, so none of
+# them is cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
