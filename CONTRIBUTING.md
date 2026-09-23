@@ -152,7 +152,15 @@ pnpm test:watch
 
 # Generate test coverage report
 pnpm test:coverage
+
+# Run mutation testing
+pnpm test:mutation
 ```
+
+CI also runs mutation testing with Stryker on every pull request. Stryker makes small changes
+to the code in `src/`, such as flipping a condition or deleting a statement, and runs the
+tests against each one. The job fails if the tests catch less than 70% of these changes. If
+it fails, check the survived mutants listed in the job output and add tests that catch them.
 
 ## Documentation
 
