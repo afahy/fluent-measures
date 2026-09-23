@@ -8,6 +8,8 @@ Run these commands from the repository root:
 - `pnpm lint` runs ESLint, Prettier checks, and the spell checker.
 - `pnpm test` runs the unit tests and TypeScript (`tsc`) checks.
 - `pnpm test:unit:coverage` runs the unit tests with coverage.
+- `pnpm test:mutation` runs mutation testing with Stryker. CI fails if the mutation score is
+  below the `break` threshold in `stryker.config.json`.
 - `pnpm build` builds the package.
 
 ## Pull request rules

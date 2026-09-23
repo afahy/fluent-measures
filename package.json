@@ -32,7 +32,7 @@
   "prepack": "pnpm release:lifecycle:prepack",
   "scripts": {
     "build": "tsup",
-    "check": "pnpm lint && pnpm test && pnpm check:size",
+    "check": "pnpm lint && pnpm test && pnpm test:mutation && pnpm check:size",
     "check:size": "size-limit",
     "check:size:why": "size-limit --why",
     "ci": "pnpm clean && pnpm install && pnpm check && pnpm build",

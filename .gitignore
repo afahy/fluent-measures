@@ -10,8 +10,8 @@ build/
 coverage/
 .nyc_output/
 .vitest/
-reports/
-.stryker-tmp/
+/reports/
+/.stryker-tmp/
 
 # Cache
 *.tsbuildinfo

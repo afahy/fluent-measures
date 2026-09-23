@@ -157,10 +157,16 @@ pnpm test:coverage
 pnpm test:mutation
 ```
 
-CI also runs mutation testing with Stryker on every pull request. Stryker makes small changes
-to the code in `src/`, such as flipping a condition or deleting a statement, and runs the
-tests against each one. The job fails if the tests catch less than 70% of these changes. If
-it fails, check the survived mutants listed in the job output and add tests that catch them.
+CI also runs mutation testing with Stryker on pull requests to `main` and on pushes to `main`.
+Stryker makes small changes to the code in `src/`, such as flipping a condition or deleting a
+statement, and runs the tests against each one. The mutation score is the percentage of these
+changes that the tests catch. The job fails when the score is below the `break` threshold in
+`stryker.config.json` (currently 70). The job output lists each change the tests missed. A
+`Survived` entry means tests ran and still passed; a `NoCoverage` entry means no test runs that
+code. Add tests that catch either kind.
+
+Mutation testing needs Node 22.18 or a later 22.x release, or Node 24.11 or later. Stryker
+depends on Babel 8, which requires those versions.
 
 ## Documentation
 
