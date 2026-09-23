@@ -13,7 +13,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { appendFileSync, existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
-import ts from 'typescript';
+import { normalizeSource } from './normalize-source.mjs';
 
 // HEAD is the merge of the PR into the base branch, so its first parent is the base branch.
 const BASE = 'HEAD^1';
@@ -23,41 +23,47 @@ const PACKAGE_PATHS = ['src/', 'package.json', 'tsup.config.ts'];
 // or export that the PR adds, so it can't show how the base branch behaves.
 const IMPORT_ERRORS = new Set(['TS2305', 'TS2307', 'TS2459', 'TS2460', 'TS2614', 'TS2724']);
 
+/**
+ * Runs git and returns the non-empty lines it prints.
+ *
+ * @param {...string} args
+ * @returns {string[]}
+ */
 function git(...args) {
   return execFileSync('git', args, { encoding: 'utf8' }).split('\n').filter(Boolean);
 }
 
+/**
+ * Returns a file's contents at a revision, or null if the file doesn't exist there.
+ *
+ * @param {string} rev
+ * @param {string} path
+ * @returns {string | null}
+ */
 function fileAt(rev, path) {
   const show = spawnSync('git', ['show', `${rev}:${path}`], { encoding: 'utf8' });
   return show.status === 0 ? show.stdout : null;
 }
 
-// Returns the same string for two versions of a file that differ only in comments or
-// formatting. For code, that is the syntax tree: node kinds plus the text of identifiers and
-// literals. Comments, including JSDoc, aren't child nodes, so they don't appear in it.
-function normalize(path, text) {
-  if (path.endsWith('.json')) return JSON.stringify(JSON.parse(text));
-  if (!/\.[cm]?[jt]sx?$/.test(path)) return text;
-  const shape = node => {
-    let result = `(${node.kind}`;
-    if (node.kind !== ts.SyntaxKind.SourceFile && typeof node.text === 'string') {
-      result += JSON.stringify(node.text);
-    }
-    ts.forEachChild(node, child => {
-      result += shape(child);
-    });
-    return `${result})`;
-  };
-  return shape(ts.createSourceFile(path, text, ts.ScriptTarget.Latest));
-}
-
+/**
+ * Runs a Node script with this script's Node binary, not the node_modules/.bin shims, which
+ * use whichever Node is on PATH.
+ *
+ * @param {string} script
+ * @param {string[]} args
+ * @param {import('node:child_process').SpawnSyncOptions} options
+ */
 function run(script, args, options) {
-  // process.execPath, not the node_modules/.bin shims, so the tools use this script's Node.
   const result = spawnSync(process.execPath, [script, ...args], options);
   if (result.error) throw result.error;
   return result;
 }
 
+/**
+ * Prints the result and writes it to the step's outputs.
+ *
+ * @param {'unchanged' | 'no-tests' | 'caught' | 'not-caught'} result
+ */
 function setResult(result) {
   console.log(`Result: ${result}`);
   if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `result=${result}\n`);
@@ -77,7 +83,11 @@ const packageFiles = git(
 const fixed = packageFiles.filter(path => {
   const before = fileAt(BASE, path);
   const after = fileAt('HEAD', path);
-  return before === null || after === null || normalize(path, before) !== normalize(path, after);
+  return (
+    before === null ||
+    after === null ||
+    normalizeSource(path, before) !== normalizeSource(path, after)
+  );
 });
 if (fixed.length === 0) {
   console.log('This PR changes only comments or formatting in the package files.');
@@ -158,8 +168,11 @@ for (const file of results) {
     continue;
   }
   ran.add(path);
-  for (const test of file.assertionResults) {
-    if (test.status === 'failed') caught.push(`${path} > ${test.fullName}`);
+  const failed = file.assertionResults.filter(test => test.status === 'failed');
+  for (const test of failed) caught.push(`${path} > ${test.fullName}`);
+  if (file.status === 'failed' && failed.length === 0) {
+    // A beforeAll or afterAll hook failed. That fails the file but not any of its tests.
+    caught.push(`${path} (in a hook): ${file.message.split('\n')[0]}`);
   }
 }
 for (const { file, line, code, message } of typeErrors) {
