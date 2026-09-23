@@ -6,6 +6,9 @@ node_modules/
 dist/
 build/
 
+# Bundle size reports from pnpm check:size:why
+esbuild-why*.html
+
 # Test and coverage
 coverage/
 .nyc_output/
