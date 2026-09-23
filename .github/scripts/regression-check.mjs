@@ -102,9 +102,13 @@ if (testPaths.length === 0) {
   process.exit(0);
 }
 
-// Keep the PR's tests but restore the base branch's package files. --no-overlay also deletes
-// files that the PR adds.
-execFileSync('git', ['checkout', '--no-overlay', BASE, '--', ...packageFiles]);
+// Keep the PR's tests but restore the base branch's package files and delete the ones the PR
+// adds. Both commands work when the files are already restored, because the workflow runs this
+// script a second time on Node 24.
+const added = packageFiles.filter(path => fileAt(BASE, path) === null);
+const inBase = packageFiles.filter(path => !added.includes(path));
+if (inBase.length > 0) execFileSync('git', ['checkout', BASE, '--', ...inBase]);
+if (added.length > 0) execFileSync('git', ['rm', '-q', '-f', '--ignore-unmatch', '--', ...added]);
 
 // tsconfig.json includes tests/, so a type-level regression test fails here, not in Vitest.
 const tsc = run('node_modules/typescript/bin/tsc', ['--noEmit', '--pretty', 'false'], {
