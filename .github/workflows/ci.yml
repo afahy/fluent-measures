@@ -41,10 +41,103 @@ jobs:
       - name: Build
         run: pnpm build
 
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [22, 24]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build
+        run: pnpm build
+
+      - name: Pack
+        id: pack
+        run: pnpm pack --pack-destination "$RUNNER_TEMP/pack"
+
+      - name: Install the tarball into an empty project
+        id: install
+        run: |
+          mkdir "$RUNNER_TEMP/consumer"
+          cd "$RUNNER_TEMP/consumer"
+          npm init --yes
+          npm install --no-audit --no-fund "$RUNNER_TEMP"/pack/*.tgz
+
+      - name: Import the package from ESM
+        working-directory: ${{ runner.temp }}/consumer
+        run: |
+          node --input-type=module <<'EOF'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          import { parseMeasurement } from '@afahy/fluent-measures';
+
+          const { value, unit } = parseMeasurement('6 ft');
+          assert.deepEqual({ value, unit }, { value: 6, unit: 'ft' });
+
+          const resolved = import.meta.resolve('@afahy/fluent-measures');
+          assert.ok(resolved.endsWith('/dist/index.js'), `import resolved to ${resolved}`);
+
+          // Bundlers that ignore exports read module, so it must name the same file.
+          const manifest = import.meta.resolve('@afahy/fluent-measures/package.json');
+          const { module } = JSON.parse(readFileSync(new URL(manifest), 'utf8'));
+          assert.equal(new URL(module, manifest).href, resolved, `module is ${module}`);
+          EOF
+
+      - name: Require the package from CJS
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        working-directory: ${{ runner.temp }}/consumer
+        run: |
+          node --input-type=commonjs <<'EOF'
+          const assert = require('node:assert/strict');
+          const path = require('node:path');
+          const { parseMeasurement } = require('@afahy/fluent-measures');
+
+          const { value, unit } = parseMeasurement('6 ft');
+          assert.deepEqual({ value, unit }, { value: 6, unit: 'ft' });
+
+          // Node 22+ can require() an ESM file, so check that require picks the CJS build.
+          const resolved = require.resolve('@afahy/fluent-measures');
+          assert.ok(resolved.endsWith('/dist/index.cjs'), `require resolved to ${resolved}`);
+
+          // Tools that ignore exports read main, so it must name the same file.
+          const manifest = require.resolve('@afahy/fluent-measures/package.json');
+          const { main } = require(manifest);
+          assert.equal(path.resolve(path.dirname(manifest), main), resolved, `main is ${main}`);
+          EOF
+
+      # publint and attw read the tarball and don't depend on the Node version, so they run
+      # in one matrix leg.
+      - name: Lint the package with publint
+        if: ${{ !cancelled() && steps.pack.outcome == 'success' && matrix.node-version == 24 }}
+        run: npx publint@0.3.24 --strict "$RUNNER_TEMP"/pack/*.tgz
+
+      - name: Check the package types with Are the Types Wrong
+        if: ${{ !cancelled() && steps.pack.outcome == 'success' && matrix.node-version == 24 }}
+        run: npx @arethetypeswrong/cli@0.18.5 "$RUNNER_TEMP"/pack/*.tgz
+
   ci-ok:
     if: always()
-    needs: [test]
+    needs: [test, package]
     runs-on: ubuntu-latest
     steps:
       - name: Check all CI jobs passed
-        run: test "${{ needs.test.result }}" = success
+        run: |
+          test "${{ needs.test.result }}" = success
+          test "${{ needs.package.result }}" = success
