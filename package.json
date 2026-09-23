@@ -49,7 +49,7 @@
     "prepublishOnly": "pnpm release:lifecycle:prepublish",
     "release": "pnpm release:validate && pnpm release:publish",
     "release:changeset": "changeset",
-    "release:lifecycle:prepare": "husky",
+    "release:lifecycle:prepare": "husky || true",
     "release:lifecycle:prepack": "pnpm clean && pnpm build",
     "release:lifecycle:prepublish": "pnpm build && pnpm test",
     "release:publish": "pnpm build && git push --follow-tags && changeset publish",
