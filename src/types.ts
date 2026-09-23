@@ -20,5 +20,5 @@ export interface ParsedValue {
   unit: Unit | null;
   type: MeasurementType;
   matches: Match[];
-  readonly raw: string;
+  raw: string;
 }
