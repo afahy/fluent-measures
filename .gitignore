@@ -7,7 +7,7 @@ dist/
 build/
 
 # Bundle size reports from pnpm check:size:why
-esbuild-why-*.html
+esbuild-why*.html
 
 # Test and coverage
 coverage/
