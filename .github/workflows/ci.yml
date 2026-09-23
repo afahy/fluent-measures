@@ -81,7 +81,9 @@ jobs:
           # the PR added under src/, so the tree matches the base branch.
           git checkout --no-overlay "$base" -- src/
           echo "Running the tests against the base branch's src/. At least one should fail."
-          if pnpm test:unit; then
+          # --reporter=default drops Vitest's GitHub Actions reporter, which would annotate
+          # the PR with the failures this step expects.
+          if pnpm test:unit --reporter=default; then
             echo "::error::No test fails without this fix. Add a regression test built from the ticket's failure inputs."
             exit 1
           fi
