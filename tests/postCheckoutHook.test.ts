@@ -1,4 +1,4 @@
-import { execFileSync, spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync, type SpawnSyncReturns } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, resolve } from 'node:path';
@@ -33,6 +33,8 @@ function createRepository(objectFormat: 'sha1' | 'sha256' = 'sha1'): string {
   });
   execFileSync('git', ['config', 'user.email', 'test@example.com'], { cwd: repository });
   execFileSync('git', ['config', 'user.name', 'Test'], { cwd: repository });
+  // Don't sign fixture commits with the developer's key, which may prompt for a passphrase.
+  execFileSync('git', ['config', 'commit.gpgsign', 'false'], { cwd: repository });
   commit(repository, 'package.json', '{ "version": "1.0.0" }\n');
 
   return repository;
@@ -50,14 +52,37 @@ function createPnpmStub(): { path: string; calls: () => string[] } {
   };
 }
 
-// Husky runs hooks with `sh -e`.
-function runHook(repository: string, args: string[], path: string) {
-  return spawnSync('sh', ['-e', hook, ...args], {
+// Installs the hook the way Husky runs it, with `sh -e`. Returns a function that reads the
+// arguments git passed to it.
+function installHook(repository: string): () => string {
+  const hooks = createDirectory('fluent-measures-hooks-');
+  const record = resolve(hooks, 'args');
+  writeFileSync(
+    resolve(hooks, 'post-checkout'),
+    `#!/bin/sh\necho "$*" > '${record}'\nexec sh -e '${hook}' "$@"\n`,
+    { mode: 0o755 }
+  );
+  execFileSync('git', ['config', 'core.hooksPath', hooks], { cwd: repository });
+
+  return () => readFileSync(record, 'utf8');
+}
+
+function run(
+  repository: string,
+  command: string,
+  args: string[],
+  path: string
+): SpawnSyncReturns<string> {
+  return spawnSync(command, args, {
     cwd: repository,
     encoding: 'utf8',
     env: { ...env, PATH: path },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
+}
+
+function runHook(repository: string, args: string[], path: string): SpawnSyncReturns<string> {
+  return run(repository, 'sh', ['-e', hook, ...args], path);
 }
 
 afterEach(() => {
@@ -86,28 +111,20 @@ describe('post-checkout hook', () => {
 
   it('stays silent when git worktree add runs it', () => {
     const repository = createRepository();
-    const hooks = createDirectory('fluent-measures-hooks-');
-    const prevHEAD = resolve(hooks, 'prev-head');
-    // Install the hook the way Husky runs it, and record the previous HEAD that git passes.
-    writeFileSync(
-      resolve(hooks, 'post-checkout'),
-      `#!/bin/sh\necho "$1" > '${prevHEAD}'\nexec sh -e '${hook}' "$@"\n`,
-      { mode: 0o755 }
-    );
-    execFileSync('git', ['config', 'core.hooksPath', hooks], { cwd: repository });
+    const hookArgs = installHook(repository);
     const worktree = resolve(createDirectory('fluent-measures-worktree-'), 'worktree');
     const pnpm = createPnpmStub();
 
-    const result = spawnSync('git', ['worktree', 'add', '--quiet', '--detach', worktree, 'HEAD'], {
-      cwd: repository,
-      encoding: 'utf8',
-      env: { ...env, PATH: pnpm.path },
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
+    const result = run(
+      repository,
+      'git',
+      ['worktree', 'add', '--quiet', '--detach', worktree, 'HEAD'],
+      pnpm.path
+    );
 
     expect(result.status).toBe(0);
     expect(result.stderr).toBe('');
-    expect(readFileSync(prevHEAD, 'utf8')).toBe(`${'0'.repeat(40)}\n`);
+    expect(hookArgs()).toBe(`${'0'.repeat(40)} ${head(repository)} 1\n`);
     expect(pnpm.calls()).toEqual([]);
   });
 
