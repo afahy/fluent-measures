@@ -1,0 +1,72 @@
+name: Regression test
+
+on:
+  pull_request:
+    branches: [main]
+    # edited: the check depends on the pull request title, so it runs again when that changes.
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+
+# A new push or edit cancels the run in progress, so the check reflects the latest commit and
+# title.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  # A bug fix must add a test that fails without the fix.
+  regression-test:
+    name: Regression test fails without the fix
+    # Test the title only in this expression: interpolating it into a run script would allow
+    # script injection. Edits to closed pull requests also send `edited`, so skip those.
+    if: github.event.pull_request.state == 'open' && startsWith(github.event.pull_request.title, 'fix')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The pull request's merge commit and its parents. HEAD^1 is the base branch.
+          fetch-depth: 2
+
+      - name: Check whether the PR changes the package
+        id: changes
+        run: |
+          if ! git rev-parse --quiet --verify HEAD^2 > /dev/null; then
+            echo "::error::HEAD isn't the pull request's merge commit, so HEAD^1 isn't the base branch."
+            exit 1
+          fi
+          if git diff --quiet HEAD^1 HEAD -- src/ package.json tsup.config.ts; then
+            echo "This PR doesn't change src/, package.json or tsup.config.ts, so there is no fix to test."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: ./.github/actions/setup
+        if: steps.changes.outputs.changed
+        with:
+          node-version: 22
+
+      - name: Run the PR's tests against the base branch on Node 22
+        id: node22
+        if: steps.changes.outputs.changed
+        run: node .github/scripts/regression-check.mjs
+
+      # The main CI job tests on Node 22 and 24, and a regression can show on only one of them.
+      - uses: actions/setup-node@v4
+        if: steps.node22.outputs.result == 'not-caught'
+        with:
+          node-version: 24
+
+      - name: Run the PR's tests against the base branch on Node 24
+        id: node24
+        if: steps.node22.outputs.result == 'not-caught'
+        run: node .github/scripts/regression-check.mjs
+
+      - name: Require a test that fails without the fix
+        if: >-
+          steps.node22.outputs.result == 'no-tests' ||
+          (steps.node22.outputs.result == 'not-caught' && steps.node24.outputs.result != 'caught')
+        run: |
+          echo "::error::No test fails without this fix. Add a regression test built from the ticket's failure inputs."
+          exit 1
