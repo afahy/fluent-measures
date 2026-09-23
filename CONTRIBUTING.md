@@ -46,8 +46,9 @@ Examples:
 
 Pull request titles must use the same format. CI validates both every commit in the pull
 request and its title with the rules in `commitlint.config.js`. Titles are also checked
-against `commitlint.pr-title.config.js`: at most 65 characters, no Linear ticket ID, and no
-merge, revert or `fixup!` messages. To revert a change, title the PR
+against `commitlint.pr-title.config.js`: at most 65 characters, no Linear ticket ID, and none
+of the formats commitlint skips for commits, such as `Merge branch …`, GitHub's default
+`Revert "…"` title or `fixup! …`. To revert a change, use the `revert` type instead:
 `revert: <original title>`.
 
 ## Project Structure

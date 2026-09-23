@@ -11,8 +11,9 @@ export default {
   plugins: [
     {
       rules: {
+        // Not \b: it treats "_" as a word character, so "_AFA-1_" would slip through.
         'no-ticket-id': ({ header }) => [
-          !/\bAFA-\d+\b/i.test(header ?? ''),
+          !/(?<![a-z0-9])afa-\d+/i.test(header ?? ''),
           'put the Linear ticket on the Fixes line of the PR description, not in the title',
         ],
       },
