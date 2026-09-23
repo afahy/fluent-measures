@@ -87,10 +87,13 @@ describe('post-checkout hook', () => {
   it('stays silent when git worktree add runs it', () => {
     const repository = createRepository();
     const hooks = createDirectory('fluent-measures-hooks-');
-    // Install the hook the way Husky runs it.
-    writeFileSync(resolve(hooks, 'post-checkout'), `#!/bin/sh\nexec sh -e '${hook}' "$@"\n`, {
-      mode: 0o755,
-    });
+    const prevHEAD = resolve(hooks, 'prev-head');
+    // Install the hook the way Husky runs it, and record the previous HEAD that git passes.
+    writeFileSync(
+      resolve(hooks, 'post-checkout'),
+      `#!/bin/sh\necho "$1" > '${prevHEAD}'\nexec sh -e '${hook}' "$@"\n`,
+      { mode: 0o755 }
+    );
     execFileSync('git', ['config', 'core.hooksPath', hooks], { cwd: repository });
     const worktree = resolve(createDirectory('fluent-measures-worktree-'), 'worktree');
     const pnpm = createPnpmStub();
@@ -104,6 +107,7 @@ describe('post-checkout hook', () => {
 
     expect(result.status).toBe(0);
     expect(result.stderr).toBe('');
+    expect(readFileSync(prevHEAD, 'utf8')).toBe(`${'0'.repeat(40)}\n`);
     expect(pnpm.calls()).toEqual([]);
   });
 
