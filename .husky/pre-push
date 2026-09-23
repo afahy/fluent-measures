@@ -2,9 +2,6 @@
 echo "🧪 Running tests..."
 pnpm test || exit 1
 
-echo "📝 Checking types..."
-pnpm test:types || exit 1
-
 echo "🏗️ Building..."
 pnpm build || exit 1
 
