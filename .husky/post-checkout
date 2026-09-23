@@ -4,6 +4,13 @@ prevHEAD=$1
 newHEAD=$2
 checkoutType=$3
 
+# With no previous checkout, as in `git worktree add`, git passes the null object ID (all
+# zeros) as the previous HEAD. There is nothing to diff against, so skip the check.
+case "$prevHEAD" in
+  *[!0]*) ;;
+  *) exit 0 ;;
+esac
+
 # Only run on branch checkout (checkoutType=1) or pull
 if [ "$checkoutType" = 1 ]; then
   # Check if package.json or pnpm-lock.yaml changed between the two heads
