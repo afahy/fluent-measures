@@ -3,7 +3,7 @@ import { normalizeSource } from '../.github/scripts/normalize-source.mjs';
 
 // normalizeSource decides whether a fix PR changed the package or only its comments and
 // formatting. If it misses a change, the regression check lets the PR through without a test.
-const same = (before: string, after: string, path = 'src/example.ts') =>
+const same = (before: string, after: string, path = 'src/example.ts'): boolean =>
   normalizeSource(path, before) === normalizeSource(path, after);
 
 describe('normalizeSource', () => {
@@ -24,6 +24,13 @@ describe('normalizeSource', () => {
     ['a number', 'const x = 1;', 'const x = 2;'],
     ['an identifier', 'const x = a;', 'const x = b;'],
     ['a string', "const x = 'a';", "const x = 'b';"],
+    ['a triple-slash reference', 'const x = 1;', '/// <reference types="node" />\nconst x = 1;'],
+    [
+      'a reference option',
+      '/// <reference types="node" />\nconst x = 1;',
+      '/// <reference types="node" preserve="true" />\nconst x = 1;',
+    ],
+    ['a type check directive', 'const x = 1;', '// @ts-nocheck\nconst x = 1;'],
   ])('treats a change to %s as a change', (_, before, after) => {
     expect(same(before, after)).toBe(false);
   });
@@ -37,6 +44,11 @@ describe('normalizeSource', () => {
     ['semicolons', 'const x = 1\nconst y = 2', 'const x = 1;\nconst y = 2;'],
     ['arrow parentheses', 'const f = x => x;', 'const f = (x) => x;'],
     ['numeric separators', 'const x = 1000;', 'const x = 1_000;'],
+    [
+      'spacing in a directive',
+      '/// <reference types="node" />\nconst x = 1;',
+      '///<reference types="node"/>\n\nconst x = 1;',
+    ],
   ])('treats a change to %s as formatting', (_, before, after) => {
     expect(same(before, after)).toBe(true);
   });

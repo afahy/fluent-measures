@@ -6,7 +6,8 @@
 // Writes `result` to $GITHUB_OUTPUT:
 //   unchanged   The PR changes only comments or formatting in the package files.
 //   no-tests    The PR adds or changes no test that can run against the base branch.
-//   caught      At least one of those tests fails against the base branch.
+//   caught      At least one of those tests, or a type assertion in them, fails against the
+//               base branch.
 //   not-caught  All of those tests pass against the base branch.
 
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -14,6 +15,7 @@ import { appendFileSync, existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { normalizeSource } from './normalize-source.mjs';
+import { isTypeAssertionError } from './type-assertion.mjs';
 
 // HEAD is the merge of the PR into the base branch, so its first parent is the base branch.
 const BASE = 'HEAD^1';
@@ -121,6 +123,8 @@ if (inBase.length > 0) execFileSync('git', ['checkout', BASE, '--', ...inBase]);
 if (added.length > 0) execFileSync('git', ['rm', '-q', '-f', '--ignore-unmatch', '--', ...added]);
 
 // tsconfig.json includes tests/, so a type-level regression test fails here, not in Vitest.
+// Only type assertions count. Other type errors in a test, such as a call updated for a new
+// signature, leave the Vitest result to decide.
 const tsc = run('node_modules/typescript/bin/tsc', ['--noEmit', '--pretty', 'false'], {
   encoding: 'utf8',
 });
@@ -128,8 +132,14 @@ if (tsc.status !== 0 && !/^\S+\(\d+,\d+\): error TS\d+/m.test(tsc.stdout)) {
   throw new Error(`tsc exited with status ${tsc.status}:\n${tsc.stdout}${tsc.stderr}`);
 }
 const typeErrors = [
-  ...tsc.stdout.matchAll(/^(tests\/.+?)\((\d+),\d+\): error (TS\d+): (.*)$/gm),
-].map(([, file, line, code, message]) => ({ file, line, code, message }));
+  ...tsc.stdout.matchAll(/^(tests\/.+?)\((\d+),(\d+)\): error (TS\d+): (.*)$/gm),
+].map(([, file, line, column, code, message]) => ({
+  file,
+  line: Number(line),
+  column: Number(column),
+  code,
+  message,
+}));
 const unloadable = new Set(typeErrors.filter(e => IMPORT_ERRORS.has(e.code)).map(e => e.file));
 
 // `vitest related` runs the changed test files and the test files that import changed helpers.
@@ -159,6 +169,8 @@ if (loadablePaths.length > 0) {
 
 const ran = new Set();
 const caught = [];
+// The first type error in each test file that isn't a type assertion.
+const ignoredTypeErrors = new Map();
 const results = existsSync(report) ? JSON.parse(readFileSync(report, 'utf8')).testResults : [];
 for (const file of results) {
   const path = relative(process.cwd(), file.name);
@@ -175,13 +187,14 @@ for (const file of results) {
     caught.push(`${path} (in a hook): ${file.message.split('\n')[0]}`);
   }
 }
-for (const { file, line, code, message } of typeErrors) {
-  if (
-    !IMPORT_ERRORS.has(code) &&
-    !unloadable.has(file) &&
-    (ran.has(file) || testPaths.includes(file))
-  ) {
+for (const error of typeErrors) {
+  const { file, line, code, message } = error;
+  if (IMPORT_ERRORS.has(code) || unloadable.has(file)) continue;
+  if (!ran.has(file) && !testPaths.includes(file)) continue;
+  if (isTypeAssertionError(file, readFileSync(file, 'utf8'), error)) {
     caught.push(`${file}:${line} ${code} ${message}`);
+  } else if (!ignoredTypeErrors.has(file)) {
+    ignoredTypeErrors.set(file, error);
   }
 }
 
@@ -192,6 +205,11 @@ if (caught.length > 0) {
   for (const path of unloadable) {
     console.log(
       `::notice::${path} doesn't load against the base branch because it imports a module or export that this PR adds, so its tests don't count. Put the regression test in a file that loads on the base branch.`
+    );
+  }
+  for (const [path, { line, code }] of ignoredTypeErrors) {
+    console.log(
+      `::notice::${path} fails the type check against the base branch (${code} on line ${line}), but that doesn't count because it isn't in a type assertion. For a type-level regression test, use expectTypeOf, assertType or @ts-expect-error.`
     );
   }
   setResult(ran.size > 0 ? 'not-caught' : 'no-tests');
