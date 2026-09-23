@@ -45,7 +45,10 @@ Examples:
 - `test: add more test cases for edge values`
 
 Pull request titles must use the same format. CI validates both every commit in the pull
-request and its title with the rules in `commitlint.config.js`.
+request and its title with the rules in `commitlint.config.js`. Titles are also checked
+against `commitlint.pr-title.config.js`: at most 65 characters, no Linear ticket ID, and no
+merge, revert or `fixup!` messages. To revert a change, title the PR
+`revert: <original title>`.
 
 ## Project Structure
 
