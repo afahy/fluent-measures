@@ -128,6 +128,21 @@ describe('post-checkout hook', () => {
     expect(pnpm.calls()).toEqual([]);
   });
 
+  // An orphan branch is unborn, so git passes the null object ID as the new HEAD.
+  it('stays silent when git switch --orphan runs it', () => {
+    const repository = createRepository();
+    const hookArgs = installHook(repository);
+    const prevHEAD = head(repository);
+    const pnpm = createPnpmStub();
+
+    const result = run(repository, 'git', ['switch', '--quiet', '--orphan', 'orphan'], pnpm.path);
+
+    expect(result.status).toBe(0);
+    expect(result.stderr).toBe('');
+    expect(hookArgs()).toBe(`${prevHEAD} ${'0'.repeat(40)} 1\n`);
+    expect(pnpm.calls()).toEqual([]);
+  });
+
   it('runs pnpm install when a branch switch changes package.json', () => {
     const repository = createRepository();
     const prevHEAD = head(repository);

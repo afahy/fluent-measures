@@ -4,12 +4,15 @@ prevHEAD=$1
 newHEAD=$2
 checkoutType=$3
 
-# With no previous checkout, as in `git worktree add`, git passes the null object ID (all
-# zeros) as the previous HEAD. There is nothing to diff against, so skip the check.
-case "$prevHEAD" in
-  *[!0]*) ;;
-  *) exit 0 ;;
-esac
+# Git passes the null object ID (all zeros) as the previous HEAD when there was no previous
+# checkout, as in `git worktree add`, and as the new HEAD for an unborn branch, as in
+# `git switch --orphan`. There is nothing to diff, so skip the check.
+for head in "$prevHEAD" "$newHEAD"; do
+  case "$head" in
+    *[!0]*) ;;
+    *) exit 0 ;;
+  esac
+done
 
 # Only run on branch checkout (checkoutType=1) or pull
 if [ "$checkoutType" = 1 ]; then
