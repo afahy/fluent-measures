@@ -1,0 +1,14 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    # 0 turns off version updates, so Dependabot opens only security updates. Raise it to
+    # turn version updates on.
+    open-pull-requests-limit: 0
+    # Dependabot's default scope for devDependencies is deps-dev, which scope-enum in
+    # commitlint.config.js rejects.
+    commit-message:
+      prefix: chore(deps)
+      prefix-development: chore(deps)
