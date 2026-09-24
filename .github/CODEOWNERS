@@ -6,6 +6,8 @@ vitest.config.ts        @afahy
 stryker.config.json     @afahy
 .changeset/config.json  @afahy
 .husky/**               @afahy
+# Keep this entry even when no CLAUDE.md exists. Claude Code reads CLAUDE.md as agent
+# instructions, so adding one should need a code-owner review, like editing AGENTS.md.
 CLAUDE.md               @afahy
 tsconfig.json           @afahy
 eslint.config.js        @afahy

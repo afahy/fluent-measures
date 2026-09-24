@@ -33,7 +33,7 @@ Run these commands from the repository root:
    scope is optional, and the only allowed scopes are `core`, `docs`, `deps`, `ci` and
    `config`. Keep titles to 65 characters or fewer: squash merging appends ` (#NN)`, and
    the commit on `main` must fit in 72.
-6. The ESLint config is `eslint.config.js`. `.eslintrc.json` is unused; do not edit it.
+6. The ESLint config is `eslint.config.js`.
 7. README examples are the public specification. When code and README disagree, follow
    the ticket's direction about which one changes. If the ticket does not say, ask on the
    ticket.
