@@ -6,6 +6,8 @@ vitest.config.ts        @afahy
 stryker.config.json     @afahy
 .changeset/config.json  @afahy
 .husky/**               @afahy
+# There is no CLAUDE.md. Claude Code reads one as agent instructions, so this entry makes
+# adding it need a code-owner review, the same as editing AGENTS.md.
 CLAUDE.md               @afahy
 tsconfig.json           @afahy
 eslint.config.js        @afahy
