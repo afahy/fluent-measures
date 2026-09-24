@@ -16,8 +16,8 @@ commitlint.pr-title.config.js  @afahy
 .lintstagedrc           @afahy
 
 # Files that instruct or configure agents and review bots. Keep these entries even
-# when a file doesn't exist, so that adding one needs a code-owner review. Put any
-# script a Claude Code hook runs under .claude/ so the script is owned too.
+# when a file doesn't exist, because adding one should need a code-owner review. Put
+# any script a Claude Code hook runs under .claude/ so the script is owned too.
 AGENTS.md               @afahy
 AGENTS.override.md      @afahy
 CLAUDE.md               @afahy
