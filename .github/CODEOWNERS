@@ -1,14 +1,10 @@
 .github/**              @afahy
-AGENTS.md               @afahy
 package.json            @afahy
 pnpm-lock.yaml          @afahy
 vitest.config.ts        @afahy
 stryker.config.json     @afahy
 .changeset/config.json  @afahy
 .husky/**               @afahy
-# Keep this entry even when no CLAUDE.md exists. Claude Code reads CLAUDE.md as agent
-# instructions, so adding one should need a code-owner review, like editing AGENTS.md.
-CLAUDE.md               @afahy
 tsconfig.json           @afahy
 eslint.config.js        @afahy
 tsup.config.ts          @afahy
@@ -18,3 +14,17 @@ cspell.json             @afahy
 commitlint.config.js    @afahy
 commitlint.pr-title.config.js  @afahy
 .lintstagedrc           @afahy
+
+# Files that instruct or configure agents and review bots. Keep these entries even
+# when a file doesn't exist, because adding one should need a code-owner review. Put
+# any script a Claude Code hook runs under .claude/ so the script is owned too.
+AGENTS.md               @afahy
+AGENTS.override.md      @afahy
+CLAUDE.md               @afahy
+CLAUDE.local.md         @afahy
+REVIEW.md               @afahy
+.claude/                @afahy
+.mcp.json               @afahy
+.codex/                 @afahy
+.coderabbit.yaml        @afahy
+.coderabbit.yml         @afahy

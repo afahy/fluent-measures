@@ -37,7 +37,8 @@ Run these commands from the repository root:
 7. README examples are the public specification. When code and README disagree, follow
    the ticket's direction about which one changes. If the ticket does not say, ask on the
    ticket.
-8. Do not edit files listed in `.github/CODEOWNERS` unless the ticket asks for it.
+8. Do not add, edit or delete files that match a pattern in `.github/CODEOWNERS` unless the
+   ticket asks for it.
 9. Never merge a PR or use a branch-protection bypass. Do not enable auto-merge until
    AFA-29 is complete. Agents open PRs from the maintainer's GitHub account, so this rule
    keeps merging a human step.
