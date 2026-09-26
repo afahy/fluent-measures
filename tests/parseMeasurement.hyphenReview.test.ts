@@ -211,6 +211,8 @@ describe('hyphenated height review regressions', () => {
     ['0 inches; actual 1.8 meters', 1.8, 'm'],
     ['zero inches; actual 180 cm', 180, 'cm'],
     ['0 feet; 11 inches', 11, 'in'],
+    ['0 feet 0 inches; actual 1.8 meters', 1.8, 'm'],
+    ['0 feet 0 inches; actual 180 cm', 180, 'cm'],
   ])('ignores a separate zero-height fragment in %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toEqual({
       value,
@@ -243,4 +245,26 @@ describe('hyphenated height review regressions', () => {
       ],
     });
   });
+
+  it.each(['180;lbs', 'lbs;180', '180;;lbs', 'lbs; ;180', 'one hundred;fifty pounds'])(
+    'treats semicolons within a single measurement as punctuation in %s',
+    raw => {
+      expect(parseMeasurement(raw)?.value).toBe(raw.startsWith('one') ? 150 : 180);
+      expect(parseMeasurement(raw)?.unit).toBe('lb');
+    }
+  );
+
+  it.each(['180;', ';180', 'one hundred;fifty;'])(
+    'ignores semicolons in unqualified input %s',
+    raw => {
+      expect(parseMeasurement(raw, { type: 'weight', allowUnqualified: true })?.value).toBe(
+        raw.startsWith('one') ? 150 : 180
+      );
+    }
+  );
+
+  it.each(['-5;feet', '-5;feet 11 inches', '-5;;feet 11 inches'])(
+    'preserves signed rejection across punctuation in %s',
+    raw => expect(parseMeasurement(raw)).toBeNull()
+  );
 });

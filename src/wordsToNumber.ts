@@ -10,6 +10,7 @@ const MULTIPLIERS = new Map<string, number>([
   ['thousand', 1000],
 ]);
 
+/** Parse a complete number phrase, including zero, hundreds, and thousands. */
 export function wordsToNumber(input: string): number | null {
   const words = input
     .toLowerCase()

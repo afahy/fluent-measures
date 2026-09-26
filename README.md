@@ -198,6 +198,7 @@ parseMeasurement('5\'-11"'); // { value: 71, unit: 'in', ... }
 parseMeasurement('0-foot-11'); // { value: 11, unit: 'in', ... }
 parseMeasurement('5-foot-0-inches'); // { value: 60, unit: 'in', ... }
 parseMeasurement('0 feet; actual 1.8 meters'); // { value: 1.8, unit: 'm', ... }
+parseMeasurement('180;lbs'); // { value: 180, unit: 'lb', ... }
 
 // Bare N-M requires an explicit height type and an inch component below 12
 parseMeasurement('5-11', { type: 'height' }); // { value: 71, unit: 'in', ... }

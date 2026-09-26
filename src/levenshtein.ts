@@ -1,12 +1,15 @@
+/** Compute character edit distance using a single working row. */
 export function levenshtein(a: string, b: string): number {
-  const dp = Array.from({ length: a.length + 1 }, () => Array(b.length + 1).fill(0));
-  for (let i = 0; i <= a.length; i++) dp[i][0] = i;
-  for (let j = 0; j <= b.length; j++) dp[0][j] = j;
+  // Each edit-distance row depends only on the preceding row.
+  const row = Array.from({ length: b.length + 1 }, (_, j) => j);
   for (let i = 1; i <= a.length; i++) {
+    let diagonal = row[0];
+    row[0] = i;
     for (let j = 1; j <= b.length; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+      const above = row[j];
+      row[j] = Math.min(above + 1, row[j - 1] + 1, diagonal + (a[i - 1] === b[j - 1] ? 0 : 1));
+      diagonal = above;
     }
   }
-  return dp[a.length][b.length];
+  return row[b.length];
 }

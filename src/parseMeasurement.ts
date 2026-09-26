@@ -5,10 +5,11 @@ import { wordsToNumber } from './wordsToNumber';
 
 import { unitConversions } from './units';
 
-import { ParseOptions, ParsedValue, MeasurementType, Match } from './types';
+import { ParseOptions, ParsedValue, Match } from './types';
 
 type QualifiedMatch = Match & { unit: NonNullable<Match['unit']> };
 
+/** Read the longest adjacent number phrase and return its first unconsumed token index. */
 function readNumberPhrase(
   tokens: string[],
   start: number,
@@ -18,7 +19,7 @@ function readNumberPhrase(
   let value: number | null = null;
   const words: string[] = [];
   for (; tokens[end] !== undefined; end += step) {
-    if (tokens[end] === 'and') continue;
+    if (tokens[end] === 'and' || (step < 0 && tokens[end] === ';')) continue;
     if (step > 0) words.push(tokens[end]);
     else words.unshift(tokens[end]);
     const candidate = wordsToNumber(words.join(' '));
@@ -28,6 +29,7 @@ function readNumberPhrase(
   return [value, end];
 }
 
+/** Parse a height or weight, optionally inferring its unit or normalizing the result. */
 export function parseMeasurement(input: string, options: ParseOptions = {}): ParsedValue | null {
   const trimmed = input?.trim();
   if (!trimmed) {
@@ -38,14 +40,10 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   // Preserve semicolon boundaries so independent fields cannot form a compound height.
   const fuzziness = options.fuzziness;
   const tokens = tokenize(
-    input.replace(/(?<![\d.])[\d.]+(?:\s*[-–—]\s*[\d.]+)+|;/g, ' - '),
+    input.replace(/(?<![\d.])[\d.]+(?:\s*[-–—]\s*[\d.]+)+/g, ' - '),
     fuzziness
   );
-  if (!tokens.length) {
-    return null;
-  }
-
-  if (options.allowUnqualified && !options.type) {
+  if (tokens.length && options.allowUnqualified && !options.type) {
     throw new Error('allowUnqualified requires type.');
   }
 
@@ -59,9 +57,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     shorthandMatches.push({ value: feet, unit: 'ft' }, { value: inches, unit: 'in' });
   }
 
-  const typesToCheck: MeasurementType[] = options.type ? [options.type] : ['height', 'weight'];
-
-  for (const type of typesToCheck) {
+  for (const type of options.type ? [options.type] : (['height', 'weight'] as const)) {
     const matches: QualifiedMatch[] = [...shorthandMatches];
     const remainingTokens = matches.length ? [] : [...tokens];
 
@@ -72,24 +68,14 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         continue;
       }
 
-      // Look for number in adjacent tokens (before or after)
-      let num: number | null = null;
-      let matchStart = i - 1;
+      // Read the preceding phrase first, allowing ordinary punctuation before its unit.
+      const [value, end] = readNumberPhrase(remainingTokens, i - 1, -1);
+      let num = value ?? parseNumberToken(remainingTokens[end] ?? '');
+      let matchStart = value === null ? end : end + 1;
       let matchEnd = i + 1;
 
-      // Check previous token first (more common)
-      if (remainingTokens[i - 1]) {
-        num = parseNumberToken(remainingTokens[i - 1]);
-        const [value, end] = readNumberPhrase(remainingTokens, i - 1, -1);
-        // Keep a zero provisionally so it cannot steal a following unit's value.
-        if (value !== null) {
-          num = value;
-          matchStart = end + 1;
-        }
-      }
-
       // A signed feet component invalidates its height, including any trailing inches.
-      const signed = /^-+[^-]/.test(remainingTokens[i - 1] ?? '');
+      const signed = /^-+[^-]/.test(remainingTokens[matchStart] ?? '');
       if (signed && unit === 'ft') {
         const [, end] = readNumberPhrase(remainingTokens, i + 1);
         if (matchUnit(remainingTokens[end] ?? '', 'height', fuzziness) === 'in') {
@@ -98,11 +84,12 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         continue;
       }
 
-      // If no number found and not last token, check next token
-      if (num === null && !signed && remainingTokens[i + 1]) {
-        num = parseNumberToken(remainingTokens[i + 1]);
+      // A semicolon can also separate a unit prefix from its value.
+      if (num === null && !signed) {
+        while (remainingTokens[matchEnd] === ';') matchEnd++;
+        num = parseNumberToken(remainingTokens[matchEnd] ?? '');
         matchStart = i;
-        matchEnd = i + 2;
+        matchEnd++;
       }
 
       if (num === null || (num === 0 && unit !== 'ft')) {
@@ -118,8 +105,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       remainingTokens.fill('', matchStart, matchEnd);
 
       if (unit === 'ft') {
-        const inchesStart = matchEnd;
-        const [inches, inchesEnd] = readNumberPhrase(remainingTokens, inchesStart);
+        const [inches, inchesEnd] = readNumberPhrase(remainingTokens, matchEnd);
         const nextWord = remainingTokens[inchesEnd] ?? '';
         const nextUnit = matchUnit(nextWord, 'height', fuzziness);
         // A following unit owns the number, even when it belongs to another measurement type.
@@ -128,9 +114,10 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
           (nextUnit === 'in' ||
             (inches > 0 && inches < 12 && !nextUnit && !matchUnit(nextWord, 'weight', fuzziness)))
         ) {
-          matches.push({ value: inches, unit: 'in' });
-          remainingTokens.fill('', inchesStart, inchesEnd + (nextUnit === 'in' ? 1 : 0));
-        } else if (num === 0) {
+          if (num || inches) matches.push({ value: inches, unit: 'in' });
+          else matches.pop();
+          remainingTokens.fill('', matchEnd, inchesEnd + (nextUnit === 'in' ? 1 : 0));
+        } else if (!num) {
           // An isolated zero must not change the unit of an independent measurement.
           matches.pop();
         }
@@ -148,20 +135,20 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
 
       for (const { value, unit } of matches) {
         // Zero components contribute nothing, including across measurement types.
-        if (value === 0) continue;
+        if (!value) continue;
         if (unit === targetUnit) {
           totalValue += value;
           continue;
         }
         const converter = unitConversions[unit][targetUnit];
         if (!converter) {
-          throw new Error(`Unsupported unit conversion from ${unit} to ${targetUnit}`);
+          throw new Error(`Cannot convert ${unit} to ${targetUnit}`);
         }
         totalValue += converter(value);
       }
 
       // A zero-height fragment must not hide a valid measurement of another type.
-      if (totalValue <= 0) continue;
+      if (!totalValue) continue;
 
       return {
         value: totalValue,
@@ -175,7 +162,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
 
   // Try unqualified input if no matches found and all previous attempts failed
   if (options.allowUnqualified && options.type) {
-    const numToken = tokens.join(' ');
+    const numToken = tokens.filter(token => token !== ';').join(' ');
     const num = tokens.length > 1 ? wordsToNumber(numToken) : parseNumberToken(numToken);
     if (num !== null && num > 0) {
       const metric = options.inferUnit === 'metric';

@@ -1,6 +1,7 @@
 import { matchUnit } from './matchUnit';
 import { wordsToNumber } from './wordsToNumber';
 
+/** Split measurement text while retaining negative signs and compound boundaries. */
 export function tokenize(input: string, fuzziness?: number): string[] {
   return (
     input
@@ -10,8 +11,10 @@ export function tokenize(input: string, fuzziness?: number): string[] {
       .replace(/(\d\s*)'-(?=\.?\d)/g, "$1' ")
       // Separate label underscores from a minus sign before splitting word hyphens.
       .replace(/_-/g, ' -')
+      // Keep semicolons visible to compound-height parsing while separating adjacent tokens.
+      .replace(/;/g, ' ; ')
       // Separate labels and punctuation before interpreting adjacent unit prefixes.
-      .replace(/[^\w\s'".-]/g, ' ')
+      .replace(/[^\w\s'".;-]/g, ' ')
       // Populated feet introduce inches; standalone unit prefixes retain the minus sign.
       // Check the prefix first so the lookbehind only scans the preceding token when needed.
       .replace(
