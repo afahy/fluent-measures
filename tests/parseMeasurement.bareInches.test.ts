@@ -37,9 +37,21 @@ describe('bare inches after feet', () => {
     ['5 ft 11 and 6 lbs', 71],
     ['5 ft 11 and six pounds', 71],
     ['5 ft eleven and 6 lbs', 71],
+    ['5 ft eleven and six pounds', 71],
+    ['5 ft one and two pounds', 61],
+    ['5 ft 1 and 2 pounds', 61],
+    ['5 ft ten and one and six pounds', 71],
   ])('preserves bare inches before a separate weight in %s', (raw, value) => {
-    expect(parseMeasurement(raw)?.value).toBe(value);
-    expect(parseMeasurement(raw)?.unit).toBe('in');
+    expect(parseMeasurement(raw)).toEqual({
+      value,
+      unit: 'in',
+      type: 'height',
+      raw,
+      matches: [
+        { value: 5, unit: 'ft' },
+        { value: value - 60, unit: 'in' },
+      ],
+    });
   });
 
   it.each(['5 ft 10 in', '5 ft ten inches', '5 ft ten and one inches'])(
@@ -54,7 +66,7 @@ describe('bare inches after feet', () => {
     }
   );
 
-  it.each(['5 ft 180 lbs', '5 ft 10 lbs', '5 ft two kg', '5 ft one and two pounds'])(
+  it.each(['5 ft 180 lbs', '5 ft 10 lbs', '5 ft two kg', '5 ft twenty two pounds'])(
     'leaves a number with its own weight unit in %s',
     raw => {
       expect(parseMeasurement(raw)).toEqual({
