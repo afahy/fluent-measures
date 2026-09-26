@@ -203,11 +203,15 @@ parseMeasurement('5-.5', { type: 'height' }); // { value: 60.5, unit: 'in', ... 
 parseMeasurement('5-11'); // null: ambiguous without a height type
 parseMeasurement('5-12', { type: 'height' }); // null: inches must be below 12
 parseMeasurement('5-11', { type: 'height', normalizedUnit: 'm' }); // { value: 1.8034, unit: 'm', ... }
-parseMeasurement('150-180 lbs'); // null: numeric ranges are not measurements
+parseMeasurement('150-180 lbs'); // null: reject numeric endpoints sharing one unit
 parseMeasurement('150 – 180 lbs'); // null: spaces and Unicode dashes also denote ranges
 parseMeasurement('kg 50-70'); // null: ranges are also rejected after a unit
 parseMeasurement('kg-70.5'); // null: a minus after a unit prefix stays negative
 ```
+
+Range rejection covers numeric endpoints that share one unit, before or after the endpoints.
+Ranges that repeat a unit at each endpoint, such as `150 lbs - 180 lbs`, are not supported;
+the existing multiple-component parser treats those as separate measurements and adds them.
 
 ### Fuzzy Matching
 

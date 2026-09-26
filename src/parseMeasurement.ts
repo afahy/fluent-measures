@@ -9,18 +9,23 @@ import { ParseOptions, ParsedValue, MeasurementType, Match } from './types';
 
 type QualifiedMatch = Match & { unit: NonNullable<Match['unit']> };
 
-function readNumberPhrase(tokens: string[], start: number): { value: number | null; end: number } {
+function readNumberPhrase(
+  tokens: string[],
+  start: number,
+  step = 1
+): [value: number | null, end: number] {
   let end = start;
   let value: number | null = null;
   const words: string[] = [];
-  for (; end < tokens.length; end++) {
+  for (; end >= 0 && end < tokens.length; end += step) {
     if (tokens[end] === 'and') continue;
-    words.push(tokens[end]);
+    if (step > 0) words.push(tokens[end]);
+    else words.unshift(tokens[end]);
     const candidate = wordsToNumber(words.join(' '));
     if (candidate === null) break;
     value = candidate;
   }
-  return { value, end };
+  return [value, end];
 }
 
 export function parseMeasurement(input: string, options: ParseOptions = {}): ParsedValue | null {
@@ -30,10 +35,10 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   }
 
   // Replace whole ranges with a boundary so neither endpoint becomes a measurement.
-  // The boundary also lets unrelated dates and ranges coexist with unit-prefix values.
+  // Preserve semicolon boundaries so independent fields cannot form a compound height.
   const fuzziness = options.fuzziness ?? 0;
   const tokens = tokenize(
-    input.replace(/(?<![\d.])[\d.]+(?:\s*[-–—]\s*[\d.]+)+/g, ' - '),
+    input.replace(/(?<![\d.])[\d.]+(?:\s*[-–—]\s*[\d.]+)+|;/g, ' - '),
     fuzziness
   );
   if (!tokens.length) {
@@ -56,7 +61,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
 
   const typesToCheck: MeasurementType[] = options.type ? [options.type] : ['height', 'weight'];
 
-  measurementTypes: for (const type of typesToCheck) {
+  for (const type of typesToCheck) {
     const matches: QualifiedMatch[] = [...shorthandMatches];
     const remainingTokens = matches.length ? [] : [...tokens];
 
@@ -75,26 +80,22 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       // Check previous token first (more common)
       if (remainingTokens[i - 1]) {
         num = parseNumberToken(remainingTokens[i - 1]);
-        const numberWords: string[] = [];
-        for (let j = i - 1; j >= 0; j--) {
-          // Conjunctions do not change the value or grow the phrase being reparsed.
-          if (remainingTokens[j] === 'and') continue;
-          numberWords.unshift(remainingTokens[j]);
-          const phrase = wordsToNumber(numberWords.join(' '));
-          if (phrase === null) break;
-          // Keep the longest valid phrase next to the unit, without summing independent values.
-          // Keep explicit zero components in feet-and-inches heights.
-          if (phrase > 0 || unit === 'ft' || unit === 'in') {
-            num = phrase;
-            numberStart = j;
-          }
+        const [value, end] = readNumberPhrase(remainingTokens, i - 1, -1);
+        // Keep the longest phrase, including explicit zero components in compound heights.
+        if (value !== null && (value > 0 || unit === 'ft' || unit === 'in')) {
+          num = value;
+          numberStart = end + 1;
         }
       }
 
       // A signed feet component invalidates its height, including any trailing inches.
       const signed = /^-+[^-]/.test(remainingTokens[i - 1] ?? '');
       if (signed && unit === 'ft') {
-        continue measurementTypes;
+        const [, end] = readNumberPhrase(remainingTokens, i + 1);
+        if (matchUnit(remainingTokens[end] ?? '', 'height', fuzziness) === 'in') {
+          i = end;
+        }
+        continue;
       }
 
       // If no number found and not last token, check next token
@@ -118,7 +119,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
 
       if (unit === 'ft') {
         const inchesStart = Math.max(numberEnd, i + 1);
-        const { value: inches, end: inchesEnd } = readNumberPhrase(remainingTokens, inchesStart);
+        const [inches, inchesEnd] = readNumberPhrase(remainingTokens, inchesStart);
         const nextWord = remainingTokens[inchesEnd] ?? '';
         // A following unit owns the number, even when it belongs to another measurement type.
         if (

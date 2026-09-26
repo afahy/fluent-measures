@@ -193,4 +193,14 @@ describe('hyphenated height review regressions', () => {
   it('rejects a long nonmatching decimal shorthand', () => {
     expect(parseMeasurement(`0-${'0'.repeat(20000)}x`, { type: 'height' })).toBeNull();
   });
+
+  it.each([
+    ['invalid -5 ft; actual 180 cm', 180, 'cm'],
+    ['invalid -5 ft; 11 inches', 11, 'in'],
+    ['-5\'-11"; actual 180 cm', 180, 'cm'],
+    ['180 cm; invalid -5\'-11"', 180, 'cm'],
+  ])('retains independent heights around a signed fragment in %s', (raw, value, unit) => {
+    expect(parseMeasurement(raw)?.value).toBe(value);
+    expect(parseMeasurement(raw)?.unit).toBe(unit);
+  });
 });
