@@ -267,4 +267,36 @@ describe('hyphenated height review regressions', () => {
     'preserves signed rejection across punctuation in %s',
     raw => expect(parseMeasurement(raw)).toBeNull()
   );
+
+  it.each(['150‑180 lbs', '150−180 lbs', '150‐180 lbs', '150‒180 lbs', 'kg 50﹘70'])(
+    'rejects shared-unit ranges with Unicode dash characters in %s',
+    raw => expect(parseMeasurement(raw)).toBeNull()
+  );
+
+  it.each([
+    ['record 0; kg 70', 70, 'kg'],
+    ['0; cm 180', 180, 'cm'],
+    ['record 0; ft 5', 5, 'ft'],
+  ])('retains unit-prefix values after an unrelated zero in %s', (raw, value, unit) => {
+    expect(parseMeasurement(raw)).toEqual({
+      value,
+      unit,
+      type: unit === 'kg' ? 'weight' : 'height',
+      raw,
+      matches: [{ value, unit }],
+    });
+  });
+
+  it('converts an explicitly meter-qualified suffix after a feet separator', () => {
+    const raw = '5 ft-1 m';
+    const result = parseMeasurement(raw);
+    expect(result?.value).toBeCloseTo(60 + 100 / 2.54);
+    expect(result?.unit).toBe('in');
+    expect(result?.matches).toEqual([
+      { value: 5, unit: 'ft' },
+      { value: 1, unit: 'm' },
+    ]);
+    expect(parseMeasurement(raw, { normalizedUnit: 'ft' })?.value).toBeCloseTo(5 + 100 / 30.48);
+    expect(parseMeasurement(raw, { normalizedUnit: 'm' })?.value).toBeCloseTo(2.524);
+  });
 });

@@ -60,7 +60,7 @@ export const unitConversions: Record<string, Record<string, (value: number) => n
   ft: { in: ftToIn, cm: ftToCm, m: value => cmToM(ftToCm(value)) },
   in: { ft: inToFt, cm: inToCm, m: value => cmToM(inToCm(value)) },
   cm: { in: cmToIn, ft: cmToFt, m: cmToM },
-  m: { cm: mToCm },
+  m: { cm: mToCm, in: value => cmToIn(mToCm(value)), ft: value => cmToFt(mToCm(value)) },
   lb: { kg: lbToKg },
   kg: { lb: kgToLb },
 };

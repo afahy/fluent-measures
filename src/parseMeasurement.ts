@@ -40,11 +40,11 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   // Preserve semicolon boundaries so independent fields cannot form a compound height.
   const fuzziness = options.fuzziness;
   const tokens = tokenize(
-    input.replace(/(?<![\d.])[\d.]+(?:\s*[-–—]\s*[\d.]+)+/g, ' - '),
+    input.replace(/(?<![\d.])[\d.]+(?:\s*\p{Dash}\s*[\d.]+)+/gu, ' - '),
     fuzziness
   );
   if (tokens.length && options.allowUnqualified && !options.type) {
-    throw new Error('allowUnqualified requires type.');
+    throw new Error('allowUnqualified requires type');
   }
 
   const shorthandMatches: QualifiedMatch[] = [];
@@ -85,14 +85,14 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       }
 
       // A semicolon can also separate a unit prefix from its value.
-      if (num === null && !signed) {
+      if (!num && (num === null || unit !== 'ft' || remainingTokens[i - 1] === ';') && !signed) {
         while (remainingTokens[matchEnd] === ';') matchEnd++;
         num = parseNumberToken(remainingTokens[matchEnd] ?? '');
         matchStart = i;
         matchEnd++;
       }
 
-      if (num === null || (num === 0 && unit !== 'ft')) {
+      if (num === null) {
         continue;
       }
 
