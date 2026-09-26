@@ -71,6 +71,19 @@ describe('wordsToNumber', () => {
     expect(wordsToNumber('one hundred -50')).toBeNull();
   });
 
+  it.each(['140 and 150', '5 11', '20 and 5', 'one and two', 'one hundred and 150'])(
+    'rejects independent values in %s',
+    input => {
+      expect(wordsToNumber(input)).toBeNull();
+    }
+  );
+
+  it('handles leading-dot decimals in mixed phrases', () => {
+    expect(wordsToNumber('one hundred and .5')).toBe(100.5);
+    expect(wordsToNumber('.5 hundred')).toBe(50);
+    expect(wordsToNumber('one hundred and .25')).toBe(100.25);
+  });
+
   it('returns null for invalid input', () => {
     expect(wordsToNumber('not a number')).toBeNull();
     expect(wordsToNumber('twenty banana')).toBeNull();

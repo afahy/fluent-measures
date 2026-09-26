@@ -42,14 +42,25 @@ export function wordsToNumber(input: string): number | null {
 
   try {
     const result = words.reduce(
-      (acc, word) => {
+      (acc, word, index) => {
         let { total, current } = acc;
 
         const number =
-          NUMBER_WORDS.get(word) ?? (/^\d+(\.\d+)?$/.test(word) ? Number(word) : undefined);
+          NUMBER_WORDS.get(word) ??
+          (/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(word) ? Number(word) : undefined);
         const multiplier = MULTIPLIERS.get(word);
 
         if (number !== undefined) {
+          if (index > 0) {
+            const previous = words[index - 1];
+            const previousMultiplier = MULTIPLIERS.get(previous);
+            // Only a tens word and a ones value form an additive pair within a group.
+            const followsTens =
+              (NUMBER_WORDS.get(previous) ?? 0) >= 20 && number > 0 && number < 10;
+            if (previousMultiplier !== undefined ? number >= previousMultiplier : !followsTens) {
+              throw new Error('Independent number values');
+            }
+          }
           current += number;
         } else if (multiplier !== undefined) {
           current = current === 0 ? multiplier : current * multiplier;

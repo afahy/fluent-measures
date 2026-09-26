@@ -52,18 +52,18 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
 
       // Check previous token first (more common)
       if (i > 0 && remainingTokens[i - 1]) {
+        num = parseNumberToken(remainingTokens[i - 1]);
         const numberWords: string[] = [];
         for (let j = i - 1; j >= 0; j--) {
           if (wordsToNumber(remainingTokens[j]) === null) break;
           numberWords.unshift(remainingTokens[j]);
-          numberStart = j;
+          const phrase = wordsToNumber(numberWords.join(' '));
+          // Keep the longest valid phrase next to the unit, without summing independent values.
+          if (phrase !== null && phrase > 0) {
+            num = phrase;
+            numberStart = j;
+          }
         }
-        // Read the whole phrase, including mixed forms such as "one hundred and 50".
-        num =
-          numberWords.length > 1
-            ? wordsToNumber(numberWords.join(' '))
-            : parseNumberToken(remainingTokens[i - 1]);
-        if (num !== null && num <= 0) num = null;
       }
 
       // If no number found and not last token, check next token
