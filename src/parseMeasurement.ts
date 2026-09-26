@@ -38,12 +38,22 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     throw new Error('If allowUnqualified is true, type must be provided.');
   }
 
+  const shorthandMatches: Match[] = [];
+  const shorthand = /^(\d+)-(\d+(?:\.\d+)?)$/.exec(input.trim());
+  if (shorthand) {
+    // Bare N-M is ambiguous unless the caller explicitly requests a height.
+    const feet = Number(shorthand[1]);
+    const inches = Number(shorthand[2]);
+    if (options.type !== 'height' || !Number.isFinite(feet) || inches >= 12) return null;
+    shorthandMatches.push({ value: feet, unit: 'ft' }, { value: inches, unit: 'in' });
+  }
+
   const typesToCheck: MeasurementType[] = options.type ? [options.type] : ['height', 'weight'];
 
   for (const type of typesToCheck) {
-    const matches: Match[] = [];
-    let hasMatch = false;
-    const remainingTokens = [...tokens];
+    const matches: Match[] = [...shorthandMatches];
+    let hasMatch = matches.length > 0;
+    const remainingTokens = hasMatch ? [] : [...tokens];
 
     // Process tokens looking for units and numbers
     for (let i = 0; i < remainingTokens.length; i++) {

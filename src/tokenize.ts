@@ -3,9 +3,9 @@ export function tokenize(input: string): string[] {
     input
       // Convert to lowercase for case-insensitive matching
       .toLowerCase()
-      // Find negative numbers like "-5" or "-5.5" and ensure they have spaces around them
-      // Input: "height-5feet" -> "height -5 feet"
-      .replace(/-(\d+(\.\d+)?)/g, ' -$1 ')
+      // A minus sign starts a number only at the beginning or after whitespace.
+      // Input: "height -5feet" -> "height -5 feet"
+      .replace(/(^|\s)-(\d+(\.\d+)?)/g, '$1-$2 ')
       // Add spaces between numbers and any following letters/units or quotes
       // Example: "5ft" -> "5 ft", "72.5kg" -> "72.5 kg"
       .replace(/([0-9])([a-z]+\.?|['"])/g, '$1 $2')
