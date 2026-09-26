@@ -40,34 +40,48 @@ export function wordsToNumber(input: string): number | null {
     .split(/\s+/)
     .filter(word => word !== 'and');
 
-  try {
-    const result = words.reduce(
-      (acc, word) => {
-        let { total, current } = acc;
+  let hasHundred = false;
+  let hasThousand = false;
+  let total = 0;
+  let current = 0;
+  for (let index = 0; index < words.length; index++) {
+    const word = words[index];
+    const number =
+      NUMBER_WORDS.get(word) ?? (/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(word) ? Number(word) : undefined);
+    const multiplier = MULTIPLIERS.get(word);
 
-        const number = NUMBER_WORDS.get(word);
-        const multiplier = MULTIPLIERS.get(word);
-
-        if (number !== undefined) {
-          current += number;
-        } else if (multiplier !== undefined) {
-          current = current === 0 ? multiplier : current * multiplier;
-
-          if (word === 'thousand') {
-            total += current;
-            current = 0;
-          }
-        } else {
-          throw new Error(`Invalid number word: ${word}`);
+    if (number !== undefined) {
+      if (index > 0) {
+        const previous = words[index - 1];
+        const previousMultiplier = MULTIPLIERS.get(previous);
+        const previousNumber = NUMBER_WORDS.get(previous) ?? 0;
+        // Only a tens word and a ones value form an additive pair within a group.
+        const followsTens =
+          previousNumber >= 10 && previousNumber % 10 === 0 && number > 0 && number < 10;
+        if (previousMultiplier !== undefined ? number >= previousMultiplier : !followsTens) {
+          return null;
         }
+      }
+      current += number;
+    } else if (multiplier !== undefined) {
+      // Each group can contain one hundred, and the whole phrase one thousand.
+      if (word === 'hundred') {
+        if (hasHundred) return null;
+        hasHundred = true;
+      } else {
+        if (hasThousand) return null;
+        hasThousand = true;
+        hasHundred = false;
+      }
+      current = current === 0 ? multiplier : current * multiplier;
 
-        return { total, current };
-      },
-      { total: 0, current: 0 }
-    );
-
-    return result.total + result.current;
-  } catch {
-    return null;
+      if (word === 'thousand') {
+        total += current;
+        current = 0;
+      }
+    } else {
+      return null;
+    }
   }
+  return total + current;
 }

@@ -62,6 +62,40 @@ describe('wordsToNumber', () => {
     expect(wordsToNumber(input)).toBeNull();
   });
 
+  it('combines numeric tokens with number words', () => {
+    expect(wordsToNumber('one hundred and 50')).toBe(150);
+    expect(wordsToNumber('1 hundred fifty')).toBe(150);
+    expect(wordsToNumber('one hundred and 0')).toBe(100);
+    expect(wordsToNumber('one hundred and 50.5')).toBe(150.5);
+    expect(wordsToNumber('one hundred 50garbage')).toBeNull();
+    expect(wordsToNumber('one hundred -50')).toBeNull();
+  });
+
+  it.each(['140 and 150', '5 11', '20 and 5', 'one and two', 'one hundred and 150'])(
+    'rejects independent values in %s',
+    input => {
+      expect(wordsToNumber(input)).toBeNull();
+    }
+  );
+
+  it('handles leading-dot decimals in mixed phrases', () => {
+    expect(wordsToNumber('one hundred and .5')).toBe(100.5);
+    expect(wordsToNumber('.5 hundred')).toBe(50);
+    expect(wordsToNumber('one hundred and .25')).toBe(100.25);
+  });
+
+  it.each(['one hundred and two hundred', '5 hundred and 6 hundred', 'one thousand two thousand'])(
+    'rejects repeated multiplier groups in %s',
+    input => {
+      expect(wordsToNumber(input)).toBeNull();
+    }
+  );
+
+  it('allows hundreds in separate groups around a thousand', () => {
+    expect(wordsToNumber('one hundred thousand two hundred fifty')).toBe(100250);
+    expect(wordsToNumber('five hundred thousand')).toBe(500000);
+  });
+
   it('returns null for invalid input', () => {
     expect(wordsToNumber('not a number')).toBeNull();
     expect(wordsToNumber('twenty banana')).toBeNull();
@@ -70,6 +104,7 @@ describe('wordsToNumber', () => {
   });
 
   it('ignores "and" in the input', () => {
+    expect(wordsToNumber('ten and one')).toEqual(11);
     expect(wordsToNumber('twenty and five')).toEqual(25);
     expect(wordsToNumber('one hundred and one')).toEqual(101);
     expect(wordsToNumber('one thousand and one')).toEqual(1001);
