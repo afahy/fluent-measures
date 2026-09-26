@@ -7,7 +7,7 @@ import { NORMALIZED_UNITS, unitConversions } from './units';
 
 import { ParseOptions, ParsedValue, MeasurementType, Match } from './types';
 
-function readNumberPhrase(tokens: string[], start: number) {
+function readNumberPhrase(tokens: string[], start: number): { value: number | null; end: number } {
   let end = start;
   let value: number | null = null;
   const words: string[] = [];
