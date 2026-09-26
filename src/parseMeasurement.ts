@@ -108,9 +108,10 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         const { value: inches, end: inchesEnd } = readNumberPhrase(remainingTokens, inchesStart);
         const nextWord = remainingTokens[inchesEnd] ?? '';
         // A following unit owns the number, even when it belongs to another measurement type.
-        // Two small values joined by "and" remain ambiguous; a larger following value is separate.
+        // Keep an ambiguous written-out phrase such as "one and two pounds" with its unit.
         const linkedInches =
           remainingTokens[inchesEnd - 1] === 'and' &&
+          !/\d/.test(remainingTokens.slice(inchesStart, inchesEnd + 1).join(' ')) &&
           (readNumberPhrase(remainingTokens, inchesEnd).value ?? 12) < 12;
         if (
           inches !== null &&
