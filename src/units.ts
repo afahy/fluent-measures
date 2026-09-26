@@ -62,8 +62,8 @@ export function kgToLb(value: number): number {
 }
 
 export const unitConversions: Record<string, Record<string, (value: number) => number>> = {
-  ft: { in: ftToIn, cm: ftToCm },
-  in: { ft: inToFt, cm: inToCm },
+  ft: { in: ftToIn, cm: ftToCm, m: value => cmToM(ftToCm(value)) },
+  in: { ft: inToFt, cm: inToCm, m: value => cmToM(inToCm(value)) },
   cm: { in: cmToIn, ft: cmToFt, m: cmToM },
   m: { cm: mToCm },
   lb: { kg: lbToKg },

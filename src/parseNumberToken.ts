@@ -1,18 +1,16 @@
 import { wordsToNumber } from './wordsToNumber';
 
 export function parseNumberToken(token: string): number | null {
-  const isNegative = token.startsWith('-');
-  const absToken = isNegative ? token.slice(1) : token;
+  // Negative values and repeated minus signs are never valid measurements.
+  if (token.startsWith('-')) return null;
 
-  const num = parseFloat(absToken);
+  const num = parseFloat(token);
   if (!isNaN(num)) {
-    const finalNum = isNegative ? -num : num;
-    return finalNum <= 0 ? null : finalNum;
+    return num <= 0 ? null : num;
   }
-  const wordNum = wordsToNumber(absToken);
+  const wordNum = wordsToNumber(token);
   if (wordNum !== null) {
-    const finalNum = isNegative ? -wordNum : wordNum;
-    return finalNum <= 0 ? null : finalNum;
+    return wordNum <= 0 ? null : wordNum;
   }
   return null;
 }

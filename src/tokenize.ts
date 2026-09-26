@@ -9,9 +9,9 @@ export function tokenize(input: string): string[] {
       // Add spaces between numbers and any following letters/units or quotes
       // Example: "5ft" -> "5 ft", "72.5kg" -> "72.5 kg"
       .replace(/([0-9])([a-z]+\.?|['"])/g, '$1 $2')
-      // Add spaces between quotes and any following numbers
-      // Example: "'" -> "' 5", "\"11" -> "\" 11"
-      .replace(/(['"])([0-9])/g, '$1 $2')
+      // Add spaces between quotes and following numbers, including a height separator.
+      // Example: "'-11" -> "' 11", "\"11" -> "\" 11"
+      .replace(/(['"])-?([0-9])/g, '$1 $2')
       // Replace standalone hyphens (not part of negative numbers) with spaces
       // Example: "six-foot-two" -> "six foot two"
       .replace(/(?<!-)\b-\b/g, ' ')

@@ -46,6 +46,9 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     const inches = Number(shorthand[2]);
     if (options.type !== 'height' || !Number.isFinite(feet) || inches >= 12) return null;
     shorthandMatches.push({ value: feet, unit: 'ft' }, { value: inches, unit: 'in' });
+  } else if (/\d-(?:\d|\.\d)/.test(input)) {
+    // Numeric ranges are not measurements; only the complete height shorthand is supported.
+    return null;
   }
 
   const typesToCheck: MeasurementType[] = options.type ? [options.type] : ['height', 'weight'];
@@ -77,6 +80,14 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       // Check previous token first (more common)
       if (i > 0 && remainingTokens[i - 1]) {
         num = parseNumberToken(remainingTokens[i - 1]);
+        // Zero feet can still be followed by a positive inch component.
+        if (
+          unit === 'ft' &&
+          remainingTokens[i - 1] !== 'and' &&
+          wordsToNumber(remainingTokens[i - 1]) === 0
+        ) {
+          num = 0;
+        }
         const numberWords: string[] = [];
         for (let j = i - 1; j >= 0; j--) {
           // Conjunctions do not change the value or grow the phrase being reparsed.
@@ -94,7 +105,12 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       }
 
       // If no number found and not last token, check next token
-      if (num === null && i < remainingTokens.length - 1 && remainingTokens[i + 1]) {
+      if (
+        num === null &&
+        !remainingTokens[i - 1]?.startsWith('-') &&
+        i < remainingTokens.length - 1 &&
+        remainingTokens[i + 1]
+      ) {
         num = parseNumberToken(remainingTokens[i + 1]);
         numberStart = i + 1;
         numberEnd = i + 2;

@@ -23,4 +23,8 @@ describe('parseNumberToken', () => {
     expect(parseNumberToken('abc')).toBeNull();
     expect(parseNumberToken('ft')).toBeNull();
   });
+
+  it.each(['--5', '--5.5', '--five', '---5'])('rejects repeated minus signs in %s', token => {
+    expect(parseNumberToken(token)).toBeNull();
+  });
 });
