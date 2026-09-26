@@ -158,7 +158,7 @@ describe('hyphenated height review regressions', () => {
     expect(parseMeasurement('-5\'-11", 180 lbs', { normalizedUnit: 'lb' })?.value).toBe(180);
   });
 
-  it.each(['foots-5', 'poundz-150', 'meterz-1.5'])(
+  it.each(['foots-5', 'poundz-150', 'meterz-1.5', 'and ft-5'])(
     'preserves signs after fuzzy unit prefixes in %s',
     raw => {
       expect(parseMeasurement(raw, { fuzziness: 1 })).toBeNull();
@@ -202,5 +202,45 @@ describe('hyphenated height review regressions', () => {
   ])('retains independent heights around a signed fragment in %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)?.value).toBe(value);
     expect(parseMeasurement(raw)?.unit).toBe(unit);
+  });
+
+  it.each([
+    ['0 feet; actual 1.8 meters', 1.8, 'm'],
+    ['0 feet; actual 180 cm', 180, 'cm'],
+    ['180 cm; zero feet', 180, 'cm'],
+    ['0 inches; actual 1.8 meters', 1.8, 'm'],
+    ['zero inches; actual 180 cm', 180, 'cm'],
+    ['0 feet; 11 inches', 11, 'in'],
+  ])('ignores a separate zero-height fragment in %s', (raw, value, unit) => {
+    expect(parseMeasurement(raw)).toEqual({
+      value,
+      unit,
+      type: 'height',
+      raw,
+      matches: [{ value, unit }],
+    });
+  });
+
+  it.each([
+    ['5 ft-11', 5, 11],
+    ['5 feet-11 inches', 5, 11],
+    ['0 ft-11', 0, 11],
+    ['five feet-11', 5, 11],
+    ['zero feet-11', 0, 11],
+    ['5 ft-.5', 5, 0.5],
+    ['5 ft-0 inches', 5, 0],
+    ['5 footz-11', 5, 11],
+    ['height:5 ft-11', 5, 11],
+  ])('recognizes mixed spacing in %s', (raw, feet, inches) => {
+    expect(parseMeasurement(raw, { fuzziness: 1 })).toEqual({
+      value: feet * 12 + inches,
+      unit: 'in',
+      type: 'height',
+      raw,
+      matches: [
+        { value: feet, unit: 'ft' },
+        { value: inches, unit: 'in' },
+      ],
+    });
   });
 });

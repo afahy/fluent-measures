@@ -17,7 +17,7 @@ function readNumberPhrase(
   let end = start;
   let value: number | null = null;
   const words: string[] = [];
-  for (; end >= 0 && end < tokens.length; end += step) {
+  for (; tokens[end] !== undefined; end += step) {
     if (tokens[end] === 'and') continue;
     if (step > 0) words.push(tokens[end]);
     else words.unshift(tokens[end]);
@@ -36,7 +36,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
 
   // Replace whole ranges with a boundary so neither endpoint becomes a measurement.
   // Preserve semicolon boundaries so independent fields cannot form a compound height.
-  const fuzziness = options.fuzziness ?? 0;
+  const fuzziness = options.fuzziness;
   const tokens = tokenize(
     input.replace(/(?<![\d.])[\d.]+(?:\s*[-–—]\s*[\d.]+)+|;/g, ' - '),
     fuzziness
@@ -46,7 +46,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   }
 
   if (options.allowUnqualified && !options.type) {
-    throw new Error('If allowUnqualified is true, type must be provided.');
+    throw new Error('allowUnqualified requires type.');
   }
 
   const shorthandMatches: QualifiedMatch[] = [];
@@ -74,17 +74,17 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
 
       // Look for number in adjacent tokens (before or after)
       let num: number | null = null;
-      let numberStart = i - 1;
-      let numberEnd = i;
+      let matchStart = i - 1;
+      let matchEnd = i + 1;
 
       // Check previous token first (more common)
       if (remainingTokens[i - 1]) {
         num = parseNumberToken(remainingTokens[i - 1]);
         const [value, end] = readNumberPhrase(remainingTokens, i - 1, -1);
-        // Keep the longest phrase, including explicit zero components in compound heights.
-        if (value !== null && (value > 0 || unit === 'ft' || unit === 'in')) {
+        // Keep a zero provisionally so it cannot steal a following unit's value.
+        if (value !== null) {
           num = value;
-          numberStart = end + 1;
+          matchStart = end + 1;
         }
       }
 
@@ -101,11 +101,11 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       // If no number found and not last token, check next token
       if (num === null && !signed && remainingTokens[i + 1]) {
         num = parseNumberToken(remainingTokens[i + 1]);
-        numberStart = i + 1;
-        numberEnd = i + 2;
+        matchStart = i;
+        matchEnd = i + 2;
       }
 
-      if (num === null) {
+      if (num === null || (num === 0 && unit !== 'ft')) {
         continue;
       }
 
@@ -115,22 +115,24 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       });
 
       // Mark tokens as used by replacing them with empty string
-      remainingTokens.fill('', Math.min(numberStart, i), Math.max(numberEnd, i + 1));
+      remainingTokens.fill('', matchStart, matchEnd);
 
       if (unit === 'ft') {
-        const inchesStart = Math.max(numberEnd, i + 1);
+        const inchesStart = matchEnd;
         const [inches, inchesEnd] = readNumberPhrase(remainingTokens, inchesStart);
         const nextWord = remainingTokens[inchesEnd] ?? '';
+        const nextUnit = matchUnit(nextWord, 'height', fuzziness);
         // A following unit owns the number, even when it belongs to another measurement type.
         if (
           inches !== null &&
-          inches > 0 &&
-          inches < 12 &&
-          !matchUnit(nextWord, 'height', fuzziness) &&
-          !matchUnit(nextWord, 'weight', fuzziness)
+          (nextUnit === 'in' ||
+            (inches > 0 && inches < 12 && !nextUnit && !matchUnit(nextWord, 'weight', fuzziness)))
         ) {
           matches.push({ value: inches, unit: 'in' });
-          remainingTokens.fill('', inchesStart, inchesEnd);
+          remainingTokens.fill('', inchesStart, inchesEnd + (nextUnit === 'in' ? 1 : 0));
+        } else if (num === 0) {
+          // An isolated zero must not change the unit of an independent measurement.
+          matches.pop();
         }
       }
     }
