@@ -88,6 +88,30 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       hasMatch = true;
       // Mark tokens as used by replacing them with empty string
       remainingTokens.fill('', Math.min(numberStart, i), Math.max(numberEnd, i + 1));
+
+      if (unit === 'ft') {
+        const inchesStart = Math.max(numberEnd, i + 1);
+        let inchesEnd = inchesStart;
+        while (
+          inchesEnd < remainingTokens.length &&
+          wordsToNumber(remainingTokens[inchesEnd]) !== null
+        ) {
+          inchesEnd++;
+        }
+        const inches = wordsToNumber(remainingTokens.slice(inchesStart, inchesEnd).join(' '));
+        const nextWord = remainingTokens[inchesEnd] ?? '';
+        // A following unit owns the number, even when it belongs to another measurement type.
+        if (
+          inches !== null &&
+          inches > 0 &&
+          inches < 12 &&
+          !matchUnit(nextWord, 'height', fuzziness) &&
+          !matchUnit(nextWord, 'weight', fuzziness)
+        ) {
+          matches.push({ value: inches, unit: 'in' });
+          remainingTokens.fill('', inchesStart, inchesEnd);
+        }
+      }
     }
 
     // If we found any matches for this type
