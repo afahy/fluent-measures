@@ -69,4 +69,27 @@ describe('hyphenated height review regressions', () => {
       expect(parseMeasurement(raw)?.unit).toBe('lb');
     }
   );
+
+  it.each(['0 feet, 180 lbs', 'zero feet, 180 lbs'])(
+    'continues to a valid weight after an empty height in %s',
+    raw => {
+      expect(parseMeasurement(raw)?.value).toBe(180);
+      expect(parseMeasurement(raw)?.unit).toBe('lb');
+    }
+  );
+
+  it.each(['weight - kg 70', 'weight -- kg 70'])(
+    'allows a unit-prefix value after a prose separator in %s',
+    raw => {
+      expect(parseMeasurement(raw)?.value).toBe(70);
+      expect(parseMeasurement(raw)?.unit).toBe('kg');
+    }
+  );
+
+  it.each(['weight_-70 kg', 'height_-5 feet', 'weight: -70 kg'])(
+    'preserves negative signs after labels in %s',
+    raw => {
+      expect(parseMeasurement(raw)).toBeNull();
+    }
+  );
 });
