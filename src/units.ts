@@ -14,11 +14,6 @@ export const UNIT_ALIASES: Record<Unit, string[]> = {
   kg: ['kg', 'kilogram', 'kilograms', 'kilos'],
 };
 
-export const NORMALIZED_UNITS: Record<MeasurementType, { metric: Unit; imperial: Unit }> = {
-  height: { metric: 'cm', imperial: 'in' },
-  weight: { metric: 'kg', imperial: 'lb' },
-};
-
 // Height conversion functions
 export function ftToIn(value: number): number {
   return value * 12;
@@ -62,10 +57,10 @@ export function kgToLb(value: number): number {
 }
 
 export const unitConversions: Record<string, Record<string, (value: number) => number>> = {
-  ft: { in: ftToIn, cm: ftToCm },
-  in: { ft: inToFt, cm: inToCm },
+  ft: { in: ftToIn, cm: ftToCm, m: value => cmToM(ftToCm(value)) },
+  in: { ft: inToFt, cm: inToCm, m: value => cmToM(inToCm(value)) },
   cm: { in: cmToIn, ft: cmToFt, m: cmToM },
-  m: { cm: mToCm },
+  m: { cm: mToCm, in: value => cmToIn(mToCm(value)), ft: value => cmToFt(mToCm(value)) },
   lb: { kg: lbToKg },
   kg: { lb: kgToLb },
 };

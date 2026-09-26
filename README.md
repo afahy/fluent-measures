@@ -190,7 +190,35 @@ const heightMixed = parseMeasurement('5\'11"', {
 // Handle written-out formats
 const height = parseMeasurement('five foot ten', { type: 'height' });
 // { value: 70, unit: 'in', type: 'height', raw: 'five foot ten' }
+
+// Hyphens can separate feet and inches
+parseMeasurement('5-foot-11'); // { value: 71, unit: 'in', ... }
+parseMeasurement('5 ft-11'); // { value: 71, unit: 'in', ... }
+parseMeasurement('5\'-11"'); // { value: 71, unit: 'in', ... }
+parseMeasurement('0-foot-11'); // { value: 11, unit: 'in', ... }
+parseMeasurement('5-foot-0-inches'); // { value: 60, unit: 'in', ... }
+parseMeasurement('0 feet; actual 1.8 meters'); // { value: 1.8, unit: 'm', ... }
+parseMeasurement('180;lbs'); // { value: 180, unit: 'lb', ... }
+parseMeasurement('record 0; kg 70'); // { value: 70, unit: 'kg', ... }
+parseMeasurement('5 ft-1 m', { normalizedUnit: 'm' }); // { value: 2.524, unit: 'm', ... }
+
+// Bare N-M requires an explicit height type and an inch component below 12
+parseMeasurement('5-11', { type: 'height' }); // { value: 71, unit: 'in', ... }
+parseMeasurement('5-.5', { type: 'height' }); // { value: 60.5, unit: 'in', ... }
+parseMeasurement('5-11'); // null: ambiguous without a height type
+parseMeasurement('5-12', { type: 'height' }); // null: inches must be below 12
+parseMeasurement('5-11', { type: 'height', normalizedUnit: 'm' }); // { value: 1.8034, unit: 'm', ... }
+parseMeasurement('150-180 lbs'); // null: reject numeric endpoints sharing one unit
+parseMeasurement('150 – 180 lbs'); // null: spaces and Unicode dashes also denote ranges
+parseMeasurement('kg 50-70'); // null: ranges are also rejected after a unit
+parseMeasurement('kg-70.5'); // null: a minus after a unit prefix stays negative
 ```
+
+Range rejection covers complete numeric ranges that share one unit, before or after the endpoints.
+Ranges that repeat a unit at each endpoint, such as `150 lbs - 180 lbs`, are not supported;
+the existing multiple-component parser treats those as separate measurements and adds them.
+Mixed inputs containing both a range and a separate measurement are also unsupported: the
+existing parser may attach the range's unit to a later value, as in `50-70 kg, 180 lbs`.
 
 ### Fuzzy Matching
 

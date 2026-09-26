@@ -1,18 +1,11 @@
 import { wordsToNumber } from './wordsToNumber';
 
+/** Parse a positive numeric token or written number, rejecting signed values. */
 export function parseNumberToken(token: string): number | null {
-  const isNegative = token.startsWith('-');
-  const absToken = isNegative ? token.slice(1) : token;
+  // Negative values and repeated minus signs are never valid measurements.
+  if (token.startsWith('-')) return null;
 
-  const num = parseFloat(absToken);
-  if (!isNaN(num)) {
-    const finalNum = isNegative ? -num : num;
-    return finalNum <= 0 ? null : finalNum;
-  }
-  const wordNum = wordsToNumber(absToken);
-  if (wordNum !== null) {
-    const finalNum = isNegative ? -wordNum : wordNum;
-    return finalNum <= 0 ? null : finalNum;
-  }
-  return null;
+  const num = parseFloat(token);
+  const value = isNaN(num) ? wordsToNumber(token) : num;
+  return value !== null && value > 0 ? value : null;
 }

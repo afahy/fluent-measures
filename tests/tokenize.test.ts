@@ -37,6 +37,23 @@ describe('tokenize', () => {
     expect(tokenize('-72.5 kg')).toEqual(['-72.5', 'kg']);
   });
 
+  it.each([
+    ['5-11', ['5', '11']],
+    ['5-foot-11', ['5', 'foot', '11']],
+    ['5-foot-11.5', ['5', 'foot', '11.5']],
+    ['height-5feet', ['height', '5', 'feet']],
+  ])('splits separator hyphens in %s', (input, expected) => {
+    expect(tokenize(input)).toEqual(expected);
+  });
+
+  it.each([
+    ['height -5feet', ['height', '-5', 'feet']],
+    ['height\t-5.5ft', ['height', '-5.5', 'ft']],
+    ['height\n-5ft', ['height', '-5', 'ft']],
+  ])('preserves a minus sign after whitespace in %s', (input, expected) => {
+    expect(tokenize(input)).toEqual(expected);
+  });
+
   it('handles multiple whitespace characters', () => {
     expect(tokenize('5    11')).toEqual(['5', '11']);
     expect(tokenize('  180  lbs  ')).toEqual(['180', 'lbs']);
