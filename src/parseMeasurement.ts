@@ -92,19 +92,24 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       if (unit === 'ft') {
         const inchesStart = Math.max(numberEnd, i + 1);
         let inchesEnd = inchesStart;
-        while (
-          inchesEnd < remainingTokens.length &&
-          wordsToNumber(remainingTokens[inchesEnd]) !== null
-        ) {
-          inchesEnd++;
+        let inches: number | null = null;
+        const inchWords: string[] = [];
+        for (; inchesEnd < remainingTokens.length; inchesEnd++) {
+          const next = remainingTokens[inchesEnd];
+          if (next === 'and') continue;
+          inchWords.push(next);
+          const candidate = wordsToNumber(inchWords.join(' '));
+          if (candidate === null) break;
+          inches = candidate;
         }
-        const inches = wordsToNumber(remainingTokens.slice(inchesStart, inchesEnd).join(' '));
         const nextWord = remainingTokens[inchesEnd] ?? '';
         // A following unit owns the number, even when it belongs to another measurement type.
+        // Keep values joined by "and" with the following measurement too.
         if (
           inches !== null &&
           inches > 0 &&
           inches < 12 &&
+          remainingTokens[inchesEnd - 1] !== 'and' &&
           !matchUnit(nextWord, 'height', fuzziness) &&
           !matchUnit(nextWord, 'weight', fuzziness)
         ) {

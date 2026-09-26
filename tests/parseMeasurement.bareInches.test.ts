@@ -26,6 +26,16 @@ describe('bare inches after feet', () => {
     expect(parseMeasurement('5 ft 11', { normalizedUnit: 'cm' })?.value).toBeCloseTo(180.34);
   });
 
+  it.each([
+    ['5 ft 11 200 lbs', 71],
+    ['5 ft ten 200 lbs', 70],
+    ['5 ft ten and one 200 lbs', 71],
+    ['5 ft 11 two hundred pounds', 71],
+  ])('preserves bare inches before a separate weight in %s', (raw, value) => {
+    expect(parseMeasurement(raw)?.value).toBe(value);
+    expect(parseMeasurement(raw)?.unit).toBe('in');
+  });
+
   it.each(['5 ft 10 in', '5 ft ten inches', '5 ft ten and one inches'])(
     'does not double count explicit inches in %s',
     raw => {
