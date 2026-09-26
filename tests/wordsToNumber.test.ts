@@ -51,6 +51,17 @@ describe('wordsToNumber', () => {
     expect(wordsToNumber('ninety nine thousand nine hundred and ninety nine')).toEqual(99999);
   });
 
+  it.each([
+    'constructor',
+    '__proto__',
+    'one constructor',
+    'one __proto__',
+    'constructor hundred',
+    '__proto__ thousand',
+  ])('rejects inherited object keys in %s', input => {
+    expect(wordsToNumber(input)).toBeNull();
+  });
+
   it('returns null for invalid input', () => {
     expect(wordsToNumber('not a number')).toBeNull();
     expect(wordsToNumber('twenty banana')).toBeNull();

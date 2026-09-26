@@ -146,6 +146,10 @@ describe('parseMeasurement', () => {
     });
   });
 
+  it.each(['constructor lbs', '__proto__ kg'])('rejects inherited object keys in %s', input => {
+    expect(parseMeasurement(input)).toBeNull();
+  });
+
   it('returns null on unknown input', () => {
     const result = parseMeasurement('giraffe moon');
     expect(result).toBeNull();
