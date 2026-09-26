@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { parseMeasurement } from '../src';
+import * as numberWords from '../src/wordsToNumber';
 
 describe('measurement number phrases', () => {
   it.each([
@@ -26,6 +27,9 @@ describe('measurement number phrases', () => {
     ['20 and 5 pounds', 5, 'lb', 'weight'],
     ['one and two pounds', 2, 'lb', 'weight'],
     ['one hundred and 150 pounds', 150, 'lb', 'weight'],
+    ['one hundred and two hundred pounds', 200, 'lb', 'weight'],
+    ['5 hundred and 6 hundred pounds', 600, 'lb', 'weight'],
+    ['one thousand and two thousand pounds', 2000, 'lb', 'weight'],
   ])('keeps independent values separate in %s', (raw, value, unit, type) => {
     expect(parseMeasurement(raw)).toEqual({
       value,
@@ -70,5 +74,28 @@ describe('measurement number phrases', () => {
     expect(parseMeasurement('zero pounds')).toBeNull();
     expect(parseMeasurement('zero and zero pounds')).toBeNull();
     expect(parseMeasurement('-5 feet')).toBeNull();
+  });
+
+  it.each([
+    ['1 hundred fifty', 150],
+    ['.5 hundred', 50],
+    ['one hundred thousand two hundred fifty', 100250],
+  ])('parses complete unqualified phrases in %s', (raw, value) => {
+    expect(parseMeasurement(raw, { type: 'weight', allowUnqualified: true })?.value).toBe(value);
+  });
+
+  it.each(['1 ', 'and '])('bounds phrase parsing work for a long run of %s', prefix => {
+    const raw = prefix.repeat(1000) + '1 pounds';
+    const parser = vi.spyOn(numberWords, 'wordsToNumber');
+    try {
+      expect(parseMeasurement(raw)?.value).toBe(1);
+      const parsedCharacters = parser.mock.calls.reduce(
+        (total, [phrase]) => total + phrase.length,
+        0
+      );
+      expect(parsedCharacters).toBeLessThan(raw.length * 4);
+    } finally {
+      parser.mockRestore();
+    }
   });
 });

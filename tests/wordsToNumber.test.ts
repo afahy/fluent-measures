@@ -84,6 +84,18 @@ describe('wordsToNumber', () => {
     expect(wordsToNumber('one hundred and .25')).toBe(100.25);
   });
 
+  it.each(['one hundred and two hundred', '5 hundred and 6 hundred', 'one thousand two thousand'])(
+    'rejects repeated multiplier groups in %s',
+    input => {
+      expect(wordsToNumber(input)).toBeNull();
+    }
+  );
+
+  it('allows hundreds in separate groups around a thousand', () => {
+    expect(wordsToNumber('one hundred thousand two hundred fifty')).toBe(100250);
+    expect(wordsToNumber('five hundred thousand')).toBe(500000);
+  });
+
   it('returns null for invalid input', () => {
     expect(wordsToNumber('not a number')).toBeNull();
     expect(wordsToNumber('twenty banana')).toBeNull();

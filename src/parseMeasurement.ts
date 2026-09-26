@@ -55,9 +55,12 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         num = parseNumberToken(remainingTokens[i - 1]);
         const numberWords: string[] = [];
         for (let j = i - 1; j >= 0; j--) {
+          // Conjunctions do not change the value or grow the phrase being reparsed.
+          if (remainingTokens[j] === 'and') continue;
           if (wordsToNumber(remainingTokens[j]) === null) break;
           numberWords.unshift(remainingTokens[j]);
           const phrase = wordsToNumber(numberWords.join(' '));
+          if (phrase === null) break;
           // Keep the longest valid phrase next to the unit, without summing independent values.
           if (phrase !== null && phrase > 0) {
             num = phrase;
@@ -129,7 +132,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   // Try unqualified input if no matches found and all previous attempts failed
   if (options.allowUnqualified && options.type) {
     const numToken = tokens.filter(Boolean).join(' ');
-    const num = parseNumberToken(numToken);
+    const num = tokens.length > 1 ? wordsToNumber(numToken) : parseNumberToken(numToken);
     if (num !== null && num > 0) {
       const isMetric = options.inferUnit === 'metric';
       const unit = NORMALIZED_UNITS[options.type][isMetric ? 'metric' : 'imperial'];
