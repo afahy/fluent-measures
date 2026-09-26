@@ -45,7 +45,8 @@ export function wordsToNumber(input: string): number | null {
       (acc, word) => {
         let { total, current } = acc;
 
-        const number = NUMBER_WORDS.get(word);
+        const number =
+          NUMBER_WORDS.get(word) ?? (/^\d+(\.\d+)?$/.test(word) ? Number(word) : undefined);
         const multiplier = MULTIPLIERS.get(word);
 
         if (number !== undefined) {

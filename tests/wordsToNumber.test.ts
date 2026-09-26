@@ -62,6 +62,15 @@ describe('wordsToNumber', () => {
     expect(wordsToNumber(input)).toBeNull();
   });
 
+  it('combines numeric tokens with number words', () => {
+    expect(wordsToNumber('one hundred and 50')).toBe(150);
+    expect(wordsToNumber('1 hundred fifty')).toBe(150);
+    expect(wordsToNumber('one hundred and 0')).toBe(100);
+    expect(wordsToNumber('one hundred and 50.5')).toBe(150.5);
+    expect(wordsToNumber('one hundred 50garbage')).toBeNull();
+    expect(wordsToNumber('one hundred -50')).toBeNull();
+  });
+
   it('returns null for invalid input', () => {
     expect(wordsToNumber('not a number')).toBeNull();
     expect(wordsToNumber('twenty banana')).toBeNull();

@@ -1,6 +1,7 @@
 import { matchUnit } from './matchUnit';
 import { parseNumberToken } from './parseNumberToken';
 import { tokenize } from './tokenize';
+import { wordsToNumber } from './wordsToNumber';
 
 import { NORMALIZED_UNITS, unitConversions } from './units';
 
@@ -46,18 +47,30 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
 
       // Look for number in adjacent tokens (before or after)
       let num: number | null = null;
-      let numberToken = '';
+      let numberStart = i - 1;
+      let numberEnd = i;
 
       // Check previous token first (more common)
       if (i > 0 && remainingTokens[i - 1]) {
-        numberToken = remainingTokens[i - 1];
-        num = parseNumberToken(numberToken);
+        const numberWords: string[] = [];
+        for (let j = i - 1; j >= 0; j--) {
+          if (wordsToNumber(remainingTokens[j]) === null) break;
+          numberWords.unshift(remainingTokens[j]);
+          numberStart = j;
+        }
+        // Read the whole phrase, including mixed forms such as "one hundred and 50".
+        num =
+          numberWords.length > 1
+            ? wordsToNumber(numberWords.join(' '))
+            : parseNumberToken(remainingTokens[i - 1]);
+        if (num !== null && num <= 0) num = null;
       }
 
       // If no number found and not last token, check next token
       if (num === null && i < remainingTokens.length - 1 && remainingTokens[i + 1]) {
-        numberToken = remainingTokens[i + 1];
-        num = parseNumberToken(numberToken);
+        num = parseNumberToken(remainingTokens[i + 1]);
+        numberStart = i + 1;
+        numberEnd = i + 2;
       }
 
       if (num === null) {
@@ -71,13 +84,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
 
       hasMatch = true;
       // Mark tokens as used by replacing them with empty string
-      if (i > 0 && remainingTokens[i - 1] === numberToken) {
-        remainingTokens[i - 1] = '';
-        remainingTokens[i] = '';
-      } else if (i < remainingTokens.length - 1 && remainingTokens[i + 1] === numberToken) {
-        remainingTokens[i] = '';
-        remainingTokens[i + 1] = '';
-      }
+      remainingTokens.fill('', Math.min(numberStart, i), Math.max(numberEnd, i + 1));
     }
 
     // If we found any matches for this type
