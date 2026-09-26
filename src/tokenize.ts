@@ -1,3 +1,5 @@
+import { matchUnit } from './matchUnit';
+
 export function tokenize(input: string): string[] {
   return (
     input
@@ -7,6 +9,10 @@ export function tokenize(input: string): string[] {
       .replace(/(\d\s*)'-(?=\d)/g, "$1' ")
       // Separate label underscores from a minus sign before splitting word hyphens.
       .replace(/_-/g, ' -')
+      // A standalone unit prefix retains its following minus sign.
+      .replace(/(?<![\w-])([a-z]+)-(?=\.?\d)/g, (match, word: string) =>
+        matchUnit(word, 'height') || matchUnit(word, 'weight') ? `${word} -` : match
+      )
       // Add spaces between numbers and any following letters/units or quotes
       // Example: "5ft" -> "5 ft", "72.5kg" -> "72.5 kg"
       .replace(/([0-9])([a-z]+\.?|['"])/g, '$1 $2')
@@ -22,13 +28,7 @@ export function tokenize(input: string): string[] {
       .split(/\s+/)
       // Remove empty tokens
       .filter(Boolean)
-      .map(token => {
-        // Preserve numbers (including negative & decimals) and single/double quotes as is
-        // Examples: "-5", "5.5", "'", "\""
-        if (/^-?\d+(\.\d+)?$|^['"]$/.test(token)) return token;
-        // For all other tokens, remove any trailing periods
-        // Example: "lbs." -> "lbs"
-        return token.replace(/\.+$/, '');
-      })
+      // Remove trailing periods (for example, "lbs." -> "lbs").
+      .map(token => token.replace(/\.+$/, ''))
   );
 }

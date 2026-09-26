@@ -92,4 +92,42 @@ describe('hyphenated height review regressions', () => {
       expect(parseMeasurement(raw)).toBeNull();
     }
   );
+
+  it.each(['kg-70.5', 'pounds-150', 'weight kg-70.5', 'ft-5', 'inches-11', 'kg-.5'])(
+    'rejects negative values attached to a unit prefix in %s',
+    raw => {
+      expect(parseMeasurement(raw)).toBeNull();
+    }
+  );
+
+  it.each(['kg 50-70', 'pounds 150-180', 'kg .5-.7', 'cm 150.5-180.5', 'ft5-11'])(
+    'rejects ranges after a unit prefix in %s',
+    raw => {
+      expect(parseMeasurement(raw)).toBeNull();
+    }
+  );
+
+  it.each(['0 feet, 180 lbs', 'zero feet, 180 lbs'])(
+    'normalizes the valid weight after a zero-height fragment in %s',
+    raw => {
+      expect(parseMeasurement(raw, { normalizedUnit: 'lb' })?.value).toBe(180);
+      expect(parseMeasurement(raw, { normalizedUnit: 'kg' })?.value).toBeCloseTo(81.6466266);
+    }
+  );
+
+  it.each(['5-foot-0-inches', '5 feet zero inches', '5\'-0"'])(
+    'retains explicit zero inches in %s',
+    raw => {
+      expect(parseMeasurement(raw)).toEqual({
+        value: 60,
+        unit: 'in',
+        type: 'height',
+        raw,
+        matches: [
+          { value: 5, unit: 'ft' },
+          { value: 0, unit: 'in' },
+        ],
+      });
+    }
+  );
 });

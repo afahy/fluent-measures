@@ -195,6 +195,7 @@ const height = parseMeasurement('five foot ten', { type: 'height' });
 parseMeasurement('5-foot-11'); // { value: 71, unit: 'in', ... }
 parseMeasurement('5\'-11"'); // { value: 71, unit: 'in', ... }
 parseMeasurement('0-foot-11'); // { value: 11, unit: 'in', ... }
+parseMeasurement('5-foot-0-inches'); // { value: 60, unit: 'in', ... }
 
 // Bare N-M requires an explicit height type and an inch component below 12
 parseMeasurement('5-11', { type: 'height' }); // { value: 71, unit: 'in', ... }
@@ -202,6 +203,8 @@ parseMeasurement('5-11'); // null: ambiguous without a height type
 parseMeasurement('5-12', { type: 'height' }); // null: inches must be below 12
 parseMeasurement('5-11', { type: 'height', normalizedUnit: 'm' }); // { value: 1.8034, unit: 'm', ... }
 parseMeasurement('150-180 lbs'); // null: numeric ranges are not measurements
+parseMeasurement('kg 50-70'); // null: ranges are also rejected after a unit
+parseMeasurement('kg-70.5'); // null: a minus after a unit prefix stays negative
 ```
 
 ### Fuzzy Matching

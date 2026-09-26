@@ -28,9 +28,9 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     return null;
   }
 
-  // Keep a range's upper value signed so it cannot become a scalar measurement.
+  // Keep both range endpoints signed so neither can become a scalar measurement.
   // Unrelated ranges (for example, dates in prose) can still be ignored by the unit scan.
-  const tokens = tokenize(input.replace(/(\d)-(?=\.?\d)/g, '$1 -'));
+  const tokens = tokenize(input.replace(/(?<![\d.])([\d.]+)-(?=\.?\d)/g, '-$1 -'));
   if (!tokens.length) {
     return null;
   }
@@ -88,8 +88,8 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
           const phrase = wordsToNumber(numberWords.join(' '));
           if (phrase === null) break;
           // Keep the longest valid phrase next to the unit, without summing independent values.
-          // Zero feet can still be followed by a positive inch component.
-          if (phrase > 0 || unit === 'ft') {
+          // Keep explicit zero components in feet-and-inches heights.
+          if (phrase > 0 || unit === 'ft' || unit === 'in') {
             num = phrase;
             numberStart = j;
           }
@@ -143,6 +143,8 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       let totalValue = 0;
 
       for (const { value, unit } of matches) {
+        // Zero components contribute nothing, including across measurement types.
+        if (value === 0) continue;
         if (unit === targetUnit) {
           totalValue += value;
           continue;
