@@ -3,15 +3,16 @@ export function tokenize(input: string): string[] {
     input
       // Convert to lowercase for case-insensitive matching
       .toLowerCase()
+      // A quote after a numeric feet component can introduce a height separator.
+      .replace(/(\d\s*)'-(?=\d)/g, "$1' ")
       // A minus sign starts a number only at the beginning or after whitespace.
       // Input: "height -5feet" -> "height -5 feet"
       .replace(/(^|\s)-(\d+(\.\d+)?)/g, '$1-$2 ')
       // Add spaces between numbers and any following letters/units or quotes
       // Example: "5ft" -> "5 ft", "72.5kg" -> "72.5 kg"
       .replace(/([0-9])([a-z]+\.?|['"])/g, '$1 $2')
-      // Add spaces between quotes and following numbers, including a height separator.
-      // Example: "'-11" -> "' 11", "\"11" -> "\" 11"
-      .replace(/(['"])-?([0-9])/g, '$1 $2')
+      // Separate quoted numbers while preserving a minus after an opening quote.
+      .replace(/(['"])(-?[0-9])/g, '$1 $2')
       // Replace standalone hyphens (not part of negative numbers) with spaces
       // Example: "six-foot-two" -> "six foot two"
       .replace(/(?<!-)\b-\b/g, ' ')

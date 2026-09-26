@@ -54,4 +54,19 @@ describe('hyphenated height review regressions', () => {
       expect(parseMeasurement(raw)).toBeNull();
     }
   );
+
+  it.each(['"-5 ft"', 'weight "-70 kg"', "'-5 ft'", "weight '-70 kg'"])(
+    'preserves a minus after an opening quote in %s',
+    raw => {
+      expect(parseMeasurement(raw)).toBeNull();
+    }
+  );
+
+  it.each(['recorded 2025-09-01 at 180 lbs', 'record 12-34 weighs 180 lbs'])(
+    'ignores unrelated numeric hyphens in %s',
+    raw => {
+      expect(parseMeasurement(raw)?.value).toBe(180);
+      expect(parseMeasurement(raw)?.unit).toBe('lb');
+    }
+  );
 });

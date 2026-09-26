@@ -5,12 +5,6 @@ export function parseNumberToken(token: string): number | null {
   if (token.startsWith('-')) return null;
 
   const num = parseFloat(token);
-  if (!isNaN(num)) {
-    return num <= 0 ? null : num;
-  }
-  const wordNum = wordsToNumber(token);
-  if (wordNum !== null) {
-    return wordNum <= 0 ? null : wordNum;
-  }
-  return null;
+  const value = isNaN(num) ? wordsToNumber(token) : num;
+  return value !== null && value > 0 ? value : null;
 }

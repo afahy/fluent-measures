@@ -26,7 +26,9 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     return null;
   }
 
-  const tokens = tokenize(input);
+  // Keep a range's upper value signed so it cannot become a scalar measurement.
+  // Unrelated ranges (for example, dates in prose) can still be ignored by the unit scan.
+  const tokens = tokenize(input.replace(/(\d)-(?=\.?\d)/g, '$1 -'));
   if (!tokens.length) {
     return null;
   }
@@ -46,9 +48,6 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     const inches = Number(shorthand[2]);
     if (options.type !== 'height' || !Number.isFinite(feet) || inches >= 12) return null;
     shorthandMatches.push({ value: feet, unit: 'ft' }, { value: inches, unit: 'in' });
-  } else if (/\d-(?:\d|\.\d)/.test(input)) {
-    // Numeric ranges are not measurements; only the complete height shorthand is supported.
-    return null;
   }
 
   const typesToCheck: MeasurementType[] = options.type ? [options.type] : ['height', 'weight'];
