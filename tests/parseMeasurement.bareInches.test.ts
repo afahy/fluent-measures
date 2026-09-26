@@ -31,6 +31,9 @@ describe('bare inches after feet', () => {
     ['5 ft ten 200 lbs', 70],
     ['5 ft ten and one 200 lbs', 71],
     ['5 ft 11 two hundred pounds', 71],
+    ['5 ft 11 and 200 lbs', 71],
+    ['5 ft 11 and two hundred pounds', 71],
+    ['5 ft ten and one and 200 lbs', 71],
   ])('preserves bare inches before a separate weight in %s', (raw, value) => {
     expect(parseMeasurement(raw)?.value).toBe(value);
     expect(parseMeasurement(raw)?.unit).toBe('in');

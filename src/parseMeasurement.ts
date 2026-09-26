@@ -7,6 +7,20 @@ import { NORMALIZED_UNITS, unitConversions } from './units';
 
 import { ParseOptions, ParsedValue, MeasurementType, Match } from './types';
 
+function readNumberPhrase(tokens: string[], start: number) {
+  let end = start;
+  let value: number | null = null;
+  const words: string[] = [];
+  for (; end < tokens.length; end++) {
+    if (tokens[end] === 'and') continue;
+    words.push(tokens[end]);
+    const candidate = wordsToNumber(words.join(' '));
+    if (candidate === null) break;
+    value = candidate;
+  }
+  return { value, end };
+}
+
 export function parseMeasurement(input: string, options: ParseOptions = {}): ParsedValue | null {
   if (!input?.trim()) {
     return null;
@@ -91,25 +105,18 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
 
       if (unit === 'ft') {
         const inchesStart = Math.max(numberEnd, i + 1);
-        let inchesEnd = inchesStart;
-        let inches: number | null = null;
-        const inchWords: string[] = [];
-        for (; inchesEnd < remainingTokens.length; inchesEnd++) {
-          const next = remainingTokens[inchesEnd];
-          if (next === 'and') continue;
-          inchWords.push(next);
-          const candidate = wordsToNumber(inchWords.join(' '));
-          if (candidate === null) break;
-          inches = candidate;
-        }
+        const { value: inches, end: inchesEnd } = readNumberPhrase(remainingTokens, inchesStart);
         const nextWord = remainingTokens[inchesEnd] ?? '';
         // A following unit owns the number, even when it belongs to another measurement type.
-        // Keep values joined by "and" with the following measurement too.
+        // Two small values joined by "and" remain ambiguous; a larger following value is separate.
+        const linkedInches =
+          remainingTokens[inchesEnd - 1] === 'and' &&
+          (readNumberPhrase(remainingTokens, inchesEnd).value ?? 12) < 12;
         if (
           inches !== null &&
           inches > 0 &&
           inches < 12 &&
-          remainingTokens[inchesEnd - 1] !== 'and' &&
+          !linkedInches &&
           !matchUnit(nextWord, 'height', fuzziness) &&
           !matchUnit(nextWord, 'weight', fuzziness)
         ) {
