@@ -45,7 +45,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   }
 
   const shorthandMatches: QualifiedMatch[] = [];
-  const shorthand = /^(\d+)-(\d*\.?\d+)$/.exec(trimmed);
+  const shorthand = /^(\d+)-((?:\d*\.)?\d+)$/.exec(trimmed);
   if (shorthand) {
     // Bare N-M is ambiguous unless the caller explicitly requests a height.
     const feet = +shorthand[1];

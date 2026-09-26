@@ -189,4 +189,8 @@ describe('hyphenated height review regressions', () => {
       expect(parseMeasurement(raw)).toBeNull();
     }
   );
+
+  it('rejects a long nonmatching decimal shorthand', () => {
+    expect(parseMeasurement(`0-${'0'.repeat(20000)}x`, { type: 'height' })).toBeNull();
+  });
 });
