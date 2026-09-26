@@ -1,38 +1,38 @@
-const NUMBER_WORDS: Record<string, number> = {
-  zero: 0,
-  one: 1,
-  two: 2,
-  three: 3,
-  four: 4,
-  five: 5,
-  six: 6,
-  seven: 7,
-  eight: 8,
-  nine: 9,
-  ten: 10,
-  eleven: 11,
-  twelve: 12,
-  thirteen: 13,
-  fourteen: 14,
-  fifteen: 15,
-  sixteen: 16,
-  seventeen: 17,
-  eighteen: 18,
-  nineteen: 19,
-  twenty: 20,
-  thirty: 30,
-  forty: 40,
-  fifty: 50,
-  sixty: 60,
-  seventy: 70,
-  eighty: 80,
-  ninety: 90,
-};
+const NUMBER_WORDS = new Map<string, number>([
+  ['zero', 0],
+  ['one', 1],
+  ['two', 2],
+  ['three', 3],
+  ['four', 4],
+  ['five', 5],
+  ['six', 6],
+  ['seven', 7],
+  ['eight', 8],
+  ['nine', 9],
+  ['ten', 10],
+  ['eleven', 11],
+  ['twelve', 12],
+  ['thirteen', 13],
+  ['fourteen', 14],
+  ['fifteen', 15],
+  ['sixteen', 16],
+  ['seventeen', 17],
+  ['eighteen', 18],
+  ['nineteen', 19],
+  ['twenty', 20],
+  ['thirty', 30],
+  ['forty', 40],
+  ['fifty', 50],
+  ['sixty', 60],
+  ['seventy', 70],
+  ['eighty', 80],
+  ['ninety', 90],
+]);
 
-const MULTIPLIERS: Record<string, number> = {
-  hundred: 100,
-  thousand: 1000,
-};
+const MULTIPLIERS = new Map<string, number>([
+  ['hundred', 100],
+  ['thousand', 1000],
+]);
 
 export function wordsToNumber(input: string): number | null {
   const words = input
@@ -45,10 +45,13 @@ export function wordsToNumber(input: string): number | null {
       (acc, word) => {
         let { total, current } = acc;
 
-        if (NUMBER_WORDS[word] != null) {
-          current += NUMBER_WORDS[word];
-        } else if (MULTIPLIERS[word]) {
-          current = current === 0 ? MULTIPLIERS[word] : current * MULTIPLIERS[word];
+        const number = NUMBER_WORDS.get(word);
+        const multiplier = MULTIPLIERS.get(word);
+
+        if (number !== undefined) {
+          current += number;
+        } else if (multiplier !== undefined) {
+          current = current === 0 ? multiplier : current * multiplier;
 
           if (word === 'thousand') {
             total += current;
