@@ -130,4 +130,63 @@ describe('hyphenated height review regressions', () => {
       });
     }
   );
+
+  it.each(['-5\'-11"', '-0\'-11"', '-5.5\'-11"', '-5-foot-11-inches', '--5\'-11"'])(
+    'rejects the whole compound height after signed feet in %s',
+    raw => {
+      expect(parseMeasurement(raw)).toBeNull();
+      expect(parseMeasurement(raw, { type: 'height' })).toBeNull();
+    }
+  );
+
+  it.each(['150 - 180 lbs', '150- 180 lbs', '150–180 lbs', 'kg 50 — 70', '.5 – .7 kg'])(
+    'rejects spaced and Unicode numeric ranges in %s',
+    raw => {
+      expect(parseMeasurement(raw)).toBeNull();
+    }
+  );
+
+  it.each(['record 1-2; kg 70', 'record 2026-09-26; kg 70', 'record 1–2; kg 70'])(
+    'ignores unrelated ranges before unit-prefix values in %s',
+    raw => {
+      expect(parseMeasurement(raw)?.value).toBe(70);
+      expect(parseMeasurement(raw)?.unit).toBe('kg');
+    }
+  );
+
+  it('retains a valid weight after a rejected signed compound height', () => {
+    expect(parseMeasurement('-5\'-11", 180 lbs', { normalizedUnit: 'lb' })?.value).toBe(180);
+  });
+
+  it.each(['foots-5', 'poundz-150', 'meterz-1.5'])(
+    'preserves signs after fuzzy unit prefixes in %s',
+    raw => {
+      expect(parseMeasurement(raw, { fuzziness: 1 })).toBeNull();
+    }
+  );
+
+  it('retains fuzzy units inside a positive hyphenated height', () => {
+    expect(parseMeasurement('5-foots-11', { fuzziness: 1 })?.value).toBe(71);
+  });
+
+  it.each(['5-.5', '5-0.5'])('accepts equivalent decimal inch components in %s', raw => {
+    expect(parseMeasurement(raw, { type: 'height' })?.value).toBe(60.5);
+    expect(parseMeasurement(raw, { type: 'height' })?.unit).toBe('in');
+    expect(parseMeasurement(raw)).toBeNull();
+  });
+
+  it.each(['5-foot-.5', '5-foot-.5-inches', '5\'-.5"', "5'.5"])(
+    'retains leading-dot inches in unit-delimited heights such as %s',
+    raw => {
+      expect(parseMeasurement(raw)?.value).toBe(60.5);
+      expect(parseMeasurement(raw)?.unit).toBe('in');
+    }
+  );
+
+  it.each(['"-.5 ft"', "'-.5 feet'", '-5\'-.5"'])(
+    'preserves rejection of signed leading-dot quoted values in %s',
+    raw => {
+      expect(parseMeasurement(raw)).toBeNull();
+    }
+  );
 });

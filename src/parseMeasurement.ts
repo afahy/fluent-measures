@@ -3,7 +3,7 @@ import { parseNumberToken } from './parseNumberToken';
 import { tokenize } from './tokenize';
 import { wordsToNumber } from './wordsToNumber';
 
-import { NORMALIZED_UNITS, unitConversions } from './units';
+import { unitConversions } from './units';
 
 import { ParseOptions, ParsedValue, MeasurementType, Match } from './types';
 
@@ -24,50 +24,45 @@ function readNumberPhrase(tokens: string[], start: number): { value: number | nu
 }
 
 export function parseMeasurement(input: string, options: ParseOptions = {}): ParsedValue | null {
-  if (!input?.trim()) {
+  const trimmed = input?.trim();
+  if (!trimmed) {
     return null;
   }
 
-  // Keep both range endpoints signed so neither can become a scalar measurement.
-  // Unrelated ranges (for example, dates in prose) can still be ignored by the unit scan.
-  const tokens = tokenize(input.replace(/(?<![\d.])([\d.]+)-(?=\.?\d)/g, '-$1 -'));
+  // Replace whole ranges with a boundary so neither endpoint becomes a measurement.
+  // The boundary also lets unrelated dates and ranges coexist with unit-prefix values.
+  const fuzziness = options.fuzziness ?? 0;
+  const tokens = tokenize(
+    input.replace(/(?<![\d.])[\d.]+(?:\s*[-–—]\s*[\d.]+)+/g, ' - '),
+    fuzziness
+  );
   if (!tokens.length) {
     return null;
   }
-
-  const raw = input;
-  const fuzziness = options.fuzziness ?? 0;
 
   if (options.allowUnqualified && !options.type) {
     throw new Error('If allowUnqualified is true, type must be provided.');
   }
 
   const shorthandMatches: QualifiedMatch[] = [];
-  const shorthand = /^(\d+)-(\d+(?:\.\d+)?)$/.exec(input.trim());
+  const shorthand = /^(\d+)-(\d*\.?\d+)$/.exec(trimmed);
   if (shorthand) {
     // Bare N-M is ambiguous unless the caller explicitly requests a height.
-    const feet = Number(shorthand[1]);
-    const inches = Number(shorthand[2]);
-    if (options.type !== 'height' || !Number.isFinite(feet) || inches >= 12) return null;
+    const feet = +shorthand[1];
+    const inches = +shorthand[2];
+    if (options.type !== 'height' || feet === Infinity || inches >= 12) return null;
     shorthandMatches.push({ value: feet, unit: 'ft' }, { value: inches, unit: 'in' });
   }
 
   const typesToCheck: MeasurementType[] = options.type ? [options.type] : ['height', 'weight'];
 
-  for (const type of typesToCheck) {
+  measurementTypes: for (const type of typesToCheck) {
     const matches: QualifiedMatch[] = [...shorthandMatches];
     const remainingTokens = matches.length ? [] : [...tokens];
 
     // Process tokens looking for units and numbers
     for (let i = 0; i < remainingTokens.length; i++) {
-      const word = remainingTokens[i];
-
-      // Skip empty tokens
-      if (!word) {
-        continue;
-      }
-
-      const unit = matchUnit(word, type, fuzziness);
+      const unit = matchUnit(remainingTokens[i], type, fuzziness);
       if (!unit) {
         continue;
       }
@@ -96,8 +91,14 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         }
       }
 
+      // A signed feet component invalidates its height, including any trailing inches.
+      const signed = /^-+[^-]/.test(remainingTokens[i - 1] ?? '');
+      if (signed && unit === 'ft') {
+        continue measurementTypes;
+      }
+
       // If no number found and not last token, check next token
-      if (num === null && !/^-+[^-]/.test(remainingTokens[i - 1] ?? '') && remainingTokens[i + 1]) {
+      if (num === null && !signed && remainingTokens[i + 1]) {
         num = parseNumberToken(remainingTokens[i + 1]);
         numberStart = i + 1;
         numberEnd = i + 2;
@@ -149,7 +150,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
           totalValue += value;
           continue;
         }
-        const converter = unitConversions[unit]?.[targetUnit];
+        const converter = unitConversions[unit][targetUnit];
         if (!converter) {
           throw new Error(`Unsupported unit conversion from ${unit} to ${targetUnit}`);
         }
@@ -163,7 +164,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         value: totalValue,
         unit: targetUnit,
         type,
-        raw,
+        raw: input,
         matches,
       };
     }
@@ -174,8 +175,8 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     const numToken = tokens.join(' ');
     const num = tokens.length > 1 ? wordsToNumber(numToken) : parseNumberToken(numToken);
     if (num !== null && num > 0) {
-      const isMetric = options.inferUnit === 'metric';
-      const unit = NORMALIZED_UNITS[options.type][isMetric ? 'metric' : 'imperial'];
+      const metric = options.inferUnit === 'metric';
+      const unit = options.type === 'height' ? (metric ? 'cm' : 'in') : metric ? 'kg' : 'lb';
 
       return {
         matches: [
@@ -187,7 +188,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         value: num,
         unit,
         type: options.type,
-        raw,
+        raw: input,
       };
     }
   }
