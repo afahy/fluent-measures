@@ -92,6 +92,7 @@ describe('wordsToNumber', () => {
   });
 
   it('ignores "and" in the input', () => {
+    expect(wordsToNumber('ten and one')).toEqual(11);
     expect(wordsToNumber('twenty and five')).toEqual(25);
     expect(wordsToNumber('one hundred and one')).toEqual(101);
     expect(wordsToNumber('one thousand and one')).toEqual(1001);

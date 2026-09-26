@@ -54,9 +54,10 @@ export function wordsToNumber(input: string): number | null {
           if (index > 0) {
             const previous = words[index - 1];
             const previousMultiplier = MULTIPLIERS.get(previous);
+            const previousNumber = NUMBER_WORDS.get(previous) ?? 0;
             // Only a tens word and a ones value form an additive pair within a group.
             const followsTens =
-              (NUMBER_WORDS.get(previous) ?? 0) >= 20 && number > 0 && number < 10;
+              previousNumber >= 10 && previousNumber % 10 === 0 && number > 0 && number < 10;
             if (previousMultiplier !== undefined ? number >= previousMultiplier : !followsTens) {
               throw new Error('Independent number values');
             }

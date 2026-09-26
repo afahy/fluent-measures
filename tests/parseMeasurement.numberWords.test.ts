@@ -6,6 +6,7 @@ describe('measurement number phrases', () => {
     ['one hundred fifty pounds', 150],
     ['one hundred and 50 pounds', 150],
     ['twenty-one pounds', 21],
+    ['ten and one pounds', 11],
     ['1 hundred and fifty pounds', 150],
     ['one thousand two hundred and fifty pounds', 1250],
     ['I weigh one hundred fifty pounds', 150],
