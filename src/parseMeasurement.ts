@@ -41,7 +41,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   // Replace whole ranges with a boundary so neither endpoint becomes a measurement.
   // Preserve semicolon boundaries so independent fields cannot form a compound height.
   const fuzziness = options.fuzziness;
-  const tokens = tokenizeNormalized(
+  let tokens = tokenizeNormalized(
     trimmed.replace(/(?<![\d.])[\d.]+(?:\s*\p{Dash}\s*[\d.]+)+/gu, ' - '),
     fuzziness
   );
@@ -49,19 +49,16 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     throw new Error('allowUnqualified requires type');
   }
 
-  const shorthandMatches: QualifiedMatch[] = [];
   const shorthand = trimmed.match(/^(\d+)-((?:\d*\.)?\d+)$/);
   if (shorthand) {
     // Bare N-M is ambiguous unless the caller explicitly requests a height.
-    const feet = +shorthand[1];
-    const inches = +shorthand[2];
-    if (options.type !== 'height' || feet === Infinity || inches >= 12) return null;
-    shorthandMatches.push({ value: feet, unit: 'ft' }, { value: inches, unit: 'in' });
+    if (options.type !== 'height' || +shorthand[1] === Infinity || +shorthand[2] >= 12) return null;
+    // Feed the components through the same parser as explicit feet and inches.
+    tokens = [shorthand[1], 'ft', shorthand[2], 'in'];
   }
 
   for (const type of options.type ? [options.type] : (['height', 'weight'] as const)) {
-    const matches: QualifiedMatch[] = [...shorthandMatches];
-    // Bare shorthand has already been replaced by a range boundary in tokens.
+    const matches: QualifiedMatch[] = [];
     const remainingTokens = [...tokens];
 
     // Process tokens looking for units and numbers

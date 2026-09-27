@@ -3,7 +3,10 @@ import { wordsToNumber } from './wordsToNumber';
 
 /** Normalize comma groups before interpreting numeric syntax or splitting tokens. */
 export function normalizeNumericCommas(input: string): string {
-  return input.replace(/(?<=\d),(?=\d{1,2}(?!\d))/g, '.').replace(/(?<=\d),(?=\d{3}(?!\d))/g, '');
+  // Keep word-separating commas as punctuation; fractions may omit the leading zero.
+  return input
+    .replace(/(?<![a-z_]),(?=\d{1,2}(?!\d))/gi, '.')
+    .replace(/(?<=\d),(?=\d{3}(?!\d))/g, '');
 }
 
 /** Normalize comma numbers before splitting standalone measurement text. */
