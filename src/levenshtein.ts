@@ -7,7 +7,7 @@ export function levenshtein(a: string, b: string): number {
     row[0] = i;
     for (let j = 1; j <= b.length; j++) {
       const above = row[j];
-      row[j] = Math.min(above + 1, row[j - 1] + 1, diagonal + (a[i - 1] === b[j - 1] ? 0 : 1));
+      row[j] = a[i - 1] === b[j - 1] ? diagonal : Math.min(above, row[j - 1], diagonal) + 1;
       diagonal = above;
     }
   }

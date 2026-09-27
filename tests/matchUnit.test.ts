@@ -39,6 +39,40 @@ describe('matchUnit', () => {
   });
 
   describe('fuzzy matching', () => {
+    it.each(['food', 'feel', 'feed', 'fool'])('rejects the short prose word %s', word => {
+      expect(matchUnit(word, 'height', 2)).toBeNull();
+    });
+
+    it('requires the first letter even for long aliases', () => {
+      expect(matchUnit('xilograms', 'weight', 2)).toBeNull();
+      expect(matchUnit('xentimeters', 'height', 2)).toBeNull();
+    });
+
+    it('limits edits in proportion to alias length', () => {
+      expect(matchUnit('fxxt', 'height', 2)).toBeNull();
+      expect(matchUnit('kixxs', 'weight', 2)).toBeNull();
+      expect(matchUnit('kilogxxms', 'weight', 1)).toBeNull();
+      expect(matchUnit('kilogxxms', 'weight', 2)).toBe('kg');
+    });
+
+    it('does not fuzzy-match one- or two-letter aliases', () => {
+      expect(matchUnit('fts', 'height', 2)).toBeNull();
+      expect(matchUnit('kgs', 'weight', 2)).toBeNull();
+    });
+
+    it('keeps short abbreviations exact even with fuzziness enabled', () => {
+      expect(matchUnit('lbs', 'weight', 2)).toBe('lb');
+      expect(matchUnit('lxs', 'weight', 2)).toBeNull();
+      expect(matchUnit('ls', 'weight', 2)).toBeNull();
+    });
+
+    it('matches exact aliases even when fuzziness is disabled or invalid', () => {
+      for (const fuzziness of [-1, 0, NaN]) {
+        expect(matchUnit('feet', 'height', fuzziness)).toBe('ft');
+        expect(matchUnit('fett', 'height', fuzziness)).toBeNull();
+      }
+    });
+
     it('handles small typos with fuzziness=1', () => {
       expect(matchUnit('fett', 'height', 1)).toBe('ft');
       expect(matchUnit('inche', 'height', 1)).toBe('in');
