@@ -176,7 +176,7 @@ interface ParsedValue {
 ### Weight
 
 - **Imperial**: lb (lbs, pounds)
-- **Metric**: kg (kilos, kilograms)
+- **Metric**: kg (kilo, kilos, kilograms)
 
 ## Advanced Use Cases
 
@@ -243,6 +243,15 @@ To separate a label ending in a number from a measurement, put a space after the
 ### Fuzzy Matching
 
 Enabling fuzzy matching allows the parser to be more forgiving with typos and variations:
+
+Exact aliases take priority. Fuzzy candidates must share the alias's first letter, and the
+edit distance must be no greater than `fuzziness` and less than a third of the alias's length.
+Aliases of three characters or fewer require exact matches. The prose words `food`,
+`feel`, `feed`, `fool`, `kill`, and `kills` are excluded from fuzzy matching because they are too
+close to `foot`, `feet`, `kilo`, or `kilos`. The closest qualifying alias wins; equal distances
+keep the first unit in the supported-unit order (`ft`, `in`, `cm`, `m` for height; `lb`, `kg` for weight).
+
+These spelling checks reduce false matches; fuzzy matching can still mistake prose for units.
 
 ```typescript
 // With fuzzy matching enabled

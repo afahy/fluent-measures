@@ -1,60 +1,40 @@
 import { MeasurementType, Unit } from './types';
 
-export const UNITS: Record<MeasurementType, Unit[]> = {
-  height: ['ft', 'in', 'cm', 'm'],
-  weight: ['lb', 'kg'],
-};
-
-export const UNIT_ALIASES: Record<Unit, string[]> = {
-  ft: ['ft', 'feet', 'foot', "'"],
-  in: ['in', 'inch', 'inches', '"'],
-  cm: ['cm', 'centimeter', 'centimeters'],
-  m: ['m', 'meter', 'meters'],
-  lb: ['lb', 'lbs', 'pound', 'pounds'],
-  kg: ['kg', 'kilogram', 'kilograms', 'kilos'],
+// Each alias group starts with its canonical unit.
+export const UNIT_ALIASES: Record<MeasurementType, [Unit, ...string[]][]> = {
+  height: [
+    ['ft', 'feet', 'foot', "'"],
+    ['in', 'inch', 'inches', '"'],
+    ['cm', 'centimeter', 'centimeters'],
+    ['m', 'meter', 'meters'],
+  ],
+  weight: [
+    ['lb', 'lbs', 'pound', 'pounds'],
+    ['kg', 'kilo', 'kilos', 'kilogram', 'kilograms'],
+  ],
 };
 
 // Height conversion functions
-export function ftToIn(value: number): number {
-  return value * 12;
-}
+export const ftToIn = (value: number): number => value * 12;
 
-export function inToFt(value: number): number {
-  return value / 12;
-}
+export const inToFt = (value: number): number => value / 12;
 
-export function mToCm(value: number): number {
-  return value * 100;
-}
+export const mToCm = (value: number): number => value * 100;
 
-export function cmToM(value: number): number {
-  return value / 100;
-}
+export const cmToM = (value: number): number => value / 100;
 
-export function inToCm(value: number): number {
-  return value * 2.54;
-}
+export const inToCm = (value: number): number => value * 2.54;
 
-export function cmToIn(value: number): number {
-  return value / 2.54;
-}
+export const cmToIn = (value: number): number => value / 2.54;
 
-export function ftToCm(value: number): number {
-  return value * 12 * 2.54;
-}
+export const ftToCm = (value: number): number => value * 12 * 2.54;
 
-export function cmToFt(value: number): number {
-  return value / (12 * 2.54);
-}
+export const cmToFt = (value: number): number => value / (12 * 2.54);
 
 // Weight conversion functions
-export function lbToKg(value: number): number {
-  return value * 0.45359237;
-}
+export const lbToKg = (value: number): number => value * 0.45359237;
 
-export function kgToLb(value: number): number {
-  return value / 0.45359237;
-}
+export const kgToLb = (value: number): number => value / 0.45359237;
 
 export const unitConversions: Record<string, Record<string, (value: number) => number>> = {
   ft: { in: ftToIn, cm: ftToCm, m: value => cmToM(ftToCm(value)) },
