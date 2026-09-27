@@ -228,6 +228,12 @@ existing parser may attach the range's unit to a later value, as in `50-70 kg, 1
 
 ### Commas and Label Boundaries
 
+Thousands groups start with one to three digits and continue in groups of three. A final
+one- or two-digit comma group can be a decimal fraction (`1,234,56 kg` is 1234.56 kg).
+Malformed combinations such as `12,34,567 kg` and `1234,567 kg` return `null`, including
+when they occur in a range or compound measurement. Trailing punctuation is preserved:
+`1,000, kg` still means 1000 kg.
+
 Spaces and word-number hyphens separate tokens. A following number keeps its decimal
 comma or thousands group: `weight 72,5 kg` is 72.5 kg, and `height-1,800 cm` is 1800 cm.
 For the same reason, `phase 2,180 cm` and `phase-2,180 cm` both contain the number 2180.

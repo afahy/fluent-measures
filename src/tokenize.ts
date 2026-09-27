@@ -3,10 +3,21 @@ import { wordsToNumber } from './wordsToNumber';
 
 /** Normalize comma groups before interpreting numeric syntax or splitting tokens. */
 export function normalizeNumericCommas(input: string): string {
-  // Commas after labels are separators; fractions may omit the leading zero.
-  return input
-    .replace(/,(?<![\p{L}\p{M}_][\p{N}.]*,)(?=\d{1,2}(?!\d))/gu, '.')
-    .replace(/(?<=\d),(?<![\p{L}\p{M}_][\p{N}.]*,)(?=\d{3}(?!\d))/gu, '');
+  let valid = true;
+  const normalized = input.replace(
+    /([\p{L}\p{M}_][\p{N}.]*,)|[.,]?\d(?:[\d.,]*\d)?/gu,
+    (number, label?: string) => {
+      // Commas outside the supported numeric group sizes remain punctuation.
+      if (label || !/,\d{1,3}(?!\d)/.test(number)) return number;
+      if (!/^(?:\d{1,3}(?:,\d{3})+|\d*)(?:,\d{1,2}|\.\d*)?$/.test(number)) {
+        valid = false;
+        return '';
+      }
+      return number.replace(/,(?=\d{1,2}$)/, '.').replace(/,/g, '');
+    }
+  );
+  // Reject the whole input so a malformed component or range cannot leak a value.
+  return valid ? normalized : '';
 }
 
 /** Normalize comma numbers before splitting standalone measurement text. */

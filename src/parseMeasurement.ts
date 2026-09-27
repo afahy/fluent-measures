@@ -1,5 +1,4 @@
 import { matchUnit } from './matchUnit';
-import { parseNumberToken } from './parseNumberToken';
 import { normalizeNumericCommas, tokenizeNormalized } from './tokenize';
 import { wordsToNumber } from './wordsToNumber';
 
@@ -31,12 +30,10 @@ function readNumberPhrase(
 
 /** Parse a height or weight, optionally inferring its unit or normalizing the result. */
 export function parseMeasurement(input: string, options: ParseOptions = {}): ParsedValue | null {
-  let trimmed = input?.trim();
+  const trimmed = normalizeNumericCommas(input?.trim() || '');
   if (!trimmed) {
     return null;
   }
-
-  trimmed = normalizeNumericCommas(trimmed);
 
   // Replace whole ranges with a boundary so neither endpoint becomes a measurement.
   // Preserve semicolon boundaries so independent fields cannot form a compound height.
@@ -69,9 +66,8 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       }
 
       // Read the preceding phrase first, allowing ordinary punctuation before its unit.
-      const [value, end] = readNumberPhrase(remainingTokens, i - 1, -1);
-      let num = value ?? parseNumberToken(remainingTokens[end] ?? '');
-      let matchStart = value === null ? end : end + 1;
+      let [num, end] = readNumberPhrase(remainingTokens, i - 1, -1);
+      let matchStart = num === null ? end : end + 1;
       let matchEnd = i + 1;
 
       // A signed feet component invalidates its height, including any trailing inches.
@@ -87,7 +83,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       // A semicolon can also separate a unit prefix from its value.
       if (!num && (num === null || unit !== 'ft' || remainingTokens[i - 1] === ';') && !signed) {
         while (remainingTokens[matchEnd] === ';') matchEnd++;
-        num = parseNumberToken(remainingTokens[matchEnd] ?? '');
+        num = wordsToNumber(remainingTokens[matchEnd] ?? '') || null;
         matchStart = i;
         matchEnd++;
       }
@@ -162,8 +158,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
 
   // Try unqualified input if no matches found and all previous attempts failed
   if (options.allowUnqualified && options.type) {
-    const numToken = tokens.filter(token => token !== ';').join(' ');
-    const num = tokens.length > 1 ? wordsToNumber(numToken) : parseNumberToken(numToken);
+    const num = wordsToNumber(tokens.filter(token => token !== ';').join(' '));
     if (num !== null && num > 0) {
       const metric = options.inferUnit === 'metric';
       const unit = options.type === 'height' ? (metric ? 'cm' : 'in') : metric ? 'kg' : 'lb';
