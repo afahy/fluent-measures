@@ -24,7 +24,7 @@ export function wordsToNumber(input: string): number | null {
   for (let index = 0; index < words.length; index++) {
     const word = words[index];
     const number =
-      NUMBER_WORDS.get(word) ?? (/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(word) ? Number(word) : undefined);
+      NUMBER_WORDS.get(word) ?? (/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(word) ? +word : undefined);
     const multiplier = MULTIPLIERS.get(word);
 
     if (number !== undefined) {
