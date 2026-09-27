@@ -16,6 +16,7 @@ The parser can handle common spelling mistakes and phrasing variations using Lev
 
 - Parses height and weight in both metric and imperial units (`lb`, `kg`, `ft`, `in`, `cm`, `m`)
 - Handles numeric and written-out expressions (`5' 11"`, `five feet eleven inches`, or `one hundred fifty pounds`)
+- Accepts comma-separated thousands (`1,000 lbs`) and decimal commas with one or two digits (`72,5 kg` or `72,05 kg`)
 - Supports both strict and fuzzy matching to accommodate exact or loosely formatted input (`5 foot 11 inc` → `71 in`)
 - Normalizes output for consistent downstream use (e.g. math, display, storage)
 - Zero dependencies

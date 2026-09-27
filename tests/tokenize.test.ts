@@ -27,6 +27,28 @@ describe('tokenize', () => {
     expect(tokenize('5.11 meters')).toEqual(['5.11', 'meters']);
   });
 
+  it.each([
+    ['72,5 kg', ['72.5', 'kg']],
+    ['72,05kg', ['72.05', 'kg']],
+    ['1,000 lbs', ['1000', 'lbs']],
+    ['1,000,000 lbs', ['1000000', 'lbs']],
+    ['12,345,678.9 lbs', ['12345678.9', 'lbs']],
+    ['-72,5 kg', ['-72.5', 'kg']],
+    ['-1,000 lbs', ['-1000', 'lbs']],
+  ])('normalizes numeric commas in %s', (input, expected) => {
+    expect(tokenize(input)).toEqual(expected);
+  });
+
+  it.each([
+    ['weight, 72 kg', ['weight', '72', 'kg']],
+    ['72, kg', ['72', 'kg']],
+    ['72, 5 kg', ['72', '5', 'kg']],
+    ['72 kg,180 cm', ['72', 'kg', '180', 'cm']],
+    ['1,2345 lbs', ['1', '2345', 'lbs']],
+  ])('keeps other commas as separators in %s', (input, expected) => {
+    expect(tokenize(input)).toEqual(expected);
+  });
+
   it('handles unit abbreviations with periods', () => {
     expect(tokenize('180 lb.')).toEqual(['180', 'lb']);
     expect(tokenize('72.5 kg.')).toEqual(['72.5', 'kg']);
