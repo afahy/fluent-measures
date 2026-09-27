@@ -11,6 +11,10 @@ describe('conservative fuzzy unit matching', () => {
     expect(parseMeasurement(raw, { fuzziness })).toBeNull();
   });
 
+  it.each(['kill 5', '5 kills'])('does not interpret %s as kilograms', raw => {
+    expect(parseMeasurement(raw, { fuzziness: 1 })).toBeNull();
+  });
+
   it.each(['80 kilo', '80 kilos', '80 KILO'])('recognizes %s without fuzziness', raw => {
     expect(parseMeasurement(raw)).toEqual({
       value: 80,

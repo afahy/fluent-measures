@@ -8,8 +8,8 @@ export function matchUnit(word: string, type: MeasurementType, fuzziness?: numbe
   for (const aliases of UNIT_ALIASES[type]) {
     for (const alias of aliases) {
       if (word === alias) return aliases[0];
-      // Food, fool, feed and feel are too close to foot/feet to accept as fuzzy units.
-      if (!fuzziness || /^f(oo|ee)[dl]$/.test(word)) continue;
+      // Exclude common prose near foot/feet and kilo/kilos.
+      if (!fuzziness || /^(f(oo|ee)[dl]|kills?)$/.test(word)) continue;
       if (word[0] !== alias[0]) continue;
       const distance = levenshtein(word, alias);
       // Keep edits below a third of the alias length; short abbreviations stay exact-only.
