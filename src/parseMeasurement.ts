@@ -162,6 +162,11 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     if (num !== null && num > 0) {
       const metric = options.inferUnit === 'metric';
       const unit = options.type === 'height' ? (metric ? 'cm' : 'in') : metric ? 'kg' : 'lb';
+      const targetUnit = options.normalizedUnit || unit;
+      const converter = targetUnit === unit ? null : unitConversions[unit][targetUnit];
+      if (targetUnit !== unit && !converter) {
+        throw new Error(`Cannot convert ${unit} to ${targetUnit}`);
+      }
 
       return {
         matches: [
@@ -170,8 +175,8 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
             unit,
           },
         ],
-        value: num,
-        unit,
+        value: converter ? converter(num) : num,
+        unit: targetUnit,
         type: options.type,
         raw: input,
       };
