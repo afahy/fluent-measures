@@ -16,6 +16,8 @@ The parser can handle common spelling mistakes and phrasing variations using Lev
 
 - Parses height and weight in both metric and imperial units (`lb`, `kg`, `ft`, `in`, `cm`, `m`)
 - Handles numeric and written-out expressions (`5' 11"`, `five feet eleven inches`, or `one hundred fifty pounds`)
+- Accepts comma-separated thousands (`1,000 lbs`) and decimal commas with one or two digits (`72,5 kg`, `72,05 kg`, or `,5 kg`)
+- Keeps commas after contiguous labels, including Unicode letters and digit suffixes, as separators (`phase2,180 cm` → `180 cm`)
 - Supports both strict and fuzzy matching to accommodate exact or loosely formatted input (`5 foot 11 inc` → `71 in`)
 - Normalizes output for consistent downstream use (e.g. math, display, storage)
 - Zero dependencies
@@ -205,12 +207,16 @@ parseMeasurement('5 ft-1 m', { normalizedUnit: 'm' }); // { value: 2.524, unit: 
 // Bare N-M requires an explicit height type and an inch component below 12
 parseMeasurement('5-11', { type: 'height' }); // { value: 71, unit: 'in', ... }
 parseMeasurement('5-.5', { type: 'height' }); // { value: 60.5, unit: 'in', ... }
+parseMeasurement('5-11,5', { type: 'height' }); // { value: 71.5, unit: 'in', ... }
+parseMeasurement('5-,5', { type: 'height' }); // { value: 60.5, unit: 'in', ... }
 parseMeasurement('5-11'); // null: ambiguous without a height type
 parseMeasurement('5-12', { type: 'height' }); // null: inches must be below 12
 parseMeasurement('5-11', { type: 'height', normalizedUnit: 'm' }); // { value: 1.8034, unit: 'm', ... }
 parseMeasurement('150-180 lbs'); // null: reject numeric endpoints sharing one unit
 parseMeasurement('150 – 180 lbs'); // null: spaces and Unicode dashes also denote ranges
 parseMeasurement('kg 50-70'); // null: ranges are also rejected after a unit
+parseMeasurement('72,5-80,5 kg'); // null: decimal commas also denote a range
+parseMeasurement('1,250-1,500 lbs'); // null: thousands groups also denote a range
 parseMeasurement('kg-70.5'); // null: a minus after a unit prefix stays negative
 ```
 
@@ -219,6 +225,20 @@ Ranges that repeat a unit at each endpoint, such as `150 lbs - 180 lbs`, are not
 the existing multiple-component parser treats those as separate measurements and adds them.
 Mixed inputs containing both a range and a separate measurement are also unsupported: the
 existing parser may attach the range's unit to a later value, as in `50-70 kg, 180 lbs`.
+
+### Commas and Label Boundaries
+
+Thousands groups start with one to three digits and continue in groups of three. A final
+one- or two-digit comma group can be a decimal fraction (`1,234,56 kg` is 1234.56 kg).
+Malformed combinations such as `12,34,567 kg` and `1234,567 kg` return `null`, including
+when they occur in a range or compound measurement. Trailing punctuation is preserved:
+`1,000, kg` still means 1000 kg.
+
+Spaces and word-number hyphens separate tokens. A following number keeps its decimal
+comma or thousands group: `weight 72,5 kg` is 72.5 kg, and `height-1,800 cm` is 1800 cm.
+For the same reason, `phase 2,180 cm` and `phase-2,180 cm` both contain the number 2180.
+To separate a label ending in a number from a measurement, put a space after the comma:
+`phase-2, 180 cm` is 180 cm. Contiguous labels such as `phase2,180 cm` are also recognized.
 
 ### Fuzzy Matching
 
