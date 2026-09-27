@@ -14,6 +14,11 @@ describe('unqualified measurement normalization', () => {
       { value: 1.8, unit: 'm', sourceUnit: 'cm' },
     ],
     [
+      '100',
+      { type: 'weight', inferUnit: 'metric', normalizedUnit: 'lb' } as const,
+      { value: 100 / 0.45359237, unit: 'lb', sourceUnit: 'kg' },
+    ],
+    [
       '220',
       { type: 'weight', inferUnit: 'imperial', normalizedUnit: 'kg' } as const,
       { value: 99.79032140000001, unit: 'kg', sourceUnit: 'lb' },
@@ -24,6 +29,24 @@ describe('unqualified measurement normalization', () => {
       value: expected.value,
       unit: expected.unit,
       type: options.type,
+      raw,
+    });
+  });
+
+  it('retains an inferred result when conversion underflows to zero', () => {
+    const raw = `0.${'0'.repeat(323)}5`;
+    expect(
+      parseMeasurement(raw, {
+        type: 'height',
+        allowUnqualified: true,
+        inferUnit: 'metric',
+        normalizedUnit: 'm',
+      })
+    ).toEqual({
+      matches: [{ value: Number.MIN_VALUE, unit: 'cm' }],
+      value: 0,
+      unit: 'm',
+      type: 'height',
       raw,
     });
   });
