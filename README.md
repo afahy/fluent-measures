@@ -17,7 +17,7 @@ The parser can handle common spelling mistakes and phrasing variations using Lev
 - Parses height and weight in both metric and imperial units (`lb`, `kg`, `ft`, `in`, `cm`, `m`)
 - Handles numeric and written-out expressions (`5' 11"`, `five feet eleven inches`, or `one hundred fifty pounds`)
 - Accepts comma-separated thousands (`1,000 lbs`) and decimal commas with one or two digits (`72,5 kg`, `72,05 kg`, or `,5 kg`)
-- Keeps commas after Unicode labels and labels ending in digits as separators (`phase2,180 cm` → `180 cm`)
+- Keeps commas after contiguous labels, including Unicode letters and digit suffixes, as separators (`phase2,180 cm` → `180 cm`)
 - Supports both strict and fuzzy matching to accommodate exact or loosely formatted input (`5 foot 11 inc` → `71 in`)
 - Normalizes output for consistent downstream use (e.g. math, display, storage)
 - Zero dependencies
@@ -225,6 +225,14 @@ Ranges that repeat a unit at each endpoint, such as `150 lbs - 180 lbs`, are not
 the existing multiple-component parser treats those as separate measurements and adds them.
 Mixed inputs containing both a range and a separate measurement are also unsupported: the
 existing parser may attach the range's unit to a later value, as in `50-70 kg, 180 lbs`.
+
+### Commas and Label Boundaries
+
+Spaces and word-number hyphens separate tokens. A following number keeps its decimal
+comma or thousands group: `weight 72,5 kg` is 72.5 kg, and `height-1,800 cm` is 1800 cm.
+For the same reason, `phase 2,180 cm` and `phase-2,180 cm` both contain the number 2180.
+To separate a label ending in a number from a measurement, put a space after the comma:
+`phase-2, 180 cm` is 180 cm. Contiguous labels such as `phase2,180 cm` are also recognized.
 
 ### Fuzzy Matching
 
