@@ -1,6 +1,6 @@
 import { matchUnit } from './matchUnit';
 import { parseNumberToken } from './parseNumberToken';
-import { tokenize } from './tokenize';
+import { normalizeNumericCommas, tokenizeNormalized } from './tokenize';
 import { wordsToNumber } from './wordsToNumber';
 
 import { unitConversions } from './units';
@@ -31,16 +31,18 @@ function readNumberPhrase(
 
 /** Parse a height or weight, optionally inferring its unit or normalizing the result. */
 export function parseMeasurement(input: string, options: ParseOptions = {}): ParsedValue | null {
-  const trimmed = input?.trim();
+  let trimmed = input?.trim();
   if (!trimmed) {
     return null;
   }
 
+  trimmed = normalizeNumericCommas(trimmed);
+
   // Replace whole ranges with a boundary so neither endpoint becomes a measurement.
   // Preserve semicolon boundaries so independent fields cannot form a compound height.
   const fuzziness = options.fuzziness;
-  const tokens = tokenize(
-    input.replace(/(?<![\d.])[\d.]+(?:\s*\p{Dash}\s*[\d.]+)+/gu, ' - '),
+  const tokens = tokenizeNormalized(
+    trimmed.replace(/(?<![\d.])[\d.]+(?:\s*\p{Dash}\s*[\d.]+)+/gu, ' - '),
     fuzziness
   );
   if (tokens.length && options.allowUnqualified && !options.type) {
@@ -48,7 +50,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   }
 
   const shorthandMatches: QualifiedMatch[] = [];
-  const shorthand = /^(\d+)-((?:\d*\.)?\d+)$/.exec(trimmed);
+  const shorthand = trimmed.match(/^(\d+)-((?:\d*\.)?\d+)$/);
   if (shorthand) {
     // Bare N-M is ambiguous unless the caller explicitly requests a height.
     const feet = +shorthand[1];
@@ -59,7 +61,8 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
 
   for (const type of options.type ? [options.type] : (['height', 'weight'] as const)) {
     const matches: QualifiedMatch[] = [...shorthandMatches];
-    const remainingTokens = matches.length ? [] : [...tokens];
+    // Bare shorthand has already been replaced by a range boundary in tokens.
+    const remainingTokens = [...tokens];
 
     // Process tokens looking for units and numbers
     for (let i = 0; i < remainingTokens.length; i++) {

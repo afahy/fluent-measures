@@ -1,20 +1,26 @@
 import { matchUnit } from './matchUnit';
 import { wordsToNumber } from './wordsToNumber';
 
-/** Split measurement text while retaining negative signs and compound boundaries. */
+/** Normalize comma groups before interpreting numeric syntax or splitting tokens. */
+export function normalizeNumericCommas(input: string): string {
+  return input.replace(/(?<=\d),(?=\d{1,2}(?!\d))/g, '.').replace(/(?<=\d),(?=\d{3}(?!\d))/g, '');
+}
+
+/** Normalize comma numbers before splitting standalone measurement text. */
 export function tokenize(input: string, fuzziness?: number): string[] {
+  return tokenizeNormalized(normalizeNumericCommas(input), fuzziness);
+}
+
+/** Split normalized text while retaining negative signs and compound boundaries. */
+export function tokenizeNormalized(input: string, fuzziness?: number): string[] {
   return (
     input
       // Convert to lowercase for case-insensitive matching
       .toLowerCase()
       // Keep semicolons visible to compound-height parsing while separating adjacent tokens.
       .replace(/;/g, ' ; ')
-      // Normalize numeric commas (1,000 -> 1000, 72,5 -> 72.5) and separate other punctuation.
-      // Split a hyphen after quoted feet and label underscores before minus signs too.
-      .replace(
-        /(?<=\d),(\d{3}|(\d{1,2}))(?!\d)|(?<=\d\s*')-(?=\.?\d)|_(?=-)|[^\w\s'".;-]/g,
-        (_, digits?: string, decimal?: string) => (decimal ? `.${decimal}` : digits || ' ')
-      )
+      // Split punctuation, hyphens after quoted feet, and underscores before minus signs.
+      .replace(/(?<=\d\s*')-(?=\.?\d)|_(?=-)|[^\w\s'".;-]/g, ' ')
       // Populated feet introduce inches; standalone unit prefixes retain the minus sign.
       // Check the prefix first so the lookbehind only scans the preceding token when needed.
       .replace(
