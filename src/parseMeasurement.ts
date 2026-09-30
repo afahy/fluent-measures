@@ -120,6 +120,17 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       }
     }
 
+    // Inferred units use the same normalization and result handling as explicit units.
+    const inferred = !matches.length && options.allowUnqualified && options.type;
+    if (inferred) {
+      const num = wordsToNumber(tokens.filter(token => token !== ';').join(' '));
+      if (num !== null && num > 0) {
+        const metric = options.inferUnit === 'metric';
+        const unit = type === 'height' ? (metric ? 'cm' : 'in') : metric ? 'kg' : 'lb';
+        matches.push({ value: num, unit });
+      }
+    }
+
     // If we found any matches for this type
     if (matches.length) {
       // For height measurements with multiple components, always normalize to inches
@@ -144,7 +155,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       }
 
       // A zero-height fragment must not hide a valid measurement of another type.
-      if (!totalValue) continue;
+      if (!totalValue && !inferred) continue;
 
       return {
         value: totalValue,
@@ -152,28 +163,6 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         type,
         raw: input,
         matches,
-      };
-    }
-  }
-
-  // Try unqualified input if no matches found and all previous attempts failed
-  if (options.allowUnqualified && options.type) {
-    const num = wordsToNumber(tokens.filter(token => token !== ';').join(' '));
-    if (num !== null && num > 0) {
-      const metric = options.inferUnit === 'metric';
-      const unit = options.type === 'height' ? (metric ? 'cm' : 'in') : metric ? 'kg' : 'lb';
-
-      return {
-        matches: [
-          {
-            value: num,
-            unit,
-          },
-        ],
-        value: num,
-        unit,
-        type: options.type,
-        raw: input,
       };
     }
   }

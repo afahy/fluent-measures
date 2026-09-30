@@ -94,6 +94,14 @@ const inferredHeight = parseMeasurement('72', {
   inferUnit: 'imperial',
 });
 /* { value: 72, unit: 'in', type: 'height', raw: '72' } */
+
+const normalizedInferredHeight = parseMeasurement('72', {
+  type: 'height',
+  allowUnqualified: true,
+  inferUnit: 'imperial',
+  normalizedUnit: 'cm',
+});
+/* { value: 182.88, unit: 'cm', type: 'height', matches: [{ value: 72, unit: 'in' }], raw: '72' } */
 ```
 
 Use fuzzy matching for greater flexibility
