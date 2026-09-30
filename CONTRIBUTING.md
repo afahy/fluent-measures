@@ -168,6 +168,10 @@ code. Add tests that catch either kind.
 Mutation testing needs Node 22.18 or a later 22.x release, or Node 24.11 or later. Stryker
 depends on Babel 8, which requires those versions.
 
+`vite` is in `devDependencies` because vitest needs it as a peer dependency. When you upgrade
+vitest to a release that doesn't accept the installed vite major, raise the `vite` range in the
+same change. If they don't match, `pnpm install` prints an `unmet peer vite` warning.
+
 ## Documentation
 
 We use TypeDoc to generate API documentation. Please add proper JSDoc comments to all public functions and types:
