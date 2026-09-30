@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "runId": "c80ceee9-451a-4904-990c-a8301447eab0",
+  "pr": 31,
+  "headSha": "0111ccb02be68cdb02cc2bc88375f211f0237e58",
+  "baseSha": "db2880309eb1409a6ee57d8d7f35fda3c23ff088",
+  "outcome": "blocked",
+  "summary": "The standards and specification reviews found no legitimate issue in the PR diff, but registry access failures prevented completion of all required dependency checks.",
+  "standards": [
+    "Clean: the direct vite dependency and matching lockfile importer are correct; AFA-38 authorizes the CODEOWNERS-protected files, and no consumer-facing package field changed that would require a changeset."
+  ],
+  "specification": [
+    "Clean: the PR declares vite ^6.4.3 as the sole root devDependency, stays on major 6, leaves other direct dependencies unchanged, and documents future vitest compatibility maintenance as AFA-38 requires."
+  ],
+  "unresolved": [],
+  "fixes": [],
+  "verification": [
+    {
+      "command": "pnpm install --frozen-lockfile",
+      "passed": true,
+      "detail": "The frozen lockfile installation completed without peer-dependency warnings."
+    },
+    {
+      "command": "pnpm why vite && pnpm ls --depth 0",
+      "passed": true,
+      "detail": "Both commands show vite 6.4.3 as the root development dependency and only installed Vite version."
+    },
+    {
+      "command": "pnpm dedupe --check",
+      "passed": false,
+      "detail": "The npm registry returned HTTP 403 in this environment."
+    },
+    {
+      "command": "pnpm outdated",
+      "passed": false,
+      "detail": "The npm registry returned HTTP 403 in this environment."
+    },
+    {
+      "command": "pnpm audit && pnpm audit --prod",
+      "passed": false,
+      "detail": "The npm audit endpoint returned HTTP 403 in this environment."
+    },
+    {
+      "command": "pnpm lint",
+      "passed": true,
+      "detail": "ESLint, Prettier, and cspell passed."
+    },
+    {
+      "command": "pnpm test",
+      "passed": true,
+      "detail": "All 529 unit tests and the TypeScript check passed on Node 22.22.2."
+    },
+    {
+      "command": "pnpm test:unit:coverage",
+      "passed": true,
+      "detail": "All 529 tests passed with 98.47% statement and 96.62% branch coverage."
+    },
+    {
+      "command": "pnpm test:mutation",
+      "passed": true,
+      "detail": "Mutation score was 90.53%, above the configured 70% break threshold."
+    },
+    {
+      "command": "pnpm build",
+      "passed": true,
+      "detail": "CJS, ESM, and declaration builds completed successfully."
+    },
+    {
+      "command": "pnpm check:size",
+      "passed": true,
+      "detail": "ESM was 1.95 kB and CJS was 2 kB, both within limits."
+    },
+    {
+      "command": "git diff --check db2880309eb1409a6ee57d8d7f35fda3c23ff088...0111ccb02be68cdb02cc2bc88375f211f0237e58",
+      "passed": true,
+      "detail": "The reviewed PR diff has no whitespace errors."
+    }
+  ],
+  "blockers": [
+    "HTTP 403 responses from the npm registry prevented pnpm outdated, pnpm dedupe --check, pnpm audit, and pnpm audit --prod from completing."
+  ],
+  "commitMessage": ""
+}
