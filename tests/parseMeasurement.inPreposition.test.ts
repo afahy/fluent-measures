@@ -8,13 +8,15 @@ describe('the word "in" before a number', () => {
     ['I was 180 lbs in 2019', 180, 'lb', 'weight'],
     ['gained 10 kg in six months', 10, 'kg', 'weight'],
     ['in 2024 I weighed 80 kg', 80, 'kg', 'weight'],
+    ['IN 2020 I weighed 80 kg', 80, 'kg', 'weight'],
     ['born in 1990, 180 cm', 180, 'cm', 'height'],
+    ['weighed 70 kg (in 2020)', 70, 'kg', 'weight'],
   ] as const)('reads "in" as a preposition in %s', (raw, value, unit, type) => {
     expect(parseMeasurement(raw)).toEqual({ value, unit, type, raw, matches: [{ value, unit }] });
   });
 
-  it('returns null when "in" is the only unit and comes before the number', () => {
-    expect(parseMeasurement('in 5')).toBeNull();
+  it.each(['in 5', 'height in 72'])('returns null without a label in %s', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
   });
 
   it('finds no height when the only "in" is a preposition', () => {
@@ -56,6 +58,93 @@ describe('the word "in" before a number', () => {
 
   it('still reads 5 ft 11 in as a compound height', () => {
     const raw = '5 ft 11 in';
+    expect(parseMeasurement(raw)).toEqual({
+      value: 71,
+      unit: 'in',
+      type: 'height',
+      raw,
+      matches: [
+        { value: 5, unit: 'ft' },
+        { value: 11, unit: 'in' },
+      ],
+    });
+  });
+});
+
+describe('the letter "m" before a number', () => {
+  it.each(['M 28', 'Sex: M, Age: 28'])('returns null for a sex marker and an age in %s', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
+
+  it('finds the weight after a sex marker and an age', () => {
+    const raw = 'm 28, 180 lbs';
+    expect(parseMeasurement(raw)).toEqual({
+      value: 180,
+      unit: 'lb',
+      type: 'weight',
+      raw,
+      matches: [{ value: 180, unit: 'lb' }],
+    });
+  });
+
+  it('reads only the height in M/28/5\'11"', () => {
+    const raw = 'M/28/5\'11"';
+    expect(parseMeasurement(raw)).toEqual({
+      value: 71,
+      unit: 'in',
+      type: 'height',
+      raw,
+      matches: [
+        { value: 5, unit: 'ft' },
+        { value: 11, unit: 'in' },
+      ],
+    });
+  });
+});
+
+describe('unit labels before a number', () => {
+  it.each([
+    ['Height (in): 72', 72, 'in'],
+    ['height (in) 72', 72, 'in'],
+    ['height (IN): 72', 72, 'in'],
+    ['[in] 72', 72, 'in'],
+    ['in: 72', 72, 'in'],
+    ['Height in: 72', 72, 'in'],
+    ['Height (in.): 72', 72, 'in'],
+    ['in. 5', 5, 'in'],
+    ['Height (m): 1.8', 1.8, 'm'],
+    ['m: 1.8', 1.8, 'm'],
+  ] as const)('reads the label in %s', (raw, value, unit) => {
+    expect(parseMeasurement(raw)).toEqual({
+      value,
+      unit,
+      type: 'height',
+      raw,
+      matches: [{ value, unit }],
+    });
+  });
+
+  it('reads every label in an input, not only the first', () => {
+    expect(parseMeasurement('Unit (in), height (in): 72')?.value).toBe(72);
+  });
+
+  it('reads a label when the height type is given', () => {
+    expect(parseMeasurement('Height (in): 72', { type: 'height' })?.value).toBe(72);
+  });
+
+  it('leaves a number with its own unit to that unit in weigh-in: 180 lbs', () => {
+    const raw = 'weigh-in: 180 lbs';
+    expect(parseMeasurement(raw)).toEqual({
+      value: 180,
+      unit: 'lb',
+      type: 'weight',
+      raw,
+      matches: [{ value: 180, unit: 'lb' }],
+    });
+  });
+
+  it('reads a sex marker label as a letter in M: 5\'11"', () => {
+    const raw = 'M: 5\'11"';
     expect(parseMeasurement(raw)).toEqual({
       value: 71,
       unit: 'in',

@@ -2,7 +2,7 @@ import { matchUnit } from './matchUnit';
 import { normalizeNumericCommas, tokenizeNormalized } from './tokenize';
 import { wordsToNumber } from './wordsToNumber';
 
-import { unitConversions } from './units';
+import { LABEL_ALIASES, unitConversions } from './units';
 
 import { ParseOptions, ParsedValue, Match } from './types';
 
@@ -80,16 +80,24 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         continue;
       }
 
-      // A semicolon can also separate a unit prefix from its value. The word "in" is never a
-      // prefix, because before a number it is almost always a preposition: "in 2020".
+      // A semicolon can also separate a unit prefix from its value. Short aliases such as "in"
+      // are words before a number ("in 2020"), so only their spelled-out labels are prefixes.
       if (
         !num &&
         (num === null || unit !== 'ft' || remainingTokens[i - 1] === ';') &&
         !signed &&
-        remainingTokens[i] !== 'in'
+        !LABEL_ALIASES.has(remainingTokens[i])
       ) {
         while (remainingTokens[matchEnd] === ';') matchEnd++;
         num = wordsToNumber(remainingTokens[matchEnd] ?? '') || null;
+        // A label doesn't take a number that has its own unit: "weigh-in: 180 lbs".
+        const next = remainingTokens[matchEnd + 1] ?? '';
+        if (
+          LABEL_ALIASES.has(unit) &&
+          (matchUnit(next, 'height', fuzziness) || matchUnit(next, 'weight', fuzziness))
+        ) {
+          num = null;
+        }
         matchStart = i;
         matchEnd++;
       }

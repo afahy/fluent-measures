@@ -1,5 +1,14 @@
 import { matchUnit } from './matchUnit';
+import { LABEL_ALIASES } from './units';
 import { wordsToNumber } from './wordsToNumber';
+
+// A short alias in brackets or before a colon, as in "(in)" and "m:", is a label. So is "in."
+// followed by a space, the usual abbreviation for inches.
+const LABELS = [...LABEL_ALIASES.keys()].join('|');
+const LABEL_PATTERN = new RegExp(
+  `(?<=[([]\\s*)(?:${LABELS})(?=\\.?\\s*[)\\]])|\\b(?:${LABELS})(?=\\.?\\s*:)|\\bin(?=\\.(?:\\s|$))`,
+  'g'
+);
 
 /** Normalize comma groups before interpreting numeric syntax or splitting tokens. */
 export function normalizeNumericCommas(input: string): string {
@@ -32,6 +41,8 @@ export function tokenizeNormalized(input: string, fuzziness?: number): string[] 
       input
         // Convert to lowercase for case-insensitive matching
         .toLowerCase()
+        // Spell out label aliases before the punctuation that marks them is removed.
+        .replace(LABEL_PATTERN, alias => LABEL_ALIASES.get(alias) ?? alias)
         // Split punctuation, hyphens after quoted feet, and underscores before minus signs.
         .replace(/(?<=\d\s*')-(?=\.?\d)|_(?=-)|[^\w\s'".;-]/g, ' ')
         // Populated feet introduce inches; standalone unit prefixes retain the minus sign.
