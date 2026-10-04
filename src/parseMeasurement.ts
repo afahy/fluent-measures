@@ -80,8 +80,14 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         continue;
       }
 
-      // A semicolon can also separate a unit prefix from its value.
-      if (!num && (num === null || unit !== 'ft' || remainingTokens[i - 1] === ';') && !signed) {
+      // A semicolon can also separate a unit prefix from its value. The word "in" is never a
+      // prefix, because before a number it is almost always a preposition: "in 2020".
+      if (
+        !num &&
+        (num === null || unit !== 'ft' || remainingTokens[i - 1] === ';') &&
+        !signed &&
+        remainingTokens[i] !== 'in'
+      ) {
         while (remainingTokens[matchEnd] === ';') matchEnd++;
         num = wordsToNumber(remainingTokens[matchEnd] ?? '') || null;
         matchStart = i;
