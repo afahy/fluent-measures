@@ -76,12 +76,15 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         const word = remainingTokens[i];
         if (type === 'weight' && UNSUPPORTED_WEIGHT_UNITS.test(word)) {
           const [before, beforeEnd] = readNumberPhrase(remainingTokens, i - 1, -1);
-          const [, afterEnd] = readNumberPhrase(tokens, i + 1);
+          // Reading backward already skips semicolons, so skip them reading forward too, as in
+          // "8 oz; 7 lb" and "12 st 4;lb".
+          const [, afterEnd] = readNumberPhrase(tokens, skipSemicolons(tokens, i + 1));
           // Earlier matches blank their tokens, so check the original tokens for a unit.
           if (
             before !== null &&
             !(word === 'st' && /^(?:\d*[02-9])?1$/.test(remainingTokens[i - 1])) &&
-            (isWeightUnit(tokens[beforeEnd]) || isWeightUnit(tokens[afterEnd]))
+            (isWeightUnit(tokens[beforeEnd]) ||
+              isWeightUnit(tokens[skipSemicolons(tokens, afterEnd)]))
           ) {
             return null;
           }

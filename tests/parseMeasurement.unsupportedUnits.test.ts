@@ -19,6 +19,9 @@ describe('unsupported weight units', () => {
     '12;st 4lb',
     '8 oz 7 lb',
     '7 lb; 8 oz',
+    '8 oz; 7 lb',
+    '12st; 4lb',
+    '12 st 4;lb',
     'baby: 7 lb 8 oz',
     // Decimal stones, which can't be ordinals
     '10.1st 4lb',
