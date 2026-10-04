@@ -204,9 +204,17 @@ pnpm docs
 
 This library is designed to be lightweight and performant. When contributing, keep in mind:
 
-1. **Bundle Size**: Avoid adding dependencies when possible
-2. **Algorithmic Complexity**: Be mindful of performance in parsing algorithms
-3. **Memory Usage**: Avoid unnecessary object creation in hot paths
+1. **Bundle Size**: Avoid adding dependencies when possible. Each build, `dist/index.js` and
+   `dist/index.cjs`, has a budget of 2.5 kB after minifying and compressing with Brotli. The
+   limits are set in `.size-limit.cjs`, and if this note disagrees with that file, the file is
+   right. CI fails when a build goes over its budget. To check, run `pnpm build` and then
+   `pnpm check:size`. To see how much minified code each source file adds, run
+   `pnpm exec tsup --metafile` and load `dist/metafile-esm.json` into
+   [esbuild's bundle analyzer](https://esbuild.github.io/analyze/). `pnpm check:size:why` can't
+   show this, because it only sees the built file. Raising the budget needs its own ticket, so
+   don't raise it as part of another change.
+2. **Algorithmic Complexity**: Be mindful of performance in parsing algorithms.
+3. **Memory Usage**: Avoid unnecessary object creation in hot paths.
 
 ## Any contributions you make will be under the MIT Software License
 
