@@ -204,7 +204,12 @@ pnpm docs
 
 This library is designed to be lightweight and performant. When contributing, keep in mind:
 
-1. **Bundle Size**: Avoid adding dependencies when possible
+1. **Bundle Size**: Avoid adding dependencies when possible. Each build, `dist/index.js` and
+   `dist/index.cjs`, has a budget of 2.5 kB after minifying and compressing with Brotli, set in
+   `.size-limit.cjs`. CI fails when a build goes over it. To check, run `pnpm build` and then
+   `pnpm check:size`. `pnpm check:size:why` opens a report in your browser that shows which
+   modules take up the space. Raising the budget needs its own ticket, so don't raise it as
+   part of another change
 2. **Algorithmic Complexity**: Be mindful of performance in parsing algorithms
 3. **Memory Usage**: Avoid unnecessary object creation in hot paths
 
