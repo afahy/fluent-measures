@@ -179,15 +179,18 @@ interface ParsedValue {
 - **Metric**: kg (kilo, kilos, kilograms)
 
 Most units can come before their number, as in `kg 70`. The short forms `in` and `m` can only
-when written as a label, because before a number they're usually ordinary words:
+when written as a label, because before a number they're usually ordinary words. A label is in
+brackets or before `:` or `=`, or, for inches, written `in.`:
 
 ```typescript
 parseMeasurement('Height (in): 72'); // { value: 72, unit: 'in', ... }
 parseMeasurement('m: 1.8'); // { value: 1.8, unit: 'm', ... }
+parseMeasurement('in = 72'); // { value: 72, unit: 'in', ... }
 parseMeasurement('in. 5'); // { value: 5, unit: 'in', ... }
+parseMeasurement('check-in: 5'); // null: "in" is part of a hyphenated word
 parseMeasurement('weighed 70 kg in 2020'); // { value: 70, unit: 'kg', ... }
 parseMeasurement('M 28'); // null: "M" before an age isn't meters
-parseMeasurement('weigh-in: 180 lbs'); // { value: 180, unit: 'lb', ... }: 180 has its own unit
+parseMeasurement('Weigh in: 180 lbs'); // { value: 180, unit: 'lb', ... }: 180 has its own unit
 ```
 
 ## Advanced Use Cases

@@ -22,6 +22,10 @@ export const LABEL_ALIASES = new Map([
   ['m', 'meter'],
 ]);
 
+// The unit of the next smaller part after a label's unit, as in "m: 1 cm: 80". Inches have no
+// smaller part.
+export const NEXT_PART: Partial<Record<Unit, Unit>> = { m: 'cm' };
+
 // Height conversion functions
 export const ftToIn = (value: number): number => value * 12;
 

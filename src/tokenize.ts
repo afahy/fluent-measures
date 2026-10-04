@@ -2,11 +2,12 @@ import { matchUnit } from './matchUnit';
 import { LABEL_ALIASES } from './units';
 import { wordsToNumber } from './wordsToNumber';
 
-// A short alias in brackets or before a colon, as in "(in)" and "m:", is a label. So is "in."
-// followed by a space, the usual abbreviation for inches.
+// A short alias in brackets or before a colon or equals sign, as in "(in)", "m:" and "in = 72",
+// is a label. So is "in." followed by a space, the usual abbreviation for inches. The alias must
+// be a word of its own, so "check-in: 5" isn't a label.
 const LABELS = [...LABEL_ALIASES.keys()].join('|');
 const LABEL_PATTERN = new RegExp(
-  `(?<=[([]\\s*)(?:${LABELS})(?=\\.?\\s*[)\\]])|\\b(?:${LABELS})(?=\\.?\\s*:)|\\bin(?=\\.(?:\\s|$))`,
+  `(?<=[([]\\s*)(?:${LABELS})(?=\\.?\\s*[)\\]])|(?<![\\w-])(?:${LABELS})(?=\\.?\\s*[:=])|(?<![\\w-])in(?=\\.(?:\\s|$))`,
   'g'
 );
 

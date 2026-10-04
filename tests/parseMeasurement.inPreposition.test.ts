@@ -114,6 +114,9 @@ describe('unit labels before a number', () => {
     ['in. 5', 5, 'in'],
     ['Height (m): 1.8', 1.8, 'm'],
     ['m: 1.8', 1.8, 'm'],
+    ['Height in = 72', 72, 'in'],
+    ['in=72', 72, 'in'],
+    ['m = 1.8', 1.8, 'm'],
   ] as const)('reads the label in %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toEqual({
       value,
@@ -132,8 +135,8 @@ describe('unit labels before a number', () => {
     expect(parseMeasurement('Height (in): 72', { type: 'height' })?.value).toBe(72);
   });
 
-  it('leaves a number with its own unit to that unit in weigh-in: 180 lbs', () => {
-    const raw = 'weigh-in: 180 lbs';
+  it('leaves a number with its own unit to that unit in Weigh in: 180 lbs', () => {
+    const raw = 'Weigh in: 180 lbs';
     expect(parseMeasurement(raw)).toEqual({
       value: 180,
       unit: 'lb',
@@ -143,8 +146,7 @@ describe('unit labels before a number', () => {
     });
   });
 
-  it('reads a sex marker label as a letter in M: 5\'11"', () => {
-    const raw = 'M: 5\'11"';
+  it.each(['M: 5\'11"', 'M: 5 ft 11 in'])('reads a sex marker label as a letter in %s', raw => {
     expect(parseMeasurement(raw)).toEqual({
       value: 71,
       unit: 'in',
@@ -155,5 +157,47 @@ describe('unit labels before a number', () => {
         { value: 11, unit: 'in' },
       ],
     });
+  });
+
+  it.each(['m: 1 cm: 80', 'Height m: 1, cm: 80'])(
+    'reads consecutive label fields as one height in %s',
+    raw => {
+      const result = parseMeasurement(raw);
+      expect(result?.value).toBeCloseTo(180 / 2.54);
+      expect(result?.unit).toBe('in');
+      expect(result?.matches).toEqual([
+        { value: 1, unit: 'm' },
+        { value: 80, unit: 'cm' },
+      ]);
+    }
+  );
+
+  it('leaves a number with centimeters to centimeters in Height (m): 180 cm', () => {
+    const raw = 'Height (m): 180 cm';
+    expect(parseMeasurement(raw)).toEqual({
+      value: 180,
+      unit: 'cm',
+      type: 'height',
+      raw,
+      matches: [{ value: 180, unit: 'cm' }],
+    });
+  });
+
+  it('reads consecutive feet and inch fields in ft: 5 in: 11', () => {
+    expect(parseMeasurement('ft: 5 in: 11')?.matches).toEqual([
+      { value: 5, unit: 'ft' },
+      { value: 11, unit: 'in' },
+    ]);
+  });
+
+  it.each(['check-in: 5', 'weigh-in: 180', 'sign-in: 2020', 'check-in. 5'])(
+    'does not read the end of a hyphenated word as a label in %s',
+    raw => {
+      expect(parseMeasurement(raw)).toBeNull();
+    }
+  );
+
+  it('still finds the weight after a hyphenated word in weigh-in: 180 lbs', () => {
+    expect(parseMeasurement('weigh-in: 180 lbs')?.matches).toEqual([{ value: 180, unit: 'lb' }]);
   });
 });
