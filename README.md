@@ -178,6 +178,9 @@ interface ParsedValue {
 - **Imperial**: lb (lbs, pounds)
 - **Metric**: kg (kilo, kilos, kilograms)
 
+Stone, ounces and grams aren't supported. A weight that uses one of them returns `null`, even
+next to a supported unit, so `12st 4lb` and `7 lb 8 oz` return `null` rather than 4 lb or 7 lb.
+
 Most units can come before their number, as in `kg 70`. The short forms `in` and `m` can only
 when written as a label, because before a number they're usually ordinary words. A label is in
 brackets or before `:` or `=`, or, for inches, written `in.`:

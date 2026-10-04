@@ -2,7 +2,7 @@ import { matchUnit } from './matchUnit';
 import { normalizeNumericCommas, tokenizeNormalized } from './tokenize';
 import { wordsToNumber } from './wordsToNumber';
 
-import { LABEL_ALIASES, NEXT_PART, unitConversions } from './units';
+import { LABEL_ALIASES, NEXT_PART, UNSUPPORTED_WEIGHT_UNITS, unitConversions } from './units';
 
 import { ParseOptions, ParsedValue, Match } from './types';
 
@@ -68,6 +68,17 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     for (let i = 0; i < remainingTokens.length; i++) {
       const unit = matchUnit(remainingTokens[i], type, fuzziness);
       if (!unit) {
+        // A number in an unsupported weight unit would leave the weight incomplete. "st" after a
+        // number that ends in 1, except 11, is an ordinal, as in "Oct 1st".
+        const word = remainingTokens[i];
+        if (
+          type === 'weight' &&
+          UNSUPPORTED_WEIGHT_UNITS.test(word) &&
+          readNumberPhrase(remainingTokens, i - 1, -1)[0] !== null &&
+          !(word === 'st' && /(?:^|[^1])1$/.test(remainingTokens[i - 1]))
+        ) {
+          return null;
+        }
         continue;
       }
 
