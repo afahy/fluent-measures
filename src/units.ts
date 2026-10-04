@@ -14,6 +14,18 @@ export const UNIT_ALIASES: Record<MeasurementType, [Unit, ...string[]][]> = {
   ],
 };
 
+// Short aliases that are usually ordinary words before a number, as in "in 2020" and "M 28".
+// They can come before their number only as a label, such as "(in)" or "m:", which the
+// tokenizer spells out as the alias given here.
+export const LABEL_ALIASES = new Map([
+  ['in', 'inch'],
+  ['m', 'meter'],
+]);
+
+// The unit of the next smaller part after a label's unit, as in "m: 1 cm: 80". Inches have no
+// smaller part.
+export const NEXT_PART: Partial<Record<Unit, Unit>> = { m: 'cm' };
+
 // Height conversion functions
 export const ftToIn = (value: number): number => value * 12;
 

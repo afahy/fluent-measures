@@ -2,7 +2,7 @@ import { matchUnit } from './matchUnit';
 import { normalizeNumericCommas, tokenizeNormalized } from './tokenize';
 import { wordsToNumber } from './wordsToNumber';
 
-import { unitConversions } from './units';
+import { LABEL_ALIASES, NEXT_PART, unitConversions } from './units';
 
 import { ParseOptions, ParsedValue, Match } from './types';
 
@@ -26,6 +26,12 @@ function readNumberPhrase(
     value = candidate;
   }
   return [value, end];
+}
+
+/** Return the index of the first token at or after `start` that isn't a semicolon. */
+function skipSemicolons(tokens: string[], start: number): number {
+  while (tokens[start] === ';') start++;
+  return start;
 }
 
 /** Parse a height or weight, optionally inferring its unit or normalizing the result. */
@@ -80,10 +86,27 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         continue;
       }
 
-      // A semicolon can also separate a unit prefix from its value.
-      if (!num && (num === null || unit !== 'ft' || remainingTokens[i - 1] === ';') && !signed) {
-        while (remainingTokens[matchEnd] === ';') matchEnd++;
+      // A semicolon can also separate a unit prefix from its value. Short aliases such as "in"
+      // are words before a number ("in 2020"), so only their spelled-out labels are prefixes.
+      if (
+        !num &&
+        (num === null || unit !== 'ft' || remainingTokens[i - 1] === ';') &&
+        !signed &&
+        !LABEL_ALIASES.has(remainingTokens[i])
+      ) {
+        matchEnd = skipSemicolons(remainingTokens, matchEnd);
         num = wordsToNumber(remainingTokens[matchEnd] ?? '') || null;
+        // A label doesn't take a number that has its own unit, as in "weigh in: 180 lbs", unless
+        // that unit starts the next part of the measurement with its own number: "m: 1 cm: 80".
+        // Semicolons can come between a number and its unit, as in "180; lbs".
+        const unitAt = skipSemicolons(remainingTokens, matchEnd + 1);
+        const next = remainingTokens[unitAt] ?? '';
+        const nextUnit =
+          matchUnit(next, 'height', fuzziness) || matchUnit(next, 'weight', fuzziness);
+        const partAt = skipSemicolons(remainingTokens, unitAt + 1);
+        const startsNextPart =
+          nextUnit === NEXT_PART[unit] && wordsToNumber(remainingTokens[partAt] ?? '') !== null;
+        if (LABEL_ALIASES.has(unit) && nextUnit && !startsNextPart) num = null;
         matchStart = i;
         matchEnd++;
       }
