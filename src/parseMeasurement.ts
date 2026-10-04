@@ -205,10 +205,11 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       // A zero-height fragment must not hide a valid measurement of another type.
       if (!totalValue) continue;
 
-      // Another measurement is fine only as the same value written another way, within 1%.
-      if (
-        counted.some(parts => Math.abs(total(parts, targetUnit) - totalValue) > totalValue / 100)
-      ) {
+      // Another measurement is fine only as the same value written another way, within 1%. The
+      // tiny margin keeps an exact 1% after floating-point rounding, which makes 1.01 - 1 a little
+      // more than 0.01.
+      const limit = (totalValue / 100) * (1 + 1e-9);
+      if (counted.some(parts => Math.abs(total(parts, targetUnit) - totalValue) > limit)) {
         return null;
       }
 

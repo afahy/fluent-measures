@@ -82,8 +82,20 @@ describe('separate measurements in one input', () => {
     expect(parseMeasurement('0 m')).toBeNull();
   });
 
-  it('accepts a difference of exactly 1%, and no more', () => {
-    expect(parseMeasurement('100 cm (101 cm)')?.value).toBe(100);
-    expect(parseMeasurement('100 cm (101.1 cm)')).toBeNull();
+  it.each([
+    ['100 cm (101 cm)', 100],
+    // Decimals whose difference is exactly 1% but rounds to slightly more
+    ['1 m; 1.01 m', 1],
+    ['70 kg; 70.7 kg', 70],
+    ['0.3 m (0.303 m)', 0.3],
+  ])('accepts a difference of exactly 1% in %s', (raw, value) => {
+    expect(parseMeasurement(raw)?.value).toBe(value);
   });
+
+  it.each(['100 cm (101.1 cm)', '1 m; 1.0101 m'])(
+    'rejects a difference of more than 1% in %s',
+    raw => {
+      expect(parseMeasurement(raw)).toBeNull();
+    }
+  );
 });
