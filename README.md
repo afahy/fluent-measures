@@ -224,7 +224,7 @@ parseMeasurement('5-foot-0-inches'); // { value: 60, unit: 'in', ... }
 parseMeasurement('0 feet; actual 1.8 meters'); // { value: 1.8, unit: 'm', ... }
 parseMeasurement('180;lbs'); // { value: 180, unit: 'lb', ... }
 parseMeasurement('record 0; kg 70'); // { value: 70, unit: 'kg', ... }
-parseMeasurement('5 ft-1 m', { normalizedUnit: 'm' }); // { value: 2.524, unit: 'm', ... }
+parseMeasurement('5 ft-1 m', { normalizedUnit: 'm' }); // null: 5 ft and 1 m are separate and disagree
 
 // Bare N-M requires an explicit height type and an inch component below 12
 parseMeasurement('5-11', { type: 'height' }); // { value: 71, unit: 'in', ... }
@@ -243,10 +243,23 @@ parseMeasurement('kg-70.5'); // null: a minus after a unit prefix stays negative
 ```
 
 Range rejection covers complete numeric ranges that share one unit, before or after the endpoints.
-Ranges that repeat a unit at each endpoint, such as `150 lbs - 180 lbs`, are not supported;
-the existing multiple-component parser treats those as separate measurements and adds them.
+Ranges that repeat a unit at each endpoint, such as `150 lbs - 180 lbs`, return `null`, because
+the endpoints are separate measurements that disagree.
 Mixed inputs containing both a range and a separate measurement are also unsupported: the
 existing parser may attach the range's unit to a later value, as in `50-70 kg, 180 lbs`.
+
+### Separate Measurements
+
+Parts form one measurement only when each unit is the next smaller one, as in `5 ft 11 in` or
+`1 m 80 cm`. Other parts are separate measurements. When an input has more than one, the first
+is returned if the others agree with it within 1%, as when a value is followed by its
+conversion. Otherwise the result is `null`:
+
+```typescript
+parseMeasurement('70 kg (154 lbs)'); // { value: 70, unit: 'kg', ... }
+parseMeasurement('180 cm (5\'11")'); // { value: 180, unit: 'cm', ... }
+parseMeasurement('210 lbs to 180 lbs'); // null: two different weights
+```
 
 ### Commas and Label Boundaries
 

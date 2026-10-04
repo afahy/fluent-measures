@@ -4,7 +4,7 @@ import { wordsToNumber } from './wordsToNumber';
 
 import { LABEL_ALIASES, NEXT_PART, UNSUPPORTED_WEIGHT_UNITS, unitConversions } from './units';
 
-import { ParseOptions, ParsedValue, Match } from './types';
+import { ParseOptions, ParsedValue, Match, Unit } from './types';
 
 type QualifiedMatch = Match & { unit: NonNullable<Match['unit']> };
 
@@ -26,6 +26,25 @@ function readNumberPhrase(
     value = candidate;
   }
   return [value, end];
+}
+
+/** Add up a measurement's parts in the target unit. */
+function total(parts: QualifiedMatch[], targetUnit: Unit): number {
+  let sum = 0;
+  for (const { value, unit } of parts) {
+    // Zero components contribute nothing, including across measurement types.
+    if (!value) continue;
+    if (unit === targetUnit) {
+      sum += value;
+      continue;
+    }
+    const converter = unitConversions[unit][targetUnit];
+    if (!converter) {
+      throw new Error(`Cannot convert ${unit} to ${targetUnit}`);
+    }
+    sum += converter(value);
+  }
+  return sum;
 }
 
 /** Return the index of the first token at or after `start` that isn't a semicolon. */
@@ -166,36 +185,39 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
 
     // If we found any matches for this type
     if (matches.length) {
-      // For height measurements with multiple components, always normalize to inches
-      // For other cases, use the input unit unless normalization is requested
-      const targetUnit =
-        options.normalizedUnit ||
-        (type === 'height' && matches.length > 1 ? 'in' : matches[0].unit);
-      let totalValue = 0;
-
-      for (const { value, unit } of matches) {
-        // Zero components contribute nothing, including across measurement types.
-        if (!value) continue;
-        if (unit === targetUnit) {
-          totalValue += value;
-          continue;
-        }
-        const converter = unitConversions[unit][targetUnit];
-        if (!converter) {
-          throw new Error(`Cannot convert ${unit} to ${targetUnit}`);
-        }
-        totalValue += converter(value);
+      // Parts form one measurement only while each unit is the next smaller one, as in
+      // "5 ft 11 in". Any other part starts a separate measurement, as in "70 kg (154 lbs)".
+      const measurements: QualifiedMatch[][] = [];
+      for (const match of matches) {
+        const last = measurements.at(-1);
+        if (last && NEXT_PART[last[last.length - 1].unit] === match.unit) last.push(match);
+        else measurements.push([match]);
       }
+      // A measurement that adds up to zero doesn't count, as in "0 feet; actual 1.8 meters".
+      const counted = measurements.filter(parts => parts.some(({ value }) => value));
+      const first = counted[0] ?? measurements[0];
+
+      // A measurement with several parts is always a height, which is normalized to inches.
+      // For other cases, use the input unit unless normalization is requested
+      const targetUnit = options.normalizedUnit || (first.length > 1 ? 'in' : first[0].unit);
+      const totalValue = total(first, targetUnit);
 
       // A zero-height fragment must not hide a valid measurement of another type.
       if (!totalValue) continue;
+
+      // Another measurement is fine only as the same value written another way, within 1%.
+      if (
+        counted.some(parts => Math.abs(total(parts, targetUnit) - totalValue) > totalValue / 100)
+      ) {
+        return null;
+      }
 
       return {
         value: totalValue,
         unit: targetUnit,
         type,
         raw: input,
-        matches,
+        matches: first,
       };
     }
   }
