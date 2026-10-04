@@ -26,6 +26,10 @@ export const LABEL_ALIASES = new Map([
 // smaller part.
 export const NEXT_PART: Partial<Record<Unit, Unit>> = { m: 'cm' };
 
+// Weight units the library doesn't support. A weight with a part in one of them returns null
+// rather than the supported part alone, as in "12st 4lb".
+export const UNSUPPORTED_WEIGHT_UNITS = /^(?:st|stones?|oz|ounces?|g|grams?)$/;
+
 // Height conversion functions
 export const ftToIn = (value: number): number => value * 12;
 

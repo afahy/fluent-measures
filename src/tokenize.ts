@@ -42,6 +42,9 @@ export function tokenizeNormalized(input: string, fuzziness?: number): string[] 
   return (
     (
       input
+        // A capital G right after a number, as in "5G phone", is a network generation, not
+        // grams, which are written "g". Rename it before case is lost.
+        .replace(/(?<=\d)G(?![A-Za-z])/g, 'gen')
         // Convert to lowercase for case-insensitive matching
         .toLowerCase()
         // Spell out label aliases before the punctuation that marks them is removed. A bracket
