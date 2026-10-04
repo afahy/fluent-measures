@@ -190,12 +190,19 @@ describe('unit labels before a number', () => {
     ]);
   });
 
-  it.each(['check-in: 5', 'weigh-in: 180', 'sign-in: 2020', 'check-in. 5'])(
-    'does not read the end of a hyphenated word as a label in %s',
-    raw => {
-      expect(parseMeasurement(raw)).toBeNull();
-    }
-  );
+  it.each([
+    'check-in: 5',
+    'weigh-in: 180',
+    'sign-in: 2020',
+    'check-in. 5',
+    // Non-breaking hyphen, hyphen and en dash
+    'check‑in: 5',
+    'check‐in: 5',
+    'check–in: 5',
+    'weigh‑in. 180',
+  ])('does not read the end of a hyphenated word as a label in %s', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
 
   it('still finds the weight after a hyphenated word in weigh-in: 180 lbs', () => {
     expect(parseMeasurement('weigh-in: 180 lbs')?.matches).toEqual([{ value: 180, unit: 'lb' }]);

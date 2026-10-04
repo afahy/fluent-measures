@@ -4,11 +4,11 @@ import { wordsToNumber } from './wordsToNumber';
 
 // A short alias in brackets or before a colon or equals sign, as in "(in)", "m:" and "in = 72",
 // is a label. So is "in." followed by a space, the usual abbreviation for inches. The alias must
-// be a word of its own, so "check-in: 5" isn't a label.
+// be a word of its own, so "check-in: 5" isn't a label, with any kind of hyphen or dash.
 const LABELS = [...LABEL_ALIASES.keys()].join('|');
 const LABEL_PATTERN = new RegExp(
-  `(?<=[([]\\s*)(?:${LABELS})(?=\\.?\\s*[)\\]])|(?<![\\w-])(?:${LABELS})(?=\\.?\\s*[:=])|(?<![\\w-])in(?=\\.(?:\\s|$))`,
-  'g'
+  `(?<=[([]\\s*)(?:${LABELS})(?=\\.?\\s*[)\\]])|(?<![\\w\\p{Dash}])(?:${LABELS})(?=\\.?\\s*[:=])|(?<![\\w\\p{Dash}])in(?=\\.(?:\\s|$))`,
+  'gu'
 );
 
 /** Normalize comma groups before interpreting numeric syntax or splitting tokens. */
