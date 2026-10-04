@@ -17,6 +17,9 @@ describe('unsupported weight units', () => {
     '3 kg 400 grams',
     '12 STONE 4 LB',
     '12;st 4lb',
+    '8 oz 7 lb',
+    '7 lb; 8 oz',
+    'baby: 7 lb 8 oz',
   ])('returns null instead of a partial weight in %s', raw => {
     expect(parseMeasurement(raw)).toBeNull();
   });
@@ -48,12 +51,25 @@ describe('unsupported weight units', () => {
     });
   });
 
-  it.each(['stone age, 180 lbs', '2 big dogs, 180 lbs', '12 steps, 180 lbs'])(
-    'keeps the weight when no number has an unsupported unit in %s',
-    raw => {
-      expect(parseMeasurement(raw)?.matches).toEqual([{ value: 180, unit: 'lb' }]);
-    }
-  );
+  it.each([
+    'stone age, 180 lbs',
+    '2 big dogs, 180 lbs',
+    '12 steps, 180 lbs',
+    'I drink 8 oz of water, weight 180 lbs',
+    'weight 180 lbs, ate 200 g of rice',
+    '5G phone, 180 lbs',
+    '16 oz steak; 180 lbs',
+    'ate 200 g, then 3 times, 180 lbs',
+    'Day 3 log: 180 lbs',
+  ])('keeps the weight when no unsupported part is next to it in %s', raw => {
+    expect(parseMeasurement(raw)?.matches).toEqual([{ value: 180, unit: 'lb' }]);
+  });
+
+  it('keeps the weight when an unsupported unit word has no number of its own', () => {
+    expect(parseMeasurement('gravel and stone, 50 lb bag')?.matches).toEqual([
+      { value: 50, unit: 'lb' },
+    ]);
+  });
 
   it('reads an unsupported unit only when the library reads a weight', () => {
     const raw = '12st 4lb, 5\'11"';

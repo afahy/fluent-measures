@@ -44,6 +44,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   // Replace whole ranges with a boundary so neither endpoint becomes a measurement.
   // Preserve semicolon boundaries so independent fields cannot form a compound height.
   const fuzziness = options.fuzziness;
+  const isWeightUnit = (token = '') => matchUnit(token, 'weight', fuzziness) !== null;
   let tokens = tokenizeNormalized(
     trimmed.replace(/(?<![\d.])[\d.]+(?:\s*\p{Dash}\s*[\d.]+)+/gu, ' - '),
     fuzziness
@@ -68,16 +69,22 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     for (let i = 0; i < remainingTokens.length; i++) {
       const unit = matchUnit(remainingTokens[i], type, fuzziness);
       if (!unit) {
-        // A number in an unsupported weight unit would leave the weight incomplete. "st" after a
-        // number that ends in 1, except 11, is an ordinal, as in "Oct 1st".
+        // A number in an unsupported weight unit next to a supported part, as in "12st 4lb" or
+        // "7 lb 8 oz", would leave the weight incomplete. An unrelated amount elsewhere, as in
+        // "8 oz of water", doesn't count. "st" after a number that ends in 1, except 11, is an
+        // ordinal, as in "Oct 1st".
         const word = remainingTokens[i];
-        if (
-          type === 'weight' &&
-          UNSUPPORTED_WEIGHT_UNITS.test(word) &&
-          readNumberPhrase(remainingTokens, i - 1, -1)[0] !== null &&
-          !(word === 'st' && /(?:^|[^1])1$/.test(remainingTokens[i - 1]))
-        ) {
-          return null;
+        if (type === 'weight' && UNSUPPORTED_WEIGHT_UNITS.test(word)) {
+          const [before, beforeEnd] = readNumberPhrase(remainingTokens, i - 1, -1);
+          const [, afterEnd] = readNumberPhrase(tokens, i + 1);
+          // Earlier matches blank their tokens, so check the original tokens for a unit.
+          if (
+            before !== null &&
+            !(word === 'st' && /(?:^|[^1])1$/.test(remainingTokens[i - 1])) &&
+            (isWeightUnit(tokens[beforeEnd]) || isWeightUnit(tokens[afterEnd]))
+          ) {
+            return null;
+          }
         }
         continue;
       }

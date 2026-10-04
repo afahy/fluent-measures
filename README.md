@@ -178,8 +178,9 @@ interface ParsedValue {
 - **Imperial**: lb (lbs, pounds)
 - **Metric**: kg (kilo, kilos, kilograms)
 
-Stone, ounces and grams aren't supported. A weight that uses one of them returns `null`, even
-next to a supported unit, so `12st 4lb` and `7 lb 8 oz` return `null` rather than 4 lb or 7 lb.
+Stone, ounces and grams aren't supported. A weight with a part in one of them returns `null`, so
+`12st 4lb` and `7 lb 8 oz` return `null` rather than 4 lb or 7 lb. An unrelated amount elsewhere
+in the text doesn't count: `I drink 8 oz of water, weight 180 lbs` returns 180 lb.
 
 Most units can come before their number, as in `kg 70`. The short forms `in` and `m` can only
 when written as a label, because before a number they're usually ordinary words. A label is in
