@@ -71,8 +71,8 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       if (!unit) {
         // A number in an unsupported weight unit next to a supported part, as in "12st 4lb" or
         // "7 lb 8 oz", would leave the weight incomplete. An unrelated amount elsewhere, as in
-        // "8 oz of water", doesn't count. "st" after a number that ends in 1, except 11, is an
-        // ordinal, as in "Oct 1st".
+        // "8 oz of water", doesn't count. "st" after a whole number that ends in 1, except 11, is
+        // an ordinal, as in "Oct 1st", but "10.1st" is stone.
         const word = remainingTokens[i];
         if (type === 'weight' && UNSUPPORTED_WEIGHT_UNITS.test(word)) {
           const [before, beforeEnd] = readNumberPhrase(remainingTokens, i - 1, -1);
@@ -80,7 +80,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
           // Earlier matches blank their tokens, so check the original tokens for a unit.
           if (
             before !== null &&
-            !(word === 'st' && /(?:^|[^1])1$/.test(remainingTokens[i - 1])) &&
+            !(word === 'st' && /^(?:\d*[02-9])?1$/.test(remainingTokens[i - 1])) &&
             (isWeightUnit(tokens[beforeEnd]) || isWeightUnit(tokens[afterEnd]))
           ) {
             return null;

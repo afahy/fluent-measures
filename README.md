@@ -180,7 +180,10 @@ interface ParsedValue {
 
 Stone, ounces and grams aren't supported. A weight with a part in one of them returns `null`, so
 `12st 4lb` and `7 lb 8 oz` return `null` rather than 4 lb or 7 lb. An unrelated amount elsewhere
-in the text doesn't count: `I drink 8 oz of water, weight 180 lbs` returns 180 lb.
+in the text doesn't count: `I drink 8 oz of water, weight 180 lbs` returns 180 lb. Commas don't
+separate parts, though, so a weight directly followed by an amount in one of these units also
+returns `null`, as in `180 lbs, 8 oz of water a day`. A capital `G` right after a number, as in
+`5G`, is read as a network generation, not grams.
 
 Most units can come before their number, as in `kg 70`. The short forms `in` and `m` can only
 when written as a label, because before a number they're usually ordinary words. A label is in

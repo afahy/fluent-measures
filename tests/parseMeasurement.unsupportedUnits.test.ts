@@ -20,6 +20,10 @@ describe('unsupported weight units', () => {
     '8 oz 7 lb',
     '7 lb; 8 oz',
     'baby: 7 lb 8 oz',
+    // Decimal stones, which can't be ordinals
+    '10.1st 4lb',
+    '1.1st 4lb',
+    '111st 4lb',
   ])('returns null instead of a partial weight in %s', raw => {
     expect(parseMeasurement(raw)).toBeNull();
   });
@@ -41,6 +45,7 @@ describe('unsupported weight units', () => {
     ['Oct 1st: 180 lbs', 180, 'lb'],
     ['21st birthday, 180 lbs', 180, 'lb'],
     ['May 31st, 180 lbs', 180, 'lb'],
+    ['the 101st, 180 lbs', 180, 'lb'],
   ] as const)('keeps the weight in %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toEqual({
       value,
@@ -61,6 +66,9 @@ describe('unsupported weight units', () => {
     '16 oz steak; 180 lbs',
     'ate 200 g, then 3 times, 180 lbs',
     'Day 3 log: 180 lbs',
+    // A capital G after a number is a network generation, not grams
+    '180 lbs, 5G phone',
+    '180 lbs, 4G signal',
   ])('keeps the weight when no unsupported part is next to it in %s', raw => {
     expect(parseMeasurement(raw)?.matches).toEqual([{ value: 180, unit: 'lb' }]);
   });
