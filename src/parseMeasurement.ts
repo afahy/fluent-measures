@@ -28,6 +28,12 @@ function readNumberPhrase(
   return [value, end];
 }
 
+/** Return the index of the first token at or after `start` that isn't a semicolon. */
+function skipSemicolons(tokens: string[], start: number): number {
+  while (tokens[start] === ';') start++;
+  return start;
+}
+
 /** Parse a height or weight, optionally inferring its unit or normalizing the result. */
 export function parseMeasurement(input: string, options: ParseOptions = {}): ParsedValue | null {
   const trimmed = normalizeNumericCommas(input?.trim() || '');
@@ -88,16 +94,18 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         !signed &&
         !LABEL_ALIASES.has(remainingTokens[i])
       ) {
-        while (remainingTokens[matchEnd] === ';') matchEnd++;
+        matchEnd = skipSemicolons(remainingTokens, matchEnd);
         num = wordsToNumber(remainingTokens[matchEnd] ?? '') || null;
         // A label doesn't take a number that has its own unit, as in "weigh in: 180 lbs", unless
         // that unit starts the next part of the measurement with its own number: "m: 1 cm: 80".
-        const next = remainingTokens[matchEnd + 1] ?? '';
+        // Semicolons can come between a number and its unit, as in "180; lbs".
+        const unitAt = skipSemicolons(remainingTokens, matchEnd + 1);
+        const next = remainingTokens[unitAt] ?? '';
         const nextUnit =
           matchUnit(next, 'height', fuzziness) || matchUnit(next, 'weight', fuzziness);
+        const partAt = skipSemicolons(remainingTokens, unitAt + 1);
         const startsNextPart =
-          nextUnit === NEXT_PART[unit] &&
-          wordsToNumber(remainingTokens[matchEnd + 2] ?? '') !== null;
+          nextUnit === NEXT_PART[unit] && wordsToNumber(remainingTokens[partAt] ?? '') !== null;
         if (LABEL_ALIASES.has(unit) && nextUnit && !startsNextPart) num = null;
         matchStart = i;
         matchEnd++;

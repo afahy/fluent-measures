@@ -4,10 +4,12 @@ import { wordsToNumber } from './wordsToNumber';
 
 // A short alias in brackets or before a colon or equals sign, as in "(in)", "m:" and "in = 72",
 // is a label. So is "in." followed by a space, the usual abbreviation for inches. The alias must
-// be a word of its own, so "check-in: 5" isn't a label, with any kind of hyphen or dash.
+// be a word of its own, so "check-in: 5" isn't a label, with any kind of hyphen or dash. The
+// opening bracket is matched forward: some engines run a lookbehind such as `(?<=\(\s*)` in
+// quadratic time across a long run of spaces.
 const LABELS = [...LABEL_ALIASES.keys()].join('|');
 const LABEL_PATTERN = new RegExp(
-  `(?<=[([]\\s*)(?:${LABELS})(?=\\.?\\s*[)\\]])|(?<![\\w\\p{Dash}])(?:${LABELS})(?=\\.?\\s*[:=])|(?<![\\w\\p{Dash}])in(?=\\.(?:\\s|$))`,
+  `([([]\\s*)(${LABELS})(?=\\.?\\s*[)\\]])|(?<![\\w\\p{Dash}])(?:${LABELS})(?=\\.?\\s*[:=])|(?<![\\w\\p{Dash}])in(?=\\.(?:\\s|$))`,
   'gu'
 );
 
@@ -42,8 +44,12 @@ export function tokenizeNormalized(input: string, fuzziness?: number): string[] 
       input
         // Convert to lowercase for case-insensitive matching
         .toLowerCase()
-        // Spell out label aliases before the punctuation that marks them is removed.
-        .replace(LABEL_PATTERN, alias => LABEL_ALIASES.get(alias) ?? alias)
+        // Spell out label aliases before the punctuation that marks them is removed. A bracket
+        // label keeps its opening bracket.
+        .replace(
+          LABEL_PATTERN,
+          (label, open = '', alias = label) => open + (LABEL_ALIASES.get(alias) ?? alias)
+        )
         // Split punctuation, hyphens after quoted feet, and underscores before minus signs.
         .replace(/(?<=\d\s*')-(?=\.?\d)|_(?=-)|[^\w\s'".;-]/g, ' ')
         // Populated feet introduce inches; standalone unit prefixes retain the minus sign.

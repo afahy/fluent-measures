@@ -1,3 +1,4 @@
+import { performance } from 'node:perf_hooks';
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
 
@@ -135,15 +136,25 @@ describe('unit labels before a number', () => {
     expect(parseMeasurement('Height (in): 72', { type: 'height' })?.value).toBe(72);
   });
 
-  it('leaves a number with its own unit to that unit in Weigh in: 180 lbs', () => {
-    const raw = 'Weigh in: 180 lbs';
-    expect(parseMeasurement(raw)).toEqual({
-      value: 180,
-      unit: 'lb',
-      type: 'weight',
-      raw,
-      matches: [{ value: 180, unit: 'lb' }],
-    });
+  it.each(['Weigh in: 180 lbs', 'Weigh in: 180; lbs'])(
+    'leaves a number with its own unit to that unit in %s',
+    raw => {
+      expect(parseMeasurement(raw)).toEqual({
+        value: 180,
+        unit: 'lb',
+        type: 'weight',
+        raw,
+        matches: [{ value: 180, unit: 'lb' }],
+      });
+    }
+  );
+
+  it('reads a bracket label padded with many spaces in linear time', () => {
+    const raw = `(${' '.repeat(200000)}in) 72`;
+    const start = performance.now();
+    expect(parseMeasurement(raw)?.value).toBe(72);
+    // A quadratic pattern takes seconds here on Node 22, and this takes milliseconds.
+    expect(performance.now() - start).toBeLessThan(1000);
   });
 
   it.each(['M: 5\'11"', 'M: 5 ft 11 in'])('reads a sex marker label as a letter in %s', raw => {
@@ -159,7 +170,7 @@ describe('unit labels before a number', () => {
     });
   });
 
-  it.each(['m: 1 cm: 80', 'Height m: 1, cm: 80'])(
+  it.each(['m: 1 cm: 80', 'Height m: 1, cm: 80', 'm: 1 cm; 80'])(
     'reads consecutive label fields as one height in %s',
     raw => {
       const result = parseMeasurement(raw);
