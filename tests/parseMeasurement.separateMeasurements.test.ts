@@ -13,6 +13,10 @@ describe('separate measurements in one input', () => {
     ['6 ft = 72 inches', 6, 'ft', 'height'],
     ['1 m (100 cm)', 1, 'm', 'height'],
     ['1.8 m (180 cm)', 1.8, 'm', 'height'],
+    // A compound starts from a whole number, so these are conversions too
+    ['0.8 m (80 cm)', 0.8, 'm', 'height'],
+    ['0.5 ft (6 in)', 0.5, 'ft', 'height'],
+    ['0.5 m (50 cm)', 0.5, 'm', 'height'],
   ] as const)('returns the first of two agreeing measurements in %s', (raw, value, unit, type) => {
     expect(parseMeasurement(raw)).toEqual({ value, unit, type, raw, matches: [{ value, unit }] });
   });
@@ -26,6 +30,13 @@ describe('separate measurements in one input', () => {
       if (descriptor) Object.defineProperty(Array.prototype, 'at', descriptor);
     }
   });
+
+  it.each([`${'9'.repeat(400)} kg; 1 kg`, `${'9'.repeat(400)} kg`, `1 kg; ${'9'.repeat(400)} kg`])(
+    'returns null for a value too large to represent',
+    raw => {
+      expect(parseMeasurement(raw)).toBeNull();
+    }
+  );
 
   it('converts only the first measurement to the requested unit', () => {
     const result = parseMeasurement('70 kg (154 lbs)', { normalizedUnit: 'lb' });
@@ -46,6 +57,8 @@ describe('separate measurements in one input', () => {
     // 12 in or more after feet is a separate measurement, and it disagrees
     ['5 ft 12 in', {}],
     ['5 feet twenty one inches', {}],
+    // A fractional larger part doesn't start a compound
+    ['5.5 ft 2 in', {}],
   ] as const)('returns null for measurements that disagree in %s', (raw, options) => {
     expect(parseMeasurement(raw, options)).toBeNull();
   });

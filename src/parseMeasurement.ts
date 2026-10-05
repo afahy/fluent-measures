@@ -74,8 +74,9 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
 
   const shorthand = trimmed.match(/^(\d+)-((?:\d*\.)?\d+)$/);
   if (shorthand) {
-    // Bare N-M is ambiguous unless the caller explicitly requests a height.
-    if (options.type !== 'height' || +shorthand[1] === Infinity || +shorthand[2] >= 12) return null;
+    // Bare N-M is ambiguous unless the caller explicitly requests a height. Feet too large to
+    // represent return null when the measurement is read.
+    if (options.type !== 'height' || +shorthand[2] >= 12) return null;
     // Feed the components through the same parser as explicit feet and inches.
     tokens = [shorthand[1], 'ft', shorthand[2], 'in'];
   }
@@ -185,17 +186,19 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
 
     // If we found any matches for this type
     if (matches.length) {
-      // Parts form one measurement only while each unit is the next smaller one and the smaller
-      // part is less than one of the larger unit, as in "5 ft 11 in". Any other part starts a
-      // separate measurement, as in "70 kg (154 lbs)" or "6 ft (72 in)".
+      // Parts form one measurement only while each unit is the next smaller one, the larger part
+      // is a whole number and the smaller part is less than one of the larger unit, as in
+      // "5 ft 11 in". Any other part starts a separate measurement, as in "70 kg (154 lbs)",
+      // "6 ft (72 in)" or "0.5 m (50 cm)".
       const measurements: QualifiedMatch[][] = [];
       for (const match of matches) {
         const last = measurements[measurements.length - 1];
-        const unit = last?.[last.length - 1].unit;
+        const previous = last?.[last.length - 1];
         if (
-          unit &&
-          NEXT_PART[unit] === match.unit &&
-          match.value < unitConversions[unit][match.unit](1)
+          previous &&
+          Number.isInteger(previous.value) &&
+          NEXT_PART[previous.unit] === match.unit &&
+          match.value < unitConversions[previous.unit][match.unit](1)
         ) {
           last.push(match);
         } else {
@@ -213,6 +216,8 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
 
       // A zero-height fragment must not hide a valid measurement of another type.
       if (!totalValue) continue;
+      // A number too large to represent, such as 400 digits, has no usable value.
+      if (!Number.isFinite(totalValue)) return null;
 
       // Another measurement is fine only as the same value written another way, within 1%. The
       // tiny margin keeps an exact 1% after floating-point rounding, which makes 1.01 - 1 a little
