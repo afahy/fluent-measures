@@ -185,13 +185,22 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
 
     // If we found any matches for this type
     if (matches.length) {
-      // Parts form one measurement only while each unit is the next smaller one, as in
-      // "5 ft 11 in". Any other part starts a separate measurement, as in "70 kg (154 lbs)".
+      // Parts form one measurement only while each unit is the next smaller one and the smaller
+      // part is less than one of the larger unit, as in "5 ft 11 in". Any other part starts a
+      // separate measurement, as in "70 kg (154 lbs)" or "6 ft (72 in)".
       const measurements: QualifiedMatch[][] = [];
       for (const match of matches) {
-        const last = measurements.at(-1);
-        if (last && NEXT_PART[last[last.length - 1].unit] === match.unit) last.push(match);
-        else measurements.push([match]);
+        const last = measurements[measurements.length - 1];
+        const unit = last?.[last.length - 1].unit;
+        if (
+          unit &&
+          NEXT_PART[unit] === match.unit &&
+          match.value < unitConversions[unit][match.unit](1)
+        ) {
+          last.push(match);
+        } else {
+          measurements.push([match]);
+        }
       }
       // A measurement that adds up to zero doesn't count, as in "0 feet; actual 1.8 meters".
       const counted = measurements.filter(parts => parts.some(({ value }) => value));

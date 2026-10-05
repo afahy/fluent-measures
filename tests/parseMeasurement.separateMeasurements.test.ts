@@ -7,8 +7,24 @@ describe('separate measurements in one input', () => {
     ['154 lbs (70 kg)', 154, 'lb', 'weight'],
     ['180 cm (5\'11")', 180, 'cm', 'height'],
     ['6 ft or 183 cm', 6, 'ft', 'height'],
+    // A smaller part of one unit or more is a conversion, not part of a compound height
+    ['6 ft (72 in)', 6, 'ft', 'height'],
+    ['6 ft; 72 in', 6, 'ft', 'height'],
+    ['6 ft = 72 inches', 6, 'ft', 'height'],
+    ['1 m (100 cm)', 1, 'm', 'height'],
+    ['1.8 m (180 cm)', 1.8, 'm', 'height'],
   ] as const)('returns the first of two agreeing measurements in %s', (raw, value, unit, type) => {
     expect(parseMeasurement(raw)).toEqual({ value, unit, type, raw, matches: [{ value, unit }] });
+  });
+
+  it('runs without Array.prototype.at, which the ES2020 target lacks', () => {
+    const descriptor = Object.getOwnPropertyDescriptor(Array.prototype, 'at');
+    Reflect.deleteProperty(Array.prototype, 'at');
+    try {
+      expect(parseMeasurement('70 kg (154 lbs)')?.value).toBe(70);
+    } finally {
+      if (descriptor) Object.defineProperty(Array.prototype, 'at', descriptor);
+    }
   });
 
   it('converts only the first measurement to the requested unit', () => {
@@ -27,12 +43,23 @@ describe('separate measurements in one input', () => {
     ['5 ft-1 m', { normalizedUnit: 'm' }],
     ['150 lbs - 180 lbs', {}],
     ['5 ft 10 cm', { normalizedUnit: 'cm' }],
+    // 12 in or more after feet is a separate measurement, and it disagrees
+    ['5 ft 12 in', {}],
+    ['5 feet twenty one inches', {}],
   ] as const)('returns null for measurements that disagree in %s', (raw, options) => {
     expect(parseMeasurement(raw, options)).toBeNull();
   });
 
+  it.each(['5-60', '1-12'])(
+    'keeps rejecting bare shorthand with 12 in or more, even when it agrees, in %s',
+    raw => {
+      expect(parseMeasurement(raw, { type: 'height' })).toBeNull();
+    }
+  );
+
   it.each([
     ['5 ft 11 in', 71, [5, 'ft'], [11, 'in']],
+    ['5 ft 11.5 in', 71.5, [5, 'ft'], [11.5, 'in']],
     ['5\'11"', 71, [5, 'ft'], [11, 'in']],
     ['five foot ten', 70, [5, 'ft'], [10, 'in']],
     ['0-foot-11', 11, [0, 'ft'], [11, 'in']],

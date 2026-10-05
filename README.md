@@ -250,14 +250,16 @@ existing parser may attach the range's unit to a later value, as in `50-70 kg, 1
 
 ### Separate Measurements
 
-Parts form one measurement only when each unit is the next smaller one, as in `5 ft 11 in` or
-`1 m 80 cm`. Other parts are separate measurements. When an input has more than one, the first
-is returned if the others agree with it within 1%, as when a value is followed by its
-conversion. Otherwise the result is `null`:
+Parts form one measurement only when each unit is the next smaller one and the smaller part is
+less than one of the larger unit, as in `5 ft 11 in` or `1 m 80 cm`. Other parts are separate
+measurements, so `6 ft (72 in)` is a height and its conversion. When an input has more than one
+measurement, the first is returned if the others agree with it within 1%. Otherwise the result is
+`null`:
 
 ```typescript
 parseMeasurement('70 kg (154 lbs)'); // { value: 70, unit: 'kg', ... }
 parseMeasurement('180 cm (5\'11")'); // { value: 180, unit: 'cm', ... }
+parseMeasurement('6 ft (72 in)'); // { value: 6, unit: 'ft', ... }
 parseMeasurement('210 lbs to 180 lbs'); // null: two different weights
 ```
 
