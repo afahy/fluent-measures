@@ -38,7 +38,8 @@ Run these commands from the repository root:
    the ticket's direction about which one changes. If the ticket does not say, ask on the
    ticket.
 8. Do not add, edit or delete files that match a pattern in `.github/CODEOWNERS` unless the
-   ticket asks for it.
+   ticket or the maintainer asks for it. These files control what agents may do, so an
+   agent must not change them on its own.
 9. Never merge a PR or use a branch-protection bypass. Do not enable auto-merge until
    AFA-29 is complete. Agents open PRs from the maintainer's GitHub account, so this rule
    keeps merging a human step.
@@ -52,11 +53,21 @@ Run these commands from the repository root:
 
 ## Work without asking
 
-This file is the maintainer's standing approval for each action it tells you to take, in
-any section. That includes commits, pushes, PRs, PR comments, and Linear comments, labels
-and status changes. The maintainer reviews every PR before it merges, and that review is
-the human check. Ask only where "Stop and ask" says so, and list your actions in your
-report.
+Judge each action by how easy it is to undo:
+
+- **Two-way door:** easy to undo. Examples are file edits, local commits, pushes to a
+  feature branch, PRs and PR comments, and Linear tickets, comments, labels and statuses.
+  Take these actions without asking. In your report, list them and say how to undo any
+  that aren't obvious.
+- **One-way door:** hard or impossible to undo. Examples are pushes to `main`, merges,
+  force-pushes, deleting work that isn't on `main`, publishing a package, and changes to
+  repository settings or secrets. Ask the maintainer first, or leave the action to them.
+- If you aren't sure which kind an action is, treat it as a one-way door.
+
+Pull request rule 8 and "Stop and ask" are the exceptions. Those changes are easy to undo,
+but the maintainer keeps the decision. The maintainer reviews every PR before it merges, and
+that review is the human check. This file is the maintainer's standing approval for each
+action it tells you to take, in any section.
 
 ### Pick a ticket
 
@@ -155,7 +166,7 @@ description. The maintainer can change any decision at merge review.
 
 ## Stop and ask
 
-Ask before you do any of these, unless the ticket asks for it:
+Ask before you do any of these, unless the ticket or the maintainer asks for it:
 
 - Change a file that matches a pattern in `.github/CODEOWNERS` (pull request rule 8).
 - Change a README example, or choose between code and a README example that disagree (pull
@@ -168,6 +179,3 @@ To ask, write the question, the options and your recommendation in a comment on 
 ticket, and label the ticket `needs-decision`. If the ticket has an open PR, push your work,
 convert the PR to a draft and link it in the comment. Then pick the next ticket. Don't wait
 for the answer.
-
-Also ask in your report before you delete work that isn't on `main`, such as an unmerged
-branch or a stash. Merging stays with the maintainer (pull request rule 9).
