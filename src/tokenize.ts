@@ -1,5 +1,5 @@
 import { matchUnit } from './matchUnit';
-import { LABEL_ALIASES } from './units';
+import { LABEL_ALIASES, LABEL_MARK } from './units';
 import { wordsToNumber } from './wordsToNumber';
 
 // A short alias in brackets or before a colon or equals sign, as in "(in)", "m:" and "in = 72",
@@ -48,11 +48,12 @@ export function tokenizeNormalized(input: string, fuzziness?: number): string[] 
         .replace(/(?<=\d)G(?![A-Za-z])/g, 'gen')
         // Convert to lowercase for case-insensitive matching
         .toLowerCase()
-        // Spell out label aliases before the punctuation that marks them is removed. A bracket
-        // label keeps its opening bracket.
+        // Spell out label aliases before the punctuation that marks them is removed, after a mark
+        // that tells the parser it's a label. A bracket label keeps its opening bracket.
         .replace(
           LABEL_PATTERN,
-          (label, open = '', alias = label) => open + (LABEL_ALIASES.get(alias) ?? alias)
+          (label, open = '', alias = label) =>
+            `${open}${LABEL_MARK} ${LABEL_ALIASES.get(alias) ?? alias}`
         )
         // Split punctuation, hyphens after quoted feet, and underscores before minus signs.
         .replace(/(?<=\d\s*')-(?=\.?\d)|_(?=-)|[^\w\s'".;-]/g, ' ')

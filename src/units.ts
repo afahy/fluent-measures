@@ -22,6 +22,10 @@ export const LABEL_ALIASES = new Map([
   ['m', 'meter'],
 ]);
 
+// The tokenizer puts this token before each spelled-out label, so the parser knows the label's
+// value comes after it, as in "age=28, in=72". It's a word that ordinary input doesn't contain.
+export const LABEL_MARK = '_label';
+
 // The unit of the next smaller part of a compound measurement, as in "5 ft 11 in" and
 // "1 m 80 cm". Inches have no smaller part.
 export const NEXT_PART: Partial<Record<Unit, Unit>> = { ft: 'in', m: 'cm' };
