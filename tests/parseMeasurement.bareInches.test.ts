@@ -79,11 +79,9 @@ describe('bare inches after feet', () => {
     }
   );
 
-  it('leaves a metric component with its own unit', () => {
-    expect(parseMeasurement('5 ft 10 cm', { normalizedUnit: 'cm' })?.matches).toEqual([
-      { value: 5, unit: 'ft' },
-      { value: 10, unit: 'cm' },
-    ]);
+  it('leaves a metric component with its own unit, as a separate measurement', () => {
+    // 10 cm isn't read as inches, and it doesn't agree with 5 ft, so there's no single answer.
+    expect(parseMeasurement('5 ft 10 cm', { normalizedUnit: 'cm' })).toBeNull();
   });
 
   it.each(['5 ft 0', '5 ft 12', '5 ft 13', '5 ft -11', '5 ft twenty one'])(

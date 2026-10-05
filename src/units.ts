@@ -22,9 +22,9 @@ export const LABEL_ALIASES = new Map([
   ['m', 'meter'],
 ]);
 
-// The unit of the next smaller part after a label's unit, as in "m: 1 cm: 80". Inches have no
-// smaller part.
-export const NEXT_PART: Partial<Record<Unit, Unit>> = { m: 'cm' };
+// The unit of the next smaller part of a compound measurement, as in "5 ft 11 in" and
+// "1 m 80 cm". Inches have no smaller part.
+export const NEXT_PART: Partial<Record<Unit, Unit>> = { ft: 'in', m: 'cm' };
 
 // Weight units the library doesn't support. A weight with a part in one of them returns null
 // rather than the supported part alone, as in "12st 4lb".
