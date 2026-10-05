@@ -26,6 +26,11 @@ export const LABEL_ALIASES = new Map([
 // value comes after it, as in "age=28, in=72". It's a word that ordinary input doesn't contain.
 export const LABEL_MARK = '_label';
 
+// The tokenizer puts this token before a label that starts a new field, after a comma, semicolon,
+// colon, equals sign or "&", as in "age=28, in=180 lbs". The label can't take the number before
+// this token, because that number belongs to the field before it.
+export const FIELD_MARK = '_field';
+
 // The unit of the next smaller part of a compound measurement, as in "5 ft 11 in" and
 // "1 m 80 cm". Inches have no smaller part.
 export const NEXT_PART: Partial<Record<Unit, Unit>> = { ft: 'in', m: 'cm' };

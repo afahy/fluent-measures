@@ -1,5 +1,5 @@
 import { matchUnit } from './matchUnit';
-import { LABEL_ALIASES, LABEL_MARK } from './units';
+import { FIELD_MARK, LABEL_ALIASES, LABEL_MARK } from './units';
 import { wordsToNumber } from './wordsToNumber';
 
 // A short alias in brackets or before a colon or equals sign, as in "(in)", "m:" and "in = 72",
@@ -7,10 +7,11 @@ import { wordsToNumber } from './wordsToNumber';
 // be a word of its own, so "check-in: 5" isn't a label, with any kind of hyphen or dash, and
 // neither is "µm: 5" after any Unicode letter. The opening bracket is matched forward: some
 // engines run a lookbehind such as `(?<=\(\s*)` in quadratic time across a long run of spaces.
+// For the same reason, a field separator before the label is matched forward too.
 const LABELS = [...LABEL_ALIASES.keys()].join('|');
 const WORD_BEFORE = '(?<![\\p{L}\\p{M}\\p{N}_\\p{Dash}])';
 const LABEL_PATTERN = new RegExp(
-  `([([]\\s*)(${LABELS})(?=\\.?\\s*[)\\]])|${WORD_BEFORE}(?:${LABELS})(?=\\.?\\s*[:=])|${WORD_BEFORE}in(?=\\.(?:\\s|$))`,
+  `([,;:=&]\\s*)?(?:([([]\\s*)(${LABELS})(?=\\.?\\s*[)\\]])|${WORD_BEFORE}(?:${LABELS})(?=\\.?\\s*[:=])|${WORD_BEFORE}in(?=\\.(?:\\s|$)))`,
   'gu'
 );
 
@@ -49,11 +50,12 @@ export function tokenizeNormalized(input: string, fuzziness?: number): string[] 
         // Convert to lowercase for case-insensitive matching
         .toLowerCase()
         // Spell out label aliases before the punctuation that marks them is removed, after a mark
-        // that tells the parser it's a label. A bracket label keeps its opening bracket.
+        // that tells the parser it's a label. A bracket label keeps its opening bracket, and a
+        // label after a field separator gets a second mark first.
         .replace(
           LABEL_PATTERN,
-          (label, open = '', alias = label) =>
-            `${open}${LABEL_MARK} ${LABEL_ALIASES.get(alias) ?? alias}`
+          (label, field = '', open = '', alias = label.slice(field.length)) =>
+            `${field && `${field}${FIELD_MARK} `}${open}${LABEL_MARK} ${LABEL_ALIASES.get(alias) ?? alias}`
         )
         // Split punctuation, hyphens after quoted feet, and underscores before minus signs.
         .replace(/(?<=\d\s*')-(?=\.?\d)|_(?=-)|[^\w\s'".;-]/g, ' ')

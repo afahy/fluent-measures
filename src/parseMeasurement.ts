@@ -80,7 +80,7 @@ function readValueAfter(
     nextUnit === NEXT_PART[unit] &&
     wordsToNumber(tokens[skipSemicolons(tokens, unitAt + 1)] ?? '') !== null;
   const ownUnit = LABEL_ALIASES.has(unit) && nextUnit && !startsNextPart;
-  return [ownUnit ? null : value || null, end];
+  return [ownUnit ? null : value, end];
 }
 
 /** Parse a height or weight, optionally inferring its unit or normalizing the result. */
@@ -144,8 +144,8 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
 
       // Read the preceding phrase first, allowing ordinary punctuation before its unit. A label's
       // value comes after it, as in "age=28, in=72", so a label skips this when it can take the
-      // number after it. Otherwise it reads the number before its mark, as in "72 (in)" and
-      // "72 (in), 180 lbs".
+      // number after it, including a zero. Otherwise it reads the number before its mark, as in
+      // "72 (in)" and "72 (in), 180 lbs", unless a field separator comes between them.
       const label = remainingTokens[i - 1] === LABEL_MARK;
       let [num, end]: [number | null, number] =
         label && readValueAfter(remainingTokens, i + 1, unit, fuzziness)[0] !== null
@@ -173,7 +173,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         !LABEL_ALIASES.has(remainingTokens[i])
       ) {
         const [value, valueEnd] = readValueAfter(remainingTokens, matchEnd, unit, fuzziness);
-        num = value;
+        num = value || null;
         matchStart = i;
         matchEnd = valueEnd;
       }
