@@ -27,6 +27,7 @@ describe('a label reads the number after it', () => {
     ['Height (in): 72', 72],
     ['in: 72', 72],
     ['72 in: height', 72],
+    ['72 (in): height', 72],
   ])('falls back to the number before it only when none follows, in %s', (raw, value) => {
     expect(parseMeasurement(raw)?.matches).toEqual([{ value, unit: 'in' }]);
   });
@@ -81,6 +82,12 @@ describe('a label reads the number after it', () => {
     ['age: 28 in: 180 lbs', 180, 'lb'],
     ['age 28 in: 180 lbs', 180, 'lb'],
     ['age=28 in=72 cm', 72, 'cm'],
+    ['72 (in): 180 lbs', 180, 'lb'],
+    ['age 28 (in): 180 lbs', 180, 'lb'],
+    ['age 28 [in]: 180 lbs', 180, 'lb'],
+    ['age 28 (in) = 180 lbs', 180, 'lb'],
+    ['age 28 (m): 80 kg', 80, 'kg'],
+    ['age 28 (in): 72 cm', 72, 'cm'],
   ] as const)(
     "doesn't give a field name the number before it when a number follows, in %s",
     (raw, value, unit) => {

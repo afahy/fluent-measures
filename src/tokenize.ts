@@ -11,7 +11,7 @@ import { wordsToNumber } from './wordsToNumber';
 const LABELS = [...LABEL_ALIASES.keys()].join('|');
 const WORD_BEFORE = '(?<![\\p{L}\\p{M}\\p{N}_\\p{Dash}])';
 const LABEL_PATTERN = new RegExp(
-  `([,;:=&]\\s*)?(?:([([]\\s*)(${LABELS})(?=\\.?\\s*[)\\]])|${WORD_BEFORE}(${LABELS})(?=\\.?\\s*[:=])|${WORD_BEFORE}in(?=\\.(?:\\s|$)))`,
+  `([,;:=&]\\s*)?(?:([([]\\s*)(${LABELS})(?=\\.?\\s*[)\\]](\\s*[:=])?)|${WORD_BEFORE}(${LABELS})(?=\\.?\\s*[:=])|${WORD_BEFORE}in(?=\\.(?:\\s|$)))`,
   'gu'
 );
 
@@ -50,12 +50,13 @@ export function tokenizeNormalized(input: string, fuzziness?: number): string[] 
         // Convert to lowercase for case-insensitive matching
         .toLowerCase()
         // Spell out label aliases before the punctuation that marks them is removed, after a mark
-        // that tells the parser what kind of label it is. A bracket label keeps its opening
+        // that tells the parser what kind of label it is. A label before ":" or "=" is a field
+        // name, in brackets too, as in "age 28 (in): 180 lbs". A bracket label keeps its opening
         // bracket, and a label after a field separator gets a field mark first.
         .replace(
           LABEL_PATTERN,
-          (_, field = '', open = '', alias?: string, name?: string) =>
-            `${field && `${field}${FIELD_MARK} `}${open}${name ? NAME_MARK : UNIT_MARK} ${LABEL_ALIASES.get(alias ?? name ?? 'in')}`
+          (_, field = '', open = '', alias?: string, assign?: string, name?: string) =>
+            `${field && `${field}${FIELD_MARK} `}${open}${assign || name ? NAME_MARK : UNIT_MARK} ${LABEL_ALIASES.get(alias ?? name ?? 'in')}`
         )
         // Split punctuation, hyphens after quoted feet, and underscores before minus signs.
         .replace(/(?<=\d\s*')-(?=\.?\d)|_(?=-)|[^\w\s'".;-]/g, ' ')
