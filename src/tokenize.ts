@@ -4,12 +4,13 @@ import { wordsToNumber } from './wordsToNumber';
 
 // A short alias in brackets or before a colon or equals sign, as in "(in)", "m:" and "in = 72",
 // is a label. So is "in." followed by a space, the usual abbreviation for inches. The alias must
-// be a word of its own, so "check-in: 5" isn't a label, with any kind of hyphen or dash. The
-// opening bracket is matched forward: some engines run a lookbehind such as `(?<=\(\s*)` in
-// quadratic time across a long run of spaces.
+// be a word of its own, so "check-in: 5" isn't a label, with any kind of hyphen or dash, and
+// neither is "µm: 5" after any Unicode letter. The opening bracket is matched forward: some
+// engines run a lookbehind such as `(?<=\(\s*)` in quadratic time across a long run of spaces.
 const LABELS = [...LABEL_ALIASES.keys()].join('|');
+const WORD_BEFORE = '(?<![\\p{L}\\p{M}\\p{N}_\\p{Dash}])';
 const LABEL_PATTERN = new RegExp(
-  `([([]\\s*)(${LABELS})(?=\\.?\\s*[)\\]])|(?<![\\w\\p{Dash}])(?:${LABELS})(?=\\.?\\s*[:=])|(?<![\\w\\p{Dash}])in(?=\\.(?:\\s|$))`,
+  `([([]\\s*)(${LABELS})(?=\\.?\\s*[)\\]])|${WORD_BEFORE}(?:${LABELS})(?=\\.?\\s*[:=])|${WORD_BEFORE}in(?=\\.(?:\\s|$))`,
   'gu'
 );
 
