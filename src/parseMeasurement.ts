@@ -4,8 +4,9 @@ import { wordsToNumber } from './wordsToNumber';
 
 import {
   LABEL_ALIASES,
-  LABEL_MARK,
+  NAME_MARK,
   NEXT_PART,
+  UNIT_MARK,
   UNSUPPORTED_WEIGHT_UNITS,
   unitConversions,
 } from './units';
@@ -143,14 +144,20 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       }
 
       // Read the preceding phrase first, allowing ordinary punctuation before its unit. A label's
-      // value comes after it, as in "age=28, in=72", so a label skips this when it can take the
-      // number after it, including a zero. Otherwise it reads the number before its mark, as in
-      // "72 (in)" and "72 (in), 180 lbs", unless a field separator comes between them.
-      const label = remainingTokens[i - 1] === LABEL_MARK;
-      let [num, end]: [number | null, number] =
-        label && readValueAfter(remainingTokens, i + 1, unit, fuzziness)[0] !== null
-          ? [null, i - 1]
-          : readNumberPhrase(remainingTokens, label ? i - 2 : i - 1, -1);
+      // value comes after it, as in "age=28, in=72", so a label skips this when its value follows.
+      // For a field name, the label before ":" or "=", that's any number. A label in brackets, or
+      // "in.", can also be the unit of the number before it, so its value must be a number it can
+      // take, including a zero. Otherwise a label reads the number before its mark, as in
+      // "72 in: height" and "72 (in), 180 lbs", unless a field separator comes between them.
+      const mark = remainingTokens[i - 1];
+      const label = mark === NAME_MARK || mark === UNIT_MARK;
+      const valueFollows =
+        mark === NAME_MARK
+          ? readNumberPhrase(remainingTokens, skipSemicolons(remainingTokens, i + 1))[0] !== null
+          : label && readValueAfter(remainingTokens, i + 1, unit, fuzziness)[0] !== null;
+      let [num, end]: [number | null, number] = valueFollows
+        ? [null, i - 1]
+        : readNumberPhrase(remainingTokens, label ? i - 2 : i - 1, -1);
       let matchStart = num === null ? end : end + 1;
       let matchEnd = i + 1;
 

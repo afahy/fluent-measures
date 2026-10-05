@@ -1,5 +1,5 @@
 import { matchUnit } from './matchUnit';
-import { FIELD_MARK, LABEL_ALIASES, LABEL_MARK } from './units';
+import { FIELD_MARK, LABEL_ALIASES, NAME_MARK, UNIT_MARK } from './units';
 import { wordsToNumber } from './wordsToNumber';
 
 // A short alias in brackets or before a colon or equals sign, as in "(in)", "m:" and "in = 72",
@@ -11,7 +11,7 @@ import { wordsToNumber } from './wordsToNumber';
 const LABELS = [...LABEL_ALIASES.keys()].join('|');
 const WORD_BEFORE = '(?<![\\p{L}\\p{M}\\p{N}_\\p{Dash}])';
 const LABEL_PATTERN = new RegExp(
-  `([,;:=&]\\s*)?(?:([([]\\s*)(${LABELS})(?=\\.?\\s*[)\\]])|${WORD_BEFORE}(?:${LABELS})(?=\\.?\\s*[:=])|${WORD_BEFORE}in(?=\\.(?:\\s|$)))`,
+  `([,;:=&]\\s*)?(?:([([]\\s*)(${LABELS})(?=\\.?\\s*[)\\]])|${WORD_BEFORE}(${LABELS})(?=\\.?\\s*[:=])|${WORD_BEFORE}in(?=\\.(?:\\s|$)))`,
   'gu'
 );
 
@@ -50,12 +50,12 @@ export function tokenizeNormalized(input: string, fuzziness?: number): string[] 
         // Convert to lowercase for case-insensitive matching
         .toLowerCase()
         // Spell out label aliases before the punctuation that marks them is removed, after a mark
-        // that tells the parser it's a label. A bracket label keeps its opening bracket, and a
-        // label after a field separator gets a second mark first.
+        // that tells the parser what kind of label it is. A bracket label keeps its opening
+        // bracket, and a label after a field separator gets a field mark first.
         .replace(
           LABEL_PATTERN,
-          (label, field = '', open = '', alias = label.slice(field.length)) =>
-            `${field && `${field}${FIELD_MARK} `}${open}${LABEL_MARK} ${LABEL_ALIASES.get(alias) ?? alias}`
+          (_, field = '', open = '', alias?: string, name?: string) =>
+            `${field && `${field}${FIELD_MARK} `}${open}${name ? NAME_MARK : UNIT_MARK} ${LABEL_ALIASES.get(alias ?? name ?? 'in')}`
         )
         // Split punctuation, hyphens after quoted feet, and underscores before minus signs.
         .replace(/(?<=\d\s*')-(?=\.?\d)|_(?=-)|[^\w\s'".;-]/g, ' ')
