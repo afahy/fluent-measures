@@ -90,4 +90,11 @@ describe('any unit as a label', () => {
     expect(parseMeasurement('12 st, lb: 4')).toBeNull();
     expect(parseMeasurement('Stone: 12, lb: 4')).toBeNull();
   });
+
+  it.each(['age=28, kg=400 g', 'age=28, lbs=8 oz', 'age=28, lbs=12 stone', 'age 28 kg: 400 g'])(
+    "doesn't take a number in stone, ounces or grams, so %s returns null",
+    raw => {
+      expect(parseMeasurement(raw)).toBeNull();
+    }
+  );
 });

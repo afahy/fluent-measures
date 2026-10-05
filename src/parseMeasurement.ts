@@ -83,16 +83,18 @@ function readValueAfter(
 ): [value: number | null, end: number] {
   const [value, end] = readNumberPhrase(tokens, skipMarks(tokens, start));
   // A label doesn't take a number that has its own unit, as in "weigh in: 180 lbs" and
-  // "180 lbs = 82 kg". A semicolon or a unit label's mark can come between a number and its unit,
-  // as in "180; lbs" and "180 (lbs), 82 (kg)". But a unit with its own number after it doesn't own the
-  // number when it starts the next part of the measurement, as in "m: 1 cm: 80", or when it's
-  // another label, as in "kg: 72 cm: 180". The short aliases are labels even when spelled out.
+  // "180 lbs = 82 kg", even an unsupported one, as in "kg=400 g", so the check for stone, ounces
+  // and grams still sees that part. A semicolon or a unit label's mark can come between a number
+  // and its unit, as in "180; lbs" and "180 (lbs), 82 (kg)". But a unit with its own number after
+  // it doesn't own the number when it starts the next part of the measurement, as in
+  // "m: 1 cm: 80", or when it's another label, as in "kg: 72 cm: 180". The short aliases are
+  // labels even when spelled out.
   const unitAt = skipMarks(tokens, end);
   const next = tokens[unitAt] ?? '';
   const nextUnit = matchUnit(next, 'height', fuzziness) || matchUnit(next, 'weight', fuzziness);
   const ownUnit =
     (label || LABEL_ALIASES.has(unit)) &&
-    nextUnit &&
+    (nextUnit || UNSUPPORTED_WEIGHT_UNITS.test(next)) &&
     !(
       (nextUnit === NEXT_PART[unit] || tokens[unitAt - 1] === UNIT_MARK) &&
       wordsToNumber(tokens[skipMarks(tokens, unitAt + 1)] ?? '') !== null
