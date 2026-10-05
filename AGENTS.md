@@ -49,3 +49,71 @@ Run these commands from the repository root:
     `Test B` with the commands you ran and, for a bug fix, the check from rule 2. Tick only
     the checklist items that are true. Don't change the version in `package.json`;
     changesets sets it at release time.
+
+## Work without asking
+
+The maintainer reviews every PR before it merges, and that review is the human check. This
+section is the maintainer's standing approval for the steps below. Do them without asking,
+and list them in your report:
+
+- Run `pnpm install`, the tests, lint, mutation testing and the build.
+- For an `agent-ready` ticket, create the branch, commit, push and open the PR. Then move
+  the ticket to In Review.
+- Before you open the PR, review your own diff and fix the findings that are in scope. In
+  Claude Code, use the `code-review` skill at `high`.
+- After each push, watch CI and the Codex and CodeRabbit reviews until each one finishes.
+  If a watch expires first, start it again. Don't ask whether to watch.
+- If CodeRabbit's rate limit has reset, or Codex hasn't reviewed a commit after 30 minutes,
+  comment `@coderabbitai review` or `@codex review` on the PR.
+- Reproduce each review finding before you act on it. Then:
+  - If this PR causes it, or the ticket covers it, fix it with a regression test and push.
+  - If `main` gives the same result and the ticket doesn't cover it, file a Linear ticket
+    with the failing inputs and a "must not change" list. Label it `agent-ready`, or
+    `needs-decision` if it needs one of the decisions under "Stop and ask".
+  - If you can't reproduce it, reply on the thread with the inputs you ran.
+- Reply to each bot thread. Resolve each thread that a pushed commit fixes.
+- After three review rounds on one PR, stop waiting for more bot reviews and report the PR
+  as ready to merge. A round is one push and the bot reviews of that push.
+- If a CI job fails because no runner picked it up, re-run the failed jobs. If GitHub
+  reports an Actions incident, wait until it ends.
+- When you report a PR as ready to merge, watch it until it merges or closes. Don't ask the
+  maintainer to tell you.
+- After the PR merges, pull `main`. Delete the local branch after you confirm that `main`
+  has its changes. Watch CI on `main`, then start the next unblocked `agent-ready` ticket in
+  milestone order.
+- While a PR waits for merge, you may start a ticket that changes different files, in its
+  own worktree. Do tickets that change the same code one at a time.
+
+## Make your own decisions
+
+When a question comes up during a ticket, apply the first rule below that answers it. Record
+each decision under "Description" in the PR body. If a decision changes the ticket's scope
+or expected results, add a ticket comment too. The maintainer can change any decision at
+merge review.
+
+1. The README is the specification. Keep each result that the README or an existing test
+   shows, unless the ticket accepts the change.
+2. Keep each result that `main` gives, unless the ticket asks for the change. If a fix must
+   change a result, list it in the PR.
+3. If a second bug has the same cause and the same fix location, and the fix breaks no
+   existing test, fix it in the same PR.
+4. If two parts of a ticket conflict, choose the option that changes the fewest results
+   from `main`. Update the ticket to match.
+5. In all other cases, use your own recommendation and continue. Don't stop to ask unless
+   "Stop and ask" lists the question.
+
+## Stop and ask
+
+Ask the maintainer only about these decisions:
+
+- Changing a file in `.github/CODEOWNERS` that the ticket doesn't name (rule 8).
+- Changing a README example that the ticket doesn't name (rule 7).
+- Changing the exported types or the public API.
+- Raising the bundle size budget.
+
+Write the question, the options and your recommendation in a comment on the Linear ticket,
+and label the ticket `needs-decision`. Then continue with the next unblocked ticket. Don't
+wait for the answer.
+
+Ask in your report before you delete work that isn't on `main`, such as an unmerged branch
+or a stash. Merging stays with the maintainer (rule 9).
