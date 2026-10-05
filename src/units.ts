@@ -22,9 +22,17 @@ export const LABEL_ALIASES = new Map([
   ['m', 'meter'],
 ]);
 
-// The tokenizer puts this token before each spelled-out label, so the parser knows the label's
-// value comes after it, as in "age=28, in=72". It's a word that ordinary input doesn't contain.
-export const LABEL_MARK = '_label';
+// The tokenizer puts one of these tokens before each spelled-out label, so the parser knows the
+// label's value comes after it, as in "age=28, in=72". They're words that ordinary input doesn't
+// contain. A label before ":" or "=" is a field name. A label in brackets, or "in.", can also be
+// the unit of the number before it, as in "72 (in), 180 lbs".
+export const NAME_MARK = '_name';
+export const UNIT_MARK = '_unit';
+
+// The tokenizer puts this token before a label that starts a new field, after a comma, semicolon,
+// colon, equals sign or "&", as in "age=28, in=180 lbs". The label can't take the number before
+// this token, because that number belongs to the field before it.
+export const FIELD_MARK = '_field';
 
 // The unit of the next smaller part of a compound measurement, as in "5 ft 11 in" and
 // "1 m 80 cm". Inches have no smaller part.
