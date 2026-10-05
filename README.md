@@ -202,6 +202,16 @@ parseMeasurement('M 28'); // null: "M" before an age isn't meters
 parseMeasurement('Weigh in: 180 lbs'); // { value: 180, unit: 'lb', ... }: 180 has its own unit
 ```
 
+Any unit can be a label. A label reads the number after it, so it doesn't take the number of the
+field before it. When the number after a unit label has its own unit, the label takes the number
+before it instead:
+
+```typescript
+parseMeasurement('age=28, kg=72'); // { value: 72, unit: 'kg', ... }
+parseMeasurement('age: 28, ft: 6'); // { value: 6, unit: 'ft', ... }
+parseMeasurement('180 lbs = 82 kg'); // { value: 180, unit: 'lb', ... }
+```
+
 ## Advanced Use Cases
 
 ### Handling Mixed Unit Notations

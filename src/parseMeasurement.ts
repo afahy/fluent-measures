@@ -3,6 +3,7 @@ import { normalizeNumericCommas, tokenizeNormalized } from './tokenize';
 import { wordsToNumber } from './wordsToNumber';
 
 import {
+  FIELD_MARK,
   LABEL_ALIASES,
   NAME_MARK,
   NEXT_PART,
@@ -54,9 +55,18 @@ function total(parts: QualifiedMatch[], targetUnit: Unit): number {
   return sum;
 }
 
-/** Return the index of the first token at or after `start` that isn't a semicolon. */
-function skipSemicolons(tokens: string[], start: number): number {
-  while (tokens[start] === ';') start++;
+/**
+ * Return the index of the first token at or after `start` that isn't a semicolon or a unit label's
+ * mark. A field mark ends the search, because a new field starts there, unless `field` is true.
+ */
+function skipMarks(tokens: string[], start: number, field?: boolean): number {
+  while (
+    tokens[start] === ';' ||
+    tokens[start] === UNIT_MARK ||
+    (field && tokens[start] === FIELD_MARK)
+  ) {
+    start++;
+  }
   return start;
 }
 
@@ -68,19 +78,25 @@ function readValueAfter(
   tokens: string[],
   start: number,
   unit: Unit,
+  label: boolean,
   fuzziness?: number
 ): [value: number | null, end: number] {
-  const [value, end] = readNumberPhrase(tokens, skipSemicolons(tokens, start));
-  // A label doesn't take a number that has its own unit, as in "weigh in: 180 lbs", unless that
-  // unit starts the next part of the measurement with its own number: "m: 1 cm: 80". Semicolons
-  // can come between a number and its unit, as in "180; lbs".
-  const unitAt = skipSemicolons(tokens, end);
+  const [value, end] = readNumberPhrase(tokens, skipMarks(tokens, start));
+  // A label doesn't take a number that has its own unit, as in "weigh in: 180 lbs" and
+  // "180 lbs = 82 kg". A semicolon or a unit label's mark can come between a number and its unit,
+  // as in "180; lbs" and "180 (lbs), 82 (kg)". But a unit with its own number after it doesn't own the
+  // number when it starts the next part of the measurement, as in "m: 1 cm: 80", or when it's
+  // another label, as in "kg: 72 cm: 180". The short aliases are labels even when spelled out.
+  const unitAt = skipMarks(tokens, end);
   const next = tokens[unitAt] ?? '';
   const nextUnit = matchUnit(next, 'height', fuzziness) || matchUnit(next, 'weight', fuzziness);
-  const startsNextPart =
-    nextUnit === NEXT_PART[unit] &&
-    wordsToNumber(tokens[skipSemicolons(tokens, unitAt + 1)] ?? '') !== null;
-  const ownUnit = LABEL_ALIASES.has(unit) && nextUnit && !startsNextPart;
+  const ownUnit =
+    (label || LABEL_ALIASES.has(unit)) &&
+    nextUnit &&
+    !(
+      (nextUnit === NEXT_PART[unit] || tokens[unitAt - 1] === UNIT_MARK) &&
+      wordsToNumber(tokens[skipMarks(tokens, unitAt + 1)] ?? '') !== null
+    );
   return [ownUnit ? null : value, end];
 }
 
@@ -128,9 +144,11 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         if (type === 'weight' && UNSUPPORTED_WEIGHT_UNITS.test(word)) {
           const [before, beforeEnd] = readNumberPhrase(remainingTokens, i - 1, -1);
           // Reading backward already skips semicolons, so skip them reading forward too, as in
-          // "8 oz; 7 lb" and "12 st 4;lb".
-          const [after, afterEnd] = readNumberPhrase(tokens, skipSemicolons(tokens, i + 1));
-          const unitAt = skipSemicolons(tokens, afterEnd);
+          // "8 oz; 7 lb" and "12 st 4;lb". Commas don't separate parts, so skip field marks too,
+          // as in "Stone: 12, lb: 4".
+          const skip = (start: number): number => skipMarks(tokens, start, true);
+          const [after, afterEnd] = readNumberPhrase(tokens, skip(i + 1));
+          const unitAt = skip(afterEnd);
           // A supported part before it can have its unit first, as in "kg 3, 400 g". Earlier
           // matches blank their tokens, so check the original tokens for a unit.
           const partEndsAt = (end: number): boolean =>
@@ -146,10 +164,10 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
                 word !== 'g' &&
                 !(
                   isWeightUnit(tokens[unitAt]) &&
-                  readNumberPhrase(tokens, skipSemicolons(tokens, unitAt + 1))[0] === null
+                  readNumberPhrase(tokens, skip(unitAt + 1))[0] === null
                 ) &&
                 (partEndsAt(i - 1) ||
-                  isWeightUnit(tokens[skipSemicolons(tokens, readNumberPhrase(tokens, unitAt)[1])]))
+                  isWeightUnit(tokens[skip(readNumberPhrase(tokens, unitAt)[1])]))
               : !(word === 'st' && /^(?:\d*[02-9])?1$/.test(remainingTokens[i - 1])) &&
                 (partEndsAt(beforeEnd) || isWeightUnit(tokens[unitAt]))
           ) {
@@ -161,16 +179,17 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
 
       // Read the preceding phrase first, allowing ordinary punctuation before its unit. A label's
       // value comes after it, as in "age=28, in=72", so a label skips this when its value follows.
-      // For a field name, the label before ":" or "=", that's any number. A label in brackets, or
-      // "in.", can also be the unit of the number before it, so its value must be a number it can
-      // take, including a zero. Otherwise a label reads the number before its mark, as in
-      // "72 in: height" and "72 (in), 180 lbs", unless a field separator comes between them.
+      // For a field name, a short alias before ":" or "=", that's any number. Any other label can
+      // also be the unit of the number before it, as in "(in)", "in." and "kg:", so its value must
+      // be a number it can take, including a zero. Otherwise a label reads the number before its
+      // mark, as in "72 in: height", "72 (in), 180 lbs" and "180 lbs = 82 kg", unless a field
+      // separator comes between them.
       const mark = remainingTokens[i - 1];
       const label = mark === NAME_MARK || mark === UNIT_MARK;
       const valueFollows =
         mark === NAME_MARK
-          ? readNumberPhrase(remainingTokens, skipSemicolons(remainingTokens, i + 1))[0] !== null
-          : label && readValueAfter(remainingTokens, i + 1, unit, fuzziness)[0] !== null;
+          ? readNumberPhrase(remainingTokens, skipMarks(remainingTokens, i + 1))[0] !== null
+          : label && readValueAfter(remainingTokens, i + 1, unit, label, fuzziness)[0] !== null;
       let [num, end]: [number | null, number] = valueFollows
         ? [null, i - 1]
         : readNumberPhrase(remainingTokens, label ? i - 2 : i - 1, -1);
@@ -195,7 +214,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         !signed &&
         !LABEL_ALIASES.has(remainingTokens[i])
       ) {
-        const [value, valueEnd] = readValueAfter(remainingTokens, matchEnd, unit, fuzziness);
+        const [value, valueEnd] = readValueAfter(remainingTokens, matchEnd, unit, label, fuzziness);
         num = value || null;
         matchStart = i;
         matchEnd = valueEnd;

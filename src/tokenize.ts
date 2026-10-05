@@ -1,14 +1,14 @@
 import { matchUnit } from './matchUnit';
-import { FIELD_MARK, LABEL_ALIASES, NAME_MARK, UNIT_MARK } from './units';
+import { FIELD_MARK, LABEL_ALIASES, NAME_MARK, UNIT_ALIASES, UNIT_MARK } from './units';
 import { wordsToNumber } from './wordsToNumber';
 
-// A short alias in brackets or before a colon or equals sign, as in "(in)", "m:" and "in = 72",
-// is a label. So is "in." followed by a space, the usual abbreviation for inches. The alias must
+// A unit alias in brackets or before a colon or equals sign, as in "(kg)", "m:", "in = 72" and
+// "("):", is a label. So is "in." followed by a space, the usual abbreviation for inches. The alias must
 // be a word of its own, so "check-in: 5" isn't a label, with any kind of hyphen or dash, and
 // neither is "µm: 5" after any Unicode letter. The opening bracket is matched forward: some
 // engines run a lookbehind such as `(?<=\(\s*)` in quadratic time across a long run of spaces.
 // For the same reason, a field separator before the label is matched forward too.
-const LABELS = [...LABEL_ALIASES.keys()].join('|');
+const LABELS = Object.values(UNIT_ALIASES).flat(2).join('|');
 const WORD_BEFORE = '(?<![\\p{L}\\p{M}\\p{N}_\\p{Dash}])';
 const LABEL_PATTERN = new RegExp(
   `([,;:=&]\\s*)?(?:([([]\\s*)(${LABELS})(?=\\.?\\s*[)\\]](\\s*[:=])?)|${WORD_BEFORE}(${LABELS})(?=\\.?\\s*[:=])|${WORD_BEFORE}in(?=\\.(?:\\s|$)))`,
@@ -49,14 +49,18 @@ export function tokenizeNormalized(input: string, fuzziness?: number): string[] 
         .replace(/(?<=\d)G(?![A-Za-z])/g, 'gen')
         // Convert to lowercase for case-insensitive matching
         .toLowerCase()
-        // Spell out label aliases before the punctuation that marks them is removed, after a mark
-        // that tells the parser what kind of label it is. A label before ":" or "=" is a field
-        // name, in brackets too, as in "age 28 (in): 180 lbs". A bracket label keeps its opening
+        // Mark labels before the punctuation that marks them is removed, so the parser knows what
+        // kind of label each one is, and spell out the short aliases. A short alias before ":" or
+        // "=" is a field name, in brackets too, as in "age 28 (in): 180 lbs". Other units are
+        // always unit labels, so "180 lbs = 82 kg" keeps 180 lb. A bracket label keeps its opening
         // bracket, and a label after a field separator gets a field mark first.
         .replace(
           LABEL_PATTERN,
-          (_, field = '', open = '', alias?: string, assign?: string, name?: string) =>
-            `${field && `${field}${FIELD_MARK} `}${open}${assign || name ? NAME_MARK : UNIT_MARK} ${LABEL_ALIASES.get(alias ?? name ?? 'in')}`
+          (_, field = '', open = '', alias?: string, assign?: string, name?: string) => {
+            const word = alias ?? name ?? 'in';
+            const short = LABEL_ALIASES.get(word);
+            return `${field && `${field}${FIELD_MARK} `}${open}${short && (assign || name) ? NAME_MARK : UNIT_MARK} ${short ?? word}`;
+          }
         )
         // Split punctuation, hyphens after quoted feet, and underscores before minus signs.
         .replace(/(?<=\d\s*')-(?=\.?\d)|_(?=-)|[^\w\s'".;-]/g, ' ')
