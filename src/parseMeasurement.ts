@@ -2,7 +2,13 @@ import { matchUnit } from './matchUnit';
 import { normalizeNumericCommas, tokenizeNormalized } from './tokenize';
 import { wordsToNumber } from './wordsToNumber';
 
-import { LABEL_ALIASES, NEXT_PART, UNSUPPORTED_WEIGHT_UNITS, unitConversions } from './units';
+import {
+  LABEL_ALIASES,
+  LABEL_MARK,
+  NEXT_PART,
+  UNSUPPORTED_WEIGHT_UNITS,
+  unitConversions,
+} from './units';
 
 import { ParseOptions, ParsedValue, Match, Unit } from './types';
 
@@ -112,8 +118,15 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         continue;
       }
 
-      // Read the preceding phrase first, allowing ordinary punctuation before its unit.
-      let [num, end] = readNumberPhrase(remainingTokens, i - 1, -1);
+      // Read the preceding phrase first, allowing ordinary punctuation before its unit. A label's
+      // value comes after it, as in "age=28, in=72", so a label skips this when a number follows
+      // and reads the number before its mark only otherwise, as in "72 (in)".
+      const label = remainingTokens[i - 1] === LABEL_MARK;
+      let [num, end]: [number | null, number] =
+        label &&
+        wordsToNumber(remainingTokens[skipSemicolons(remainingTokens, i + 1)] ?? '') !== null
+          ? [null, i - 1]
+          : readNumberPhrase(remainingTokens, label ? i - 2 : i - 1, -1);
       let matchStart = num === null ? end : end + 1;
       let matchEnd = i + 1;
 
