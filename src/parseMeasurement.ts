@@ -129,13 +129,29 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
           const [before, beforeEnd] = readNumberPhrase(remainingTokens, i - 1, -1);
           // Reading backward already skips semicolons, so skip them reading forward too, as in
           // "8 oz; 7 lb" and "12 st 4;lb".
-          const [, afterEnd] = readNumberPhrase(tokens, skipSemicolons(tokens, i + 1));
-          // Earlier matches blank their tokens, so check the original tokens for a unit.
+          const [after, afterEnd] = readNumberPhrase(tokens, skipSemicolons(tokens, i + 1));
+          const unitAt = skipSemicolons(tokens, afterEnd);
+          // A supported part before it can have its unit first, as in "kg 3, 400 g". Earlier
+          // matches blank their tokens, so check the original tokens for a unit.
+          const partEndsAt = (end: number): boolean =>
+            isWeightUnit(tokens[readNumberPhrase(tokens, end, -1)[1]]);
+          // With no number before it, the unit can come before its number, as in "stone 12, 4 lb",
+          // unless a weight unit after that number takes it, as in "stone, 50 lb bag". A unit with
+          // its own number after it doesn't, as in "Stone: 12, lb: 4". Like "in" and "m", "st"
+          // and "g" before a number are usually other words, as in "Main St 12".
           if (
-            before !== null &&
-            !(word === 'st' && /^(?:\d*[02-9])?1$/.test(remainingTokens[i - 1])) &&
-            (isWeightUnit(tokens[beforeEnd]) ||
-              isWeightUnit(tokens[skipSemicolons(tokens, afterEnd)]))
+            before === null
+              ? after !== null &&
+                word !== 'st' &&
+                word !== 'g' &&
+                !(
+                  isWeightUnit(tokens[unitAt]) &&
+                  readNumberPhrase(tokens, skipSemicolons(tokens, unitAt + 1))[0] === null
+                ) &&
+                (partEndsAt(i - 1) ||
+                  isWeightUnit(tokens[skipSemicolons(tokens, readNumberPhrase(tokens, unitAt)[1])]))
+              : !(word === 'st' && /^(?:\d*[02-9])?1$/.test(remainingTokens[i - 1])) &&
+                (partEndsAt(beforeEnd) || isWeightUnit(tokens[unitAt]))
           ) {
             return null;
           }
