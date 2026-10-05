@@ -22,10 +22,10 @@ export const LABEL_ALIASES = new Map([
   ['m', 'meter'],
 ]);
 
-// The tokenizer puts one of these tokens before each spelled-out label, so the parser knows the
-// label's value comes after it, as in "age=28, in=72". They're words that ordinary input doesn't
-// contain. A label before ":" or "=" is a field name. A label in brackets, or "in.", can also be
-// the unit of the number before it, as in "72 (in), 180 lbs".
+// The tokenizer puts one of these tokens before each label, so the parser knows the label's value
+// comes after it, as in "age=28, in=72" and "age=28, kg=72". They're words that ordinary input
+// doesn't contain. A short alias before ":" or "=" is a field name. Any other label can also be
+// the unit of the number before it, as in "72 (in), 180 lbs" and "180 lbs = 82 kg".
 export const NAME_MARK = '_name';
 export const UNIT_MARK = '_unit';
 
