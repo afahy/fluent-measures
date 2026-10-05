@@ -203,13 +203,19 @@ parseMeasurement('Weigh in: 180 lbs'); // { value: 180, unit: 'lb', ... }: 180 h
 ```
 
 Any unit can be a label. A label reads the number after it, so it doesn't take the number of the
-field before it. When the number after a unit label has its own unit, the label takes the number
-before it instead:
+field before it. When the number after a label has its own unit, the label takes the number before
+it instead, unless a comma, semicolon, colon, equals sign or `&` comes between them. The exception
+is `in` or `m` before `:` or `=`, which is a field name: it takes the number before it only when no
+number follows it.
 
 ```typescript
 parseMeasurement('age=28, kg=72'); // { value: 72, unit: 'kg', ... }
 parseMeasurement('age: 28, ft: 6'); // { value: 6, unit: 'ft', ... }
 parseMeasurement('180 lbs = 82 kg'); // { value: 180, unit: 'lb', ... }
+parseMeasurement('age=28, kg=72 lbs'); // { value: 72, unit: 'lb', ... }: "kg" doesn't take 28
+parseMeasurement('72 (in), 180 lbs'); // { value: 72, unit: 'in', ... }
+parseMeasurement('72 in: 180 lbs'); // { value: 180, unit: 'lb', ... }: "in:" is a field name
+parseMeasurement('72 in: height'); // { value: 72, unit: 'in', ... }
 ```
 
 ## Advanced Use Cases
