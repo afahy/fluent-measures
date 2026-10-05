@@ -44,6 +44,19 @@ describe('a label reads the number after it', () => {
     ]);
   });
 
+  it.each([
+    ['72 (in), 180 lbs', {}, 72, 'in'],
+    ['72 (in), 180 lbs', { type: 'height' }, 72, 'in'],
+    ['72 in: 180 lbs', {}, 72, 'in'],
+    ['72 (in) 180 lbs', {}, 72, 'in'],
+    ['1.8 (m), 80 kg', {}, 1.8, 'm'],
+  ] as const)(
+    'reads the number before it when the next number has its own unit, in %s',
+    (raw, options, value, unit) => {
+      expect(parseMeasurement(raw, options)?.matches).toEqual([{ value, unit }]);
+    }
+  );
+
   it('still leaves a number that has its own unit to that unit', () => {
     expect(parseMeasurement('age 28, weigh in: 180 lbs')?.matches).toEqual([
       { value: 180, unit: 'lb' },

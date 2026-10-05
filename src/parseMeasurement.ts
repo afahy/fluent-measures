@@ -59,6 +59,30 @@ function skipSemicolons(tokens: string[], start: number): number {
   return start;
 }
 
+/**
+ * Read the number phrase after a unit, as before one, so "kg one hundred eighty" is 180 kg.
+ * Return a null value when there's no number, or when the unit is a label and can't take it.
+ */
+function readValueAfter(
+  tokens: string[],
+  start: number,
+  unit: Unit,
+  fuzziness?: number
+): [value: number | null, end: number] {
+  const [value, end] = readNumberPhrase(tokens, skipSemicolons(tokens, start));
+  // A label doesn't take a number that has its own unit, as in "weigh in: 180 lbs", unless that
+  // unit starts the next part of the measurement with its own number: "m: 1 cm: 80". Semicolons
+  // can come between a number and its unit, as in "180; lbs".
+  const unitAt = skipSemicolons(tokens, end);
+  const next = tokens[unitAt] ?? '';
+  const nextUnit = matchUnit(next, 'height', fuzziness) || matchUnit(next, 'weight', fuzziness);
+  const startsNextPart =
+    nextUnit === NEXT_PART[unit] &&
+    wordsToNumber(tokens[skipSemicolons(tokens, unitAt + 1)] ?? '') !== null;
+  const ownUnit = LABEL_ALIASES.has(unit) && nextUnit && !startsNextPart;
+  return [ownUnit ? null : value || null, end];
+}
+
 /** Parse a height or weight, optionally inferring its unit or normalizing the result. */
 export function parseMeasurement(input: string, options: ParseOptions = {}): ParsedValue | null {
   const trimmed = normalizeNumericCommas(input?.trim() || '');
@@ -119,12 +143,12 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       }
 
       // Read the preceding phrase first, allowing ordinary punctuation before its unit. A label's
-      // value comes after it, as in "age=28, in=72", so a label skips this when a number follows
-      // and reads the number before its mark only otherwise, as in "72 (in)".
+      // value comes after it, as in "age=28, in=72", so a label skips this when it can take the
+      // number after it. Otherwise it reads the number before its mark, as in "72 (in)" and
+      // "72 (in), 180 lbs".
       const label = remainingTokens[i - 1] === LABEL_MARK;
       let [num, end]: [number | null, number] =
-        label &&
-        wordsToNumber(remainingTokens[skipSemicolons(remainingTokens, i + 1)] ?? '') !== null
+        label && readValueAfter(remainingTokens, i + 1, unit, fuzziness)[0] !== null
           ? [null, i - 1]
           : readNumberPhrase(remainingTokens, label ? i - 2 : i - 1, -1);
       let matchStart = num === null ? end : end + 1;
@@ -148,23 +172,8 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         !signed &&
         !LABEL_ALIASES.has(remainingTokens[i])
       ) {
-        // Read the whole number phrase, as before a unit, so "kg one hundred eighty" is 180 kg.
-        const [value, valueEnd] = readNumberPhrase(
-          remainingTokens,
-          skipSemicolons(remainingTokens, matchEnd)
-        );
-        num = value || null;
-        // A label doesn't take a number that has its own unit, as in "weigh in: 180 lbs", unless
-        // that unit starts the next part of the measurement with its own number: "m: 1 cm: 80".
-        // Semicolons can come between a number and its unit, as in "180; lbs".
-        const unitAt = skipSemicolons(remainingTokens, valueEnd);
-        const next = remainingTokens[unitAt] ?? '';
-        const nextUnit =
-          matchUnit(next, 'height', fuzziness) || matchUnit(next, 'weight', fuzziness);
-        const partAt = skipSemicolons(remainingTokens, unitAt + 1);
-        const startsNextPart =
-          nextUnit === NEXT_PART[unit] && wordsToNumber(remainingTokens[partAt] ?? '') !== null;
-        if (LABEL_ALIASES.has(unit) && nextUnit && !startsNextPart) num = null;
+        const [value, valueEnd] = readValueAfter(remainingTokens, matchEnd, unit, fuzziness);
+        num = value;
         matchStart = i;
         matchEnd = valueEnd;
       }
