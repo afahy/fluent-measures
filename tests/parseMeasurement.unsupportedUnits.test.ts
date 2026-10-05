@@ -27,6 +27,17 @@ describe('unsupported weight units', () => {
     '10.1st 4lb',
     '1.1st 4lb',
     '111st 4lb',
+    // Units written before their number
+    'stone 12, 4 lb',
+    'oz 8, 7 lb',
+    'kg 3, 400 g',
+    'lb 7, 8 oz',
+    'Stone: 12, lb: 4',
+    'stone twelve, four pounds',
+    'ounces 8; 7 lb',
+    'stone 12 and 4 lb',
+    '7 lb, oz 8',
+    'lb 7; oz 8',
   ])('returns null instead of a partial weight in %s', raw => {
     expect(parseMeasurement(raw)).toBeNull();
   });
@@ -72,6 +83,11 @@ describe('unsupported weight units', () => {
     // A capital G after a number is a network generation, not grams
     '180 lbs, 5G phone',
     '180 lbs, 4G signal',
+    '180 lbs, stone wall',
+    'Water (oz): 64, weight 180 lbs',
+    // "st" and "g" before a number are usually other words
+    'Main St 12, 180 lbs',
+    'Block G 5, 180 lbs',
   ])('keeps the weight when no unsupported part is next to it in %s', raw => {
     expect(parseMeasurement(raw)?.matches).toEqual([{ value: 180, unit: 'lb' }]);
   });
