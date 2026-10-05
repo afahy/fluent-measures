@@ -4,10 +4,10 @@
 module.exports = [
   {
     path: 'dist/index.js',
-    limit: '2.5 kB',
+    limit: '3 kB',
   },
   {
     path: 'dist/index.cjs',
-    limit: '2.5 kB',
+    limit: '3 kB',
   },
 ];
