@@ -170,7 +170,9 @@ code. Add tests that catch either kind.
 A second job, "Mutants on changed lines are killed", runs Stryker on the files that a pull
 request changes under `src/`. It fails when a mutant whose code overlaps a line that the pull
 request adds or changes survives, or no test covers it. So the tests must catch every change to
-the code that a pull request adds. To run it
+the code that a pull request adds. It also fails before Stryker runs when the path of a changed
+source file has a backslash. Stryker reads a backslash as a slash, so the job can't find that
+file's mutants. To run it
 on your committed changes, use `node .github/scripts/mutation-check.mjs --base origin/main`. If a
 mutant can't change behavior, put `// Stryker disable next-line <mutator>: <reason>` on the line
 above it. The reason must say why behavior can't change, and the job fails on a disable comment

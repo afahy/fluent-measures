@@ -12,6 +12,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
+  backslashPaths,
   hunkRanges,
   isSourceFile,
   literalGlob,
@@ -39,14 +40,16 @@ if (baseFlag < 0 && spawnSync('git', ['rev-parse', '--quiet', '--verify', 'HEAD^
   process.exit(0);
 }
 
-// Fixed options, so the user's git settings can't change the output.
+// Fixed options, so color, external diff tools and rename detection can't change the output.
+// Each pathspec is literal, so `src/a\b.ts` and `src/[u]nits.ts` don't also match `src/ab.ts`
+// and `src/units.ts`.
 const gitDiff = ['diff', '--no-color', '--no-ext-diff', '--no-renames'];
 const range = revisions(base, { fromMergeBase: baseFlag >= 0 });
 
-// File names come NUL-separated and unquoted, so any file name works.
+// File names come NUL-separated and unquoted, so git prints each name as it is.
 const files = execFileSync(
   'git',
-  [...gitDiff, '--name-only', '-z', '--diff-filter=d', ...range, '--', 'src/'],
+  [...gitDiff, '--name-only', '-z', '--diff-filter=d', ...range, '--', ':(literal)src/'],
   { encoding: 'utf8' }
 )
   .split('\0')
@@ -54,9 +57,13 @@ const files = execFileSync(
 /** @type {Map<string, Array<[number, number]>>} */
 const changed = new Map();
 for (const file of files) {
-  const diff = execFileSync('git', [...gitDiff, '--unified=0', ...range, '--', file], {
-    encoding: 'utf8',
-  });
+  const diff = execFileSync(
+    'git',
+    [...gitDiff, '--unified=0', ...range, '--', `:(literal)${file}`],
+    {
+      encoding: 'utf8',
+    }
+  );
   const ranges = hunkRanges(diff);
   if (ranges.length > 0) changed.set(file, ranges);
 }
@@ -68,6 +75,16 @@ const lines = [...changed].flatMap(([file, ranges]) =>
   ranges.map(([from, to]) => `  ${file}:${from}${from === to ? '' : `-${to}`}`)
 );
 console.log(`Changed lines:\n${lines.join('\n')}`);
+
+// Stryker reads a backslash in a path as a slash. So this check can't find the mutants of such a
+// file, and it would pass without checking the file.
+const backslashed = backslashPaths([...changed.keys()]);
+for (const file of backslashed) {
+  console.error(
+    `::error file=${file}::Rename ${file}. Its path has a backslash, and Stryker reads a backslash as a slash, so this check can't find the file's mutants.`
+  );
+}
+if (backslashed.length > 0) process.exit(1);
 
 // Mutate the whole of each changed file, so a mutant whose code spans more lines than the change
 // is still made. Only the mutants that overlap a changed line count. Use the project's Stryker
