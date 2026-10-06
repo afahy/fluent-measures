@@ -624,3 +624,22 @@ describe('README examples', () => {
     }
   );
 });
+
+// The README has no same-unit example today, so these check the exact branch directly. Each wrong
+// value is within the 2-decimal tolerance, so only an exact comparison rejects it.
+describe('expectedValue', () => {
+  it.each([
+    ['70 kg', 70, 70.004],
+    ['kg 70', 70, 70.004],
+    ['70 kilograms', 70, 70.004],
+    ['1,000 kg', 1000, 1000.004],
+    ['72½ kg', 72.5, 72.504],
+  ])('matches %s with { normalizedUnit: "kg" } exactly', (input, documented, wrong) => {
+    expect(wrong).not.toEqual(expectedValue(documented, input, { normalizedUnit: 'kg' }));
+    expect(documented).toEqual(expectedValue(documented, input, { normalizedUnit: 'kg' }));
+  });
+
+  it('allows the README rounding for a converted value', () => {
+    expect(68.0388555).toEqual(expectedValue(68.04, '150 lbs', { normalizedUnit: 'kg' }));
+  });
+});
