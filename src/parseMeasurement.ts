@@ -1,5 +1,10 @@
 import { matchUnit } from './matchUnit';
-import { normalizeFractions, normalizeNumericCommas, tokenizeNormalized } from './tokenize';
+import {
+  normalizeForms,
+  normalizeFractions,
+  normalizeNumericCommas,
+  tokenizeNormalized,
+} from './tokenize';
 import { NUMBER_WORDS, wordsToNumber } from './wordsToNumber';
 
 import {
@@ -105,7 +110,7 @@ function readValueAfter(
 /** Parse a height or weight, optionally inferring its unit or normalizing the result. */
 export function parseMeasurement(input: string, options: ParseOptions = {}): ParsedValue | null {
   // Stryker disable next-line StringLiteral: the replacement "Stryker was here!" also returns null.
-  const trimmed = normalizeFractions(normalizeNumericCommas(input?.trim() || ''));
+  const trimmed = normalizeFractions(normalizeNumericCommas(normalizeForms(input?.trim() || '')));
   if (!trimmed) {
     return null;
   }
