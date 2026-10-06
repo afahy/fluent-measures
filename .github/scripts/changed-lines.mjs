@@ -14,6 +14,78 @@ export function revisions(base, { fromMergeBase }) {
   return fromMergeBase ? [`${base}...HEAD`] : [base, 'HEAD'];
 }
 
+// Environment variables that change how git reads a pathspec or writes a diff. With
+// GIT_LITERAL_PATHSPECS, for example, git reads `:(literal)src/` as a plain path, which matches
+// nothing.
+const GIT_OUTPUT_VARIABLES = new Set([
+  'GIT_LITERAL_PATHSPECS',
+  'GIT_GLOB_PATHSPECS',
+  'GIT_NOGLOB_PATHSPECS',
+  'GIT_ICASE_PATHSPECS',
+  'GIT_DIFF_OPTS',
+]);
+
+/**
+ * Returns `env` without the variables that change how git reads a pathspec or writes a diff.
+ *
+ * @param {Record<string, string | undefined>} env
+ * @returns {Record<string, string | undefined>}
+ */
+export function gitEnvironment(env) {
+  return Object.fromEntries(
+    Object.entries(env).filter(([name]) => !GIT_OUTPUT_VARIABLES.has(name))
+  );
+}
+
+/**
+ * Splits the NUL-separated file names that git writes into the names that are valid UTF-8 and the
+ * names that aren't. Node opens a file by a UTF-8 name, so it can't open a file in the second
+ * group. Those names come back with U+FFFD in place of each byte that isn't valid.
+ *
+ * @param {Uint8Array} output
+ * @returns {{ names: string[], invalid: string[] }}
+ */
+export function decodeNames(output) {
+  const strict = new TextDecoder('utf-8', { fatal: true });
+  const loose = new TextDecoder('utf-8');
+  /** @type {string[]} */
+  const names = [];
+  /** @type {string[]} */
+  const invalid = [];
+  for (let start = 0; start < output.length; ) {
+    let end = output.indexOf(0, start);
+    if (end === -1) end = output.length;
+    if (end > start) {
+      const bytes = output.subarray(start, end);
+      try {
+        names.push(strict.decode(bytes));
+      } catch {
+        invalid.push(loose.decode(bytes));
+      }
+    }
+    start = end + 1;
+  }
+  return { names, invalid };
+}
+
+/**
+ * Returns the files whose `mutate` pattern, from `literalGlob`, matched no file in Stryker's run,
+ * from the warnings in its log. Stryker never reads some folders, such as `node_modules`, so it
+ * can't mutate a file in them. A file without mutants, such as one with only types, still matches.
+ *
+ * @param {string} log
+ * @param {string[]} files
+ * @returns {string[]}
+ */
+export function unmatchedFiles(log, files) {
+  const patterns = new Set(
+    [...log.matchAll(/Glob pattern "(.*)" did not result in any files\./g)].map(
+      ([, pattern]) => pattern
+    )
+  );
+  return files.filter(file => patterns.has(literalGlob(file)));
+}
+
 /**
  * Returns whether Stryker mutates `file`: a TypeScript source file, not a declaration file.
  *

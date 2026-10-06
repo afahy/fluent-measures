@@ -1,5 +1,13 @@
 export function revisions(base: string, options: { fromMergeBase: boolean }): string[];
 
+export function gitEnvironment(
+  env: Record<string, string | undefined>
+): Record<string, string | undefined>;
+
+export function decodeNames(output: Uint8Array): { names: string[]; invalid: string[] };
+
+export function unmatchedFiles(log: string, files: string[]): string[];
+
 export function isSourceFile(file: string): boolean;
 
 export function backslashPaths(files: string[]): string[];
