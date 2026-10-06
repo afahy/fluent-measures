@@ -33,6 +33,8 @@ describe('spoken numbers', () => {
     ['twenty-one', { type: 'height' }],
     ['two-ten', { type: 'height' }],
     ['nine-eleven', { type: 'height' }],
+    // "and" isn't a number, so this isn't 3 ft 0 in.
+    ['three-and', { type: 'height' }],
     ['five-eleven-two', { type: 'height' }],
   ] as const)('returns null for %s with %o', (raw, options) => {
     expect(parseMeasurement(raw, options)).toBeNull();

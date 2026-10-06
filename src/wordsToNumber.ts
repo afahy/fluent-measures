@@ -64,5 +64,6 @@ export function wordsToNumber(input: string): number | null {
       return null;
     }
   }
-  return total + current;
+  // A phrase with no number in it, such as "and", isn't a number.
+  return words.length ? total + current : null;
 }

@@ -42,6 +42,11 @@ describe('wordsToNumber', () => {
     expect(wordsToNumber('one 80')).toBeNull();
   });
 
+  it('returns null for a phrase with no number in it', () => {
+    expect(wordsToNumber('and')).toBeNull();
+    expect(wordsToNumber('and and')).toBeNull();
+  });
+
   it('rejects a number after a multiplier that is as large as the multiplier', () => {
     expect(wordsToNumber('one hundred 100')).toBeNull();
     expect(wordsToNumber('one thousand 1000')).toBeNull();
