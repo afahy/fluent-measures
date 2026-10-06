@@ -1,6 +1,7 @@
 import eslint from '@eslint/js';
 import tseslint from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
+import vitest from '@vitest/eslint-plugin';
 
 export default [
   eslint.configs.recommended,
@@ -30,6 +31,19 @@ export default [
       ],
       '@typescript-eslint/no-explicit-any': 'error',
       'no-console': ['warn', { allow: ['warn', 'error'] }],
+    },
+  },
+  // Every test must be able to fail (AGENTS.md rule 11): it must reach an expect, and no expect
+  // may sit in a branch that can be skipped.
+  {
+    files: ['tests/**/*.ts'],
+    plugins: { vitest },
+    rules: {
+      ...vitest.configs.recommended.rules,
+      'vitest/expect-expect': 'error',
+      'vitest/no-conditional-expect': 'error',
+      // Vitest's expect takes an optional message as its second argument.
+      'vitest/valid-expect': ['error', { maxArgs: 2 }],
     },
   },
 ];
