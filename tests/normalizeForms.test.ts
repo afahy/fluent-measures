@@ -23,6 +23,9 @@ describe('normalizeForms', () => {
     ['−,5 kg', '-,5 kg'],
     ['kg −−5', 'kg −-5'],
     ['kg−70.5 or −2', 'kg-70.5 or −2'],
+    // A word that only contains a number word isn't a number.
+    ['often −5 ft', 'often -5 ft'],
+    ['Someone −5 ft', 'Someone -5 ft'],
   ])('writes %s as %s', (input, output) => {
     expect(normalizeForms(input)).toBe(output);
   });
@@ -45,6 +48,11 @@ describe('normalizeForms', () => {
     '1 m −80 cm',
     '5 ft ﹣11 in',
     '−five ft',
+    // A number word or a Unicode fraction is an earlier number too.
+    'one m−80 cm',
+    'Five ft﹣11 in',
+    '½ lb−180 lbs',
+    'one hundred−5',
   ])('leaves %s as it is', input => {
     expect(normalizeForms(input)).toBe(input);
   });

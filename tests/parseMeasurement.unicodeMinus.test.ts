@@ -30,6 +30,7 @@ describe('Unicode minus signs', () => {
     ['150−180 lbs', {}],
     ['5−11', { type: 'height' }],
     ['Height: 180 cm (−2 cm)', {}],
+    ['½ lb−180 lbs', {}],
   ] as const)('keeps returning null for %s with %o', (raw, options) => {
     expect(parseMeasurement(raw, options)).toBeNull();
   });
@@ -44,9 +45,9 @@ describe('Unicode minus signs', () => {
     expect(parseMeasurement(raw, options)).toMatchObject({ value, unit });
   });
 
-  // The README's "1 m 80 cm" is one height with two parts.
-  it('keeps the parts of 1 m−80 cm', () => {
-    expect(parseMeasurement('1 m−80 cm')?.matches).toEqual([
+  // The README's "1 m 80 cm" is one height with two parts, also when its number is a word.
+  it.each(['1 m−80 cm', 'one m−80 cm'])('keeps the parts of %s', raw => {
+    expect(parseMeasurement(raw)?.matches).toEqual([
       { value: 1, unit: 'm' },
       { value: 80, unit: 'cm' },
     ]);
