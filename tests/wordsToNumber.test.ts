@@ -25,6 +25,39 @@ describe('wordsToNumber', () => {
     expect(wordsToNumber('ninety nine')).toEqual(99);
   });
 
+  // AFA-60: a ones word and then a tens word, as the first two words, are spoken hundreds.
+  it('reads spoken hundreds', () => {
+    expect(wordsToNumber('one eighty')).toEqual(180);
+    expect(wordsToNumber('two twenty five')).toEqual(225);
+    expect(wordsToNumber('nine ninety nine')).toEqual(999);
+  });
+
+  it('reads only a ones word and a tens word as spoken hundreds', () => {
+    expect(wordsToNumber('one two')).toBeNull();
+    expect(wordsToNumber('one ten')).toBeNull();
+    expect(wordsToNumber('ten eighty')).toBeNull();
+    expect(wordsToNumber('zero eighty')).toBeNull();
+    expect(wordsToNumber('one hundred one eighty')).toBeNull();
+    // The ticket asks for a tens word, so digits don't count.
+    expect(wordsToNumber('one 80')).toBeNull();
+  });
+
+  // A group can contain one hundred, and spoken hundreds count as that hundred.
+  it('rejects a hundred after spoken hundreds', () => {
+    expect(wordsToNumber('one eighty hundred')).toBeNull();
+    expect(wordsToNumber('two twenty hundred')).toBeNull();
+  });
+
+  it('returns null for a phrase with no number in it', () => {
+    expect(wordsToNumber('and')).toBeNull();
+    expect(wordsToNumber('and and')).toBeNull();
+  });
+
+  it('rejects a number after a multiplier that is as large as the multiplier', () => {
+    expect(wordsToNumber('one hundred 100')).toBeNull();
+    expect(wordsToNumber('one thousand 1000')).toBeNull();
+  });
+
   it('handles hundreds correctly', () => {
     expect(wordsToNumber('one hundred')).toEqual(100);
     expect(wordsToNumber('two hundred')).toEqual(200);
