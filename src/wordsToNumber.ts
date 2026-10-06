@@ -1,5 +1,5 @@
 // Values advance by one through nineteen, then by ten from twenty through ninety.
-const NUMBER_WORDS = new Map(
+export const NUMBER_WORDS = new Map(
   'zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty thirty forty fifty sixty seventy eighty ninety'
     .split(' ')
     .map((word, index): [string, number] => [word, index < 20 ? index : (index - 18) * 10])
@@ -35,7 +35,12 @@ export function wordsToNumber(input: string): number | null {
         // Only a tens word and a ones value form an additive pair within a group.
         const followsTens =
           previousNumber >= 10 && previousNumber % 10 === 0 && number > 0 && number < 10;
-        if (previousMultiplier !== undefined ? number >= previousMultiplier : !followsTens) {
+        // A ones word and then a tens word, as the first two words, are spoken hundreds, as in
+        // "one eighty" for 180. Every number word from twenty up is a tens word.
+        if (index === 1 && previousNumber && previousNumber < 10 && NUMBER_WORDS.get(word)! >= 20) {
+          current *= 100;
+          hasHundred = true;
+        } else if (previousMultiplier !== undefined ? number >= previousMultiplier : !followsTens) {
           return null;
         }
       }
@@ -60,5 +65,6 @@ export function wordsToNumber(input: string): number | null {
       return null;
     }
   }
-  return total + current;
+  // A phrase with no number in it, such as "and", isn't a number.
+  return words.length ? total + current : null;
 }
