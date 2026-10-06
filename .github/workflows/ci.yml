@@ -130,9 +130,28 @@ jobs:
       - name: Mutation tests
         run: pnpm test:mutation
 
+  # Every mutant on a line that the pull request adds or changes under src/ must be killed. On a
+  # push to main, the script finds no pull request and passes, so ci-ok still sees success.
+  mutation-changed-lines:
+    name: Mutants on changed lines are killed
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The pull request's merge commit and its parents. HEAD^1 is the base branch.
+          fetch-depth: 2
+
+      - uses: ./.github/actions/setup
+        with:
+          node-version: 22
+
+      - name: Mutation tests on the changed lines
+        run: node .github/scripts/mutation-check.mjs
+
   ci-ok:
     if: always()
-    needs: [test, package, mutation]
+    needs: [test, package, mutation, mutation-changed-lines]
     runs-on: ubuntu-latest
     steps:
       - name: Check all CI jobs passed

@@ -165,6 +165,14 @@ changes that the tests catch. The job fails when the score is below the `break` 
 `Survived` entry means tests ran and still passed; a `NoCoverage` entry means no test runs that
 code. Add tests that catch either kind.
 
+A second job, "Mutants on changed lines are killed", runs Stryker only on the lines that a pull
+request adds or changes under `src/`. It fails when a mutant on those lines survives or no test
+covers it, so the tests must catch every change to the code that a pull request adds. To run it
+on your committed changes, use `node .github/scripts/mutation-check.mjs --base origin/main`. If a
+mutant can't change behavior, put `// Stryker disable next-line <mutator>: <reason>` on the line
+above it. The reason must say why behavior can't change, and the job fails on a disable comment
+without one.
+
 Mutation testing needs Node 22.18 or a later 22.x release, or Node 24.11 or later. Stryker
 depends on Babel 8, which requires those versions.
 
