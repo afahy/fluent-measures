@@ -14,6 +14,7 @@ import { join } from 'node:path';
 import {
   hunkRanges,
   isSourceFile,
+  literalGlob,
   revisions,
   unexplainedIgnores,
   unkilledMutants,
@@ -79,7 +80,7 @@ writeFileSync(
   configFile,
   JSON.stringify({
     ...config,
-    mutate: [...changed.keys()],
+    mutate: [...changed.keys()].map(literalGlob),
     reporters: ['clear-text', 'json'],
     jsonReporter: { fileName: report },
     thresholds: { ...config.thresholds, break: null },

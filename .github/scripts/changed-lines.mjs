@@ -25,6 +25,17 @@ export function isSourceFile(file) {
 }
 
 /**
+ * Returns `file` as a glob pattern that matches only that file. Stryker reads `mutate` entries
+ * as globs, so a name such as `src/[u]nits.ts` would otherwise match `src/units.ts`.
+ *
+ * @param {string} file
+ * @returns {string}
+ */
+export function literalGlob(file) {
+  return file.replace(/[\\*?[\]{}()!+@]/g, '\\$&');
+}
+
+/**
  * Returns the line ranges that `git diff --unified=0` output for one file adds or changes. It
  * reads only the hunk headers, so file names in the diff don't matter. A hunk that only deletes
  * lines adds no range.
