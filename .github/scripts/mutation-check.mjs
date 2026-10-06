@@ -40,8 +40,9 @@ if (baseFlag < 0 && spawnSync('git', ['rev-parse', '--quiet', '--verify', 'HEAD^
   process.exit(0);
 }
 
-// Fixed options, so the user's git settings can't change the output.
-const gitDiff = ['diff', '--no-color', '--no-ext-diff', '--no-renames'];
+// Fixed options, so the user's git settings can't change the output. Pathspecs are literal, so
+// `src/a\b.ts` and `src/[u]nits.ts` don't also match `src/ab.ts` and `src/units.ts`.
+const gitDiff = ['--literal-pathspecs', 'diff', '--no-color', '--no-ext-diff', '--no-renames'];
 const range = revisions(base, { fromMergeBase: baseFlag >= 0 });
 
 // File names come NUL-separated and unquoted, so git prints each name as it is.

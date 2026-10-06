@@ -61,4 +61,34 @@ describe('mutation-check.mjs', () => {
     expect(check.stderr).toContain('::error file=src/c\\d/e.ts::Rename src/c\\d/e.ts.');
     expect(check.stderr).not.toContain('src/units.ts');
   });
+
+  // Git reads a pathspec as a glob unless it's literal: `\b` matches `b`, and `[u]` matches `u`.
+  // The changed lines print before the script reads the Stryker config, which this repository
+  // doesn't have, so the script stops after them.
+  it('gives each changed file only its own changed lines', () => {
+    const repository = createRepository();
+    const base = commitFiles(repository, {
+      'src/a\\b.ts': 'export const a = 1;\nexport const b = 2;\n',
+      'src/ab.ts': 'export const c = 3;\n',
+      'src/[u]nits.ts': 'export const d = 4;\n',
+      'src/units.ts': 'export const e = 5;\n',
+    });
+    commitFiles(repository, {
+      'src/a\\b.ts': 'export const a = 1;\n',
+      'src/ab.ts': 'export const c = 3;\nexport const f = 6;\n',
+      'src/[u]nits.ts': 'export const d = 7;\n',
+      'src/units.ts': 'export const e = 5;\nexport const g = 8;\nexport const h = 9;\n',
+    });
+
+    const check = spawnSync(execPath, [script, '--base', base], {
+      cwd: repository,
+      encoding: 'utf8',
+      env: withoutGitRepository(),
+    });
+
+    expect(check.stdout).toContain(
+      'Changed lines:\n  src/[u]nits.ts:1\n  src/ab.ts:2\n  src/units.ts:2-3\n'
+    );
+    expect(check.stderr).not.toContain('Rename');
+  });
 });
