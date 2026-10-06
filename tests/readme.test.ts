@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
 import type { ParseOptions, ParsedValue } from '../src/types';
 import { UNIT_ALIASES } from '../src/units';
+import { wordsToNumber } from '../src/wordsToNumber';
 
 const README = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
 
@@ -485,14 +486,14 @@ function leadingObject(text: string): string {
  * CommonMark: up to 3 spaces of indent, backticks or tildes, and a closing fence of the same
  * character that is at least as long. The language is the first word of the info string.
  */
-function readmeExamples(): ReadmeEntry[] {
+function readmeExamples(readme = README): ReadmeEntry[] {
   const examples = [];
   let section = '';
   let fence: string | null = null;
   let language = '';
   let block = '';
   let firstLine = 0;
-  for (const [index, line] of README.split('\n').entries()) {
+  for (const [index, line] of readme.split('\n').entries()) {
     if (fence === null) {
       const open = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
       if (open && !(open[1][0] === '`' && open[2].includes('`'))) {
@@ -553,10 +554,14 @@ const UNIT_NAMES = new Map(
  */
 function expectedValue(value: number, input: string, options?: ParseOptions): unknown {
   const unit = options?.normalizedUnit;
-  // The input without its number, as in "kg" for "1,000 kg", "72½ kg" and "kg 70".
+  // The input without its number, as in "kg" for "1,000 kg", "72½ kg", "kg 70" and "eighty
+  // kilograms". Number words are dropped as the parser reads them.
   const inputUnit = input
-    .replace(/[\d\s.,/\u2044\u00bc-\u00be\u2150-\u215e\u2189]/g, '')
-    .toLowerCase();
+    .toLowerCase()
+    .split(/[\s-]+/)
+    .filter(word => word !== 'and' && wordsToNumber(word) === null)
+    .join('')
+    .replace(/[\d.,/\u2044\u00bc-\u00be\u2150-\u215e\u2189]/g, '');
   if (unit === undefined || UNIT_NAMES.get(unit)?.includes(inputUnit)) return value;
   return expect.closeTo(value, Math.max(2, (String(value).split('.')[1] ?? '').length));
 }
@@ -634,6 +639,8 @@ describe('expectedValue', () => {
     ['70 kilograms', 70, 70.004],
     ['1,000 kg', 1000, 1000.004],
     ['72½ kg', 72.5, 72.504],
+    ['eighty kilograms', 80, 80.004],
+    ['seventy-two kg', 72, 72.004],
   ])('matches %s with { normalizedUnit: "kg" } exactly', (input, documented, wrong) => {
     expect(wrong).not.toEqual(expectedValue(documented, input, { normalizedUnit: 'kg' }));
     expect(documented).toEqual(expectedValue(documented, input, { normalizedUnit: 'kg' }));
@@ -641,5 +648,25 @@ describe('expectedValue', () => {
 
   it('allows the README rounding for a converted value', () => {
     expect(68.0388555).toEqual(expectedValue(68.04, '150 lbs', { normalizedUnit: 'kg' }));
+    expect(68.0388555).toEqual(
+      expectedValue(68.04, 'one hundred fifty pounds', { normalizedUnit: 'kg' })
+    );
+  });
+});
+
+// The README has neither form below today, so these read small documents instead.
+describe('readmeExamples', () => {
+  it('reads an example in a fence that is still open at the end', () => {
+    const readme = "## Usage\n```ts\nparseMeasurement('6 ft'); // { value: 6, unit: 'ft', ... }\n";
+    expect(readmeExamples(readme)).toEqual([
+      { section: 'Usage', input: '6 ft', readmeComment: "{ value: 6, unit: 'ft', ... }" },
+    ]);
+  });
+
+  it('names the README line of an argument that is a variable', () => {
+    const readme = "## Usage\n```ts\nconst input = '9 ft';\nparseMeasurement(input);\n```\n";
+    expect(() => readmeExamples(readme)).toThrow(
+      "README line 4: can't read the parseMeasurement argument input (ReferenceError: input is not defined). Write each argument as a literal."
+    );
   });
 });
