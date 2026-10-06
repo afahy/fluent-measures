@@ -1,30 +1,33 @@
-import { execFileSync, spawnSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
-import { env } from 'node:process';
 import { afterEach, describe, expect, it } from 'vitest';
+import { git, withoutGitRepository } from './gitEnvironment';
 
 const hook = resolve('.husky/prepare-commit-msg');
 const repositories: string[] = [];
+const env = withoutGitRepository();
 
 function createRepository(branch: string): string {
   const repository = mkdtempSync(resolve(tmpdir(), 'fluent-measures-hook-'));
   repositories.push(repository);
 
-  execFileSync('git', ['init', '--initial-branch', 'main'], { cwd: repository });
-  execFileSync('git', ['config', 'user.email', 'test@example.com'], { cwd: repository });
-  execFileSync('git', ['config', 'user.name', 'Test'], { cwd: repository });
+  git(repository, 'init', '--initial-branch', 'main');
+  git(repository, 'config', 'user.email', 'test@example.com');
+  git(repository, 'config', 'user.name', 'Test');
+  // Don't sign fixture commits with the developer's key, which may prompt for a passphrase.
+  git(repository, 'config', 'commit.gpgsign', 'false');
   writeFileSync(resolve(repository, 'example.txt'), 'initial content\n');
-  execFileSync('git', ['add', 'example.txt'], { cwd: repository });
-  execFileSync('git', ['commit', '-m', 'test: initial commit'], { cwd: repository });
+  git(repository, 'add', 'example.txt');
+  git(repository, 'commit', '-m', 'test: initial commit');
 
   if (branch !== 'main') {
-    execFileSync('git', ['checkout', '-b', branch], { cwd: repository });
+    git(repository, 'checkout', '-b', branch);
   }
 
   writeFileSync(resolve(repository, 'example.txt'), 'staged change\n');
-  execFileSync('git', ['add', 'example.txt'], { cwd: repository });
+  git(repository, 'add', 'example.txt');
 
   return repository;
 }
@@ -40,6 +43,7 @@ describe('prepare-commit-msg hook', () => {
     const result = spawnSync('sh', [hook], {
       cwd: createRepository('feature/test'),
       encoding: 'utf8',
+      env,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
 
@@ -52,6 +56,7 @@ describe('prepare-commit-msg hook', () => {
     const result = spawnSync('sh', [hook], {
       cwd: createRepository('main'),
       encoding: 'utf8',
+      env,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
 
