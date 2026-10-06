@@ -84,7 +84,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function checkMeasurement(value: unknown, fail: (message: string) => never): Measurement {
   if (!isRecord(value)) fail('each expected outcome must be null or an object');
   const keys = Object.keys(value).sort().join(',');
-  if (keys !== 'type,unit,value') fail('an expected measurement has only value, unit and type');
+  if (keys !== 'type,unit,value')
+    fail('an expected measurement must have only value, unit and type');
   const { value: amount, unit, type } = value;
   if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) {
     fail('an expected value must be a positive number');
@@ -194,7 +195,7 @@ function run(entry: Entry, parse: Parse = parseMeasurement): Result {
 // Shows spaces, invisible characters and dashes that look like a hyphen as escapes.
 function quote(text: string): string {
   return JSON.stringify(text).replace(
-    /[\u0080-\u00a0\u00ad\u2000-\u2012\u2028-\u202f\u205f-\u206f\u2212\u3000\ufeff]/g,
+    /[\u0080-\u00a0\u00ad\u2000-\u2015\u2028-\u202f\u205f-\u206f\u2212\u3000\ufe58\ufe63\ufeff\uff0d]/g,
     character => `\\u${character.charCodeAt(0).toString(16).padStart(4, '0')}`
   );
 }
@@ -326,7 +327,7 @@ describe('corpus line checks', () => {
     [
       'an extra measurement field',
       valid.replace('"value":6', '"value":6,"raw":"6 ft"'),
-      'has only value, unit and type',
+      'must have only value, unit and type',
     ],
     ['an id with spaces', valid.replace('symbols-1', 'symbols 1'), 'id must be lowercase'],
     ['an unknown source', valid.replace('handwritten', 'memory'), 'source must be'],
