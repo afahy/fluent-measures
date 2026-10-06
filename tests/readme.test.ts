@@ -284,6 +284,63 @@ const cases: ReadmeCase[] = [
   },
 ];
 
+// Results that the README states in its prose, in the sections Weight, Handling Mixed Unit
+// Notations, Separate Measurements, and Commas and Label Boundaries. A test can't find prose
+// examples reliably, so nothing checks this list against the README. When the prose changes,
+// change this list too. Each expected result comes from the README sentence that names the input.
+const proseCases: ReadmeCase[] = [
+  { section: 'Weight', input: '12st 4lb', expected: null },
+  { section: 'Weight', input: '7 lb 8 oz', expected: null },
+  {
+    section: 'Weight',
+    input: 'I drink 8 oz of water, weight 180 lbs',
+    expected: { value: 180, unit: 'lb' },
+  },
+  { section: 'Weight', input: '180 lbs, 8 oz of water a day', expected: null },
+  { section: 'Weight', input: 'stone 12, 4 lb', expected: null },
+  { section: 'Weight', input: 'kg 3, 400 g', expected: null },
+  { section: 'Weight', input: 'Main St 12, 180 lbs', expected: { value: 180, unit: 'lb' } },
+  { section: 'Handling Mixed Unit Notations', input: '150 lbs - 180 lbs', expected: null },
+  // "a height and its conversion", and "the first is returned"
+  {
+    section: 'Separate Measurements',
+    input: '6 ft (72 in)',
+    expected: { value: 6, unit: 'ft', type: 'height' },
+  },
+  {
+    section: 'Separate Measurements',
+    input: '0.5 m (50 cm)',
+    expected: { value: 0.5, unit: 'm', type: 'height' },
+  },
+  {
+    section: 'Commas and Label Boundaries',
+    input: '1,234,56 kg',
+    expected: { value: 1234.56, unit: 'kg' },
+  },
+  { section: 'Commas and Label Boundaries', input: '12,34,567 kg', expected: null },
+  { section: 'Commas and Label Boundaries', input: '1234,567 kg', expected: null },
+  {
+    section: 'Commas and Label Boundaries',
+    input: '1,000, kg',
+    expected: { value: 1000, unit: 'kg' },
+  },
+  {
+    section: 'Commas and Label Boundaries',
+    input: 'weight 72,5 kg',
+    expected: { value: 72.5, unit: 'kg' },
+  },
+  {
+    section: 'Commas and Label Boundaries',
+    input: 'height-1,800 cm',
+    expected: { value: 1800, unit: 'cm' },
+  },
+  {
+    section: 'Commas and Label Boundaries',
+    input: 'phase-2, 180 cm',
+    expected: { value: 180, unit: 'cm' },
+  },
+];
+
 /** The code block languages that can hold examples. */
 const CODE_LANGUAGES = new Set(['typescript', 'ts', 'tsx', 'javascript', 'js', 'jsx']);
 
@@ -445,6 +502,13 @@ describe('README examples', () => {
       expect(documentedParts(parseMeasurement(input, options), expected)).toEqual(
         expected && { ...expected, value: expectedValue(expected.value, options) }
       );
+    }
+  );
+
+  it.each(proseCases.map(testCase => [nameOf(testCase), testCase] as const))(
+    '%s returns the result that the README prose states',
+    (_name, { input, expected }) => {
+      expect(documentedParts(parseMeasurement(input), expected)).toEqual(expected);
     }
   );
 });
