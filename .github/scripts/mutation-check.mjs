@@ -80,6 +80,9 @@ writeFileSync(
   JSON.stringify({
     ...config,
     mutate: [...changed.keys()],
+    // Run every test, so a changed file that no test imports gives NoCoverage mutants, not a
+    // Stryker error.
+    vitest: { ...config.vitest, related: false },
     reporters: ['clear-text', 'json'],
     jsonReporter: { fileName: report },
     thresholds: { ...config.thresholds, break: null },
