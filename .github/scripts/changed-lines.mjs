@@ -25,14 +25,13 @@ export function isSourceFile(file) {
 }
 
 /**
- * Returns the file names that have a backslash. Stryker reads a backslash in a file name as a
- * slash, so its report names `src/a\b.ts` as `src/a/b.ts`, and the mutants of the changed file
- * can't be found.
+ * Returns the paths that have a backslash. Stryker reads a backslash as a slash. So its report
+ * names `src/a\b.ts` as `src/a/b.ts`, and the check can't find that file's mutants.
  *
  * @param {string[]} files
  * @returns {string[]}
  */
-export function backslashNames(files) {
+export function backslashPaths(files) {
   return files.filter(file => file.includes('\\'));
 }
 

@@ -12,7 +12,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
-  backslashNames,
+  backslashPaths,
   hunkRanges,
   isSourceFile,
   literalGlob,
@@ -44,7 +44,7 @@ if (baseFlag < 0 && spawnSync('git', ['rev-parse', '--quiet', '--verify', 'HEAD^
 const gitDiff = ['diff', '--no-color', '--no-ext-diff', '--no-renames'];
 const range = revisions(base, { fromMergeBase: baseFlag >= 0 });
 
-// File names come NUL-separated and unquoted, so any file name works.
+// File names come NUL-separated and unquoted, so git prints each name as it is.
 const files = execFileSync(
   'git',
   [...gitDiff, '--name-only', '-z', '--diff-filter=d', ...range, '--', 'src/'],
@@ -70,12 +70,12 @@ const lines = [...changed].flatMap(([file, ranges]) =>
 );
 console.log(`Changed lines:\n${lines.join('\n')}`);
 
-// Stryker reads a backslash in a file name as a slash, so this check couldn't find the mutants
-// of such a file and would pass without checking it.
-const backslashed = backslashNames([...changed.keys()]);
+// Stryker reads a backslash in a path as a slash. So this check can't find the mutants of such a
+// file, and it would pass without checking the file.
+const backslashed = backslashPaths([...changed.keys()]);
 for (const file of backslashed) {
   console.error(
-    `::error::Rename ${file}: the mutation check can't check a file whose name has a backslash, because Stryker reads it as a slash.`
+    `::error file=${file}::Rename ${file}. Its path has a backslash, and Stryker reads a backslash as a slash, so this check can't find the file's mutants.`
   );
 }
 if (backslashed.length > 0) process.exit(1);

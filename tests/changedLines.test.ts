@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  backslashNames,
+  backslashPaths,
   hunkRanges,
   isSourceFile,
   literalGlob,
@@ -77,16 +77,16 @@ describe('isSourceFile', () => {
   });
 });
 
-describe('backslashNames', () => {
-  // In these strings, `\\` is one backslash: the first name is src/a\b.ts.
-  it('returns the file names that have a backslash', () => {
-    expect(backslashNames(['src/a\\b.ts', 'src/units.ts', 'src/[u]nits.ts', 'src/c\\.ts'])).toEqual(
-      ['src/a\\b.ts', 'src/c\\.ts']
-    );
+describe('backslashPaths', () => {
+  // In these strings, `\\` is one backslash: the first path is src/a\b.ts.
+  it('returns the paths that have a backslash', () => {
+    expect(
+      backslashPaths(['src/a\\b.ts', 'src/units.ts', 'src/[u]nits.ts', 'src/c\\d/e.ts'])
+    ).toEqual(['src/a\\b.ts', 'src/c\\d/e.ts']);
   });
 
-  it('returns no names when none has a backslash', () => {
-    expect(backslashNames(['src/units.ts', 'src/a/b.ts'])).toEqual([]);
+  it('returns no paths when none has a backslash', () => {
+    expect(backslashPaths(['src/units.ts', 'src/a/b.ts'])).toEqual([]);
   });
 });
 
