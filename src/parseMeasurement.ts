@@ -267,6 +267,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     const inferred = !matches.length && options.allowUnqualified && options.type;
     if (inferred) {
       const num = wordsToNumber(tokens.filter(token => token !== ';').join(' '));
+      // Stryker disable next-line ConditionalExpression: num > 0 is false for null too.
       if (num !== null && num > 0) {
         const metric = options.inferUnit === 'metric';
         const unit = type === 'height' ? (metric ? 'cm' : 'in') : metric ? 'kg' : 'lb';
@@ -305,7 +306,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       const totalValue = total(first, targetUnit);
 
       // A zero-height fragment must not hide a valid measurement of another type. An inferred
-      // value is the only measurement left, so it stays even when its conversion underflows to zero.
+      // value is the only measurement, so it stays even when its conversion underflows to zero.
       if (!totalValue && !inferred) continue;
       // A number too large to represent, such as 400 digits, has no usable value.
       if (!Number.isFinite(totalValue)) return null;
