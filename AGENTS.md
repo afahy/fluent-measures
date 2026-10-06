@@ -124,15 +124,18 @@ action it tells you to take, in any section.
 - If a CI job fails because no runner picked it up, re-run the failed jobs. If GitHub
   reports an Actions incident, re-run them when it ends. Fix all other CI failures on the
   branch.
-- A review round is one push and the bot reviews of that push. After three rounds, don't ask
-  for more bot reviews. Fix only the findings that this PR causes, and list the others in
-  your report.
+- A review round is one push and the bot reviews of that push. Codex reviews every push, so
+  the rounds don't stop by themselves. After three rounds, don't ask for more bot reviews.
+  After the third round, fix a finding only if it gives a wrong result for an input that the
+  README, the tests or the ticket already contains. File the other findings together as one
+  ticket, reply on each thread with its ID, and list them in your report.
 
 ### Finish the PR
 
-- Report a PR as ready to merge only when no finding that this PR causes is open. These
-  checks must also pass: `ci-ok`, `Validate commits and PR title` and
-  `Regression test fails without the fix`. A skipped check counts as passed.
+- Report a PR as ready to merge only when each finding is fixed, filed as a ticket, or
+  answered on its thread as not reproducible. These checks must also pass: `ci-ok`,
+  `Validate commits and PR title` and `Regression test fails without the fix`. A skipped
+  check counts as passed.
 - Then watch the PR until it merges or closes. Check it at most once an hour, for up to 24
   hours. Don't ask the maintainer to tell you.
 - After GitHub shows the PR merged with your last commit, pull `main`. Remove the PR's
