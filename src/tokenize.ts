@@ -52,25 +52,19 @@ export function normalizeFractions(input: string): string {
 }
 
 /**
- * Write curly quotes, primes and acute accents right after a number as the ASCII marks for feet
- * and inches, so "5’11”" and "5′11″" read like 5'11". Elsewhere a curly quote is a quotation
- * mark or an apostrophe, as in "‘180 lbs’" and "“180” cm", so it stays. Full-width characters and the units "㎝"
- * and "㎏" become their ASCII forms. Other characters stay, so normalizeFractions still sees "½".
+ * Write feet and inch marks as ASCII, so "5’11”", "5′11″" and "5´11´´" read like 5'11". Primes
+ * and acute accents are always marks. A curly quote is a mark only right after a number or a
+ * fraction, and not when it closes a quoted number, as in "“180” cm" and "the ‘5’ kg bag".
+ * Full-width characters and the units "㎝" and "㎏" become their ASCII forms. Other characters
+ * stay, so normalizeFractions still sees "½".
  */
 export function normalizeForms(input: string): string {
-  // Whether a ‘ or a “ is open and waits for its closing quote. One pass keeps this linear.
-  const open: Record<string, boolean> = {};
   return input
-    .replace(/[\uff01-\uff5e㎝㎏]/g, character => character.normalize('NFKC'))
-    .replace(/[‘“’”′″´]/g, (mark: string, offset: number, text: string) => {
-      const opening = { '’': '‘', '”': '“' }[mark];
-      if (mark === '‘' || mark === '“') open[mark] = true;
-      else if (opening && open[opening]) open[opening] = false;
-      else if (/\d[’′´]?$/.test(text.slice(Math.max(0, offset - 2), offset))) {
-        return /[”″]/.test(mark) ? '"' : "'";
-      }
-      return mark;
-    });
+    .replace(/[！-～㎝㎏]/g, character => character.normalize('NFKC'))
+    .replace(/[′´]/g, "'")
+    .replace(/″/g, '"')
+    .replace(/(?<=[\d¼-¾⅐-⅞↉]['’]?)(?:(?<!‘[\d.,]*\d)’|’(?=\d))/g, "'")
+    .replace(/(?<=[\d¼-¾⅐-⅞↉])(?:(?<!“[\d.,]*\d)”|”(?=\d))/g, '"');
 }
 
 /** Normalize comma groups before interpreting numeric syntax or splitting tokens. */

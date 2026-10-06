@@ -30,6 +30,28 @@ describe('Unicode quote marks and forms', () => {
     });
   });
 
+  // From the self-review of afahy/fluent-measures#55.
+  it.each([
+    // A curly opening quote that is an apostrophe doesn't make the feet mark a closing quote.
+    ['‘90s 5’11”', 71, 'in'],
+    ['‘bout 5’11”', 71, 'in'],
+    // A digit after the mark makes it a feet mark, even inside quotes.
+    ['the ‘5’11” guy', 71, 'in'],
+    ['‘5’11”’', 71, 'in'],
+    // Marks after a fraction, and primes after a space.
+    ['5½’', 5.5, 'ft'],
+    ['72½″', 72.5, 'in'],
+    ['5 ′ 11 ″', 71, 'in'],
+    ['5 ´11', 71, 'in'],
+  ] as const)('reads %s as %s %s', (raw, value, unit) => {
+    expect(parseMeasurement(raw)).toMatchObject({ value, unit });
+  });
+
+  // A number in curly quotes with no unit is a quotation, as on main.
+  it.each(['“72”', 'he is “72” tall'])('returns null for %s', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
+
   it.each([
     ['5\'11"', 71, 'in'],
     ['5\' 11"', 71, 'in'],

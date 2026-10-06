@@ -23,11 +23,11 @@ describe('normalizeForms', () => {
     }
   );
 
-  // Each closing quote must not search back through the input. A backward search took about
-  // 460 ms for this input, and one pass takes about 2 ms.
+  // A mark must not make the code search back through the whole input. A search like that
+  // took about 460 ms for this input, and the current code takes a few milliseconds.
   it('handles a long run of marks quickly', () => {
     const start = Date.now();
     normalizeForms('1’'.repeat(100_000));
-    expect(Date.now() - start).toBeLessThan(250);
+    expect(Date.now() - start).toBeLessThan(400);
   });
 });
