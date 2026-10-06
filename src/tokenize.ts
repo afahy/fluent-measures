@@ -51,6 +51,19 @@ export function normalizeFractions(input: string): string {
     .replace(SLASH_FRACTION, writeFraction);
 }
 
+// A number as it can stand in quotes: digits, separators, spaces, slashes and fractions.
+const QUOTED_NUMBER = String.raw`[\d.,\s/⁄¼-¾⅐-⅞↉]*[\d¼-¾⅐-⅞↉]`;
+// A single or double curly mark right after a number. It closes a quoted number only when its
+// opening quote comes right before that number and no digit follows, as in "“5 1/2” ft".
+const CURLY_SINGLE = new RegExp(
+  String.raw`(?<=[\d¼-¾⅐-⅞↉]['’]?)(?:(?<!‘${QUOTED_NUMBER})’|’(?=\d))`,
+  'g'
+);
+const CURLY_DOUBLE = new RegExp(
+  String.raw`(?<=[\d¼-¾⅐-⅞↉])(?:(?<!“${QUOTED_NUMBER})”|”(?=\d))`,
+  'g'
+);
+
 /**
  * Write feet and inch marks as ASCII, so "5’11”", "5′11″" and "5´11´´" read like 5'11". Primes
  * and acute accents are always marks. A curly quote is a mark only right after a number or a
@@ -63,8 +76,8 @@ export function normalizeForms(input: string): string {
     .replace(/[！-～㎝㎏]/g, character => character.normalize('NFKC'))
     .replace(/[′´]/g, "'")
     .replace(/″/g, '"')
-    .replace(/(?<=[\d¼-¾⅐-⅞↉]['’]?)(?:(?<!‘[\d.,]*\d)’|’(?=\d))/g, "'")
-    .replace(/(?<=[\d¼-¾⅐-⅞↉])(?:(?<!“[\d.,]*\d)”|”(?=\d))/g, '"');
+    .replace(CURLY_SINGLE, "'")
+    .replace(CURLY_DOUBLE, '"');
 }
 
 /** Normalize comma groups before interpreting numeric syntax or splitting tokens. */

@@ -69,6 +69,9 @@ describe('Unicode quote marks and forms', () => {
     ['the ‘5’ kg bag', 5, 'kg'],
     ['“180” lbs', 180, 'lb'],
     ['‘180’ lbs', 180, 'lb'],
+    // A quoted number can hold a fraction.
+    ['“5 1/2” ft', 5.5, 'ft'],
+    ['the ‘5½’ kg bag', 5.5, 'kg'],
   ] as const)('keeps reading %s as %s %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });
