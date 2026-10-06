@@ -15,6 +15,21 @@ const LABEL_PATTERN = new RegExp(
   'gu'
 );
 
+/**
+ * Write each fraction as a decimal, so "150 1/2" and "150½" are 150.5. Numbers with a slash
+ * between them that aren't a proper fraction, as in "5/2" or "120/80", become a word, so they
+ * can't be read as a value. A date such as "12/25/2020" has two slashes and stays as it is.
+ */
+export function normalizeFractions(input: string): string {
+  return input
+    .replace(/[\u00bc-\u00be\u2150-\u215e]/g, fraction => ` ${fraction.normalize('NFKD')}`)
+    .replace(
+      /(?<![\d/.])(?:(\d+)\s+)?(\d+)[/\u2044](\d+)(?![\d/])/g,
+      (_, whole = '0', numerator: string, denominator: string) =>
+        +numerator < +denominator ? String(+whole + +numerator / +denominator) : 'x'
+    );
+}
+
 /** Normalize comma groups before interpreting numeric syntax or splitting tokens. */
 export function normalizeNumericCommas(input: string): string {
   let valid = true;
@@ -36,7 +51,7 @@ export function normalizeNumericCommas(input: string): string {
 
 /** Normalize comma numbers before splitting standalone measurement text. */
 export function tokenize(input: string, fuzziness?: number): string[] {
-  return tokenizeNormalized(normalizeNumericCommas(input), fuzziness);
+  return tokenizeNormalized(normalizeNumericCommas(normalizeFractions(input)), fuzziness);
 }
 
 /** Split normalized text while retaining negative signs and compound boundaries. */

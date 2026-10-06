@@ -1,5 +1,5 @@
 import { matchUnit } from './matchUnit';
-import { normalizeNumericCommas, tokenizeNormalized } from './tokenize';
+import { normalizeFractions, normalizeNumericCommas, tokenizeNormalized } from './tokenize';
 import { wordsToNumber } from './wordsToNumber';
 
 import {
@@ -104,7 +104,7 @@ function readValueAfter(
 
 /** Parse a height or weight, optionally inferring its unit or normalizing the result. */
 export function parseMeasurement(input: string, options: ParseOptions = {}): ParsedValue | null {
-  const trimmed = normalizeNumericCommas(input?.trim() || '');
+  const trimmed = normalizeNumericCommas(normalizeFractions(input?.trim() || ''));
   if (!trimmed) {
     return null;
   }
