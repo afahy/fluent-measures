@@ -13,13 +13,19 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   changedRanges,
+  diffArguments,
   mutateEntries,
+  sourceRanges,
   unexplainedIgnores,
   unkilledMutants,
 } from './changed-lines.mjs';
 
 const baseFlag = process.argv.indexOf('--base');
 const base = baseFlag >= 0 ? process.argv[baseFlag + 1] : 'HEAD^1';
+if (base === undefined || base.startsWith('-')) {
+  console.error('Usage: node .github/scripts/mutation-check.mjs [--base <rev>]');
+  process.exit(2);
+}
 
 if (baseFlag < 0 && spawnSync('git', ['rev-parse', '--quiet', '--verify', 'HEAD^2']).status !== 0) {
   if (process.env.GITHUB_EVENT_NAME === 'pull_request') {
@@ -32,15 +38,10 @@ if (baseFlag < 0 && spawnSync('git', ['rev-parse', '--quiet', '--verify', 'HEAD^
   process.exit(0);
 }
 
-const diff = execFileSync(
-  'git',
-  ['diff', '--unified=0', '--no-renames', '--no-color', base, 'HEAD', '--', 'src/'],
-  { encoding: 'utf8' }
-);
-const ranges = new Map(
-  [...changedRanges(diff)].filter(([file]) => file.endsWith('.ts') && !file.endsWith('.d.ts'))
-);
-const mutate = mutateEntries(ranges);
+const diff = execFileSync('git', diffArguments(base, { fromMergeBase: baseFlag >= 0 }), {
+  encoding: 'utf8',
+});
+const mutate = mutateEntries(sourceRanges(changedRanges(diff)));
 if (mutate.length === 0) {
   console.log(`No lines under src/ change between ${base} and HEAD, so there is nothing to check.`);
   process.exit(0);

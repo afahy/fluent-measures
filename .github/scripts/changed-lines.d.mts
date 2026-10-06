@@ -1,5 +1,11 @@
 export function changedRanges(diff: string): Map<string, Array<[number, number]>>;
 
+export function diffArguments(base: string, options: { fromMergeBase: boolean }): string[];
+
+export function sourceRanges(
+  ranges: Map<string, Array<[number, number]>>
+): Map<string, Array<[number, number]>>;
+
 export function mutateEntries(ranges: Map<string, Array<[number, number]>>): string[];
 
 export interface UnkilledMutant {

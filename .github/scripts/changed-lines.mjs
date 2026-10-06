@@ -30,6 +30,42 @@ export function changedRanges(diff) {
 }
 
 /**
+ * Returns the arguments for `git diff` that list the lines HEAD adds or changes under src/. The
+ * prefixes are fixed, so the user's git settings can't change the output that `changedRanges`
+ * reads. A base from `--base` is compared from its merge base with HEAD, so changes that only the
+ * base has don't count.
+ *
+ * @param {string} base
+ * @param {{ fromMergeBase: boolean }} options
+ * @returns {string[]}
+ */
+export function diffArguments(base, { fromMergeBase }) {
+  return [
+    'diff',
+    '--unified=0',
+    '--no-renames',
+    '--no-color',
+    '--no-ext-diff',
+    '--src-prefix=a/',
+    '--dst-prefix=b/',
+    ...(fromMergeBase ? [`${base}...HEAD`] : [base, 'HEAD']),
+    '--',
+    'src/',
+  ];
+}
+
+/**
+ * Keeps the ranges of TypeScript source files, which Stryker mutates. Declaration files have
+ * nothing to mutate.
+ *
+ * @param {Map<string, Array<[number, number]>>} ranges
+ * @returns {Map<string, Array<[number, number]>>}
+ */
+export function sourceRanges(ranges) {
+  return new Map([...ranges].filter(([file]) => file.endsWith('.ts') && !file.endsWith('.d.ts')));
+}
+
+/**
  * Returns a Stryker `mutate` entry for each range, such as `src/units.ts:10-12`.
  *
  * @param {Map<string, Array<[number, number]>>} ranges

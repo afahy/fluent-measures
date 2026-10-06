@@ -171,7 +171,8 @@ covers it, so the tests must catch every change to the code that a pull request 
 on your committed changes, use `node .github/scripts/mutation-check.mjs --base origin/main`. If a
 mutant can't change behavior, put `// Stryker disable next-line <mutator>: <reason>` on the line
 above it. The reason must say why behavior can't change, and the job fails on a disable comment
-without one.
+without one. A line counts as changed even when only its formatting changes, so a pull request
+that reformats or moves a line must also deal with any mutant on it that survives on `main`.
 
 Mutation testing needs Node 22.18 or a later 22.x release, or Node 24.11 or later. Stryker
 depends on Babel 8, which requires those versions.

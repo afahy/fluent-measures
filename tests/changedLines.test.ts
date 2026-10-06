@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   changedRanges,
+  diffArguments,
   mutateEntries,
+  sourceRanges,
   unexplainedIgnores,
   unkilledMutants,
 } from '../.github/scripts/changed-lines.mjs';
@@ -76,6 +78,40 @@ describe('changedRanges', () => {
 
   it('returns no ranges for an empty diff', () => {
     expect(changedRanges('').size).toBe(0);
+  });
+});
+
+describe('diffArguments', () => {
+  it('compares the merge commit with its first parent in CI', () => {
+    expect(diffArguments('HEAD^1', { fromMergeBase: false })).toEqual([
+      'diff',
+      '--unified=0',
+      '--no-renames',
+      '--no-color',
+      '--no-ext-diff',
+      '--src-prefix=a/',
+      '--dst-prefix=b/',
+      'HEAD^1',
+      'HEAD',
+      '--',
+      'src/',
+    ]);
+  });
+
+  it('compares a --base from its merge base with HEAD', () => {
+    expect(diffArguments('origin/main', { fromMergeBase: true })).toContain('origin/main...HEAD');
+    expect(diffArguments('origin/main', { fromMergeBase: true })).not.toContain('origin/main');
+  });
+});
+
+describe('sourceRanges', () => {
+  it('keeps TypeScript source files and drops declaration files and others', () => {
+    const ranges = new Map<string, Array<[number, number]>>([
+      ['src/units.ts', [[1, 2]]],
+      ['src/types.d.ts', [[3, 4]]],
+      ['src/data.json', [[5, 6]]],
+    ]);
+    expect([...sourceRanges(ranges)]).toEqual([['src/units.ts', [[1, 2]]]]);
   });
 });
 
