@@ -11,6 +11,9 @@ describe('normalizeForms', () => {
     ['70 ㎏', '70 kg'],
     // A quotation closes before the height, so the marks after it are feet and inches.
     ['‘tall’ 5’11”', '‘tall’ 5\'11"'],
+    // Every mark in the input converts, not only the first.
+    ['5’11’’', "5'11''"],
+    ['72” or 70”', '72" or 70"'],
   ])('writes %s as %s', (input, output) => {
     expect(normalizeForms(input)).toBe(output);
   });
