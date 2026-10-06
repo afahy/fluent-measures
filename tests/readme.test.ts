@@ -448,11 +448,11 @@ function examplesIn(
       const [input, options] = node.arguments.map(argument => {
         try {
           return evaluate(argument.getText(source));
-        } catch {
+        } catch (error) {
           // An argument can't name a variable from its block, as in "parseMeasurement(input)".
           const { line } = source.getLineAndCharacterOfPosition(argument.getStart(source));
           throw new Error(
-            `README line ${firstLine + line}: write each parseMeasurement argument as a literal, not ${argument.getText(source)}`
+            `README line ${firstLine + line}: can't read the parseMeasurement argument ${argument.getText(source)} (${String(error)}). Write each argument as a literal.`
           );
         }
       }) as [string, ParseOptions?];
@@ -548,11 +548,14 @@ const UNIT_NAMES = new Map(
  * Returns the value that a result must have. Only a conversion to `normalizedUnit` can give a
  * value that the README rounds, so a converted value must match to the decimal places that the
  * README shows, and at least 2. Every other value must match exactly. That includes an input that
- * is only a number and a name of `normalizedUnit`, as in "70 kg" with { normalizedUnit: 'kg' }.
+ * is only a number and a name of `normalizedUnit`, as in "70 kg" or "kg 70" with
+ * { normalizedUnit: 'kg' }.
  */
 function expectedValue(value: number, input: string, options?: ParseOptions): unknown {
   const unit = options?.normalizedUnit;
-  const inputUnit = /^[\d.]+\s*(\D+)$/.exec(input.trim())?.[1].toLowerCase() ?? '';
+  // The unit name in an input that is only a number and a unit, in either order.
+  const [, after, before] = /^[\d.]+\s*(\D+)$|^(\D+?)\s*[\d.]+$/.exec(input.trim()) ?? [];
+  const inputUnit = (after ?? before ?? '').toLowerCase();
   if (unit === undefined || UNIT_NAMES.get(unit)?.includes(inputUnit)) return value;
   return expect.closeTo(value, Math.max(2, (String(value).split('.')[1] ?? '').length));
 }
