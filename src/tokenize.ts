@@ -69,17 +69,22 @@ const CURLY_DOUBLE = new RegExp(
  * and acute accents are always marks. A curly quote is a mark only right after a number or a
  * fraction, and not when it closes a quoted number, as in "“180” cm" and "the ‘5’ kg bag".
  * Full-width characters and the units "㎝" and "㎏" become their ASCII forms. Other characters
- * stay, so normalizeFractions still sees "½". A minus sign "−" or "﹣" right before a number
- * becomes "-", so "−5 ft" is negative. After a digit it stays a dash, as in "5−11".
+ * stay, so normalizeFractions still sees "½". The minus signs "−" and "﹣" become a hyphen-minus
+ * "-" right before a number, so "−5 ft" is negative, but only when no digit comes earlier. After
+ * a number, a minus sign joins two parts or values, as in "5−11", "1 m−80 cm" and
+ * "150 lbs−180 lbs", and the parser reads a hyphen-minus there as a sign.
  */
 export function normalizeForms(input: string): string {
-  return input
-    .replace(/[！-～㎝㎏]/g, character => character.normalize('NFKC'))
-    .replace(/(?<![\d.])[−﹣](?=[\d.¼-¾⅐-⅞↉])/g, '-')
-    .replace(/[′´]/g, "'")
-    .replace(/″/g, '"')
-    .replace(CURLY_SINGLE, "'")
-    .replace(CURLY_DOUBLE, '"');
+  return (
+    input
+      .replace(/[！-～㎝㎏]/g, character => character.normalize('NFKC'))
+      // The lookbehind runs only after a minus sign, and its lazy part stops at the nearest digit.
+      .replace(/[−﹣](?=[.,]?\d|[¼-¾⅐-⅞↉])(?<!\d[\s\S]*?.)/g, '-')
+      .replace(/[′´]/g, "'")
+      .replace(/″/g, '"')
+      .replace(CURLY_SINGLE, "'")
+      .replace(CURLY_DOUBLE, '"')
+  );
 }
 
 /** Normalize comma groups before interpreting numeric syntax or splitting tokens. */

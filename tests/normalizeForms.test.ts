@@ -14,19 +14,21 @@ describe('normalizeForms', () => {
     // Every mark in the input converts, not only the first.
     ['5’11’’', "5'11''"],
     ['72” or 70”', '72" or 70"'],
-    // A minus sign right before a number is a hyphen-minus, in each place that it occurs.
+    // A minus sign before the first number becomes a hyphen-minus, in each place before it.
     ['−5 ft', '-5 ft'],
     ['﹣5 ft', '-5 ft'],
     ['－5 ft', '-5 ft'],
     ['−½ lb', '-½ lb'],
     ['−.5 kg', '-.5 kg'],
-    ['kg−70.5 or −2', 'kg-70.5 or -2'],
+    ['−,5 kg', '-,5 kg'],
+    ['kg −−5', 'kg −-5'],
+    ['kg−70.5 or −2', 'kg-70.5 or −2'],
   ])('writes %s as %s', (input, output) => {
     expect(normalizeForms(input)).toBe(output);
   });
 
   // Fractions stay for normalizeFractions, and plain text doesn't change.
-  // A minus sign after a digit, or one that no number follows, is a dash.
+  // A minus sign after a number, or one that no number follows, stays.
   it.each([
     '5½ ft',
     '150 lbs',
@@ -39,6 +41,10 @@ describe('normalizeForms', () => {
     '1.5−2 m',
     'Height − 180 cm',
     '180− lbs',
+    '150 lbs−180 lbs',
+    '1 m −80 cm',
+    '5 ft ﹣11 in',
+    '−five ft',
   ])('leaves %s as it is', input => {
     expect(normalizeForms(input)).toBe(input);
   });
@@ -48,6 +54,15 @@ describe('normalizeForms', () => {
   it('handles a long run of marks quickly', () => {
     const start = Date.now();
     normalizeForms('1’'.repeat(100_000));
+    expect(Date.now() - start).toBeLessThan(400);
+  });
+
+  // The check for an earlier digit stops at the nearest one, so it stays fast for many signs.
+  it('handles many minus signs quickly', () => {
+    const start = Date.now();
+    expect(normalizeForms(`${'a'.repeat(100_000)}−5`)).toBe(`${'a'.repeat(100_000)}-5`);
+    normalizeForms('−1 '.repeat(50_000));
+    normalizeForms('−a'.repeat(100_000));
     expect(Date.now() - start).toBeLessThan(400);
   });
 });
