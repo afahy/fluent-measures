@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
 import type { ParseOptions, ParsedValue } from '../src/types';
 
+const README = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
+
 /** The parts of a result that a README example documents. `null` means the example returns null. */
 type Expected = ({ value: number } & Partial<Omit<ParsedValue, 'value'>>) | null;
 
@@ -284,6 +286,130 @@ const cases: ReadmeCase[] = [
   },
 ];
 
+// Results that the README states in its prose, in the sections Weight, Handling Mixed Unit
+// Notations, Separate Measurements, and Commas and Label Boundaries. A test can't find prose
+// examples reliably, so add each new one here by hand. Each case quotes the README words that
+// state its result, and a test checks that its section still contains them. Each expected
+// result comes from that statement.
+interface ProseCase extends ReadmeCase {
+  /** The README words that state the result, with each line break written as a space. */
+  statement: string;
+}
+
+const proseCases: ProseCase[] = [
+  {
+    section: 'Weight',
+    input: '12st 4lb',
+    expected: null,
+    statement: '`12st 4lb` and `7 lb 8 oz` return `null`',
+  },
+  {
+    section: 'Weight',
+    input: '7 lb 8 oz',
+    expected: null,
+    statement: '`12st 4lb` and `7 lb 8 oz` return `null`',
+  },
+  {
+    section: 'Weight',
+    input: 'I drink 8 oz of water, weight 180 lbs',
+    expected: { value: 180, unit: 'lb' },
+    statement: '`I drink 8 oz of water, weight 180 lbs` returns 180 lb',
+  },
+  {
+    section: 'Weight',
+    input: '180 lbs, 8 oz of water a day',
+    expected: null,
+    statement: 'returns `null`, as in `180 lbs, 8 oz of water a day`',
+  },
+  {
+    section: 'Weight',
+    input: 'stone 12, 4 lb',
+    expected: null,
+    statement: '`stone 12, 4 lb` and `kg 3, 400 g` return `null`',
+  },
+  {
+    section: 'Weight',
+    input: 'kg 3, 400 g',
+    expected: null,
+    statement: '`stone 12, 4 lb` and `kg 3, 400 g` return `null`',
+  },
+  {
+    section: 'Weight',
+    input: 'Main St 12, 180 lbs',
+    expected: { value: 180, unit: 'lb' },
+    statement: '`Main St 12, 180 lbs` returns 180 lb',
+  },
+  {
+    section: 'Handling Mixed Unit Notations',
+    input: '150 lbs - 180 lbs',
+    expected: null,
+    statement: 'such as `150 lbs - 180 lbs`, return `null`',
+  },
+  {
+    section: 'Separate Measurements',
+    input: '6 ft (72 in)',
+    expected: { value: 6, unit: 'ft', type: 'height' },
+    statement:
+      '`6 ft (72 in)` and `0.5 m (50 cm)` are a height and its conversion. When an input has more than one measurement, the first is returned',
+  },
+  {
+    section: 'Separate Measurements',
+    input: '0.5 m (50 cm)',
+    expected: { value: 0.5, unit: 'm', type: 'height' },
+    statement:
+      '`6 ft (72 in)` and `0.5 m (50 cm)` are a height and its conversion. When an input has more than one measurement, the first is returned',
+  },
+  {
+    section: 'Commas and Label Boundaries',
+    input: '1,234,56 kg',
+    expected: { value: 1234.56, unit: 'kg' },
+    statement: '`1,234,56 kg` is 1234.56 kg',
+  },
+  {
+    section: 'Commas and Label Boundaries',
+    input: '12,34,567 kg',
+    expected: null,
+    statement: '`12,34,567 kg` and `1234,567 kg` return `null`',
+  },
+  {
+    section: 'Commas and Label Boundaries',
+    input: '1234,567 kg',
+    expected: null,
+    statement: '`12,34,567 kg` and `1234,567 kg` return `null`',
+  },
+  {
+    section: 'Commas and Label Boundaries',
+    input: '1,000, kg',
+    expected: { value: 1000, unit: 'kg' },
+    statement: '`1,000, kg` still means 1000 kg',
+  },
+  {
+    section: 'Commas and Label Boundaries',
+    input: 'weight 72,5 kg',
+    expected: { value: 72.5, unit: 'kg' },
+    statement: '`weight 72,5 kg` is 72.5 kg',
+  },
+  {
+    section: 'Commas and Label Boundaries',
+    input: 'height-1,800 cm',
+    expected: { value: 1800, unit: 'cm' },
+    statement: '`height-1,800 cm` is 1800 cm',
+  },
+  {
+    section: 'Commas and Label Boundaries',
+    input: 'phase-2, 180 cm',
+    expected: { value: 180, unit: 'cm' },
+    statement: '`phase-2, 180 cm` is 180 cm',
+  },
+];
+
+/** Returns the README text under a heading, up to the next heading. */
+function readmeSection(section: string): string {
+  const [, text] = README.split(`\n### ${section}\n`);
+  if (text === undefined) throw new Error(`The README has no "### ${section}" heading`);
+  return text.split(/^#+ /m)[0];
+}
+
 /** The code block languages that can hold examples. */
 const CODE_LANGUAGES = new Set(['typescript', 'ts', 'tsx', 'javascript', 'js', 'jsx']);
 
@@ -351,7 +477,7 @@ function readmeExamples(): ReadmeEntry[] {
   let fence: string | null = null;
   let language = '';
   let block = '';
-  for (const line of readFileSync(new URL('../README.md', import.meta.url), 'utf8').split('\n')) {
+  for (const line of README.split('\n')) {
     if (fence === null) {
       const open = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
       if (open && !(open[1][0] === '`' && open[2].includes('`'))) {
@@ -445,6 +571,21 @@ describe('README examples', () => {
       expect(documentedParts(parseMeasurement(input, options), expected)).toEqual(
         expected && { ...expected, value: expectedValue(expected.value, options) }
       );
+    }
+  );
+
+  it.each(proseCases.map(testCase => [nameOf(testCase), testCase] as const))(
+    '%s returns the result that the README prose states',
+    (_name, { input, options, expected }) => {
+      expect(documentedParts(parseMeasurement(input, options), expected)).toEqual(expected);
+    }
+  );
+
+  it.each(proseCases.map(testCase => [nameOf(testCase), testCase] as const))(
+    '%s: the README prose still states this result',
+    (_name, { section, input, statement }) => {
+      expect(statement).toContain(`\`${input}\``);
+      expect(readmeSection(section).replace(/\s+/g, ' ')).toContain(statement);
     }
   );
 });
