@@ -42,6 +42,12 @@ describe('wordsToNumber', () => {
     expect(wordsToNumber('one 80')).toBeNull();
   });
 
+  // A group can contain one hundred, and spoken hundreds count as that hundred.
+  it('rejects a hundred after spoken hundreds', () => {
+    expect(wordsToNumber('one eighty hundred')).toBeNull();
+    expect(wordsToNumber('two twenty hundred')).toBeNull();
+  });
+
   it('returns null for a phrase with no number in it', () => {
     expect(wordsToNumber('and')).toBeNull();
     expect(wordsToNumber('and and')).toBeNull();

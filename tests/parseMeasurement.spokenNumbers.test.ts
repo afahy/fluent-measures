@@ -35,6 +35,9 @@ describe('spoken numbers', () => {
     ['nine-eleven', { type: 'height' }],
     // "and" isn't a number, so this isn't 3 ft 0 in.
     ['three-and', { type: 'height' }],
+    // Only number words are converted. The digit shorthand keeps its own rule, which needs
+    // whole-number feet.
+    ['5.0-11', { type: 'height' }],
     ['five-eleven-two', { type: 'height' }],
   ] as const)('returns null for %s with %o', (raw, options) => {
     expect(parseMeasurement(raw, options)).toBeNull();
