@@ -25,6 +25,21 @@ describe('wordsToNumber', () => {
     expect(wordsToNumber('ninety nine')).toEqual(99);
   });
 
+  // AFA-60: a ones word and then a tens word, as the first two words, are spoken hundreds.
+  it('reads spoken hundreds', () => {
+    expect(wordsToNumber('one eighty')).toEqual(180);
+    expect(wordsToNumber('two twenty five')).toEqual(225);
+    expect(wordsToNumber('nine ninety nine')).toEqual(999);
+  });
+
+  it('reads only a ones word and a tens word as spoken hundreds', () => {
+    expect(wordsToNumber('one two')).toBeNull();
+    expect(wordsToNumber('one ten')).toBeNull();
+    expect(wordsToNumber('ten eighty')).toBeNull();
+    expect(wordsToNumber('zero eighty')).toBeNull();
+    expect(wordsToNumber('one hundred one eighty')).toBeNull();
+  });
+
   it('handles hundreds correctly', () => {
     expect(wordsToNumber('one hundred')).toEqual(100);
     expect(wordsToNumber('two hundred')).toEqual(200);

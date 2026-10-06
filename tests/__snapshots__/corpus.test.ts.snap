@@ -2,10 +2,10 @@
 
 exports[`measurement corpus > matches the committed score 1`] = `
 "Category                 total   agree   wrong  missed  throws
-all                        406     361      11      34       0
+all                        406     365       9      32       0
 
 symbols                     27      26       0       1       0
-words                       30      24       2       4       0
+words                       30      28       0       2       0
 mixed-numbers               24      21       1       2       0
 decimals                    22      21       1       0       0
 commas                      26      26       0       0       0
@@ -20,19 +20,7 @@ conversion                  28      28       0       0       0
 unsupported                 26      26       0       0       0
 prose                       29      25       4       0       0
 
-Entries with the outcome "wrong" (11):
-
-words-one-eighty-pounds (words)
-  input:    "one-eighty pounds"
-  options:  {}
-  expected: 180 lb (weight)
-  actual:   80 lb (weight)
-
-words-one-sixty-lbs (words)
-  input:    "one sixty lbs"
-  options:  {}
-  expected: 160 lb (weight)
-  actual:   60 lb (weight)
+Entries with the outcome "wrong" (9):
 
 mixed-ten-and-a-half (mixed-numbers)
   input:    "5 foot 10 and a half"
@@ -88,18 +76,12 @@ prose-kilns-fuzzy (prose)
   expected: null
   actual:   2 kg (weight)
 
-Entries with the outcome "missed" (34):
+Entries with the outcome "missed" (32):
 
 symbols-hash-pounds (symbols)
   input:    "185#"
   options:  {}
   expected: 185 lb (weight)
-  actual:   null
-
-words-five-eleven (words)
-  input:    "five-eleven"
-  options:  {"type":"height"}
-  expected: 71 in (height)
   actual:   null
 
 words-centimetres (words)
@@ -112,12 +94,6 @@ words-metres (words)
   input:    "1.8 metres"
   options:  {}
   expected: 1.8 m (height)
-  actual:   null
-
-words-six-two (words)
-  input:    "six-two"
-  options:  {"type":"height"}
-  expected: 74 in (height)
   actual:   null
 
 mixed-and-a-half-meters (mixed-numbers)
