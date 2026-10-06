@@ -453,7 +453,8 @@ function examplesIn(
           // An argument can't name a variable from its block, as in "parseMeasurement(input)".
           const { line } = source.getLineAndCharacterOfPosition(argument.getStart(source));
           throw new Error(
-            `README line ${firstLine + line}: can't read the parseMeasurement argument ${argument.getText(source)} (${String(error)}). Write each argument as a literal.`
+            `README line ${firstLine + line}: can't read the parseMeasurement argument ${argument.getText(source)} (${String(error)}). Write each argument as a literal.`,
+            { cause: error }
           );
         }
       }) as [string, ParseOptions?];
