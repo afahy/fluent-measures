@@ -58,8 +58,8 @@ describe('measurement number phrases', () => {
   it('stops at an already matched unit', () => {
     // 21 in can't follow feet in one height, so centimeters after meters test the same phrase.
     const result = parseMeasurement('1 meter twenty one centimeters');
-    expect(result?.value).toBeCloseTo(121 / 2.54);
-    expect(result?.unit).toBe('in');
+    expect(result?.value).toBe(121);
+    expect(result?.unit).toBe('cm');
     expect(result?.matches).toEqual([
       { value: 1, unit: 'm' },
       { value: 21, unit: 'cm' },

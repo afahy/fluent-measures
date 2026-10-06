@@ -117,7 +117,7 @@ compact-5ft11 (compact)
 compact-1m80 (compact)
   input:    "1m80"
   options:  {}
-  expected: 1.8 m (height) | 180 cm (height) | 70.86614173228347 in (height)
+  expected: 180 cm (height)
   actual:   null
 
 compact-70kgs (compact)

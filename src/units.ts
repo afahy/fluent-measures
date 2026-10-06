@@ -64,7 +64,8 @@ export const lbToKg = (value: number): number => value * 0.45359237;
 
 export const kgToLb = (value: number): number => value / 0.45359237;
 
-export const unitConversions: Record<string, Record<string, (value: number) => number>> = {
+// Conversions between units of the same type. There are none between a height and a weight.
+export const unitConversions: Record<Unit, Partial<Record<Unit, (value: number) => number>>> = {
   ft: { in: ftToIn, cm: ftToCm, m: value => cmToM(ftToCm(value)) },
   in: { ft: inToFt, cm: inToCm, m: value => cmToM(inToCm(value)) },
   cm: { in: cmToIn, ft: cmToFt, m: cmToM },

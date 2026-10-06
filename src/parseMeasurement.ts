@@ -12,6 +12,7 @@ import {
   LABEL_ALIASES,
   NAME_MARK,
   NEXT_PART,
+  UNIT_ALIASES,
   UNIT_MARK,
   UNSUPPORTED_WEIGHT_UNITS,
   unitConversions,
@@ -45,7 +46,7 @@ function readNumberPhrase(
 function total(parts: QualifiedMatch[], targetUnit: Unit): number {
   let sum = 0;
   for (const { value, unit } of parts) {
-    // Zero components contribute nothing, including across measurement types.
+    // Zero components contribute nothing.
     if (!value) continue;
     if (unit === targetUnit) {
       sum += value;
@@ -126,6 +127,14 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   if (tokens.length && options.allowUnqualified && !options.type) {
     throw new Error('allowUnqualified requires type');
   }
+  // normalizedUnit selects the measurement type, so { normalizedUnit: 'kg' } reads only a weight.
+  const unitType = (['height', 'weight'] as const).find(type =>
+    UNIT_ALIASES[type].some(([unit]) => unit === options.normalizedUnit)
+  );
+  if (tokens.length && options.type && unitType && unitType !== options.type) {
+    throw new Error(`normalizedUnit ${options.normalizedUnit} is not a ${options.type} unit`);
+  }
+  const onlyType = options.type || unitType;
 
   // Two number words work too when the feet are 3 to 8, so "five-eleven" is "5-11". A part that
   // isn't one number word, digits included, joins as an empty string, so the pattern doesn't match.
@@ -144,7 +153,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     tokens = [shorthand[1], 'ft', shorthand[2], 'in'];
   }
 
-  for (const type of options.type ? [options.type] : (['height', 'weight'] as const)) {
+  for (const type of onlyType ? [onlyType] : (['height', 'weight'] as const)) {
     const matches: QualifiedMatch[] = [];
     const remainingTokens = [...tokens];
 
@@ -294,7 +303,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
           previous &&
           Number.isInteger(previous.value) &&
           NEXT_PART[previous.unit] === match.unit &&
-          match.value < unitConversions[previous.unit][match.unit](1)
+          match.value < unitConversions[previous.unit][match.unit]!(1)
         ) {
           last.push(match);
         } else {
@@ -305,9 +314,10 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       const counted = measurements.filter(parts => parts.some(({ value }) => value));
       const first = counted[0] ?? measurements[0];
 
-      // A measurement with several parts is always a height, which is normalized to inches.
-      // For other cases, use the input unit unless normalization is requested
-      const targetUnit = options.normalizedUnit || (first.length > 1 ? 'in' : first[0].unit);
+      // Use normalizedUnit, or else the unit of the last part. A measurement with several parts
+      // is a height, so its last part is the smallest: inches in "5 ft 11 in" and centimeters in
+      // "1 m 80 cm".
+      const targetUnit = options.normalizedUnit || first[first.length - 1].unit;
       const totalValue = total(first, targetUnit);
 
       // A zero-height fragment must not hide a valid measurement of another type. An inferred

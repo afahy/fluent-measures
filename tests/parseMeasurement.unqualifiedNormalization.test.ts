@@ -58,6 +58,6 @@ describe('unqualified measurement normalization', () => {
         allowUnqualified: true,
         normalizedUnit: 'kg',
       })
-    ).toThrow('Cannot convert in to kg');
+    ).toThrow('normalizedUnit kg is not a height unit');
   });
 });

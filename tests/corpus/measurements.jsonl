@@ -157,7 +157,7 @@
 {"id": "hyphens-weight-type", "input": "5-11", "options": {"type": "weight"}, "expected": null, "category": "hyphens", "source": "handwritten"}
 {"id": "hyphens-date-log", "input": "2026-01-15 weigh-in: 82 kg", "expected": {"value": 82, "unit": "kg", "type": "weight"}, "category": "hyphens", "source": "handwritten"}
 {"id": "compact-5ft11", "input": "5ft11", "expected": {"value": 71, "unit": "in", "type": "height"}, "category": "compact", "source": "AFA-41"}
-{"id": "compact-1m80", "input": "1m80", "expected": [{"value": 1.8, "unit": "m", "type": "height"}, {"value": 180, "unit": "cm", "type": "height"}, {"value": 70.86614173228347, "unit": "in", "type": "height"}], "category": "compact", "source": "AFA-41", "note": "Any unit is accepted, because the output unit of a metric two-part height is open (AFA-6)."}
+{"id": "compact-1m80", "input": "1m80", "expected": {"value": 180, "unit": "cm", "type": "height"}, "category": "compact", "source": "AFA-41", "note": "AFA-6 decided that a height with metric parts returns centimeters."}
 {"id": "compact-70kgs", "input": "70kgs", "expected": {"value": 70, "unit": "kg", "type": "weight"}, "category": "compact", "source": "AFA-41"}
 {"id": "compact-5ft11in", "input": "5ft11in", "expected": {"value": 71, "unit": "in", "type": "height"}, "category": "compact", "source": "handwritten"}
 {"id": "compact-6ft", "input": "6ft", "expected": {"value": 6, "unit": "ft", "type": "height"}, "category": "compact", "source": "handwritten"}
