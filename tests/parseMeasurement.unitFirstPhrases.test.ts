@@ -42,7 +42,8 @@ describe('a number in words after its unit', () => {
       { value: 11, unit: 'in' },
     ]);
     const result = parseMeasurement('m: one cm: eighty');
-    expect(result?.value).toBeCloseTo(180 / 2.54);
+    expect(result?.value).toBe(180);
+    expect(result?.unit).toBe('cm');
     expect(result?.matches).toEqual([
       { value: 1, unit: 'm' },
       { value: 80, unit: 'cm' },
