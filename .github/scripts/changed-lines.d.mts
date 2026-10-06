@@ -1,0 +1,26 @@
+export function changedRanges(diff: string): Map<string, Array<[number, number]>>;
+
+export function mutateEntries(ranges: Map<string, Array<[number, number]>>): string[];
+
+export interface UnkilledMutant {
+  file: string;
+  line: number;
+  column: number;
+  mutator: string;
+  replacement: string;
+  status: 'Survived' | 'NoCoverage';
+}
+
+export function unkilledMutants(report: {
+  files: Record<
+    string,
+    {
+      mutants: Array<{
+        status: string;
+        mutatorName: string;
+        replacement?: string;
+        location: { start: { line: number; column: number } };
+      }>;
+    }
+  >;
+}): UnkilledMutant[];
