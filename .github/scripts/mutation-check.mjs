@@ -40,15 +40,16 @@ if (baseFlag < 0 && spawnSync('git', ['rev-parse', '--quiet', '--verify', 'HEAD^
   process.exit(0);
 }
 
-// Fixed options, so the user's git settings can't change the output. Pathspecs are literal, so
-// `src/a\b.ts` and `src/[u]nits.ts` don't also match `src/ab.ts` and `src/units.ts`.
-const gitDiff = ['--literal-pathspecs', 'diff', '--no-color', '--no-ext-diff', '--no-renames'];
+// Fixed options, so color, external diff tools and rename detection can't change the output.
+// Each pathspec is literal, so `src/a\b.ts` and `src/[u]nits.ts` don't also match `src/ab.ts`
+// and `src/units.ts`.
+const gitDiff = ['diff', '--no-color', '--no-ext-diff', '--no-renames'];
 const range = revisions(base, { fromMergeBase: baseFlag >= 0 });
 
 // File names come NUL-separated and unquoted, so git prints each name as it is.
 const files = execFileSync(
   'git',
-  [...gitDiff, '--name-only', '-z', '--diff-filter=d', ...range, '--', 'src/'],
+  [...gitDiff, '--name-only', '-z', '--diff-filter=d', ...range, '--', ':(literal)src/'],
   { encoding: 'utf8' }
 )
   .split('\0')
@@ -56,9 +57,13 @@ const files = execFileSync(
 /** @type {Map<string, Array<[number, number]>>} */
 const changed = new Map();
 for (const file of files) {
-  const diff = execFileSync('git', [...gitDiff, '--unified=0', ...range, '--', file], {
-    encoding: 'utf8',
-  });
+  const diff = execFileSync(
+    'git',
+    [...gitDiff, '--unified=0', ...range, '--', `:(literal)${file}`],
+    {
+      encoding: 'utf8',
+    }
+  );
   const ranges = hunkRanges(diff);
   if (ranges.length > 0) changed.set(file, ranges);
 }
