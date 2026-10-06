@@ -283,7 +283,8 @@ const cases: ReadmeCase[] = [
   },
 ];
 
-const CALL = 'parseMeasurement(';
+/** A parseMeasurement call: the name, any whitespace, then an opening parenthesis. */
+const CALL = /parseMeasurement\s*\(/y;
 
 /** The code block languages that can hold examples. */
 const CODE_LANGUAGES = new Set(['typescript', 'ts', 'tsx', 'javascript', 'js', 'jsx']);
@@ -338,11 +339,18 @@ function indexAfterClose(text: string, start: number): number {
   throw new Error(`No ${close} closes the ${open} at index ${start}`);
 }
 
-/** Returns the index of each parseMeasurement call in `code`, outside strings and comments. */
-function callIndexes(code: string): number[] {
-  return [...codeIndexes(code)].filter(
-    i => code.startsWith(CALL, i) && !/[\w$]/.test(code[i - 1] ?? '')
-  );
+/**
+ * Returns the index of the opening parenthesis of each parseMeasurement call in `code`, outside
+ * strings and comments.
+ */
+function callOpenings(code: string): number[] {
+  const openings = [];
+  for (const i of codeIndexes(code)) {
+    CALL.lastIndex = i;
+    const match = CALL.exec(code);
+    if (match && !/[\w$]/.test(code[i - 1] ?? '')) openings.push(i + match[0].length - 1);
+  }
+  return openings;
 }
 
 /** Evaluates a JavaScript expression from the README, which is part of this repository. */
@@ -358,9 +366,9 @@ function commentIn(line = ''): string | null {
 
 /** Lists the examples in one code block. */
 function examplesIn(block: string, section: string): ReadmeEntry[] {
-  return callIndexes(block).map(at => {
-    const end = indexAfterClose(block, at + CALL.length - 1);
-    const args = block.slice(at + CALL.length, end - 1);
+  return callOpenings(block).map(open => {
+    const end = indexAfterClose(block, open);
+    const args = block.slice(open + 1, end - 1);
     const [input, options] = evaluate(`[${args}\n]`) as [string, ParseOptions?];
     // The result comment is on the same line as the call, or on the next line.
     const [sameLine, nextLine] = block.slice(end).replace(/^;/, '').split('\n');
@@ -437,17 +445,29 @@ function nameOf({ section, input, options }: ReadmeExample): string {
 }
 
 const examples = readmeExamples();
-const caseByName = new Map(cases.map(testCase => [nameOf(testCase), testCase]));
+
+// Pairs the n-th example of a name with the n-th case of that name, so that an example that the
+// README repeats keeps its own case.
+const casesByName = new Map<string, ReadmeCase[]>();
+for (const testCase of cases) {
+  casesByName.set(nameOf(testCase), [...(casesByName.get(nameOf(testCase)) ?? []), testCase]);
+}
+const seenNames = new Map<string, number>();
+const pairs = examples.map(example => {
+  const name = nameOf(example);
+  const occurrence = seenNames.get(name) ?? 0;
+  seenNames.set(name, occurrence + 1);
+  return [name, example.readmeComment, casesByName.get(name)?.[occurrence]] as const;
+});
 
 describe('README examples', () => {
   it('has one case for each example, in README order', () => {
     expect(cases.map(nameOf)).toEqual(examples.map(nameOf));
   });
 
-  it.each(examples.map(example => [nameOf(example), example.readmeComment] as const))(
+  it.each(pairs)(
     "%s: the case's expected result matches the README comment",
-    (name, readmeComment) => {
-      const testCase = caseByName.get(name);
+    (_name, readmeComment, testCase) => {
       const documented = documentedResult(readmeComment);
       // A prose or missing comment can't give a result, so the case must quote it instead.
       const [actual, wanted] =
