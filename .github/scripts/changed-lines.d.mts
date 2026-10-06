@@ -17,6 +17,7 @@ export function unkilledMutants(report: {
     {
       mutants: Array<{
         status: string;
+        statusReason?: string;
         mutatorName: string;
         replacement?: string;
         location: { start: { line: number; column: number } };
@@ -24,3 +25,17 @@ export function unkilledMutants(report: {
     }
   >;
 }): UnkilledMutant[];
+
+export function unexplainedIgnores(report: {
+  files: Record<
+    string,
+    {
+      mutants: Array<{
+        status: string;
+        statusReason?: string;
+        mutatorName: string;
+        location: { start: { line: number; column: number } };
+      }>;
+    }
+  >;
+}): Array<{ file: string; line: number; column: number; mutator: string }>;

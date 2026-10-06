@@ -70,3 +70,30 @@ export function unkilledMutants(report) {
       }))
   );
 }
+
+/** The reason Stryker gives a mutant that a disable comment without a reason ignores. */
+const DEFAULT_IGNORE_REASON = 'Ignored using a comment';
+
+/**
+ * Returns the mutants in a Stryker JSON report that a `// Stryker disable` comment ignores
+ * without a reason. Each one needs a reason that says why behavior can't change.
+ *
+ * @param {{ files: Record<string, { mutants: Array<{ status: string, statusReason?: string, mutatorName: string, location: { start: { line: number, column: number } } }> }> }} report
+ * @returns {Array<{ file: string, line: number, column: number, mutator: string }>}
+ */
+export function unexplainedIgnores(report) {
+  return Object.entries(report.files).flatMap(([file, { mutants }]) =>
+    mutants
+      .filter(
+        mutant =>
+          mutant.status === 'Ignored' &&
+          (!mutant.statusReason?.trim() || mutant.statusReason === DEFAULT_IGNORE_REASON)
+      )
+      .map(mutant => ({
+        file,
+        line: mutant.location.start.line,
+        column: mutant.location.start.column,
+        mutator: mutant.mutatorName,
+      }))
+  );
+}

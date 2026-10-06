@@ -5,13 +5,18 @@
 //
 // A mutant that can't change behavior can be marked with a comment on the line above it:
 //   // Stryker disable next-line <mutator>: <why behavior can't change>
-// Stryker then gives it the status Ignored, so this check doesn't count it.
+// Stryker then gives it the status Ignored, so this check doesn't count it. The reason is required.
 
 import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { changedRanges, mutateEntries, unkilledMutants } from './changed-lines.mjs';
+import {
+  changedRanges,
+  mutateEntries,
+  unexplainedIgnores,
+  unkilledMutants,
+} from './changed-lines.mjs';
 
 const baseFlag = process.argv.indexOf('--base');
 const base = baseFlag >= 0 ? process.argv[baseFlag + 1] : 'HEAD^1';
@@ -71,11 +76,9 @@ if (stryker.status !== 0) {
   process.exit(1);
 }
 
-const unkilled = unkilledMutants(JSON.parse(readFileSync(report, 'utf8')));
-if (unkilled.length === 0) {
-  console.log('Tests kill every mutant on the changed lines.');
-  process.exit(0);
-}
+const results = JSON.parse(readFileSync(report, 'utf8'));
+const unkilled = unkilledMutants(results);
+const unexplained = unexplainedIgnores(results);
 for (const mutant of unkilled) {
   const what = `${mutant.mutator} mutant ${JSON.stringify(mutant.replacement)}`;
   const why = mutant.status === 'NoCoverage' ? 'no test covers it' : 'it survived';
@@ -83,7 +86,18 @@ for (const mutant of unkilled) {
     `::error file=${mutant.file},line=${mutant.line},col=${mutant.column}::The ${what} on a changed line isn't killed: ${why}.`
   );
 }
-console.error(
-  `${unkilled.length} mutant(s) on changed lines aren't killed. Add or strengthen a test. If a mutant can't change behavior, add "// Stryker disable next-line <mutator>: <reason>" above its line.`
-);
-process.exit(1);
+for (const mutant of unexplained) {
+  console.error(
+    `::error file=${mutant.file},line=${mutant.line},col=${mutant.column}::A Stryker disable comment ignores the ${mutant.mutator} mutant without a reason. Add ": <why behavior can't change>" after the mutator name.`
+  );
+}
+if (unkilled.length > 0) {
+  console.error(
+    `${unkilled.length} mutant(s) on changed lines aren't killed. Add or strengthen a test. If a mutant can't change behavior, add "// Stryker disable next-line <mutator>: <reason>" above its line.`
+  );
+}
+if (unexplained.length > 0) {
+  console.error(`${unexplained.length} ignored mutant(s) on changed lines have no reason.`);
+}
+if (unkilled.length > 0 || unexplained.length > 0) process.exit(1);
+console.log('Tests kill every mutant on the changed lines.');
