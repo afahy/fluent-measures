@@ -15,6 +15,7 @@ import {
   hunkRanges,
   isSourceFile,
   literalGlob,
+  reasonlessDirectives,
   revisions,
   unexplainedIgnores,
   unkilledMutants,
@@ -104,6 +105,10 @@ if (stryker.status !== 0) {
 const results = JSON.parse(readFileSync(report, 'utf8'));
 const unkilled = unkilledMutants(results, changed);
 const unexplained = unexplainedIgnores(results, changed);
+// A new directive can ignore a mutant on a line that didn't change, so check the directives too.
+const directives = [...changed].flatMap(([file, ranges]) =>
+  reasonlessDirectives(readFileSync(file, 'utf8'), ranges).map(line => ({ file, line }))
+);
 for (const mutant of unkilled) {
   const what = `${mutant.mutator} mutant ${JSON.stringify(mutant.replacement)}`;
   const why = mutant.status === 'NoCoverage' ? 'no test covers it' : 'it survived';
@@ -121,8 +126,15 @@ if (unkilled.length > 0) {
     `${unkilled.length} mutant(s) on changed lines aren't killed. Add or strengthen a test. If a mutant can't change behavior, add "// Stryker disable next-line <mutator>: <reason>" above its line.`
   );
 }
-if (unexplained.length > 0) {
-  console.error(`${unexplained.length} ignored mutant(s) on changed lines have no reason.`);
+for (const { file, line } of directives) {
+  console.error(
+    `::error file=${file},line=${line}::This Stryker disable comment has no reason. Add ": <why behavior can't change>" after the mutator name.`
+  );
 }
-if (unkilled.length > 0 || unexplained.length > 0) process.exit(1);
+if (unexplained.length + directives.length > 0) {
+  console.error(
+    `${unexplained.length + directives.length} Stryker disable comment(s) or ignored mutant(s) on changed lines have no reason.`
+  );
+}
+if (unkilled.length > 0 || unexplained.length > 0 || directives.length > 0) process.exit(1);
 console.log('Tests kill every mutant on the changed lines.');

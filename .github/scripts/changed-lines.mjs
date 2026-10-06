@@ -144,3 +144,25 @@ export function unexplainedIgnores(report, changed) {
       mutator: mutant.mutatorName,
     }));
 }
+
+/**
+ * Returns the changed lines of `source` that hold a `// Stryker disable` directive without a
+ * reason. A directive can ignore mutants on lines that didn't change, such as the line after a
+ * `disable next-line`, so the directive itself is checked.
+ *
+ * @param {string} source
+ * @param {Array<[number, number]>} ranges
+ * @returns {number[]}
+ */
+export function reasonlessDirectives(source, ranges) {
+  return source
+    .split('\n')
+    .map((text, index) => ({ text, line: index + 1 }))
+    .filter(
+      ({ text, line }) =>
+        ranges.some(([from, to]) => line >= from && line <= to) &&
+        /\bStryker\s+disable\b/.test(text) &&
+        !/\bStryker\s+disable(?:\s+next-line)?\s+[\w\s,]+?:\s*\S/.test(text)
+    )
+    .map(({ line }) => line);
+}

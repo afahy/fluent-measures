@@ -3,6 +3,7 @@ import {
   hunkRanges,
   isSourceFile,
   literalGlob,
+  reasonlessDirectives,
   revisions,
   unexplainedIgnores,
   unkilledMutants,
@@ -174,5 +175,25 @@ describe('unexplainedIgnores', () => {
     };
     const unexplained = { file: 'src/a.ts', line: 7, column: 5, mutator: 'ConditionalExpression' };
     expect(unexplainedIgnores(report, changed)).toEqual([unexplained, unexplained, unexplained]);
+  });
+});
+
+describe('reasonlessDirectives', () => {
+  const source = [
+    'const a = 1;',
+    '// Stryker disable next-line all',
+    'const b = a ?? 2;',
+    '// Stryker disable next-line ConditionalExpression: the fallback is never read',
+    '// Stryker disable StringLiteral,ArrayDeclaration',
+    '// Stryker disable all: generated table',
+    '// Stryker restore all',
+  ].join('\n');
+
+  it('returns the changed lines with a disable comment that has no reason', () => {
+    expect(reasonlessDirectives(source, [[1, 7]])).toEqual([2, 5]);
+  });
+
+  it('ignores directives on unchanged lines', () => {
+    expect(reasonlessDirectives(source, [[3, 4]])).toEqual([]);
   });
 });

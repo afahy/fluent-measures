@@ -36,3 +36,5 @@ export function unexplainedIgnores(
   report: Report,
   changed: Map<string, Array<[number, number]>>
 ): Array<{ file: string; line: number; column: number; mutator: string }>;
+
+export function reasonlessDirectives(source: string, ranges: Array<[number, number]>): number[];
