@@ -94,7 +94,9 @@ standing approval for each action it tells you to take, in any section.
 - Use the `fix` type when the PR changes a result that `parseMeasurement` returns. Never
   change a PR's type to skip a CI check.
 - Before you open the PR, review your own diff and fix the findings that are in scope. In
-  Claude Code, use the `code-review` skill at `high`.
+  Claude Code, start a new subagent that runs the `code-review` skill at `high` on the
+  branch. A new subagent doesn't share your context, so it doesn't share your assumptions.
+  Give it only the branch name and the ticket ID.
 - If the smallest fix that you can write goes over a limit in `.size-limit.cjs`, raise that
   limit by 0.5 kB in the same PR. Change the "Bundle Size" note in `CONTRIBUTING.md` to
   match, and give the sizes before and after in the PR body. This is the maintainer's
@@ -137,6 +139,9 @@ standing approval for each action it tells you to take, in any section.
 
 ### Finish the PR
 
+- Before you report a PR as ready to merge, or merge it yourself, review its whole diff
+  again as "Build the PR" says. Fix commits after bot findings change the diff, so the first
+  review doesn't cover them. Fix the findings that are in scope.
 - Report a PR as ready to merge only when each finding is fixed, filed as a ticket, or
   answered on its thread as not reproducible. These checks must also pass: `ci-ok`,
   `Validate commits and PR title` and `Regression test fails without the fix`. A skipped
