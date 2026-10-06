@@ -69,6 +69,8 @@ fluent-measures/
 
 ## Development Setup
 
+Use Node.js 22.13 or later. CI runs on Node 22 and 24, and ESLint 10 doesn't run on Node 22 releases before 22.13.
+
 ```bash
 # Clone the repository
 git clone https://github.com/your-username/fluent-measures.git
