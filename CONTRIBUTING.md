@@ -69,6 +69,8 @@ fluent-measures/
 
 ## Development Setup
 
+Use Node.js 22.18 or a later 22.x release, or Node.js 24.11 or later. CI runs on Node 22 and 24. Some development dependencies need these versions: Stryker's Babel packages need `^22.18.0 || >=24.11.0`, and ESLint 10 needs `^20.19.0 || ^22.13.0 || >=24`.
+
 ```bash
 # Clone the repository
 git clone https://github.com/your-username/fluent-measures.git
@@ -165,8 +167,79 @@ changes that the tests catch. The job fails when the score is below the `break` 
 `Survived` entry means tests ran and still passed; a `NoCoverage` entry means no test runs that
 code. Add tests that catch either kind.
 
+A second job, "Mutants on changed lines are killed", runs Stryker on the files that a pull
+request changes under `src/`. It fails when a mutant whose code overlaps a line that the pull
+request adds or changes survives, or no test covers it. So the tests must catch every change to
+the code that a pull request adds. To run it
+on your committed changes, use `node .github/scripts/mutation-check.mjs --base origin/main`. If a
+mutant can't change behavior, put `// Stryker disable next-line <mutator>: <reason>` on the line
+above it. The reason must say why behavior can't change, and the job fails on a disable comment
+without one. A line counts as changed even when only its formatting changes, so a pull request
+that reformats or moves a line must also deal with any mutant on it that survives on `main`.
+
 Mutation testing needs Node 22.18 or a later 22.x release, or Node 24.11 or later. Stryker
 depends on Babel 8, which requires those versions.
+
+`vite` is in `devDependencies` because vitest needs it as a peer dependency. When you upgrade
+vitest to a release that doesn't accept the installed vite major, raise the `vite` range in the
+same change. If they don't match, `pnpm install` prints an `unmet peer vite` warning.
+
+### Measurement corpus
+
+The corpus measures how the parser does on the way people write heights and weights.
+`tests/corpus/measurements.jsonl` holds the inputs, one entry on each line, with the outputs that
+their writers meant. `tests/corpus.test.ts` runs `parseMeasurement` on each entry and builds a
+report. The report has the outcome counts for all entries and for each category, and it lists each
+entry that doesn't agree. The test compares the report with the Vitest snapshot in
+`tests/__snapshots__/corpus.test.ts.snap`. This snapshot is the committed score of the parser.
+
+Each entry is a JSON object with these fields:
+
+- `id`: a short name that is unique and doesn't change, such as `unicode-curly-quotes-1`. Use
+  lowercase letters and digits, with hyphens between words.
+- `input`: the text to parse.
+- `options`: the `parseMeasurement` options, if the input needs them.
+- `expected`: `{ "value": 70, "unit": "kg", "type": "weight" }` or `null`. If more than one output
+  is correct, use a list, such as `[{ "value": 70, "unit": "kg", "type": "weight" }, null]`.
+- `category`: one of `symbols`, `words`, `mixed-numbers`, `decimals`, `commas`, `hyphens`,
+  `compact`, `unicode`, `typos`, `surrounding-text`, `multiple-measurements`, `unqualified`,
+  `conversion`, `unsupported` and `prose`.
+- `source`: `handwritten`, a Linear ticket ID such as `AFA-15`, or the URL of the text.
+- `note`: optional. Use it to explain an `expected` value that isn't clear from the input.
+
+The test gives each entry one outcome:
+
+- `agree`: `expected` accepts the output. Values agree when they differ by no more than a relative
+  tolerance of 1e-9.
+- `wrong`: the parser returns a measurement that `expected` doesn't accept.
+- `missed`: the parser returns `null`, and `expected` doesn't accept `null`.
+- `throws`: the parser throws an error.
+
+To add an entry:
+
+1. Write the input the way people write it. Write it yourself, or copy public text only when its
+   license allows it. Don't add personal data.
+2. Decide `expected` before you run the parser. Use what the writer meant. Follow the README when
+   it covers the input. If the README leaves the choice between a value and `null` open, accept
+   both.
+3. Write exact values. Don't round them. Use 1 lb = 0.45359237 kg, 1 in = 2.54 cm and 1 ft = 12 in.
+4. Don't add an input if its correct output depends on an open ticket.
+5. Run `pnpm test:unit -u` to update the snapshot.
+6. Read the snapshot diff. It must show only your new entries.
+
+Update the snapshot with `pnpm test:unit -u` in these cases:
+
+- You add entries. A new entry can have any outcome.
+- A change to `src/` changes the output for an entry. Check each changed entry in the diff. If an
+  entry moves to `agree`, the parser got better.
+
+Don't change `expected` to make an entry agree with the parser. If an entry moves from `agree` to
+another outcome, a test gets looser, which pull request rule 3 in `AGENTS.md` doesn't allow.
+Make that change only when a ticket asks for it. If the snapshot changes and you don't know why,
+find the cause before you update it.
+
+The corpus test also fails when a line isn't valid JSON, two entries have the same `id`, a category
+isn't in the list, or an expected unit doesn't belong to its type.
 
 ## Documentation
 
@@ -200,9 +273,17 @@ pnpm docs
 
 This library is designed to be lightweight and performant. When contributing, keep in mind:
 
-1. **Bundle Size**: Avoid adding dependencies when possible
-2. **Algorithmic Complexity**: Be mindful of performance in parsing algorithms
-3. **Memory Usage**: Avoid unnecessary object creation in hot paths
+1. **Bundle Size**: Avoid adding dependencies when possible. Each build, `dist/index.js` and
+   `dist/index.cjs`, has a budget of 3 kB after minifying and compressing with Brotli. The
+   limits are set in `.size-limit.cjs`, and if this note disagrees with that file, the file is
+   right. CI fails when a build goes over its budget. To check, run `pnpm build` and then
+   `pnpm check:size`. To see how much minified code each source file adds, run
+   `pnpm exec tsup --metafile` and load `dist/metafile-esm.json` into
+   [esbuild's bundle analyzer](https://esbuild.github.io/analyze/). `pnpm check:size:why` can't
+   show this, because it only sees the built file. Raising the budget needs its own ticket, so
+   don't raise it as part of another change.
+2. **Algorithmic Complexity**: Be mindful of performance in parsing algorithms.
+3. **Memory Usage**: Avoid unnecessary object creation in hot paths.
 
 ## Any contributions you make will be under the MIT Software License
 

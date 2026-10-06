@@ -1,0 +1,283 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`measurement corpus > matches the committed score 1`] = `
+"Category                 total   agree   wrong  missed  throws
+all                        406     365       9      32       0
+
+symbols                     27      26       0       1       0
+words                       30      28       0       2       0
+mixed-numbers               24      21       1       2       0
+decimals                    22      21       1       0       0
+commas                      26      26       0       0       0
+hyphens                     29      29       0       0       0
+compact                     24      12       0      12       0
+unicode                     29      13       1      15       0
+typos                       30      30       0       0       0
+surrounding-text            29      29       0       0       0
+multiple-measurements       30      30       0       0       0
+unqualified                 23      21       2       0       0
+conversion                  28      28       0       0       0
+unsupported                 26      26       0       0       0
+prose                       29      25       4       0       0
+
+Entries with the outcome "wrong" (9):
+
+mixed-ten-and-a-half (mixed-numbers)
+  input:    "5 foot 10 and a half"
+  options:  {}
+  expected: 70.5 in (height)
+  actual:   70 in (height)
+
+decimals-5-11-ft (decimals)
+  input:    "5.11 ft"
+  options:  {}
+  expected: 71 in (height) | null
+  actual:   5.11 ft (height)
+
+unicode-minus-sign (unicode)
+  input:    "\\u22125 ft"
+  options:  {}
+  expected: null
+  actual:   5 ft (height)
+
+unqualified-1-75-metric-height (unqualified)
+  input:    "1.75"
+  options:  {"type":"height","allowUnqualified":true,"inferUnit":"metric"}
+  expected: 1.75 m (height) | 175 cm (height)
+  actual:   1.75 cm (height)
+
+unqualified-1-8-metric-height (unqualified)
+  input:    "1.8"
+  options:  {"type":"height","allowUnqualified":true,"inferUnit":"metric"}
+  expected: 1.8 m (height) | 180 cm (height)
+  actual:   1.8 cm (height)
+
+prose-top-10-in (prose)
+  input:    "Top 10 in the class"
+  options:  {}
+  expected: null
+  actual:   10 in (height)
+
+prose-fees-fuzzy (prose)
+  input:    "I paid 5 fees"
+  options:  {"fuzziness":1}
+  expected: null
+  actual:   5 ft (height)
+
+prose-ponds-fuzzy (prose)
+  input:    "we visited 2 ponds"
+  options:  {"fuzziness":1}
+  expected: null
+  actual:   2 lb (weight)
+
+prose-kilns-fuzzy (prose)
+  input:    "the studio has 2 kilns"
+  options:  {"fuzziness":1}
+  expected: null
+  actual:   2 kg (weight)
+
+Entries with the outcome "missed" (32):
+
+symbols-hash-pounds (symbols)
+  input:    "185#"
+  options:  {}
+  expected: 185 lb (weight)
+  actual:   null
+
+words-centimetres (words)
+  input:    "170 centimetres"
+  options:  {}
+  expected: 170 cm (height)
+  actual:   null
+
+words-metres (words)
+  input:    "1.8 metres"
+  options:  {}
+  expected: 1.8 m (height)
+  actual:   null
+
+mixed-and-a-half-meters (mixed-numbers)
+  input:    "1 and a half meters"
+  options:  {}
+  expected: 1.5 m (height)
+  actual:   null
+
+mixed-six-and-a-half-feet (mixed-numbers)
+  input:    "six and a half feet"
+  options:  {}
+  expected: 6.5 ft (height)
+  actual:   null
+
+compact-5ft11 (compact)
+  input:    "5ft11"
+  options:  {}
+  expected: 71 in (height)
+  actual:   null
+
+compact-1m80 (compact)
+  input:    "1m80"
+  options:  {}
+  expected: 1.8 m (height) | 180 cm (height) | 70.86614173228347 in (height)
+  actual:   null
+
+compact-70kgs (compact)
+  input:    "70kgs"
+  options:  {}
+  expected: 70 kg (weight)
+  actual:   null
+
+compact-5ft11in (compact)
+  input:    "5ft11in"
+  options:  {}
+  expected: 71 in (height)
+  actual:   null
+
+compact-6ft2 (compact)
+  input:    "6ft2"
+  options:  {}
+  expected: 74 in (height)
+  actual:   null
+
+compact-5ft11-quote (compact)
+  input:    "5ft11\\""
+  options:  {}
+  expected: 71 in (height)
+  actual:   null
+
+compact-1m75-cm (compact)
+  input:    "1m75"
+  options:  {"normalizedUnit":"cm"}
+  expected: 175 cm (height)
+  actual:   null
+
+compact-1m80-cm (compact)
+  input:    "1m80"
+  options:  {"normalizedUnit":"cm"}
+  expected: 180 cm (height)
+  actual:   null
+
+compact-6foot2 (compact)
+  input:    "6foot2"
+  options:  {}
+  expected: 74 in (height)
+  actual:   null
+
+compact-175cms (compact)
+  input:    "175cms"
+  options:  {}
+  expected: 175 cm (height)
+  actual:   null
+
+compact-6ft1in (compact)
+  input:    "6ft1in"
+  options:  {}
+  expected: 73 in (height)
+  actual:   null
+
+compact-ft-in-dots (compact)
+  input:    "5ft.11in."
+  options:  {}
+  expected: 71 in (height)
+  actual:   null
+
+unicode-curly-quotes-1 (unicode)
+  input:    "5’11”"
+  options:  {}
+  expected: 71 in (height)
+  actual:   null
+
+unicode-primes-1 (unicode)
+  input:    "5′11″"
+  options:  {}
+  expected: 71 in (height)
+  actual:   null
+
+unicode-curly-space (unicode)
+  input:    "5’ 11”"
+  options:  {}
+  expected: 71 in (height)
+  actual:   null
+
+unicode-curly-feet (unicode)
+  input:    "6’"
+  options:  {}
+  expected: 6 ft (height)
+  actual:   null
+
+unicode-curly-inches (unicode)
+  input:    "72”"
+  options:  {}
+  expected: 72 in (height)
+  actual:   null
+
+unicode-acute-accents (unicode)
+  input:    "5´11´´"
+  options:  {}
+  expected: 71 in (height)
+  actual:   null
+
+unicode-fullwidth (unicode)
+  input:    "１８０ｃｍ"
+  options:  {}
+  expected: 180 cm (height)
+  actual:   null
+
+unicode-square-cm (unicode)
+  input:    "180 ㎝"
+  options:  {}
+  expected: 180 cm (height)
+  actual:   null
+
+unicode-square-kg (unicode)
+  input:    "70 ㎏"
+  options:  {}
+  expected: 70 kg (weight)
+  actual:   null
+
+unicode-double-prime-inches (unicode)
+  input:    "72″"
+  options:  {}
+  expected: 72 in (height)
+  actual:   null
+
+unicode-prime-feet (unicode)
+  input:    "6′"
+  options:  {}
+  expected: 6 ft (height)
+  actual:   null
+
+unicode-primes-space (unicode)
+  input:    "5′ 11″"
+  options:  {}
+  expected: 71 in (height)
+  actual:   null
+
+unicode-curly-no-inch-mark (unicode)
+  input:    "5’11"
+  options:  {}
+  expected: 71 in (height)
+  actual:   null
+
+unicode-curly-two-singles (unicode)
+  input:    "5’11’’"
+  options:  {}
+  expected: 71 in (height)
+  actual:   null
+
+unicode-curly-to-cm (unicode)
+  input:    "5’11”"
+  options:  {"type":"height","normalizedUnit":"cm"}
+  expected: 180.34 cm (height)
+  actual:   null
+
+Entries with the outcome "throws" (0):
+
+Entries that agree with one of several outputs (6):
+
+unicode-en-dash-shorthand: null
+unicode-hyphen-shorthand: null
+multiple-kg-with-lbs: 70 kg (weight)
+multiple-height-weight-no-type: 71 in (height)
+multiple-6-1-190-no-type: 73 in (height)
+unqualified-no-infer-unit: 150 lb (weight)"
+`;

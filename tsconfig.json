@@ -1,6 +1,15 @@
 {
   "compilerOptions": {
     "target": "es2020",
+    "lib": [
+      "ES2020",
+      "ES2022.Error",
+      "DOM",
+      "DOM.Iterable",
+      "DOM.AsyncIterable",
+      "WebWorker.ImportScripts",
+      "ScriptHost"
+    ],
     "module": "esnext",
     "moduleResolution": "bundler",
     "strict": true,

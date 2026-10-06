@@ -287,16 +287,11 @@ describe('hyphenated height review regressions', () => {
     });
   });
 
-  it('converts an explicitly meter-qualified suffix after a feet separator', () => {
+  it('reads a meter-qualified suffix after a feet separator as a separate measurement', () => {
+    // 5 ft is 1.524 m, which doesn't agree with 1 m, so there's no single answer.
     const raw = '5 ft-1 m';
-    const result = parseMeasurement(raw);
-    expect(result?.value).toBeCloseTo(60 + 100 / 2.54);
-    expect(result?.unit).toBe('in');
-    expect(result?.matches).toEqual([
-      { value: 5, unit: 'ft' },
-      { value: 1, unit: 'm' },
-    ]);
-    expect(parseMeasurement(raw, { normalizedUnit: 'ft' })?.value).toBeCloseTo(5 + 100 / 30.48);
-    expect(parseMeasurement(raw, { normalizedUnit: 'm' })?.value).toBeCloseTo(2.524);
+    expect(parseMeasurement(raw)).toBeNull();
+    expect(parseMeasurement(raw, { normalizedUnit: 'ft' })).toBeNull();
+    expect(parseMeasurement(raw, { normalizedUnit: 'm' })).toBeNull();
   });
 });
