@@ -80,9 +80,6 @@ writeFileSync(
   JSON.stringify({
     ...config,
     mutate: [...changed.keys()],
-    // Run every test, so a changed file that no test imports gives NoCoverage mutants, not a
-    // Stryker error.
-    vitest: { ...config.vitest, related: false },
     reporters: ['clear-text', 'json'],
     jsonReporter: { fileName: report },
     thresholds: { ...config.thresholds, break: null },
@@ -97,7 +94,9 @@ const stryker = spawnSync(
 );
 if (stryker.error) throw stryker.error;
 if (stryker.status !== 0) {
-  console.error(`::error::Stryker exited with status ${stryker.status}.`);
+  console.error(
+    `::error::Stryker exited with status ${stryker.status}. If its log says "No tests were executed", no test imports the changed files: add tests that do.`
+  );
   process.exit(1);
 }
 
