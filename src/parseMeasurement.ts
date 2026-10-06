@@ -263,6 +263,18 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       }
     }
 
+    // Inferred units use the same normalization and result handling as explicit units.
+    const inferred = !matches.length && options.allowUnqualified && options.type;
+    if (inferred) {
+      const num = wordsToNumber(tokens.filter(token => token !== ';').join(' '));
+      // Stryker disable next-line ConditionalExpression: num > 0 is false for null too.
+      if (num !== null && num > 0) {
+        const metric = options.inferUnit === 'metric';
+        const unit = type === 'height' ? (metric ? 'cm' : 'in') : metric ? 'kg' : 'lb';
+        matches.push({ value: num, unit });
+      }
+    }
+
     // If we found any matches for this type
     if (matches.length) {
       // Parts form one measurement only while each unit is the next smaller one, the larger part
@@ -293,8 +305,9 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       const targetUnit = options.normalizedUnit || (first.length > 1 ? 'in' : first[0].unit);
       const totalValue = total(first, targetUnit);
 
-      // A zero-height fragment must not hide a valid measurement of another type.
-      if (!totalValue) continue;
+      // A zero-height fragment must not hide a valid measurement of another type. An inferred
+      // value is the only measurement, so it stays even when its conversion underflows to zero.
+      if (!totalValue && !inferred) continue;
       // A number too large to represent, such as 400 digits, has no usable value.
       if (!Number.isFinite(totalValue)) return null;
 
@@ -312,28 +325,6 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         type,
         raw: input,
         matches: first,
-      };
-    }
-  }
-
-  // Try unqualified input if no matches found and all previous attempts failed
-  if (options.allowUnqualified && options.type) {
-    const num = wordsToNumber(tokens.filter(token => token !== ';').join(' '));
-    if (num !== null && num > 0) {
-      const metric = options.inferUnit === 'metric';
-      const unit = options.type === 'height' ? (metric ? 'cm' : 'in') : metric ? 'kg' : 'lb';
-
-      return {
-        matches: [
-          {
-            value: num,
-            unit,
-          },
-        ],
-        value: num,
-        unit,
-        type: options.type,
-        raw: input,
       };
     }
   }

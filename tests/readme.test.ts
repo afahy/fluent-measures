@@ -101,6 +101,23 @@ const cases: ReadmeCase[] = [
   },
   {
     section: 'Usage',
+    input: '72',
+    options: {
+      type: 'height',
+      allowUnqualified: true,
+      inferUnit: 'imperial',
+      normalizedUnit: 'cm',
+    },
+    expected: {
+      value: 182.88,
+      unit: 'cm',
+      type: 'height',
+      matches: [{ value: 72, unit: 'in' }],
+      raw: '72',
+    },
+  },
+  {
+    section: 'Usage',
     input: '5 foot 10 inches',
     options: { fuzziness: 1 },
     expected: { value: 70, unit: 'in', type: 'height', raw: '5 foot 10 inches' },
