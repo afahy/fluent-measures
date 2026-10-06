@@ -2,11 +2,12 @@ import { execFileSync, spawnSync, type SpawnSyncReturns } from 'node:child_proce
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, resolve } from 'node:path';
-import { env } from 'node:process';
 import { afterEach, describe, expect, it } from 'vitest';
+import { withoutGitRepository } from './gitEnvironment';
 
 const hook = resolve('.husky/post-checkout');
 const directories: string[] = [];
+const env = withoutGitRepository();
 
 function createDirectory(prefix: string): string {
   const directory = mkdtempSync(resolve(tmpdir(), prefix));
@@ -15,13 +16,17 @@ function createDirectory(prefix: string): string {
 }
 
 function head(repository: string): string {
-  return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repository, encoding: 'utf8' }).trim();
+  return execFileSync('git', ['rev-parse', 'HEAD'], {
+    cwd: repository,
+    encoding: 'utf8',
+    env,
+  }).trim();
 }
 
 function commit(repository: string, file: string, content: string): string {
   writeFileSync(resolve(repository, file), content);
-  execFileSync('git', ['add', file], { cwd: repository });
-  execFileSync('git', ['commit', '-m', `test: update ${file}`], { cwd: repository });
+  execFileSync('git', ['add', file], { cwd: repository, env });
+  execFileSync('git', ['commit', '-m', `test: update ${file}`], { cwd: repository, env });
   return head(repository);
 }
 
@@ -30,11 +35,12 @@ function createRepository(objectFormat: 'sha1' | 'sha256' = 'sha1'): string {
 
   execFileSync('git', ['init', '--initial-branch', 'main', '--object-format', objectFormat], {
     cwd: repository,
+    env,
   });
-  execFileSync('git', ['config', 'user.email', 'test@example.com'], { cwd: repository });
-  execFileSync('git', ['config', 'user.name', 'Test'], { cwd: repository });
+  execFileSync('git', ['config', 'user.email', 'test@example.com'], { cwd: repository, env });
+  execFileSync('git', ['config', 'user.name', 'Test'], { cwd: repository, env });
   // Don't sign fixture commits with the developer's key, which may prompt for a passphrase.
-  execFileSync('git', ['config', 'commit.gpgsign', 'false'], { cwd: repository });
+  execFileSync('git', ['config', 'commit.gpgsign', 'false'], { cwd: repository, env });
   commit(repository, 'package.json', '{ "version": "1.0.0" }\n');
 
   return repository;
@@ -62,7 +68,7 @@ function installHook(repository: string): () => string {
     `#!/bin/sh\necho "$*" > '${record}'\nexec sh -e '${hook}' "$@"\n`,
     { mode: 0o755 }
   );
-  execFileSync('git', ['config', 'core.hooksPath', hooks], { cwd: repository });
+  execFileSync('git', ['config', 'core.hooksPath', hooks], { cwd: repository, env });
 
   return () => readFileSync(record, 'utf8');
 }
