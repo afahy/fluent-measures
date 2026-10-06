@@ -1,6 +1,6 @@
 import { matchUnit } from './matchUnit';
 import { FIELD_MARK, LABEL_ALIASES, NAME_MARK, UNIT_ALIASES, UNIT_MARK } from './units';
-import { wordsToNumber } from './wordsToNumber';
+import { MULTIPLIERS, NUMBER_WORDS, wordsToNumber } from './wordsToNumber';
 
 // A unit alias in brackets or before a colon or equals sign, as in "(kg)", "m:", "in = 72" and
 // "("):", is a label. So is "in." followed by a space, the usual abbreviation for inches. The alias must
@@ -64,16 +64,27 @@ const CURLY_DOUBLE = new RegExp(
   'g'
 );
 
+// A minus sign before a number, when no number comes earlier: no digit, Unicode fraction or number
+// word. After a number, a minus sign joins two parts or values, as in "1 m−80 cm" and "½ lb−180
+// lbs". The parser would read a hyphen-minus there as a sign. The lookbehind runs only after a
+// minus sign, and its lazy part stops at the nearest earlier number.
+const MINUS_SIGN = new RegExp(
+  String.raw`[−﹣](?=[.,]?\d|[¼-¾⅐-⅞↉])(?<!(?:[\d¼-¾⅐-⅞↉]|\b(?:${[...NUMBER_WORDS.keys(), ...MULTIPLIERS.keys()].join('|')})\b)[\s\S]*?.)`,
+  'gi'
+);
+
 /**
  * Write feet and inch marks as ASCII, so "5’11”", "5′11″" and "5´11´´" read like 5'11". Primes
  * and acute accents are always marks. A curly quote is a mark only right after a number or a
  * fraction, and not when it closes a quoted number, as in "“180” cm" and "the ‘5’ kg bag".
  * Full-width characters and the units "㎝" and "㎏" become their ASCII forms. Other characters
- * stay, so normalizeFractions still sees "½".
+ * stay, so normalizeFractions still sees "½". The minus signs "−" and "﹣" become a hyphen-minus
+ * "-" right before a number when no number comes earlier, so "−5 ft" is negative.
  */
 export function normalizeForms(input: string): string {
   return input
     .replace(/[！-～㎝㎏]/g, character => character.normalize('NFKC'))
+    .replace(MINUS_SIGN, '-')
     .replace(/[′´]/g, "'")
     .replace(/″/g, '"')
     .replace(CURLY_SINGLE, "'")

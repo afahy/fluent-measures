@@ -5,7 +5,7 @@ export const NUMBER_WORDS = new Map(
     .map((word, index): [string, number] => [word, index < 20 ? index : (index - 18) * 10])
 );
 
-const MULTIPLIERS = new Map<string, number>([
+export const MULTIPLIERS = new Map<string, number>([
   ['hundred', 100],
   ['thousand', 1000],
 ]);
