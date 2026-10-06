@@ -26,13 +26,15 @@ export function isSourceFile(file) {
 
 /**
  * Returns `file` as a glob pattern that matches only that file. Stryker reads `mutate` entries
- * as globs, so a name such as `src/[u]nits.ts` would otherwise match `src/units.ts`.
+ * as globs, so a name such as `src/[u]nits.ts` would otherwise match `src/units.ts`. Each glob
+ * character goes in a bracket of its own, such as `[[]` for `[`. Stryker turns backslashes into
+ * slashes, so a backslash escape doesn't work.
  *
  * @param {string} file
  * @returns {string}
  */
 export function literalGlob(file) {
-  return file.replace(/[\\*?[\]{}()!+@]/g, '\\$&');
+  return file.replace(/[*?[\]{}()]/g, character => (character === ']' ? '[]]' : `[${character}]`));
 }
 
 /**
