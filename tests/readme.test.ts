@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
 import type { ParseOptions, ParsedValue } from '../src/types';
 
+const README = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
+
 /** The parts of a result that a README example documents. `null` means the example returns null. */
 type Expected = ({ value: number } & Partial<Omit<ParsedValue, 'value'>>) | null;
 
@@ -286,8 +288,9 @@ const cases: ReadmeCase[] = [
 
 // Results that the README states in its prose, in the sections Weight, Handling Mixed Unit
 // Notations, Separate Measurements, and Commas and Label Boundaries. A test can't find prose
-// examples reliably, so nothing checks this list against the README. When the prose changes,
-// change this list too. Each expected result comes from the README sentence that names the input.
+// examples reliably, so add each new one here by hand. A test checks that each input below is
+// still in backticks in its section. Each expected result comes from the README sentence that
+// names the input.
 const proseCases: ReadmeCase[] = [
   { section: 'Weight', input: '12st 4lb', expected: null },
   { section: 'Weight', input: '7 lb 8 oz', expected: null },
@@ -301,7 +304,7 @@ const proseCases: ReadmeCase[] = [
   { section: 'Weight', input: 'kg 3, 400 g', expected: null },
   { section: 'Weight', input: 'Main St 12, 180 lbs', expected: { value: 180, unit: 'lb' } },
   { section: 'Handling Mixed Unit Notations', input: '150 lbs - 180 lbs', expected: null },
-  // "a height and its conversion", and "the first is returned"
+  // For both: "are a height and its conversion", and "the first is returned".
   {
     section: 'Separate Measurements',
     input: '6 ft (72 in)',
@@ -340,6 +343,12 @@ const proseCases: ReadmeCase[] = [
     expected: { value: 180, unit: 'cm' },
   },
 ];
+
+/** Returns the README text under a heading, up to the next heading. */
+function readmeSection(section: string): string {
+  const [, text = ''] = README.split(`\n### ${section}\n`);
+  return text.split(/^#+ /m)[0];
+}
 
 /** The code block languages that can hold examples. */
 const CODE_LANGUAGES = new Set(['typescript', 'ts', 'tsx', 'javascript', 'js', 'jsx']);
@@ -408,7 +417,7 @@ function readmeExamples(): ReadmeEntry[] {
   let fence: string | null = null;
   let language = '';
   let block = '';
-  for (const line of readFileSync(new URL('../README.md', import.meta.url), 'utf8').split('\n')) {
+  for (const line of README.split('\n')) {
     if (fence === null) {
       const open = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
       if (open && !(open[1][0] === '`' && open[2].includes('`'))) {
@@ -507,8 +516,15 @@ describe('README examples', () => {
 
   it.each(proseCases.map(testCase => [nameOf(testCase), testCase] as const))(
     '%s returns the result that the README prose states',
-    (_name, { input, expected }) => {
-      expect(documentedParts(parseMeasurement(input), expected)).toEqual(expected);
+    (_name, { input, options, expected }) => {
+      expect(documentedParts(parseMeasurement(input, options), expected)).toEqual(expected);
+    }
+  );
+
+  it.each(proseCases.map(testCase => [nameOf(testCase), testCase] as const))(
+    '%s is still in the README prose',
+    (_name, { section, input }) => {
+      expect(readmeSection(section)).toContain(`\`${input}\``);
     }
   );
 });
