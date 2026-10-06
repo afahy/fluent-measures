@@ -548,14 +548,15 @@ const UNIT_NAMES = new Map(
  * Returns the value that a result must have. Only a conversion to `normalizedUnit` can give a
  * value that the README rounds, so a converted value must match to the decimal places that the
  * README shows, and at least 2. Every other value must match exactly. That includes an input that
- * is only a number and a name of `normalizedUnit`, as in "70 kg" or "kg 70" with
+ * is only a number and a name of `normalizedUnit`, as in "70 kg", "kg 70" or "1,000 kg" with
  * { normalizedUnit: 'kg' }.
  */
 function expectedValue(value: number, input: string, options?: ParseOptions): unknown {
   const unit = options?.normalizedUnit;
-  // The unit name in an input that is only a number and a unit, in either order.
-  const [, after, before] = /^[\d.]+\s*(\D+)$|^(\D+?)\s*[\d.]+$/.exec(input.trim()) ?? [];
-  const inputUnit = (after ?? before ?? '').toLowerCase();
+  // The input without its number, as in "kg" for "1,000 kg", "72½ kg" and "kg 70".
+  const inputUnit = input
+    .replace(/[\d\s.,/\u2044\u00bc-\u00be\u2150-\u215e\u2189]/g, '')
+    .toLowerCase();
   if (unit === undefined || UNIT_NAMES.get(unit)?.includes(inputUnit)) return value;
   return expect.closeTo(value, Math.max(2, (String(value).split('.')[1] ?? '').length));
 }
