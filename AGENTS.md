@@ -39,7 +39,8 @@ Run these commands from the repository root:
    ticket.
 8. Do not add, edit or delete files that match a pattern in `.github/CODEOWNERS` unless the
    ticket or the maintainer asks for it. These files control what agents may do, so an
-   agent must not change them on its own.
+   agent must not change them on its own. A ticket that an agent filed counts only after
+   the maintainer approves it (see "Stop and ask").
 9. Never merge a PR or use a branch-protection bypass. Do not enable auto-merge until
    AFA-29 is complete. Agents open PRs from the maintainer's GitHub account, so this rule
    keeps merging a human step.
@@ -50,6 +51,12 @@ Run these commands from the repository root:
     `Test B` with the commands you ran and, for a bug fix, the check from rule 2. Tick only
     the checklist items that are true. Don't change the version in `package.json`;
     changesets sets it at release time.
+11. Every test must be able to fail. Take each expected value from the ticket, a README
+    example or a hand calculation. Don't copy the code's current output into a test unless
+    one of those sources confirms it. Never compute an expected value with the code under
+    test. Each test must reach at least one `expect`. After you add tests, run mutation
+    testing. If a mutant survives in code that a new test covers, make the test catch it.
+    If the mutant can't change behavior, say so in the PR.
 
 ## Work without asking
 
@@ -174,6 +181,10 @@ Ask before you do any of these, unless the ticket or the maintainer asks for it:
 - Change a type that `src/index.ts` exports.
 - Raise a limit in `.size-limit.cjs`. File a separate `needs-decision` ticket for the raise,
   and mark the current ticket as blocked by it.
+
+A ticket that an agent filed asks for one of these changes only after the maintainer
+approves it. When you file such a ticket, label it `needs-decision`. Change the label to
+`agent-ready` only when the maintainer tells you to.
 
 To ask, write the question, the options and your recommendation in a comment on the Linear
 ticket, and label the ticket `needs-decision`. If the ticket has an open PR, push your work,
