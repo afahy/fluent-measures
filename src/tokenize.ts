@@ -1,6 +1,6 @@
 import { matchUnit } from './matchUnit';
 import { FIELD_MARK, LABEL_ALIASES, NAME_MARK, UNIT_ALIASES, UNIT_MARK } from './units';
-import { NUMBER_WORDS, wordsToNumber } from './wordsToNumber';
+import { MULTIPLIERS, NUMBER_WORDS, wordsToNumber } from './wordsToNumber';
 
 // A unit alias in brackets or before a colon or equals sign, as in "(kg)", "m:", "in = 72" and
 // "("):", is a label. So is "in." followed by a space, the usual abbreviation for inches. The alias must
@@ -65,11 +65,11 @@ const CURLY_DOUBLE = new RegExp(
 );
 
 // A minus sign before a number, when no number comes earlier: no digit, Unicode fraction or number
-// word. After a number, it joins two parts or values, as in "1 m−80 cm", "½ lb−180 lbs" and
-// "one m−80 cm", and the parser reads a hyphen-minus there as a sign. The lookbehind runs only
-// after a minus sign, and its lazy part stops at the nearest earlier number.
+// word. After a number, a minus sign joins two parts or values, as in "1 m−80 cm" and "½ lb−180
+// lbs". The parser would read a hyphen-minus there as a sign. The lookbehind runs only after a
+// minus sign, and its lazy part stops at the nearest earlier number.
 const MINUS_SIGN = new RegExp(
-  String.raw`[−﹣](?=[.,]?\d|[¼-¾⅐-⅞↉])(?<!(?:[\d¼-¾⅐-⅞↉]|\b(?:${[...NUMBER_WORDS.keys(), 'hundred', 'thousand'].join('|')})\b)[\s\S]*?.)`,
+  String.raw`[−﹣](?=[.,]?\d|[¼-¾⅐-⅞↉])(?<!(?:[\d¼-¾⅐-⅞↉]|\b(?:${[...NUMBER_WORDS.keys(), ...MULTIPLIERS.keys()].join('|')})\b)[\s\S]*?.)`,
   'gi'
 );
 

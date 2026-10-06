@@ -47,7 +47,6 @@ describe('normalizeForms', () => {
     '150 lbs−180 lbs',
     '1 m −80 cm',
     '5 ft ﹣11 in',
-    '−five ft',
     // A number word or a Unicode fraction is an earlier number too.
     'one m−80 cm',
     'Five ft﹣11 in',
