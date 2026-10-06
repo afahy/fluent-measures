@@ -286,7 +286,29 @@ const cases: ReadmeCase[] = [
 const CALL = 'parseMeasurement(';
 
 /** The code block languages that can hold examples. */
-const CODE_LANGUAGES = new Set(['typescript', 'ts', 'javascript', 'js']);
+const CODE_LANGUAGES = new Set(['typescript', 'ts', 'tsx', 'javascript', 'js', 'jsx']);
+
+/**
+ * If a string, template literal or comment starts at `i`, returns the index of its last
+ * character. Otherwise returns `i`.
+ */
+function endOfStringOrComment(text: string, i: number): number {
+  const char = text[i];
+  if (char === "'" || char === '"' || char === '`') {
+    let j = i + 1;
+    while (j < text.length && text[j] !== char) j += text[j] === '\\' ? 2 : 1;
+    return j;
+  }
+  if (text.startsWith('//', i)) {
+    const newline = text.indexOf('\n', i);
+    return newline < 0 ? text.length : newline;
+  }
+  if (text.startsWith('/*', i)) {
+    const close = text.indexOf('*/', i + 2);
+    return close < 0 ? text.length : close + 1;
+  }
+  return i;
+}
 
 /** Returns the index just after the bracket that closes the one at `start`. */
 function indexAfterClose(text: string, start: number): number {
@@ -294,20 +316,30 @@ function indexAfterClose(text: string, start: number): number {
   const close = open === '(' ? ')' : '}';
   let depth = 0;
   for (let i = start; i < text.length; i++) {
-    const char = text[i];
-    if (char === "'" || char === '"') {
-      for (i++; i < text.length && text[i] !== char; i++) if (text[i] === '\\') i++;
-    } else if (char === '/' && text[i + 1] === '/') {
-      const newline = text.indexOf('\n', i);
-      if (newline < 0) break;
-      i = newline;
-    } else if (char === open) {
+    const skipTo = endOfStringOrComment(text, i);
+    if (skipTo !== i) {
+      i = skipTo;
+    } else if (text[i] === open) {
       depth++;
-    } else if (char === close && --depth === 0) {
+    } else if (text[i] === close && --depth === 0) {
       return i + 1;
     }
   }
   throw new Error(`No ${close} closes the ${open} at index ${start}`);
+}
+
+/** Returns the index of each parseMeasurement call in `code`, outside strings and comments. */
+function callIndexes(code: string): number[] {
+  const indexes = [];
+  for (let i = 0; i < code.length; i++) {
+    const skipTo = endOfStringOrComment(code, i);
+    if (skipTo !== i) {
+      i = skipTo;
+    } else if (code.startsWith(CALL, i) && !/[\w$]/.test(code[i - 1] ?? '')) {
+      indexes.push(i);
+    }
+  }
+  return indexes;
 }
 
 /** Evaluates a JavaScript expression from the README, which is part of this repository. */
@@ -321,39 +353,48 @@ function commentIn(line = ''): string | null {
   return match ? (match[1] ?? match[2]) : null;
 }
 
-/** Lists the examples in one code block. A call inside a `//` comment isn't an example. */
+/** Lists the examples in one code block. */
 function examplesIn(block: string, section: string): ReadmeEntry[] {
-  const examples = [];
-  for (let at = block.indexOf(CALL); at >= 0; at = block.indexOf(CALL, at + 1)) {
-    if (block.slice(block.lastIndexOf('\n', at) + 1, at).includes('//')) continue;
+  return callIndexes(block).map(at => {
     const end = indexAfterClose(block, at + CALL.length - 1);
     const args = block.slice(at + CALL.length, end - 1);
     const [input, options] = evaluate(`[${args}\n]`) as [string, ParseOptions?];
     // The result comment is on the same line as the call, or on the next line.
     const [sameLine, nextLine] = block.slice(end).replace(/^;/, '').split('\n');
     const readmeComment = sameLine.trim() === '' ? commentIn(nextLine) : commentIn(sameLine);
-    examples.push({ section, input, ...(options && { options }), readmeComment });
-  }
-  return examples;
+    return { section, input, ...(options && { options }), readmeComment };
+  });
 }
 
-/** Lists each parseMeasurement call in the README's code blocks, in order. */
+/**
+ * Lists each parseMeasurement call in the README's code blocks, in order. Fences follow
+ * CommonMark: up to 3 spaces of indent, backticks or tildes, and a closing fence of the same
+ * character that is at least as long. The language is the first word of the info string.
+ */
 function readmeExamples(): ReadmeEntry[] {
   const examples = [];
   let section = '';
-  let language: string | null = null;
+  let fence: string | null = null;
+  let language = '';
   let block = '';
   for (const line of readFileSync(new URL('../README.md', import.meta.url), 'utf8').split('\n')) {
-    if (line.startsWith('```')) {
-      if (language !== null && CODE_LANGUAGES.has(language)) {
-        examples.push(...examplesIn(block, section));
+    if (fence === null) {
+      const open = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+      if (open && !(open[1][0] === '`' && open[2].includes('`'))) {
+        fence = open[1];
+        language = open[2].trim().split(/\s+/)[0];
+        block = '';
+      } else if (/^#+ /.test(line)) {
+        section = line.replace(/^#+ /, '');
       }
-      language = language === null ? line.slice(3).trim() : null;
-      block = '';
-    } else if (language !== null) {
-      block += `${line}\n`;
-    } else if (/^#+ /.test(line)) {
-      section = line.replace(/^#+ /, '');
+    } else {
+      const close = /^ {0,3}(`{3,}|~{3,})\s*$/.exec(line);
+      if (close && close[1][0] === fence[0] && close[1].length >= fence.length) {
+        if (CODE_LANGUAGES.has(language)) examples.push(...examplesIn(block, section));
+        fence = null;
+      } else {
+        block += `${line}\n`;
+      }
     }
   }
   return examples;
@@ -377,9 +418,14 @@ function documentedParts(result: ParsedValue | null, expected: Expected): unknow
   );
 }
 
-/** Returns the decimal places that `value` shows, and at least 2, because the README rounds. */
-function placesIn(value: number): number {
-  return Math.max(2, (String(value).split('.')[1] ?? '').length);
+/**
+ * Returns the value that a result must have. Only a conversion to `normalizedUnit` can give a
+ * value that the README rounds, so a converted value must match to the decimal places that the
+ * README shows, and at least 2. Every other value must match exactly.
+ */
+function expectedValue(value: number, options?: ParseOptions): unknown {
+  if (options?.normalizedUnit === undefined) return value;
+  return expect.closeTo(value, Math.max(2, (String(value).split('.')[1] ?? '').length));
 }
 
 function nameOf({ section, input, options }: ReadmeExample): string {
@@ -413,7 +459,7 @@ describe('README examples', () => {
     '%s returns the documented result',
     (_name, { input, options, expected }) => {
       expect(documentedParts(parseMeasurement(input, options), expected)).toEqual(
-        expected && { ...expected, value: expect.closeTo(expected.value, placesIn(expected.value)) }
+        expected && { ...expected, value: expectedValue(expected.value, options) }
       );
     }
   );
