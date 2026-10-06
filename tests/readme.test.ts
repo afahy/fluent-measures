@@ -3,6 +3,7 @@ import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
 import type { ParseOptions, ParsedValue } from '../src/types';
+import { UNIT_ALIASES } from '../src/units';
 
 const README = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
 
@@ -429,7 +430,12 @@ function commentIn(line = ''): string | null {
  * strings, comments, template literals and regular expressions are read the way JavaScript reads
  * them.
  */
-function examplesIn(block: string, section: string, language: string): ReadmeEntry[] {
+function examplesIn(
+  block: string,
+  section: string,
+  language: string,
+  firstLine: number
+): ReadmeEntry[] {
   const kind = language === 'tsx' || language === 'jsx' ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
   const source = ts.createSourceFile('example.ts', block, ts.ScriptTarget.Latest, true, kind);
   const examples: ReadmeEntry[] = [];
@@ -439,9 +445,17 @@ function examplesIn(block: string, section: string, language: string): ReadmeEnt
       ts.isIdentifier(node.expression) &&
       node.expression.text === 'parseMeasurement'
     ) {
-      const [input, options] = node.arguments.map(argument =>
-        evaluate(argument.getText(source))
-      ) as [string, ParseOptions?];
+      const [input, options] = node.arguments.map(argument => {
+        try {
+          return evaluate(argument.getText(source));
+        } catch {
+          // An argument can't name a variable from its block, as in "parseMeasurement(input)".
+          const { line } = source.getLineAndCharacterOfPosition(argument.getStart(source));
+          throw new Error(
+            `README line ${firstLine + line}: write each parseMeasurement argument as a literal, not ${argument.getText(source)}`
+          );
+        }
+      }) as [string, ParseOptions?];
       // The result comment is on the same line as the call, or on the next line.
       const [sameLine, nextLine] = block.slice(node.getEnd()).replace(/^;/, '').split('\n');
       const readmeComment = sameLine.trim() === '' ? commentIn(nextLine) : commentIn(sameLine);
@@ -477,25 +491,34 @@ function readmeExamples(): ReadmeEntry[] {
   let fence: string | null = null;
   let language = '';
   let block = '';
-  for (const line of README.split('\n')) {
+  let firstLine = 0;
+  for (const [index, line] of README.split('\n').entries()) {
     if (fence === null) {
       const open = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
       if (open && !(open[1][0] === '`' && open[2].includes('`'))) {
         fence = open[1];
         language = open[2].trim().split(/\s+/)[0].toLowerCase();
         block = '';
+        // README line numbers start at 1, and the block starts on the line after the fence.
+        firstLine = index + 2;
       } else if (/^#+ /.test(line)) {
         section = line.replace(/^#+ /, '');
       }
     } else {
       const close = /^ {0,3}(`{3,}|~{3,})\s*$/.exec(line);
       if (close && close[1][0] === fence[0] && close[1].length >= fence.length) {
-        if (CODE_LANGUAGES.has(language)) examples.push(...examplesIn(block, section, language));
+        if (CODE_LANGUAGES.has(language)) {
+          examples.push(...examplesIn(block, section, language, firstLine));
+        }
         fence = null;
       } else {
         block += `${line}\n`;
       }
     }
+  }
+  // CommonMark ends a fence that is still open at the end of the document.
+  if (fence !== null && CODE_LANGUAGES.has(language)) {
+    examples.push(...examplesIn(block, section, language, firstLine));
   }
   return examples;
 }
@@ -516,13 +539,21 @@ function documentedParts(result: ParsedValue | null, expected: Expected): unknow
   );
 }
 
+/** Each unit's names, as in "kg", "kilo" and "kilograms". */
+const UNIT_NAMES = new Map(
+  Object.values(UNIT_ALIASES).flatMap(groups => groups.map(names => [names[0], names]))
+);
+
 /**
  * Returns the value that a result must have. Only a conversion to `normalizedUnit` can give a
  * value that the README rounds, so a converted value must match to the decimal places that the
- * README shows, and at least 2. Every other value must match exactly.
+ * README shows, and at least 2. Every other value must match exactly. That includes an input that
+ * is only a number and a name of `normalizedUnit`, as in "70 kg" with { normalizedUnit: 'kg' }.
  */
-function expectedValue(value: number, options?: ParseOptions): unknown {
-  if (options?.normalizedUnit === undefined) return value;
+function expectedValue(value: number, input: string, options?: ParseOptions): unknown {
+  const unit = options?.normalizedUnit;
+  const inputUnit = /^[\d.]+\s*(\D+)$/.exec(input.trim())?.[1].toLowerCase() ?? '';
+  if (unit === undefined || UNIT_NAMES.get(unit)?.includes(inputUnit)) return value;
   return expect.closeTo(value, Math.max(2, (String(value).split('.')[1] ?? '').length));
 }
 
@@ -569,7 +600,7 @@ describe('README examples', () => {
     '%s returns the documented result',
     (_name, { input, options, expected }) => {
       expect(documentedParts(parseMeasurement(input, options), expected)).toEqual(
-        expected && { ...expected, value: expectedValue(expected.value, options) }
+        expected && { ...expected, value: expectedValue(expected.value, input, options) }
       );
     }
   );
