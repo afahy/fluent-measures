@@ -69,11 +69,13 @@ const CURLY_DOUBLE = new RegExp(
  * and acute accents are always marks. A curly quote is a mark only right after a number or a
  * fraction, and not when it closes a quoted number, as in "“180” cm" and "the ‘5’ kg bag".
  * Full-width characters and the units "㎝" and "㎏" become their ASCII forms. Other characters
- * stay, so normalizeFractions still sees "½".
+ * stay, so normalizeFractions still sees "½". A minus sign "−" or "﹣" right before a number
+ * becomes "-", so "−5 ft" is negative. After a digit it stays a dash, as in "5−11".
  */
 export function normalizeForms(input: string): string {
   return input
     .replace(/[！-～㎝㎏]/g, character => character.normalize('NFKC'))
+    .replace(/(?<![\d.])[−﹣](?=[\d.¼-¾⅐-⅞↉])/g, '-')
     .replace(/[′´]/g, "'")
     .replace(/″/g, '"')
     .replace(CURLY_SINGLE, "'")
