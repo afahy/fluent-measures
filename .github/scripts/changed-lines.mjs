@@ -1,0 +1,168 @@
+// Helpers for .github/scripts/mutation-check.mjs: the lines that a pull request adds or changes,
+// and the mutants on them in a Stryker JSON report that no test kills.
+
+/**
+ * Returns the revisions to compare: the base and HEAD in CI, where HEAD is a merge commit whose
+ * first parent is the base, or `<base>...HEAD` for a `--base` from the command line. The second
+ * form starts from the merge base, so changes that only the base has don't count.
+ *
+ * @param {string} base
+ * @param {{ fromMergeBase: boolean }} options
+ * @returns {string[]}
+ */
+export function revisions(base, { fromMergeBase }) {
+  return fromMergeBase ? [`${base}...HEAD`] : [base, 'HEAD'];
+}
+
+/**
+ * Returns whether Stryker mutates `file`: a TypeScript source file, not a declaration file.
+ *
+ * @param {string} file
+ * @returns {boolean}
+ */
+export function isSourceFile(file) {
+  return file.endsWith('.ts') && !file.endsWith('.d.ts');
+}
+
+/**
+ * Returns `file` as a glob pattern that matches only that file. Stryker reads `mutate` entries
+ * as globs, so a name such as `src/[u]nits.ts` would otherwise match `src/units.ts`. Each glob
+ * character goes in a bracket of its own, such as `[[]` for `[`. Stryker turns backslashes into
+ * slashes, so a backslash escape doesn't work.
+ *
+ * @param {string} file
+ * @returns {string}
+ */
+export function literalGlob(file) {
+  return file.replace(/[*?[\]{}()]/g, character => (character === ']' ? '[]]' : `[${character}]`));
+}
+
+/**
+ * Returns the line ranges that `git diff --unified=0` output for one file adds or changes. It
+ * reads only the hunk headers, so file names in the diff don't matter. A hunk that only deletes
+ * lines adds no range.
+ *
+ * @param {string} diff
+ * @returns {Array<[number, number]>}
+ */
+export function hunkRanges(diff) {
+  /** @type {Array<[number, number]>} */
+  const ranges = [];
+  for (const [, from, count = '1'] of diff.matchAll(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/gm)) {
+    if (Number(count) > 0) ranges.push([Number(from), Number(from) + Number(count) - 1]);
+  }
+  return ranges;
+}
+
+/**
+ * @typedef {object} ReportMutant
+ * @property {string} status
+ * @property {string} [statusReason]
+ * @property {string} mutatorName
+ * @property {string} [replacement]
+ * @property {{ start: { line: number, column: number }, end: { line: number, column: number } }} location
+ */
+
+/**
+ * @typedef {{ files: Record<string, { mutants: ReportMutant[] }> }} Report
+ */
+
+/**
+ * Returns each mutant in the report whose code overlaps a changed line, with its file. Stryker
+ * mutates whole files, so a mutant whose code spans more lines than the change, such as an
+ * operator in a multi-line expression, still counts.
+ *
+ * @param {Report} report
+ * @param {Map<string, Array<[number, number]>>} changed
+ * @returns {Array<{ file: string, mutant: ReportMutant }>}
+ */
+function changedMutants(report, changed) {
+  return Object.entries(report.files).flatMap(([file, { mutants }]) =>
+    mutants
+      .filter(({ location }) =>
+        (changed.get(file) ?? []).some(
+          ([from, to]) => location.start.line <= to && location.end.line >= from
+        )
+      )
+      .map(mutant => ({ file, mutant }))
+  );
+}
+
+/**
+ * @typedef {object} UnkilledMutant
+ * @property {string} file
+ * @property {number} line
+ * @property {number} column
+ * @property {string} mutator
+ * @property {string} replacement
+ * @property {'Survived' | 'NoCoverage'} status
+ */
+
+/**
+ * Returns the mutants on changed lines that survived or that no test covers. A mutant that a
+ * `// Stryker disable` comment ignores has the status Ignored, so it isn't returned.
+ *
+ * @param {Report} report
+ * @param {Map<string, Array<[number, number]>>} changed
+ * @returns {UnkilledMutant[]}
+ */
+export function unkilledMutants(report, changed) {
+  return changedMutants(report, changed)
+    .filter(({ mutant }) => mutant.status === 'Survived' || mutant.status === 'NoCoverage')
+    .map(({ file, mutant }) => ({
+      file,
+      line: mutant.location.start.line,
+      column: mutant.location.start.column,
+      mutator: mutant.mutatorName,
+      replacement: mutant.replacement ?? '',
+      status: /** @type {'Survived' | 'NoCoverage'} */ (mutant.status),
+    }));
+}
+
+/** The reason Stryker gives a mutant that a disable comment without a reason ignores. */
+const DEFAULT_IGNORE_REASON = 'Ignored using a comment';
+
+/**
+ * Returns the mutants on changed lines that a `// Stryker disable` comment ignores without a
+ * reason. Each one needs a reason that says why behavior can't change.
+ *
+ * @param {Report} report
+ * @param {Map<string, Array<[number, number]>>} changed
+ * @returns {Array<{ file: string, line: number, column: number, mutator: string }>}
+ */
+export function unexplainedIgnores(report, changed) {
+  return changedMutants(report, changed)
+    .filter(
+      ({ mutant }) =>
+        mutant.status === 'Ignored' &&
+        (!mutant.statusReason?.trim() || mutant.statusReason === DEFAULT_IGNORE_REASON)
+    )
+    .map(({ file, mutant }) => ({
+      file,
+      line: mutant.location.start.line,
+      column: mutant.location.start.column,
+      mutator: mutant.mutatorName,
+    }));
+}
+
+/**
+ * Returns the changed lines of `source` that hold a `// Stryker disable` directive without a
+ * reason. A directive can ignore mutants on lines that didn't change, such as the line after a
+ * `disable next-line`, so the directive itself is checked.
+ *
+ * @param {string} source
+ * @param {Array<[number, number]>} ranges
+ * @returns {number[]}
+ */
+export function reasonlessDirectives(source, ranges) {
+  return source
+    .split('\n')
+    .map((text, index) => ({ text, line: index + 1 }))
+    .filter(
+      ({ text, line }) =>
+        ranges.some(([from, to]) => line >= from && line <= to) &&
+        /\bStryker\s+disable\b/.test(text) &&
+        !/\bStryker\s+disable(?:\s+next-line)?\s+[\w\s,]+?:\s*\S/.test(text)
+    )
+    .map(({ line }) => line);
+}
