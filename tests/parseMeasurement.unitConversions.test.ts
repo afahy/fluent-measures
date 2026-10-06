@@ -68,6 +68,14 @@ describe('unit conversions', () => {
     expect(() => parseMeasurement(raw, options)).toThrow(message);
   });
 
+  // normalizedUnit doesn't count as a type for allowUnqualified.
+  it.each([
+    ['hello', { allowUnqualified: true }],
+    ['72', { allowUnqualified: true, normalizedUnit: 'cm' }],
+  ] as const)('throws for %s with %o, which has no type', (raw, options: ParseOptions) => {
+    expect(() => parseMeasurement(raw, options)).toThrow('allowUnqualified requires type');
+  });
+
   // The tokenizer drops a lone comma, so this input has no token and returns null.
   it('returns null for an input without a token, even with contradicting options', () => {
     expect(parseMeasurement(',', { type: 'height', normalizedUnit: 'kg' })).toBeNull();

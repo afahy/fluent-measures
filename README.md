@@ -146,7 +146,8 @@ interface ParseOptions {
   inferUnit?: 'metric' | 'imperial';
 
   // Convert all components to this unit in the output. It also selects the measurement type,
-  // so a weight unit reads only a weight. A type that contradicts it throws an error.
+  // so a weight unit reads only a weight. A type that contradicts it throws an error. Bare
+  // shorthand such as 5-11, and allowUnqualified, still need type.
   normalizedUnit?: 'ft' | 'in' | 'cm' | 'm' | 'lb' | 'kg';
 }
 ```
