@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
 import type { ParseOptions, ParsedValue } from '../src/types';
@@ -283,75 +284,8 @@ const cases: ReadmeCase[] = [
   },
 ];
 
-/** A parseMeasurement call: the name, any whitespace, then an opening parenthesis. */
-const CALL = /parseMeasurement\s*\(/y;
-
 /** The code block languages that can hold examples. */
 const CODE_LANGUAGES = new Set(['typescript', 'ts', 'tsx', 'javascript', 'js', 'jsx']);
-
-/**
- * Yields the index of each character of `text` that is code, from `start` on. Strings, comments
- * and the text of template literals aren't code, but a template literal's `${...}` parts are.
- */
-function* codeIndexes(text: string, start = 0): Generator<number> {
-  // For each open `${`, the brace depth at which its closing `}` comes.
-  const templates: number[] = [];
-  let depth = 0;
-  for (let i = start; i < text.length; i++) {
-    const char = text[i];
-    if (char === "'" || char === '"') {
-      i++;
-      while (i < text.length && text[i] !== char) i += text[i] === '\\' ? 2 : 1;
-    } else if (text.startsWith('//', i)) {
-      const newline = text.indexOf('\n', i);
-      i = newline < 0 ? text.length : newline;
-    } else if (text.startsWith('/*', i)) {
-      const close = text.indexOf('*/', i + 2);
-      i = close < 0 ? text.length : close + 1;
-    } else if (char === '`' || (char === '}' && templates[templates.length - 1] === depth)) {
-      // Skip template text up to the closing backtick or the next `${`.
-      if (char === '}') templates.pop();
-      i++;
-      while (i < text.length && text[i] !== '`' && !text.startsWith('${', i)) {
-        i += text[i] === '\\' ? 2 : 1;
-      }
-      if (text.startsWith('${', i)) {
-        templates.push(depth);
-        i++;
-      }
-    } else {
-      if (char === '{') depth++;
-      if (char === '}') depth--;
-      yield i;
-    }
-  }
-}
-
-/** Returns the index just after the bracket that closes the one at `start`. */
-function indexAfterClose(text: string, start: number): number {
-  const open = text[start];
-  const close = open === '(' ? ')' : '}';
-  let depth = 0;
-  for (const i of codeIndexes(text, start)) {
-    if (text[i] === open) depth++;
-    else if (text[i] === close && --depth === 0) return i + 1;
-  }
-  throw new Error(`No ${close} closes the ${open} at index ${start}`);
-}
-
-/**
- * Returns the index of the opening parenthesis of each parseMeasurement call in `code`, outside
- * strings and comments.
- */
-function callOpenings(code: string): number[] {
-  const openings = [];
-  for (const i of codeIndexes(code)) {
-    CALL.lastIndex = i;
-    const match = CALL.exec(code);
-    if (match && !/[\w$]/.test(code[i - 1] ?? '')) openings.push(i + match[0].length - 1);
-  }
-  return openings;
-}
 
 /** Evaluates a JavaScript expression from the README, which is part of this repository. */
 function evaluate(source: string): unknown {
@@ -364,17 +298,46 @@ function commentIn(line = ''): string | null {
   return match ? (match[1] ?? match[2]) : null;
 }
 
-/** Lists the examples in one code block. */
-function examplesIn(block: string, section: string): ReadmeEntry[] {
-  return callOpenings(block).map(open => {
-    const end = indexAfterClose(block, open);
-    const args = block.slice(open + 1, end - 1);
-    const [input, options] = evaluate(`[${args}\n]`) as [string, ParseOptions?];
-    // The result comment is on the same line as the call, or on the next line.
-    const [sameLine, nextLine] = block.slice(end).replace(/^;/, '').split('\n');
-    const readmeComment = sameLine.trim() === '' ? commentIn(nextLine) : commentIn(sameLine);
-    return { section, input, ...(options && { options }), readmeComment };
-  });
+/**
+ * Lists the examples in one code block. The TypeScript parser finds each parseMeasurement call, so
+ * strings, comments, template literals and regular expressions are read the way JavaScript reads
+ * them.
+ */
+function examplesIn(block: string, section: string, language: string): ReadmeEntry[] {
+  const kind = language === 'tsx' || language === 'jsx' ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
+  const source = ts.createSourceFile('example.ts', block, ts.ScriptTarget.Latest, true, kind);
+  const examples: ReadmeEntry[] = [];
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isCallExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === 'parseMeasurement'
+    ) {
+      const [input, options] = node.arguments.map(argument =>
+        evaluate(argument.getText(source))
+      ) as [string, ParseOptions?];
+      // The result comment is on the same line as the call, or on the next line.
+      const [sameLine, nextLine] = block.slice(node.getEnd()).replace(/^;/, '').split('\n');
+      const readmeComment = sameLine.trim() === '' ? commentIn(nextLine) : commentIn(sameLine);
+      examples.push({ section, input, ...(options && { options }), readmeComment });
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return examples;
+}
+
+/** Returns the object literal at the start of `text`, using TypeScript's scanner to skip strings. */
+function leadingObject(text: string): string {
+  const scanner = ts.createScanner(ts.ScriptTarget.Latest, true, ts.LanguageVariant.Standard, text);
+  let depth = 0;
+  for (let token = scanner.scan(); token !== ts.SyntaxKind.EndOfFileToken; token = scanner.scan()) {
+    if (token === ts.SyntaxKind.OpenBraceToken) depth++;
+    else if (token === ts.SyntaxKind.CloseBraceToken && --depth === 0) {
+      return text.slice(0, scanner.getTextPos());
+    }
+  }
+  throw new Error(`No } closes the { at the start of ${JSON.stringify(text)}`);
 }
 
 /**
@@ -401,7 +364,7 @@ function readmeExamples(): ReadmeEntry[] {
     } else {
       const close = /^ {0,3}(`{3,}|~{3,})\s*$/.exec(line);
       if (close && close[1][0] === fence[0] && close[1].length >= fence.length) {
-        if (CODE_LANGUAGES.has(language)) examples.push(...examplesIn(block, section));
+        if (CODE_LANGUAGES.has(language)) examples.push(...examplesIn(block, section, language));
         fence = null;
       } else {
         block += `${line}\n`;
@@ -415,9 +378,7 @@ function readmeExamples(): ReadmeEntry[] {
 function documentedResult(readmeComment: string | null): Expected | undefined {
   if (readmeComment?.startsWith('null')) return null;
   if (!readmeComment?.startsWith('{')) return undefined;
-  const object = readmeComment
-    .slice(0, indexAfterClose(readmeComment, 0))
-    .replace(/,\s*\.\.\.\s*\}$/, ' }');
+  const object = leadingObject(readmeComment).replace(/,\s*\.\.\.\s*\}$/, ' }');
   return evaluate(object) as Expected;
 }
 
