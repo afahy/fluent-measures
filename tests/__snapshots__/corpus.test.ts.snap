@@ -2,7 +2,7 @@
 
 exports[`measurement corpus > matches the committed score 1`] = `
 "Category                 total   agree   wrong  missed  throws
-all                        406     365       9      32       0
+all                        406     380       9      17       0
 
 symbols                     27      26       0       1       0
 words                       30      28       0       2       0
@@ -11,7 +11,7 @@ decimals                    22      21       1       0       0
 commas                      26      26       0       0       0
 hyphens                     29      29       0       0       0
 compact                     24      12       0      12       0
-unicode                     29      13       1      15       0
+unicode                     29      28       1       0       0
 typos                       30      30       0       0       0
 surrounding-text            29      29       0       0       0
 multiple-measurements       30      30       0       0       0
@@ -76,7 +76,7 @@ prose-kilns-fuzzy (prose)
   expected: null
   actual:   2 kg (weight)
 
-Entries with the outcome "missed" (32):
+Entries with the outcome "missed" (17):
 
 symbols-hash-pounds (symbols)
   input:    "185#"
@@ -178,96 +178,6 @@ compact-ft-in-dots (compact)
   input:    "5ft.11in."
   options:  {}
   expected: 71 in (height)
-  actual:   null
-
-unicode-curly-quotes-1 (unicode)
-  input:    "5’11”"
-  options:  {}
-  expected: 71 in (height)
-  actual:   null
-
-unicode-primes-1 (unicode)
-  input:    "5′11″"
-  options:  {}
-  expected: 71 in (height)
-  actual:   null
-
-unicode-curly-space (unicode)
-  input:    "5’ 11”"
-  options:  {}
-  expected: 71 in (height)
-  actual:   null
-
-unicode-curly-feet (unicode)
-  input:    "6’"
-  options:  {}
-  expected: 6 ft (height)
-  actual:   null
-
-unicode-curly-inches (unicode)
-  input:    "72”"
-  options:  {}
-  expected: 72 in (height)
-  actual:   null
-
-unicode-acute-accents (unicode)
-  input:    "5´11´´"
-  options:  {}
-  expected: 71 in (height)
-  actual:   null
-
-unicode-fullwidth (unicode)
-  input:    "１８０ｃｍ"
-  options:  {}
-  expected: 180 cm (height)
-  actual:   null
-
-unicode-square-cm (unicode)
-  input:    "180 ㎝"
-  options:  {}
-  expected: 180 cm (height)
-  actual:   null
-
-unicode-square-kg (unicode)
-  input:    "70 ㎏"
-  options:  {}
-  expected: 70 kg (weight)
-  actual:   null
-
-unicode-double-prime-inches (unicode)
-  input:    "72″"
-  options:  {}
-  expected: 72 in (height)
-  actual:   null
-
-unicode-prime-feet (unicode)
-  input:    "6′"
-  options:  {}
-  expected: 6 ft (height)
-  actual:   null
-
-unicode-primes-space (unicode)
-  input:    "5′ 11″"
-  options:  {}
-  expected: 71 in (height)
-  actual:   null
-
-unicode-curly-no-inch-mark (unicode)
-  input:    "5’11"
-  options:  {}
-  expected: 71 in (height)
-  actual:   null
-
-unicode-curly-two-singles (unicode)
-  input:    "5’11’’"
-  options:  {}
-  expected: 71 in (height)
-  actual:   null
-
-unicode-curly-to-cm (unicode)
-  input:    "5’11”"
-  options:  {"type":"height","normalizedUnit":"cm"}
-  expected: 180.34 cm (height)
   actual:   null
 
 Entries with the outcome "throws" (0):

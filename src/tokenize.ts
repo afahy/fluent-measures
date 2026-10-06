@@ -51,10 +51,22 @@ export function normalizeFractions(input: string): string {
     .replace(SLASH_FRACTION, writeFraction);
 }
 
-/** Normalize comma groups before interpreting numeric syntax or splitting tokens. */
+/**
+ * Write curly quotes, primes and acute accents as the ASCII marks for feet and inches, so
+ * "5’11”" and "5′11″" read like 5'11". Full-width characters and the units "㎝" and "㎏" become
+ * their ASCII forms. Other characters stay, so normalizeFractions still sees "½".
+ */
+export function normalizeForms(input: string): string {
+  return input
+    .replace(/[\uff01-\uff5e㎝㎏]/g, character => character.normalize('NFKC'))
+    .replace(/[’′´]/g, "'")
+    .replace(/[”″]/g, '"');
+}
+
+/** Normalize character forms and comma groups before reading numbers or splitting tokens. */
 export function normalizeNumericCommas(input: string): string {
   let valid = true;
-  const normalized = input.replace(
+  const normalized = normalizeForms(input).replace(
     /([\p{L}\p{M}_][\p{N}.]*,)|[.,]?\d(?:[\d.,]*\d)?/gu,
     (number, label?: string) => {
       // Commas outside the supported numeric group sizes remain punctuation.
