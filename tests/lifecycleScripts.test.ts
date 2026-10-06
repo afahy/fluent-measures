@@ -11,14 +11,15 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, resolve } from 'node:path';
-import { env } from 'node:process';
 import { afterEach, describe, expect, it } from 'vitest';
+import { git, withoutGitRepository } from './gitEnvironment';
 
 const packageJson = JSON.parse(readFileSync(resolve('package.json'), 'utf8')) as Record<
   string,
   unknown
 > & { scripts: Record<string, string> };
 const directories: string[] = [];
+const env = withoutGitRepository();
 
 function createDirectory(prefix: string): string {
   const directory = mkdtempSync(resolve(tmpdir(), prefix));
@@ -29,7 +30,7 @@ function createDirectory(prefix: string): string {
 function createRepository({ withDependencies }: { withDependencies: boolean }): string {
   const repository = createDirectory('fluent-measures-lifecycle-');
 
-  execFileSync('git', ['init', '--initial-branch', 'main'], { cwd: repository });
+  git(repository, 'init', '--initial-branch', 'main');
   copyFileSync(resolve('package.json'), resolve(repository, 'package.json'));
   if (withDependencies) {
     symlinkSync(resolve('node_modules'), resolve(repository, 'node_modules'), 'dir');
@@ -71,6 +72,7 @@ function hooksPath(repository: string): string {
   return spawnSync('git', ['config', 'core.hooksPath'], {
     cwd: repository,
     encoding: 'utf8',
+    env,
   }).stdout.trim();
 }
 
@@ -126,6 +128,7 @@ describe('package lifecycle scripts', () => {
     const result = spawnSync('pnpm', ['pack', '--pack-destination', destination], {
       cwd: directory,
       encoding: 'utf8',
+      env,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
 
