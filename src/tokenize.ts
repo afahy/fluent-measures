@@ -27,11 +27,9 @@ export function normalizeFractions(input: string): string {
     .replace(/[\u00bc-\u00be\u2150-\u215e\u2189]/g, fraction => ` ${fraction.normalize('NFKD')}`)
     .replace(
       /(?<![\d/.])(?:(\d+(?:\.\d+)?)\s+)?(\d+(?:\.\d+)?)[/\u2044](\d+(?:\.\d+)?)(?![\d/])/g,
-      (_, whole = '', numerator: string, denominator: string) => {
+      (match: string, whole = '', numerator: string, denominator: string) => {
         const value = String(+whole + +numerator / +denominator);
-        return +numerator < +denominator &&
-          !(whole + numerator + denominator).includes('.') &&
-          !value.includes('e')
+        return +numerator < +denominator && !match.includes('.') && !value.includes('e')
           ? value
           : 'x';
       }
