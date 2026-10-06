@@ -44,6 +44,8 @@ export default [
       // changes.
       'vitest/expect-expect': 'error',
       'vitest/no-conditional-expect': 'error',
+      // An early return or other branch can skip a test's only expect.
+      'vitest/no-conditional-in-test': 'error',
       // Vitest's expect takes an optional message as its second argument.
       'vitest/valid-expect': ['error', { maxArgs: 2 }],
     },
