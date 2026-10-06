@@ -38,6 +38,13 @@ describe('wordsToNumber', () => {
     expect(wordsToNumber('ten eighty')).toBeNull();
     expect(wordsToNumber('zero eighty')).toBeNull();
     expect(wordsToNumber('one hundred one eighty')).toBeNull();
+    // The ticket asks for a tens word, so digits don't count.
+    expect(wordsToNumber('one 80')).toBeNull();
+  });
+
+  it('rejects a number after a multiplier that is as large as the multiplier', () => {
+    expect(wordsToNumber('one hundred 100')).toBeNull();
+    expect(wordsToNumber('one thousand 1000')).toBeNull();
   });
 
   it('handles hundreds correctly', () => {

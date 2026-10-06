@@ -18,6 +18,8 @@ describe('spoken numbers', () => {
     ['seventy-two inches', {}, 72, 'in'],
     ['five foot ten', { type: 'height' }, 70, 'in'],
     ['twenty one kg', {}, 21, 'kg'],
+    // The digit shorthand has no limit on the feet: 10 * 12 + 5.
+    ['10-5', { type: 'height' }, 125, 'in'],
   ] as const)('keeps reading %s with %o as %s %s', (raw, options, value, unit) => {
     expect(parseMeasurement(raw, options)).toMatchObject({ value, unit });
   });
@@ -30,6 +32,7 @@ describe('spoken numbers', () => {
     ['five-twelve', { type: 'height' }],
     ['twenty-one', { type: 'height' }],
     ['two-ten', { type: 'height' }],
+    ['nine-eleven', { type: 'height' }],
     ['five-eleven-two', { type: 'height' }],
   ] as const)('returns null for %s with %o', (raw, options) => {
     expect(parseMeasurement(raw, options)).toBeNull();

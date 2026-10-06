@@ -36,14 +36,8 @@ export function wordsToNumber(input: string): number | null {
         const followsTens =
           previousNumber >= 10 && previousNumber % 10 === 0 && number > 0 && number < 10;
         // A ones word and then a tens word, as the first two words, are spoken hundreds, as in
-        // "one eighty" for 180.
-        if (
-          index === 1 &&
-          previousNumber &&
-          previousNumber < 10 &&
-          number > 19 &&
-          number % 10 === 0
-        ) {
+        // "one eighty" for 180. Every number word from twenty up is a tens word.
+        if (index === 1 && previousNumber && previousNumber < 10 && NUMBER_WORDS.get(word)! >= 20) {
           current *= 100;
         } else if (previousMultiplier !== undefined ? number >= previousMultiplier : !followsTens) {
           return null;
