@@ -182,6 +182,63 @@ depends on Babel 8, which requires those versions.
 vitest to a release that doesn't accept the installed vite major, raise the `vite` range in the
 same change. If they don't match, `pnpm install` prints an `unmet peer vite` warning.
 
+### Measurement corpus
+
+The corpus measures how the parser does on the way people write heights and weights.
+`tests/corpus/measurements.jsonl` holds the inputs, one entry on each line, with the outputs that
+their writers meant. `tests/corpus.test.ts` runs `parseMeasurement` on each entry and builds a
+report. The report has the outcome counts for all entries and for each category, and it lists each
+entry that doesn't agree. The test compares the report with the Vitest snapshot in
+`tests/__snapshots__/corpus.test.ts.snap`. This snapshot is the committed score of the parser.
+
+Each entry is a JSON object with these fields:
+
+- `id`: a short name that is unique and doesn't change, such as `unicode-curly-quotes-1`. Use
+  lowercase letters and digits, with hyphens between words.
+- `input`: the text to parse.
+- `options`: the `parseMeasurement` options, if the input needs them.
+- `expected`: `{ "value": 70, "unit": "kg", "type": "weight" }` or `null`. If more than one output
+  is correct, use a list, such as `[{ "value": 70, "unit": "kg", "type": "weight" }, null]`.
+- `category`: one of `symbols`, `words`, `mixed-numbers`, `decimals`, `commas`, `hyphens`,
+  `compact`, `unicode`, `typos`, `surrounding-text`, `multiple-measurements`, `unqualified`,
+  `conversion`, `unsupported` and `prose`.
+- `source`: `handwritten`, a Linear ticket ID such as `AFA-15`, or the URL of the text.
+- `note`: optional. Use it to explain an `expected` value that isn't clear from the input.
+
+The test gives each entry one outcome:
+
+- `agree`: `expected` accepts the output. Values agree when they differ by no more than a relative
+  tolerance of 1e-9.
+- `wrong`: the parser returns a measurement that `expected` doesn't accept.
+- `missed`: the parser returns `null`, and `expected` doesn't accept `null`.
+- `throws`: the parser throws an error.
+
+To add an entry:
+
+1. Write the input the way people write it. Write it yourself, or copy public text only when its
+   license allows it. Don't add personal data.
+2. Decide `expected` before you run the parser. Use what the writer meant. Follow the README when
+   it covers the input. If the README leaves the choice between a value and `null` open, accept
+   both.
+3. Write exact values. Don't round them. Use 1 lb = 0.45359237 kg, 1 in = 2.54 cm and 1 ft = 12 in.
+4. Don't add an input if its correct output depends on an open ticket.
+5. Run `pnpm test:unit -u` to update the snapshot.
+6. Read the snapshot diff. It must show only your new entries.
+
+Update the snapshot with `pnpm test:unit -u` in these cases:
+
+- You add entries. A new entry can have any outcome.
+- A change to `src/` changes the output for an entry. Check each changed entry in the diff. If an
+  entry moves to `agree`, the parser got better.
+
+Don't change `expected` to make an entry agree with the parser. If an entry moves from `agree` to
+another outcome, a test gets looser, which pull request rule 3 in `AGENTS.md` doesn't allow.
+Make that change only when a ticket asks for it. If the snapshot changes and you don't know why,
+find the cause before you update it.
+
+The corpus test also fails when a line isn't valid JSON, two entries have the same `id`, a category
+isn't in the list, or an expected unit doesn't belong to its type.
+
 ## Documentation
 
 We use TypeDoc to generate API documentation. Please add proper JSDoc comments to all public functions and types:
