@@ -405,7 +405,8 @@ const proseCases: ProseCase[] = [
 
 /** Returns the README text under a heading, up to the next heading. */
 function readmeSection(section: string): string {
-  const [, text = ''] = README.split(`\n### ${section}\n`);
+  const [, text] = README.split(`\n### ${section}\n`);
+  if (text === undefined) throw new Error(`The README has no "### ${section}" heading`);
   return text.split(/^#+ /m)[0];
 }
 
