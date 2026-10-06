@@ -1,19 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import {
-  changedRanges,
-  diffArguments,
-  mutateEntries,
-  sourceRanges,
+  hunkRanges,
+  isSourceFile,
+  revisions,
   unexplainedIgnores,
   unkilledMutants,
 } from '../.github/scripts/changed-lines.mjs';
 
-// Output of `git diff --unified=0 --no-renames` for three files: one changed in two places, one
-// added, and one deleted.
-const diff = `diff --git a/src/units.ts b/src/units.ts
+// Output of `git diff --unified=0` for one file: an insertion, a one-line change, a deletion and
+// a three-line change. The file name in the header doesn't matter, so it's quoted here as git
+// quotes a name with non-ASCII characters.
+const diff = `diff --git "a/src/caf\\303\\251.ts" "b/src/caf\\303\\251.ts"
 index 1111111..2222222 100644
---- a/src/units.ts
-+++ b/src/units.ts
+--- "a/src/caf\\303\\251.ts"
++++ "b/src/caf\\303\\251.ts"
 @@ -10,0 +11,2 @@ export const UNITS = {
 +  added line 11
 +  added line 12
@@ -24,126 +24,91 @@ index 1111111..2222222 100644
 -  deleted
 -  deleted
 -  deleted
-diff --git a/src/new.ts b/src/new.ts
-new file mode 100644
-index 0000000..3333333
---- /dev/null
-+++ b/src/new.ts
-@@ -0,0 +1,3 @@
-+line 1
-+line 2
-+line 3
-diff --git a/src/old.ts b/src/old.ts
-deleted file mode 100644
-index 4444444..0000000
---- a/src/old.ts
-+++ /dev/null
-@@ -1,2 +0,0 @@
--line 1
--line 2
+@@ -40,2 +37,3 @@ function last() {
+-  old
+-  old
++  new line 37
++  new line 38
++  new line 39
 `;
 
 function mutant(
   status: string,
+  [startLine, endLine]: [number, number],
   statusReason?: string
 ): {
   status: string;
   statusReason?: string;
   mutatorName: string;
   replacement: string;
-  location: { start: { line: number; column: number } };
+  location: { start: { line: number; column: number }; end: { line: number; column: number } };
 } {
   return {
     status,
     ...(statusReason === undefined ? {} : { statusReason }),
     mutatorName: 'ConditionalExpression',
     replacement: 'false',
-    location: { start: { line: 7, column: 5 } },
+    location: { start: { line: startLine, column: 5 }, end: { line: endLine, column: 9 } },
   };
 }
 
-describe('changedRanges', () => {
-  it('lists the added and changed lines of each file, and skips deletions', () => {
-    expect([...changedRanges(diff)]).toEqual([
-      [
-        'src/units.ts',
-        [
-          [11, 12],
-          [22, 22],
-        ],
-      ],
-      ['src/new.ts', [[1, 3]]],
+describe('revisions', () => {
+  it('compares the merge commit with its first parent in CI', () => {
+    expect(revisions('HEAD^1', { fromMergeBase: false })).toEqual(['HEAD^1', 'HEAD']);
+  });
+
+  it('compares a --base from its merge base with HEAD', () => {
+    expect(revisions('origin/main', { fromMergeBase: true })).toEqual(['origin/main...HEAD']);
+  });
+});
+
+describe('isSourceFile', () => {
+  it.each([
+    ['src/units.ts', true],
+    ['src/a b.ts', true],
+    ['src/café.ts', true],
+    ['src/types.d.ts', false],
+    ['src/data.json', false],
+  ])('returns %s → %s', (file, expected) => {
+    expect(isSourceFile(file)).toBe(expected);
+  });
+});
+
+describe('hunkRanges', () => {
+  it('lists the added and changed lines, and skips hunks that only delete', () => {
+    expect(hunkRanges(diff)).toEqual([
+      [11, 12],
+      [22, 22],
+      [37, 39],
     ]);
   });
 
   it('returns no ranges for an empty diff', () => {
-    expect(changedRanges('').size).toBe(0);
-  });
-});
-
-describe('diffArguments', () => {
-  it('compares the merge commit with its first parent in CI', () => {
-    expect(diffArguments('HEAD^1', { fromMergeBase: false })).toEqual([
-      'diff',
-      '--unified=0',
-      '--no-renames',
-      '--no-color',
-      '--no-ext-diff',
-      '--src-prefix=a/',
-      '--dst-prefix=b/',
-      'HEAD^1',
-      'HEAD',
-      '--',
-      'src/',
-    ]);
-  });
-
-  it('compares a --base from its merge base with HEAD', () => {
-    expect(diffArguments('origin/main', { fromMergeBase: true })).toContain('origin/main...HEAD');
-    expect(diffArguments('origin/main', { fromMergeBase: true })).not.toContain('origin/main');
-  });
-});
-
-describe('sourceRanges', () => {
-  it('keeps TypeScript source files and drops declaration files and others', () => {
-    const ranges = new Map<string, Array<[number, number]>>([
-      ['src/units.ts', [[1, 2]]],
-      ['src/types.d.ts', [[3, 4]]],
-      ['src/data.json', [[5, 6]]],
-    ]);
-    expect([...sourceRanges(ranges)]).toEqual([['src/units.ts', [[1, 2]]]]);
-  });
-});
-
-describe('mutateEntries', () => {
-  it('writes each range as a Stryker mutate entry', () => {
-    expect(mutateEntries(changedRanges(diff))).toEqual([
-      'src/units.ts:11-12',
-      'src/units.ts:22-22',
-      'src/new.ts:1-3',
-    ]);
+    expect(hunkRanges('')).toEqual([]);
   });
 });
 
 describe('unkilledMutants', () => {
-  it('returns the mutants that survived or that no test covers', () => {
+  const changed = new Map<string, Array<[number, number]>>([['src/a.ts', [[22, 22]]]]);
+
+  it('returns the mutants on changed lines that survived or that no test covers', () => {
     const report = {
       files: {
         'src/a.ts': {
           mutants: [
-            mutant('Killed'),
-            mutant('Survived'),
-            mutant('Timeout'),
-            mutant('NoCoverage'),
-            mutant('Ignored', 'the fallback is never read'),
+            mutant('Killed', [22, 22]),
+            mutant('Survived', [22, 22]),
+            mutant('Timeout', [22, 22]),
+            mutant('NoCoverage', [22, 22]),
+            mutant('Ignored', [22, 22], 'the fallback is never read'),
           ],
         },
       },
     };
-    expect(unkilledMutants(report)).toEqual([
+    expect(unkilledMutants(report, changed)).toEqual([
       {
         file: 'src/a.ts',
-        line: 7,
+        line: 22,
         column: 5,
         mutator: 'ConditionalExpression',
         replacement: 'false',
@@ -151,7 +116,7 @@ describe('unkilledMutants', () => {
       },
       {
         file: 'src/a.ts',
-        line: 7,
+        line: 22,
         column: 5,
         mutator: 'ConditionalExpression',
         replacement: 'false',
@@ -159,24 +124,44 @@ describe('unkilledMutants', () => {
       },
     ]);
   });
-});
 
-describe('unexplainedIgnores', () => {
-  it('returns the mutants that a disable comment ignores without a reason', () => {
+  it('counts a mutant whose code spans the changed line, and skips the others', () => {
     const report = {
       files: {
         'src/a.ts': {
           mutants: [
-            mutant('Ignored', 'the fallback is never read'),
-            mutant('Ignored', 'Ignored using a comment'),
-            mutant('Ignored', '  '),
-            mutant('Ignored'),
-            mutant('Survived'),
+            mutant('Survived', [20, 25]),
+            mutant('Survived', [21, 21]),
+            mutant('Survived', [23, 30]),
+          ],
+        },
+        'src/b.ts': { mutants: [mutant('Survived', [22, 22])] },
+      },
+    };
+    expect(unkilledMutants(report, changed).map(({ file, line }) => [file, line])).toEqual([
+      ['src/a.ts', 20],
+    ]);
+  });
+});
+
+describe('unexplainedIgnores', () => {
+  it('returns the mutants on changed lines that a disable comment ignores without a reason', () => {
+    const changed = new Map<string, Array<[number, number]>>([['src/a.ts', [[7, 7]]]]);
+    const report = {
+      files: {
+        'src/a.ts': {
+          mutants: [
+            mutant('Ignored', [7, 7], 'the fallback is never read'),
+            mutant('Ignored', [7, 7], 'Ignored using a comment'),
+            mutant('Ignored', [7, 7], '  '),
+            mutant('Ignored', [7, 7]),
+            mutant('Ignored', [9, 9]),
+            mutant('Survived', [7, 7]),
           ],
         },
       },
     };
     const unexplained = { file: 'src/a.ts', line: 7, column: 5, mutator: 'ConditionalExpression' };
-    expect(unexplainedIgnores(report)).toEqual([unexplained, unexplained, unexplained]);
+    expect(unexplainedIgnores(report, changed)).toEqual([unexplained, unexplained, unexplained]);
   });
 });

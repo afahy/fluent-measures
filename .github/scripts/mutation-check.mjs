@@ -12,10 +12,9 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
-  changedRanges,
-  diffArguments,
-  mutateEntries,
-  sourceRanges,
+  hunkRanges,
+  isSourceFile,
+  revisions,
   unexplainedIgnores,
   unkilledMutants,
 } from './changed-lines.mjs';
@@ -38,18 +37,40 @@ if (baseFlag < 0 && spawnSync('git', ['rev-parse', '--quiet', '--verify', 'HEAD^
   process.exit(0);
 }
 
-const diff = execFileSync('git', diffArguments(base, { fromMergeBase: baseFlag >= 0 }), {
-  encoding: 'utf8',
-});
-const mutate = mutateEntries(sourceRanges(changedRanges(diff)));
-if (mutate.length === 0) {
+// Fixed options, so the user's git settings can't change the output.
+const gitDiff = ['diff', '--no-color', '--no-ext-diff', '--no-renames'];
+const range = revisions(base, { fromMergeBase: baseFlag >= 0 });
+
+// File names come NUL-separated and unquoted, so any file name works.
+const files = execFileSync(
+  'git',
+  [...gitDiff, '--name-only', '-z', '--diff-filter=d', ...range, '--', 'src/'],
+  { encoding: 'utf8' }
+)
+  .split('\0')
+  .filter(file => file !== '' && isSourceFile(file));
+/** @type {Map<string, Array<[number, number]>>} */
+const changed = new Map();
+for (const file of files) {
+  const diff = execFileSync('git', [...gitDiff, '--unified=0', ...range, '--', file], {
+    encoding: 'utf8',
+  });
+  const ranges = hunkRanges(diff);
+  if (ranges.length > 0) changed.set(file, ranges);
+}
+if (changed.size === 0) {
   console.log(`No lines under src/ change between ${base} and HEAD, so there is nothing to check.`);
   process.exit(0);
 }
-console.log(`Mutating the changed lines:\n${mutate.map(entry => `  ${entry}`).join('\n')}`);
+const lines = [...changed].flatMap(([file, ranges]) =>
+  ranges.map(([from, to]) => `  ${file}:${from}${from === to ? '' : `-${to}`}`)
+);
+console.log(`Changed lines:\n${lines.join('\n')}`);
 
-// Use the project's Stryker config with only the changed lines, a JSON report in a temporary
-// folder, and no score threshold: this script decides the result from the report.
+// Mutate the whole of each changed file, so a mutant whose code spans more lines than the change
+// is still made. Only the mutants that overlap a changed line count. Use the project's Stryker
+// config with a JSON report in a temporary folder and no score threshold: this script decides
+// the result from the report.
 const directory = mkdtempSync(join(tmpdir(), 'fluent-measures-mutation-'));
 const report = join(directory, 'mutation.json');
 const { $schema: _schema, ...config } = JSON.parse(readFileSync('stryker.config.json', 'utf8'));
@@ -58,7 +79,7 @@ writeFileSync(
   configFile,
   JSON.stringify({
     ...config,
-    mutate,
+    mutate: [...changed.keys()],
     reporters: ['clear-text', 'json'],
     jsonReporter: { fileName: report },
     thresholds: { ...config.thresholds, break: null },
@@ -78,8 +99,8 @@ if (stryker.status !== 0) {
 }
 
 const results = JSON.parse(readFileSync(report, 'utf8'));
-const unkilled = unkilledMutants(results);
-const unexplained = unexplainedIgnores(results);
+const unkilled = unkilledMutants(results, changed);
+const unexplained = unexplainedIgnores(results, changed);
 for (const mutant of unkilled) {
   const what = `${mutant.mutator} mutant ${JSON.stringify(mutant.replacement)}`;
   const why = mutant.status === 'NoCoverage' ? 'no test covers it' : 'it survived';

@@ -1,78 +1,78 @@
-// Helpers for .github/scripts/mutation-check.mjs: the lines that a diff adds or changes, and the
-// mutants in a Stryker JSON report that no test kills.
+// Helpers for .github/scripts/mutation-check.mjs: the lines that a pull request adds or changes,
+// and the mutants on them in a Stryker JSON report that no test kills.
 
 /**
- * Returns the line ranges that `git diff --unified=0` output adds or changes, by file. A hunk
- * that only deletes lines adds no range, and a deleted file adds no file.
- *
- * @param {string} diff
- * @returns {Map<string, Array<[number, number]>>}
- */
-export function changedRanges(diff) {
-  /** @type {Map<string, Array<[number, number]>>} */
-  const ranges = new Map();
-  /** @type {string | null} */
-  let file = null;
-  for (const line of diff.split('\n')) {
-    const header = /^\+\+\+ (?:b\/(.+)|\/dev\/null)$/.exec(line);
-    if (header) {
-      file = header[1] ?? null;
-      continue;
-    }
-    const hunk = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/.exec(line);
-    if (hunk && file !== null) {
-      const start = Number(hunk[1]);
-      const count = hunk[2] === undefined ? 1 : Number(hunk[2]);
-      if (count > 0) ranges.set(file, [...(ranges.get(file) ?? []), [start, start + count - 1]]);
-    }
-  }
-  return ranges;
-}
-
-/**
- * Returns the arguments for `git diff` that list the lines HEAD adds or changes under src/. The
- * prefixes are fixed, so the user's git settings can't change the output that `changedRanges`
- * reads. A base from `--base` is compared from its merge base with HEAD, so changes that only the
- * base has don't count.
+ * Returns the revisions to compare: the base and HEAD in CI, where HEAD is a merge commit whose
+ * first parent is the base, or `<base>...HEAD` for a `--base` from the command line. The second
+ * form starts from the merge base, so changes that only the base has don't count.
  *
  * @param {string} base
  * @param {{ fromMergeBase: boolean }} options
  * @returns {string[]}
  */
-export function diffArguments(base, { fromMergeBase }) {
-  return [
-    'diff',
-    '--unified=0',
-    '--no-renames',
-    '--no-color',
-    '--no-ext-diff',
-    '--src-prefix=a/',
-    '--dst-prefix=b/',
-    ...(fromMergeBase ? [`${base}...HEAD`] : [base, 'HEAD']),
-    '--',
-    'src/',
-  ];
+export function revisions(base, { fromMergeBase }) {
+  return fromMergeBase ? [`${base}...HEAD`] : [base, 'HEAD'];
 }
 
 /**
- * Keeps the ranges of TypeScript source files, which Stryker mutates. Declaration files have
- * nothing to mutate.
+ * Returns whether Stryker mutates `file`: a TypeScript source file, not a declaration file.
  *
- * @param {Map<string, Array<[number, number]>>} ranges
- * @returns {Map<string, Array<[number, number]>>}
+ * @param {string} file
+ * @returns {boolean}
  */
-export function sourceRanges(ranges) {
-  return new Map([...ranges].filter(([file]) => file.endsWith('.ts') && !file.endsWith('.d.ts')));
+export function isSourceFile(file) {
+  return file.endsWith('.ts') && !file.endsWith('.d.ts');
 }
 
 /**
- * Returns a Stryker `mutate` entry for each range, such as `src/units.ts:10-12`.
+ * Returns the line ranges that `git diff --unified=0` output for one file adds or changes. It
+ * reads only the hunk headers, so file names in the diff don't matter. A hunk that only deletes
+ * lines adds no range.
  *
- * @param {Map<string, Array<[number, number]>>} ranges
- * @returns {string[]}
+ * @param {string} diff
+ * @returns {Array<[number, number]>}
  */
-export function mutateEntries(ranges) {
-  return [...ranges].flatMap(([file, list]) => list.map(([from, to]) => `${file}:${from}-${to}`));
+export function hunkRanges(diff) {
+  /** @type {Array<[number, number]>} */
+  const ranges = [];
+  for (const [, from, count = '1'] of diff.matchAll(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/gm)) {
+    if (Number(count) > 0) ranges.push([Number(from), Number(from) + Number(count) - 1]);
+  }
+  return ranges;
+}
+
+/**
+ * @typedef {object} ReportMutant
+ * @property {string} status
+ * @property {string} [statusReason]
+ * @property {string} mutatorName
+ * @property {string} [replacement]
+ * @property {{ start: { line: number, column: number }, end: { line: number, column: number } }} location
+ */
+
+/**
+ * @typedef {{ files: Record<string, { mutants: ReportMutant[] }> }} Report
+ */
+
+/**
+ * Returns each mutant in the report whose code overlaps a changed line, with its file. Stryker
+ * mutates whole files, so a mutant whose code spans more lines than the change, such as an
+ * operator in a multi-line expression, still counts.
+ *
+ * @param {Report} report
+ * @param {Map<string, Array<[number, number]>>} changed
+ * @returns {Array<{ file: string, mutant: ReportMutant }>}
+ */
+function changedMutants(report, changed) {
+  return Object.entries(report.files).flatMap(([file, { mutants }]) =>
+    mutants
+      .filter(({ location }) =>
+        (changed.get(file) ?? []).some(
+          ([from, to]) => location.start.line <= to && location.end.line >= from
+        )
+      )
+      .map(mutant => ({ file, mutant }))
+  );
 }
 
 /**
@@ -86,50 +86,48 @@ export function mutateEntries(ranges) {
  */
 
 /**
- * Returns the mutants in a Stryker JSON report that survived or that no test covers. A mutant
- * that a `// Stryker disable` comment ignores has the status Ignored, so it isn't returned.
+ * Returns the mutants on changed lines that survived or that no test covers. A mutant that a
+ * `// Stryker disable` comment ignores has the status Ignored, so it isn't returned.
  *
- * @param {{ files: Record<string, { mutants: Array<{ status: string, mutatorName: string, replacement?: string, location: { start: { line: number, column: number } } }> }> }} report
+ * @param {Report} report
+ * @param {Map<string, Array<[number, number]>>} changed
  * @returns {UnkilledMutant[]}
  */
-export function unkilledMutants(report) {
-  return Object.entries(report.files).flatMap(([file, { mutants }]) =>
-    mutants
-      .filter(mutant => mutant.status === 'Survived' || mutant.status === 'NoCoverage')
-      .map(mutant => ({
-        file,
-        line: mutant.location.start.line,
-        column: mutant.location.start.column,
-        mutator: mutant.mutatorName,
-        replacement: mutant.replacement ?? '',
-        status: /** @type {'Survived' | 'NoCoverage'} */ (mutant.status),
-      }))
-  );
+export function unkilledMutants(report, changed) {
+  return changedMutants(report, changed)
+    .filter(({ mutant }) => mutant.status === 'Survived' || mutant.status === 'NoCoverage')
+    .map(({ file, mutant }) => ({
+      file,
+      line: mutant.location.start.line,
+      column: mutant.location.start.column,
+      mutator: mutant.mutatorName,
+      replacement: mutant.replacement ?? '',
+      status: /** @type {'Survived' | 'NoCoverage'} */ (mutant.status),
+    }));
 }
 
 /** The reason Stryker gives a mutant that a disable comment without a reason ignores. */
 const DEFAULT_IGNORE_REASON = 'Ignored using a comment';
 
 /**
- * Returns the mutants in a Stryker JSON report that a `// Stryker disable` comment ignores
- * without a reason. Each one needs a reason that says why behavior can't change.
+ * Returns the mutants on changed lines that a `// Stryker disable` comment ignores without a
+ * reason. Each one needs a reason that says why behavior can't change.
  *
- * @param {{ files: Record<string, { mutants: Array<{ status: string, statusReason?: string, mutatorName: string, location: { start: { line: number, column: number } } }> }> }} report
+ * @param {Report} report
+ * @param {Map<string, Array<[number, number]>>} changed
  * @returns {Array<{ file: string, line: number, column: number, mutator: string }>}
  */
-export function unexplainedIgnores(report) {
-  return Object.entries(report.files).flatMap(([file, { mutants }]) =>
-    mutants
-      .filter(
-        mutant =>
-          mutant.status === 'Ignored' &&
-          (!mutant.statusReason?.trim() || mutant.statusReason === DEFAULT_IGNORE_REASON)
-      )
-      .map(mutant => ({
-        file,
-        line: mutant.location.start.line,
-        column: mutant.location.start.column,
-        mutator: mutant.mutatorName,
-      }))
-  );
+export function unexplainedIgnores(report, changed) {
+  return changedMutants(report, changed)
+    .filter(
+      ({ mutant }) =>
+        mutant.status === 'Ignored' &&
+        (!mutant.statusReason?.trim() || mutant.statusReason === DEFAULT_IGNORE_REASON)
+    )
+    .map(({ file, mutant }) => ({
+      file,
+      line: mutant.location.start.line,
+      column: mutant.location.start.column,
+      mutator: mutant.mutatorName,
+    }));
 }
