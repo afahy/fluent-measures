@@ -313,6 +313,7 @@ describe('parseMeasurement', () => {
   it('handles edge cases and invalid inputs', () => {
     expect(parseMeasurement('')).toBeNull();
     expect(parseMeasurement('   ')).toBeNull();
+    expect(parseMeasurement(undefined as unknown as string)).toBeNull();
     expect(parseMeasurement('0 kg')).toBeNull();
     expect(parseMeasurement('-5 feet')).toBeNull();
     expect(parseMeasurement('very tall')).toBeNull();
