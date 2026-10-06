@@ -288,59 +288,118 @@ const cases: ReadmeCase[] = [
 
 // Results that the README states in its prose, in the sections Weight, Handling Mixed Unit
 // Notations, Separate Measurements, and Commas and Label Boundaries. A test can't find prose
-// examples reliably, so add each new one here by hand. A test checks that each input below is
-// still in backticks in its section. Each expected result comes from the README sentence that
-// names the input.
-const proseCases: ReadmeCase[] = [
-  { section: 'Weight', input: '12st 4lb', expected: null },
-  { section: 'Weight', input: '7 lb 8 oz', expected: null },
+// examples reliably, so add each new one here by hand. Each case quotes the README words that
+// state its result, and a test checks that its section still contains them. Each expected
+// result comes from that statement.
+interface ProseCase extends ReadmeCase {
+  /** The README words that state the result, with each line break written as a space. */
+  statement: string;
+}
+
+const proseCases: ProseCase[] = [
+  {
+    section: 'Weight',
+    input: '12st 4lb',
+    expected: null,
+    statement: '`12st 4lb` and `7 lb 8 oz` return `null`',
+  },
+  {
+    section: 'Weight',
+    input: '7 lb 8 oz',
+    expected: null,
+    statement: '`12st 4lb` and `7 lb 8 oz` return `null`',
+  },
   {
     section: 'Weight',
     input: 'I drink 8 oz of water, weight 180 lbs',
     expected: { value: 180, unit: 'lb' },
+    statement: '`I drink 8 oz of water, weight 180 lbs` returns 180 lb',
   },
-  { section: 'Weight', input: '180 lbs, 8 oz of water a day', expected: null },
-  { section: 'Weight', input: 'stone 12, 4 lb', expected: null },
-  { section: 'Weight', input: 'kg 3, 400 g', expected: null },
-  { section: 'Weight', input: 'Main St 12, 180 lbs', expected: { value: 180, unit: 'lb' } },
-  { section: 'Handling Mixed Unit Notations', input: '150 lbs - 180 lbs', expected: null },
-  // For both: "are a height and its conversion", and "the first is returned".
+  {
+    section: 'Weight',
+    input: '180 lbs, 8 oz of water a day',
+    expected: null,
+    statement: 'returns `null`, as in `180 lbs, 8 oz of water a day`',
+  },
+  {
+    section: 'Weight',
+    input: 'stone 12, 4 lb',
+    expected: null,
+    statement: '`stone 12, 4 lb` and `kg 3, 400 g` return `null`',
+  },
+  {
+    section: 'Weight',
+    input: 'kg 3, 400 g',
+    expected: null,
+    statement: '`stone 12, 4 lb` and `kg 3, 400 g` return `null`',
+  },
+  {
+    section: 'Weight',
+    input: 'Main St 12, 180 lbs',
+    expected: { value: 180, unit: 'lb' },
+    statement: '`Main St 12, 180 lbs` returns 180 lb',
+  },
+  {
+    section: 'Handling Mixed Unit Notations',
+    input: '150 lbs - 180 lbs',
+    expected: null,
+    statement: 'such as `150 lbs - 180 lbs`, return `null`',
+  },
   {
     section: 'Separate Measurements',
     input: '6 ft (72 in)',
     expected: { value: 6, unit: 'ft', type: 'height' },
+    statement:
+      '`6 ft (72 in)` and `0.5 m (50 cm)` are a height and its conversion. When an input has more than one measurement, the first is returned',
   },
   {
     section: 'Separate Measurements',
     input: '0.5 m (50 cm)',
     expected: { value: 0.5, unit: 'm', type: 'height' },
+    statement:
+      '`6 ft (72 in)` and `0.5 m (50 cm)` are a height and its conversion. When an input has more than one measurement, the first is returned',
   },
   {
     section: 'Commas and Label Boundaries',
     input: '1,234,56 kg',
     expected: { value: 1234.56, unit: 'kg' },
+    statement: '`1,234,56 kg` is 1234.56 kg',
   },
-  { section: 'Commas and Label Boundaries', input: '12,34,567 kg', expected: null },
-  { section: 'Commas and Label Boundaries', input: '1234,567 kg', expected: null },
+  {
+    section: 'Commas and Label Boundaries',
+    input: '12,34,567 kg',
+    expected: null,
+    statement: '`12,34,567 kg` and `1234,567 kg` return `null`',
+  },
+  {
+    section: 'Commas and Label Boundaries',
+    input: '1234,567 kg',
+    expected: null,
+    statement: '`12,34,567 kg` and `1234,567 kg` return `null`',
+  },
   {
     section: 'Commas and Label Boundaries',
     input: '1,000, kg',
     expected: { value: 1000, unit: 'kg' },
+    statement: '`1,000, kg` still means 1000 kg',
   },
   {
     section: 'Commas and Label Boundaries',
     input: 'weight 72,5 kg',
     expected: { value: 72.5, unit: 'kg' },
+    statement: '`weight 72,5 kg` is 72.5 kg',
   },
   {
     section: 'Commas and Label Boundaries',
     input: 'height-1,800 cm',
     expected: { value: 1800, unit: 'cm' },
+    statement: '`height-1,800 cm` is 1800 cm',
   },
   {
     section: 'Commas and Label Boundaries',
     input: 'phase-2, 180 cm',
     expected: { value: 180, unit: 'cm' },
+    statement: '`phase-2, 180 cm` is 180 cm',
   },
 ];
 
@@ -522,9 +581,10 @@ describe('README examples', () => {
   );
 
   it.each(proseCases.map(testCase => [nameOf(testCase), testCase] as const))(
-    '%s is still in the README prose',
-    (_name, { section, input }) => {
-      expect(readmeSection(section)).toContain(`\`${input}\``);
+    '%s: the README prose still states this result',
+    (_name, { section, input, statement }) => {
+      expect(statement).toContain(`\`${input}\``);
+      expect(readmeSection(section).replace(/\s+/g, ' ')).toContain(statement);
     }
   );
 });
