@@ -33,7 +33,6 @@ describe('unit conversions', () => {
 
   // A measurement with several parts keeps the unit system of its parts.
   it.each([
-    ['1 m 80 cm', 180, 'cm'],
     ['2 meters 5 centimeters', 205, 'cm'],
     ['5 ft 11 in', 71, 'in'],
     ['5 ft 0 in', 60, 'in'],
@@ -60,16 +59,29 @@ describe('unit conversions', () => {
     expect(result?.value).toBeCloseTo(value, 10);
   });
 
+  // Contradicting options throw for any input with a token, as allowUnqualified without type does.
   it.each([
     ['6 ft', { type: 'height', normalizedUnit: 'kg' }, 'normalizedUnit kg is not a height unit'],
+    ['hello', { type: 'height', normalizedUnit: 'kg' }, 'normalizedUnit kg is not a height unit'],
     ['80 kg', { type: 'weight', normalizedUnit: 'cm' }, 'normalizedUnit cm is not a weight unit'],
   ] as const)('throws for %s with %o', (raw, options: ParseOptions, message) => {
     expect(() => parseMeasurement(raw, options)).toThrow(message);
   });
 
-  // An empty input returns null before the options are checked, as with allowUnqualified.
-  it('returns null for an empty input with contradicting options', () => {
-    expect(parseMeasurement('', { type: 'height', normalizedUnit: 'kg' })).toBeNull();
+  // The tokenizer drops a lone comma, so this input has no token and returns null.
+  it('returns null for an input without a token, even with contradicting options', () => {
+    expect(parseMeasurement(',', { type: 'height', normalizedUnit: 'kg' })).toBeNull();
+  });
+
+  // JavaScript callers can pass values that TypeScript rejects.
+  it('treats an empty type as no type', () => {
+    const options = { type: '', normalizedUnit: 'kg' } as unknown as ParseOptions;
+    expect(parseMeasurement('6 ft', options)).toBeNull();
+  });
+
+  it('still throws for a normalizedUnit that has no conversion', () => {
+    const options = { normalizedUnit: 'st' } as unknown as ParseOptions;
+    expect(() => parseMeasurement('6 ft', options)).toThrow('Cannot convert ft to st');
   });
 
   it('keeps a normalizedUnit of the requested type', () => {

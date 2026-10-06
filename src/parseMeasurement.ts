@@ -46,7 +46,7 @@ function readNumberPhrase(
 function total(parts: QualifiedMatch[], targetUnit: Unit): number {
   let sum = 0;
   for (const { value, unit } of parts) {
-    // Zero components contribute nothing, including across measurement types.
+    // Zero components contribute nothing.
     if (!value) continue;
     if (unit === targetUnit) {
       sum += value;
@@ -134,7 +134,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   if (tokens.length && options.type && unitType && unitType !== options.type) {
     throw new Error(`normalizedUnit ${options.normalizedUnit} is not a ${options.type} unit`);
   }
-  const onlyType = options.type ?? unitType;
+  const onlyType = options.type || unitType;
 
   // Two number words work too when the feet are 3 to 8, so "five-eleven" is "5-11". A part that
   // isn't one number word, digits included, joins as an empty string, so the pattern doesn't match.
@@ -314,9 +314,9 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       const counted = measurements.filter(parts => parts.some(({ value }) => value));
       const first = counted[0] ?? measurements[0];
 
-      // Use the unit of the last part, unless normalization is requested. A measurement with
-      // several parts is a height, so its last part is the smallest: inches in "5 ft 11 in" and
-      // centimeters in "1 m 80 cm".
+      // Use normalizedUnit, or else the unit of the last part. A measurement with several parts
+      // is a height, so its last part is the smallest: inches in "5 ft 11 in" and centimeters in
+      // "1 m 80 cm".
       const targetUnit = options.normalizedUnit || first[first.length - 1].unit;
       const totalValue = total(first, targetUnit);
 

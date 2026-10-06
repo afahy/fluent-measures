@@ -7,7 +7,9 @@ export interface ParseOptions {
   fuzziness?: number;
   allowUnqualified?: boolean;
   inferUnit?: 'metric' | 'imperial';
-  normalizedUnit?: Unit; // The unit to normalize the final value to
+  // The unit to normalize the final value to. It also selects the measurement type, so a weight
+  // unit reads only a weight. A type that contradicts it throws an error.
+  normalizedUnit?: Unit;
 }
 
 export interface Match {
