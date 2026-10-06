@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
 import type { ParseOptions, ParsedValue } from '../src/types';
 import { UNIT_ALIASES } from '../src/units';
-import { wordsToNumber } from '../src/wordsToNumber';
 
 const README = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
 
@@ -563,24 +562,27 @@ const UNIT_NAMES = new Map(
   Object.values(UNIT_ALIASES).flatMap(groups => groups.map(names => [names[0], names]))
 );
 
+/** Every unit name, of any unit. */
+const ALL_UNIT_NAMES = new Set([...UNIT_NAMES.values()].flat());
+
 /**
  * Returns the value that a result must have. Only a conversion to `normalizedUnit` can give a
  * value that the README rounds, so a converted value must match to the decimal places that the
- * README shows, and at least 2. Every other value must match exactly. That includes an input that
- * is only a number and a name of `normalizedUnit`, as in "70 kg", "kg 70" or "1,000 kg" with
- * { normalizedUnit: 'kg' }.
+ * README shows, and at least 2. Every other value must match exactly. That includes an input whose
+ * unit names all name `normalizedUnit`, as in "70 kg", "1,000 kg", "eighty kilograms", "kg=72"
+ * or "age=28, kg=72" with { normalizedUnit: 'kg' }.
  */
 function expectedValue(value: number, input: string, options?: ParseOptions): unknown {
   const unit = options?.normalizedUnit;
-  // The input without its number, as in "kg" for "1,000 kg", "72½ kg", "kg 70" and "eighty
-  // kilograms". Number words are dropped as the parser reads them.
-  const inputUnit = input
+  if (unit === undefined) return value;
+  // The words in the input that are unit names. Numbers, number words, labels such as "age"
+  // and separators such as "=" aren't unit names, so they drop out.
+  const inputUnits = input
     .toLowerCase()
-    .split(/[\s-]+/)
-    .filter(word => word !== 'and' && wordsToNumber(word) === null)
-    .join('')
-    .replace(/[\d.,/\u2044\u00bc-\u00be\u2150-\u215e\u2189]/g, '');
-  if (unit === undefined || UNIT_NAMES.get(unit)?.includes(inputUnit)) return value;
+    .split(/[^\p{L}'"]+/u)
+    .filter(word => ALL_UNIT_NAMES.has(word));
+  const names: readonly string[] = UNIT_NAMES.get(unit) ?? [];
+  if (inputUnits.length > 0 && inputUnits.every(word => names.includes(word))) return value;
   return expect.closeTo(value, Math.max(2, (String(value).split('.')[1] ?? '').length));
 }
 
@@ -659,6 +661,9 @@ describe('expectedValue', () => {
     ['72½ kg', 72.5, 72.504],
     ['eighty kilograms', 80, 80.004],
     ['seventy-two kg', 72, 72.004],
+    ['kg=72', 72, 72.004],
+    ['age=28, kg=72', 72, 72.004],
+    ['weight (kg): 72', 72, 72.004],
   ])('matches %s with { normalizedUnit: "kg" } exactly', (input, documented, wrong) => {
     expect(wrong).not.toEqual(expectedValue(documented, input, { normalizedUnit: 'kg' }));
     expect(documented).toEqual(expectedValue(documented, input, { normalizedUnit: 'kg' }));
@@ -666,6 +671,8 @@ describe('expectedValue', () => {
 
   it('allows the README rounding for a converted value', () => {
     expect(68.0388555).toEqual(expectedValue(68.04, '150 lbs', { normalizedUnit: 'kg' }));
+    // A second unit means the result may come from a conversion.
+    expect(70.004).toEqual(expectedValue(70, '70 kg (154 lbs)', { normalizedUnit: 'kg' }));
     expect(68.0388555).toEqual(
       expectedValue(68.04, 'one hundred fifty pounds', { normalizedUnit: 'kg' })
     );

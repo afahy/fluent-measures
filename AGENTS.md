@@ -41,9 +41,9 @@ Run these commands from the repository root:
    ticket or the maintainer asks for it. These files control what agents may do, so an
    agent must not change them on its own. A ticket that an agent filed counts only after
    the maintainer approves it (see "Stop and ask").
-9. Never merge a PR or use a branch-protection bypass. Do not enable auto-merge until
-   AFA-29 is complete. Agents open PRs from the maintainer's GitHub account, so this rule
-   keeps merging a human step.
+9. Never use a branch-protection bypass, and don't enable auto-merge until AFA-29 is
+   complete. Merge a PR only when "Merge your own PR" allows it. Agents open PRs from the
+   maintainer's GitHub account, so each merge is recorded as the maintainer's.
 10. Write every PR description from `.github/pull_request_template.md`. Keep all of its
     headings in the same order and fill in each section; don't replace it with your own
     format. Fill in the `Fixes` line as rule 1 says. Under "Type of change", delete the
@@ -63,18 +63,18 @@ Run these commands from the repository root:
 Judge each action by how easy it is to undo:
 
 - **Two-way door:** easy to undo. Examples are file edits, local commits, pushes to a
-  feature branch, PRs and PR comments, and Linear tickets, comments, labels and statuses.
-  Take these actions without asking. In your report, list them and say how to undo any
-  that aren't obvious.
-- **One-way door:** hard or impossible to undo. Examples are pushes to `main`, merges,
+  feature branch, PRs and PR comments, merges that "Merge your own PR" allows, and Linear
+  tickets, comments, labels and statuses. Take these actions without asking. In your report,
+  list them and say how to undo any that aren't obvious.
+- **One-way door:** hard or impossible to undo. Examples are pushes to `main`, other merges,
   force-pushes, deleting work that isn't on `main`, publishing a package, and changes to
   repository settings or secrets. Ask the maintainer first, or leave the action to them.
 - If you aren't sure which kind an action is, treat it as a one-way door.
 
 Pull request rule 8 and "Stop and ask" are the exceptions. Those changes are easy to undo,
-but the maintainer keeps the decision. The maintainer reviews every PR before it merges, and
-that review is the human check. This file is the maintainer's standing approval for each
-action it tells you to take, in any section.
+but the maintainer keeps the decision. The maintainer reviews each PR that you can't merge
+yourself before it merges, and the others after they merge. This file is the maintainer's
+standing approval for each action it tells you to take, in any section.
 
 ### Pick a ticket
 
@@ -95,9 +95,14 @@ action it tells you to take, in any section.
   change a PR's type to skip a CI check.
 - Before you open the PR, review your own diff and fix the findings that are in scope. In
   Claude Code, use the `code-review` skill at `high`.
+- If the smallest fix that you can write goes over a limit in `.size-limit.cjs`, raise that
+  limit by 0.5 kB in the same PR. Change the "Bundle Size" note in `CONTRIBUTING.md` to
+  match, and give the sizes before and after in the PR body. This is the maintainer's
+  approval for that change. Because it changes a CODEOWNERS file, the maintainer merges it.
 - Open the PR, then move the ticket to In Review.
-- To bring a branch up to date, merge `main` into it and push. Don't rebase or force-push a
-  branch that has an open PR.
+- `main` doesn't require a branch to be up to date. When a branch has a conflict or fails
+  with the latest `main`, merge `main` into it and push. Don't rebase or force-push a branch
+  that has an open PR.
 
 ### Handle findings and CI
 
@@ -136,12 +141,36 @@ action it tells you to take, in any section.
   answered on its thread as not reproducible. These checks must also pass: `ci-ok`,
   `Validate commits and PR title` and `Regression test fails without the fix`. A skipped
   check counts as passed.
-- Then watch the PR until it merges or closes. Check it at most once an hour, for up to 24
-  hours. Don't ask the maintainer to tell you.
+- If "Merge your own PR" allows it, merge the PR. If not, watch the PR until it merges or
+  closes. Check it at most once an hour, for up to 24 hours. Don't ask the maintainer to
+  tell you.
 - After GitHub shows the PR merged with your last commit, pull `main`. Remove the PR's
   worktree and delete its local branch with `git branch -D`.
+- Then merge `main` into each other open agent PR in its worktree, and run lint and the
+  tests. Push the merge only if it has a conflict or a check fails, and fix the branch
+  first.
 - Watch CI on `main`. If it fails for a reason other than a missing runner, report the
   failure and stop. If not, pick the next ticket.
+
+### Merge your own PR
+
+A squash merge is a two-way door: a revert PR undoes it. A merge to `main` publishes no
+package, and the next docs deploy replaces the one that it starts. Merge a PR yourself only
+when all of these are true:
+
+- It is ready to merge, as "Finish the PR" says.
+- Codex has completed a review of its last commit. CodeRabbit has reviewed the PR, or you
+  waited two hours for it, as "Handle findings and CI" says.
+- Its last review round found nothing new, or it has had three rounds.
+- It changes no file that matches `.github/CODEOWNERS`, and it needs no "Stop and ask"
+  decision.
+- The PR body and a ticket comment list each result that it changes from `main` beyond the
+  ticket (decision rule 3).
+
+Merge with `gh pr merge <number> --squash`. Never add `--admin` or `--auto`. Then add a
+ticket comment with the PR link and each decision that the maintainer may want to change. To
+undo a merge, open a revert PR. If a workflow starts to publish the package when `main`
+changes, merges become one-way doors: stop merging, and tell the maintainer.
 
 ### End a turn only when you're blocked
 
@@ -182,12 +211,14 @@ Ask before you do any of these, unless the ticket or the maintainer asks for it:
 - Change a README example, or choose between code and a README example that disagree (pull
   request rule 7).
 - Change a type that `src/index.ts` exports.
-- Raise a limit in `.size-limit.cjs`. File a separate `needs-decision` ticket for the raise,
-  and mark the current ticket as blocked by it.
+- Raise a limit in `.size-limit.cjs` by more than "Build the PR" allows. File a separate
+  `needs-decision` ticket for the raise, and mark the current ticket as blocked by it.
 
 A ticket that an agent filed asks for one of these changes only after the maintainer
 approves it. When you file such a ticket, label it `needs-decision`. Change the label to
-`agent-ready` only when the maintainer tells you to.
+`agent-ready` only when the maintainer tells you to. One exception: a ticket that fixes a
+script under `.github/scripts/` for a finding on a merged agent PR. Label it `agent-ready`,
+and give its fix a test that fails before the fix. The maintainer still merges its PR.
 
 To ask, write the question, the options and your recommendation in a comment on the Linear
 ticket, and label the ticket `needs-decision`. If the ticket has an open PR, push your work,
