@@ -40,6 +40,8 @@ export default [
     plugins: { vitest },
     rules: {
       ...vitest.configs.recommended.rules,
+      // The preset sets these too. They're repeated so rule 11's checks stay errors if the preset
+      // changes.
       'vitest/expect-expect': 'error',
       'vitest/no-conditional-expect': 'error',
       // Vitest's expect takes an optional message as its second argument.
