@@ -56,10 +56,12 @@ const QUOTED_NUMBER = String.raw`[\d.,\s/⁄¼-¾⅐-⅞↉]*[\d¼-¾⅐-⅞↉]
 // A single or double curly mark right after a number. It closes a quoted number only when its
 // opening quote comes right before that number and no digit follows, as in "“5 1/2” ft".
 const CURLY_SINGLE = new RegExp(
+  // Stryker disable next-line StringLiteral: a static mutant; replaced by hand with "", 50 tests fail.
   String.raw`(?<=[\d¼-¾⅐-⅞↉]['’]?)(?:(?<!‘${QUOTED_NUMBER})’|’(?=\d))`,
   'g'
 );
 const CURLY_DOUBLE = new RegExp(
+  // Stryker disable next-line StringLiteral: a static mutant; replaced by hand with "", 50 tests fail.
   String.raw`(?<=[\d¼-¾⅐-⅞↉])(?:(?<!“${QUOTED_NUMBER})”|”(?=\d))`,
   'g'
 );
