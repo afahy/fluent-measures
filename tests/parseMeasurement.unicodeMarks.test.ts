@@ -42,7 +42,19 @@ describe('Unicode quote marks and forms', () => {
     ['He said ‘180 lbs’', 180, 'lb'],
     ['weight: “180 lbs”', 180, 'lb'],
     ['the ‘5 kg’ bag', 5, 'kg'],
+    // A closing quote after a quoted number is a quotation mark too, so the unit after it counts.
+    ['He said “180” cm', 180, 'cm'],
+    ['the ‘5’ kg bag', 5, 'kg'],
+    ['“180” lbs', 180, 'lb'],
+    ['‘180’ lbs', 180, 'lb'],
   ] as const)('keeps reading %s as %s %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
+  });
+
+  // Each closing quote must not search back through the input, or a long input takes seconds.
+  it('reads a long run of marks in under a second', () => {
+    const start = Date.now();
+    parseMeasurement('1’'.repeat(100_000));
+    expect(Date.now() - start).toBeLessThan(1000);
   });
 });
