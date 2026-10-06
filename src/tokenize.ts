@@ -52,21 +52,22 @@ export function normalizeFractions(input: string): string {
 }
 
 /**
- * Write curly quotes, primes and acute accents as the ASCII marks for feet and inches, so
- * "5’11”" and "5′11″" read like 5'11". Full-width characters and the units "㎝" and "㎏" become
- * their ASCII forms. Other characters stay, so normalizeFractions still sees "½".
+ * Write curly quotes, primes and acute accents right after a number as the ASCII marks for feet
+ * and inches, so "5’11”" and "5′11″" read like 5'11". Elsewhere a curly quote is a quotation
+ * mark or an apostrophe, as in "‘180 lbs’", so it stays. Full-width characters and the units "㎝"
+ * and "㎏" become their ASCII forms. Other characters stay, so normalizeFractions still sees "½".
  */
 export function normalizeForms(input: string): string {
   return input
     .replace(/[\uff01-\uff5e㎝㎏]/g, character => character.normalize('NFKC'))
-    .replace(/[’′´]/g, "'")
-    .replace(/[”″]/g, '"');
+    .replace(/(?<=\d[’′´]?)[’′´]/g, "'")
+    .replace(/(?<=\d)[”″]/g, '"');
 }
 
-/** Normalize character forms and comma groups before reading numbers or splitting tokens. */
+/** Normalize comma groups before interpreting numeric syntax or splitting tokens. */
 export function normalizeNumericCommas(input: string): string {
   let valid = true;
-  const normalized = normalizeForms(input).replace(
+  const normalized = input.replace(
     /([\p{L}\p{M}_][\p{N}.]*,)|[.,]?\d(?:[\d.,]*\d)?/gu,
     (number, label?: string) => {
       // Commas outside the supported numeric group sizes remain punctuation.
@@ -84,7 +85,10 @@ export function normalizeNumericCommas(input: string): string {
 
 /** Normalize fractions and comma numbers before splitting standalone measurement text. */
 export function tokenize(input: string, fuzziness?: number): string[] {
-  return tokenizeNormalized(normalizeFractions(normalizeNumericCommas(input)), fuzziness);
+  return tokenizeNormalized(
+    normalizeFractions(normalizeNumericCommas(normalizeForms(input))),
+    fuzziness
+  );
 }
 
 /** Split normalized text while retaining negative signs and compound boundaries. */

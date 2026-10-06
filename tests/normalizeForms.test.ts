@@ -14,7 +14,10 @@ describe('normalizeForms', () => {
   });
 
   // Fractions stay for normalizeFractions, and plain text doesn't change.
-  it.each(['5½ ft', '150 lbs', '5\'11"'])('leaves %s as it is', input => {
-    expect(normalizeForms(input)).toBe(input);
-  });
+  it.each(['5½ ft', '150 lbs', '5\'11"', '‘180 lbs’', '“180 lbs”', 'she’s'])(
+    'leaves %s as it is',
+    input => {
+      expect(normalizeForms(input)).toBe(input);
+    }
+  );
 });

@@ -38,6 +38,10 @@ describe('Unicode quote marks and forms', () => {
     ["the dog's 5 kg bowl", 5, 'kg'],
     // A curly apostrophe in prose is still an apostrophe.
     ['I’m about 180 lbs', 180, 'lb'],
+    // Curly quotation marks around a measurement aren't feet or inch marks.
+    ['He said ‘180 lbs’', 180, 'lb'],
+    ['weight: “180 lbs”', 180, 'lb'],
+    ['the ‘5 kg’ bag', 5, 'kg'],
   ] as const)('keeps reading %s as %s %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });
