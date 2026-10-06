@@ -205,8 +205,9 @@ describe('mutation-check.mjs', () => {
     expect(existsSync(resolve(repository, 'stryker.log'))).toBe(false);
   });
 
-  // A file with only types has no mutants, but Stryker still finds it.
-  it('passes for a changed file without mutants', () => {
+  // A file with only types has no mutants, but Stryker still finds it, so the check doesn't flag
+  // it. (The real Stryker then finds no test that imports it: AFA-83 tracks that.)
+  it("doesn't flag a changed file that Stryker finds but that has no mutants", () => {
     const repository = createRepository();
     const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
     commitFiles(repository, { 'src/types.ts': 'export type Unit = string;\n' });
