@@ -69,6 +69,8 @@ fluent-measures/
 
 ## Development Setup
 
+Use Node.js 22.18 or a later 22.x release, or Node.js 24.11 or later. CI runs on Node 22 and 24. Some development dependencies need these versions: Stryker's Babel packages need `^22.18.0 || >=24.11.0`, and ESLint 10 needs `^20.19.0 || ^22.13.0 || >=24`.
+
 ```bash
 # Clone the repository
 git clone https://github.com/your-username/fluent-measures.git
