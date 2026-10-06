@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   hunkRanges,
   isSourceFile,
+  literalGlob,
   revisions,
   unexplainedIgnores,
   unkilledMutants,
@@ -71,6 +72,16 @@ describe('isSourceFile', () => {
     ['src/data.json', false],
   ])('returns %s → %s', (file, expected) => {
     expect(isSourceFile(file)).toBe(expected);
+  });
+});
+
+describe('literalGlob', () => {
+  it.each([
+    ['src/units.ts', 'src/units.ts'],
+    ['src/[u]nits.ts', 'src/[[]u[]]nits.ts'],
+    ['src/a(b){c}*?.ts', 'src/a[(]b[)][{]c[}][*][?].ts'],
+  ])('writes %s as %s', (file, pattern) => {
+    expect(literalGlob(file)).toBe(pattern);
   });
 });
 
