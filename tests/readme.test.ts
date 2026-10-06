@@ -289,25 +289,41 @@ const CALL = 'parseMeasurement(';
 const CODE_LANGUAGES = new Set(['typescript', 'ts', 'tsx', 'javascript', 'js', 'jsx']);
 
 /**
- * If a string, template literal or comment starts at `i`, returns the index of its last
- * character. Otherwise returns `i`.
+ * Yields the index of each character of `text` that is code, from `start` on. Strings, comments
+ * and the text of template literals aren't code, but a template literal's `${...}` parts are.
  */
-function endOfStringOrComment(text: string, i: number): number {
-  const char = text[i];
-  if (char === "'" || char === '"' || char === '`') {
-    let j = i + 1;
-    while (j < text.length && text[j] !== char) j += text[j] === '\\' ? 2 : 1;
-    return j;
+function* codeIndexes(text: string, start = 0): Generator<number> {
+  // For each open `${`, the brace depth at which its closing `}` comes.
+  const templates: number[] = [];
+  let depth = 0;
+  for (let i = start; i < text.length; i++) {
+    const char = text[i];
+    if (char === "'" || char === '"') {
+      i++;
+      while (i < text.length && text[i] !== char) i += text[i] === '\\' ? 2 : 1;
+    } else if (text.startsWith('//', i)) {
+      const newline = text.indexOf('\n', i);
+      i = newline < 0 ? text.length : newline;
+    } else if (text.startsWith('/*', i)) {
+      const close = text.indexOf('*/', i + 2);
+      i = close < 0 ? text.length : close + 1;
+    } else if (char === '`' || (char === '}' && templates[templates.length - 1] === depth)) {
+      // Skip template text up to the closing backtick or the next `${`.
+      if (char === '}') templates.pop();
+      i++;
+      while (i < text.length && text[i] !== '`' && !text.startsWith('${', i)) {
+        i += text[i] === '\\' ? 2 : 1;
+      }
+      if (text.startsWith('${', i)) {
+        templates.push(depth);
+        i++;
+      }
+    } else {
+      if (char === '{') depth++;
+      if (char === '}') depth--;
+      yield i;
+    }
   }
-  if (text.startsWith('//', i)) {
-    const newline = text.indexOf('\n', i);
-    return newline < 0 ? text.length : newline;
-  }
-  if (text.startsWith('/*', i)) {
-    const close = text.indexOf('*/', i + 2);
-    return close < 0 ? text.length : close + 1;
-  }
-  return i;
 }
 
 /** Returns the index just after the bracket that closes the one at `start`. */
@@ -315,31 +331,18 @@ function indexAfterClose(text: string, start: number): number {
   const open = text[start];
   const close = open === '(' ? ')' : '}';
   let depth = 0;
-  for (let i = start; i < text.length; i++) {
-    const skipTo = endOfStringOrComment(text, i);
-    if (skipTo !== i) {
-      i = skipTo;
-    } else if (text[i] === open) {
-      depth++;
-    } else if (text[i] === close && --depth === 0) {
-      return i + 1;
-    }
+  for (const i of codeIndexes(text, start)) {
+    if (text[i] === open) depth++;
+    else if (text[i] === close && --depth === 0) return i + 1;
   }
   throw new Error(`No ${close} closes the ${open} at index ${start}`);
 }
 
 /** Returns the index of each parseMeasurement call in `code`, outside strings and comments. */
 function callIndexes(code: string): number[] {
-  const indexes = [];
-  for (let i = 0; i < code.length; i++) {
-    const skipTo = endOfStringOrComment(code, i);
-    if (skipTo !== i) {
-      i = skipTo;
-    } else if (code.startsWith(CALL, i) && !/[\w$]/.test(code[i - 1] ?? '')) {
-      indexes.push(i);
-    }
-  }
-  return indexes;
+  return [...codeIndexes(code)].filter(
+    i => code.startsWith(CALL, i) && !/[\w$]/.test(code[i - 1] ?? '')
+  );
 }
 
 /** Evaluates a JavaScript expression from the README, which is part of this repository. */
@@ -382,7 +385,7 @@ function readmeExamples(): ReadmeEntry[] {
       const open = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
       if (open && !(open[1][0] === '`' && open[2].includes('`'))) {
         fence = open[1];
-        language = open[2].trim().split(/\s+/)[0];
+        language = open[2].trim().split(/\s+/)[0].toLowerCase();
         block = '';
       } else if (/^#+ /.test(line)) {
         section = line.replace(/^#+ /, '');
