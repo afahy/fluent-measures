@@ -130,9 +130,40 @@ jobs:
       - name: Mutation tests
         run: pnpm test:mutation
 
+  # Every mutant on a line that the pull request adds or changes under src/ must be killed. When
+  # there is no pull request or it doesn't change src/, the steps are skipped and the job passes.
+  mutation-changed-lines:
+    name: Mutants on changed lines are killed
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The pull request's merge commit and its parents. HEAD^1 is the base branch.
+          fetch-depth: 2
+
+      - name: Check whether the PR changes src/
+        id: changes
+        if: github.event_name == 'pull_request'
+        run: |
+          if git diff --quiet HEAD^1 HEAD -- src/; then
+            echo "This PR doesn't change src/, so there are no changed lines to check."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: ./.github/actions/setup
+        if: steps.changes.outputs.changed
+        with:
+          node-version: 22
+
+      - name: Mutation tests on the changed lines
+        if: steps.changes.outputs.changed
+        run: node .github/scripts/mutation-check.mjs
+
   ci-ok:
     if: always()
-    needs: [test, package, mutation]
+    needs: [test, package, mutation, mutation-changed-lines]
     runs-on: ubuntu-latest
     steps:
       - name: Check all CI jobs passed
