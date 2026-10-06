@@ -20,6 +20,8 @@ describe('normalizeFractions', () => {
     ['⅛', '0.125'],
     ['⅞', '0.875'],
     ['5↉', '5'],
+    ['-½', '-0.5'],
+    ['1000000000000000000000½', 'x'],
   ])('writes %s as %s', (input, output) => {
     expect(normalizeFractions(input).trim()).toBe(output);
   });
@@ -32,6 +34,8 @@ describe('normalizeFractions', () => {
     // A slash after a number that follows a letter or quote mark separates two measurements.
     "5'10/180",
     '5ft10/180lbs',
+    '5 ft 10/180 lbs',
+    'blood pressure 120/80',
     // No slash, no fraction.
     '150 lbs',
   ])('leaves %s as it is', input => {

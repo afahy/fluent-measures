@@ -66,10 +66,26 @@ describe('fractions', () => {
     ["5'10/180", {}, 70, 'in'],
     ['5ft10/180lbs', { type: 'weight' }, 180, 'lb'],
     ['5ft10/72kg', { type: 'weight' }, 72, 'kg'],
+    ['5 ft 10/180 lbs', {}, 70, 'in'],
+    ['5 ft 10/180 lbs', { type: 'weight' }, 180, 'lb'],
+    ['5ft 10/180lbs', { type: 'weight' }, 180, 'lb'],
     ["6'1/200 lbs", { type: 'height' }, 73, 'in'],
     ["6'1/200 lbs", { type: 'weight' }, 200, 'lb'],
   ] as const)('reads %s with %o as %s %s', (raw, options, value, unit) => {
     expect(parseMeasurement(raw, options)).toMatchObject({ value, unit });
+  });
+
+  // A measurement can't be negative, so the minus must stay with the fraction.
+  it('returns null for a negative Unicode fraction', () => {
+    expect(parseMeasurement('-½ lb')).toBeNull();
+  });
+
+  // 1 followed by 100,000 zeros is too large to represent, so the result is null. The fraction
+  // pattern must still fail on it quickly.
+  it('rejects a very long number in under a second', () => {
+    const start = Date.now();
+    expect(parseMeasurement(`1${'0'.repeat(100_000)} lbs`)).toBeNull();
+    expect(Date.now() - start).toBeLessThan(1000);
   });
 
   it('keeps the README shorthand and range rules', () => {
