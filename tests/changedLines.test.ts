@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  backslashNames,
   hunkRanges,
   isSourceFile,
   literalGlob,
@@ -73,6 +74,19 @@ describe('isSourceFile', () => {
     ['src/data.json', false],
   ])('returns %s → %s', (file, expected) => {
     expect(isSourceFile(file)).toBe(expected);
+  });
+});
+
+describe('backslashNames', () => {
+  // In these strings, `\\` is one backslash: the first name is src/a\b.ts.
+  it('returns the file names that have a backslash', () => {
+    expect(backslashNames(['src/a\\b.ts', 'src/units.ts', 'src/[u]nits.ts', 'src/c\\.ts'])).toEqual(
+      ['src/a\\b.ts', 'src/c\\.ts']
+    );
+  });
+
+  it('returns no names when none has a backslash', () => {
+    expect(backslashNames(['src/units.ts', 'src/a/b.ts'])).toEqual([]);
   });
 });
 

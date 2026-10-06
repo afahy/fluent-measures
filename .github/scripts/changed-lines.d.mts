@@ -2,6 +2,8 @@ export function revisions(base: string, options: { fromMergeBase: boolean }): st
 
 export function isSourceFile(file: string): boolean;
 
+export function backslashNames(files: string[]): string[];
+
 export function literalGlob(file: string): string;
 
 export function hunkRanges(diff: string): Array<[number, number]>;

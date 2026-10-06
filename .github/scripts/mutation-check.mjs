@@ -12,6 +12,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
+  backslashNames,
   hunkRanges,
   isSourceFile,
   literalGlob,
@@ -68,6 +69,16 @@ const lines = [...changed].flatMap(([file, ranges]) =>
   ranges.map(([from, to]) => `  ${file}:${from}${from === to ? '' : `-${to}`}`)
 );
 console.log(`Changed lines:\n${lines.join('\n')}`);
+
+// Stryker reads a backslash in a file name as a slash, so this check couldn't find the mutants
+// of such a file and would pass without checking it.
+const backslashed = backslashNames([...changed.keys()]);
+for (const file of backslashed) {
+  console.error(
+    `::error::Rename ${file}: the mutation check can't check a file whose name has a backslash, because Stryker reads it as a slash.`
+  );
+}
+if (backslashed.length > 0) process.exit(1);
 
 // Mutate the whole of each changed file, so a mutant whose code spans more lines than the change
 // is still made. Only the mutants that overlap a changed line count. Use the project's Stryker

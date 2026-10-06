@@ -25,6 +25,18 @@ export function isSourceFile(file) {
 }
 
 /**
+ * Returns the file names that have a backslash. Stryker reads a backslash in a file name as a
+ * slash, so its report names `src/a\b.ts` as `src/a/b.ts`, and the mutants of the changed file
+ * can't be found.
+ *
+ * @param {string[]} files
+ * @returns {string[]}
+ */
+export function backslashNames(files) {
+  return files.filter(file => file.includes('\\'));
+}
+
+/**
  * Returns `file` as a glob pattern that matches only that file. Stryker reads `mutate` entries
  * as globs, so a name such as `src/[u]nits.ts` would otherwise match `src/units.ts`. Each glob
  * character goes in a bracket of its own, such as `[[]` for `[`. Stryker turns backslashes into
