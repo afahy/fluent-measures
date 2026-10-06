@@ -654,6 +654,8 @@ describe('expectedValue', () => {
 
   it('allows the README rounding for a converted value', () => {
     expect(68.0388555).toEqual(expectedValue(68.04, '150 lbs', { normalizedUnit: 'kg' }));
+    // A second unit means the result may come from a conversion.
+    expect(70.004).toEqual(expectedValue(70, '70 kg (154 lbs)', { normalizedUnit: 'kg' }));
     expect(68.0388555).toEqual(
       expectedValue(68.04, 'one hundred fifty pounds', { normalizedUnit: 'kg' })
     );
