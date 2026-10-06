@@ -20,8 +20,17 @@ describe('fractions', () => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });
 
-  it.each(['5/2 lbs', '3/0 lbs', '150 5/2 lbs'])(
+  it.each(['5/2 lbs', '3/0 lbs', '1/1 lbs', '150 5/2 lbs'])(
     'returns null for a slash that is not a proper fraction in %s',
+    raw => {
+      expect(parseMeasurement(raw)).toBeNull();
+    }
+  );
+
+  // These have no plain decimal value: a fraction after a decimal, and results that String()
+  // writes with an exponent (5e-7 and 1e+21).
+  it.each(['5.25 1/2 ft', '1/2000000 lbs', '1000000000000000000000 1/2 lbs'])(
+    'returns null for %s',
     raw => {
       expect(parseMeasurement(raw)).toBeNull();
     }
@@ -35,6 +44,7 @@ describe('fractions', () => {
     ['blood pressure 120/80, weight 180 lbs', 180, 'lb'],
     ['12/25/2020, 180 lbs', 180, 'lb'],
     ['1,234,56 kg', 1234.56, 'kg'],
+    ['5 ft 10 120/80', 70, 'in'],
   ] as const)('keeps reading %s as %s %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });
@@ -46,21 +56,18 @@ describe('fractions', () => {
 });
 
 describe('normalizeFractions', () => {
-  // A Unicode fraction gets a space before it, so it can follow a whole number.
   it.each([
     ['150 1/2 lbs', '150.5 lbs'],
     ['1/2 lbs', '0.5 lbs'],
     ['3 3/4', '3.75'],
     ['68 11/16 in', '68.6875 in'],
     ['5½', '5.5'],
-    ['¾ kg', ' 0.75 kg'],
-    ['⅛', ' 0.125'],
-    ['⅞', ' 0.875'],
-    ['5/2 lbs', 'x lbs'],
-    ['1/1', 'x'],
-    ['3/0', 'x'],
+    ['¾ kg', '0.75 kg'],
+    ['⅛', '0.125'],
+    ['⅞', '0.875'],
+    ['5↉', '5'],
   ])('writes %s as %s', (input, output) => {
-    expect(normalizeFractions(input)).toBe(output);
+    expect(normalizeFractions(input).trim()).toBe(output);
   });
 
   it.each([

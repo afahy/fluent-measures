@@ -16,17 +16,23 @@ const LABEL_PATTERN = new RegExp(
 );
 
 /**
- * Write each fraction as a decimal, so "150 1/2" and "150½" are 150.5. Numbers with a slash
- * between them that aren't a proper fraction, as in "5/2" or "120/80", become a word, so they
- * can't be read as a value. A date such as "12/25/2020" has two slashes and stays as it is.
+ * Write each proper fraction as a decimal, so "150 1/2" and "150½" are 150.5. Other numbers with
+ * a slash between them become "x", so "5/2" and "120/80" can't be read as a value. A fraction
+ * after a decimal number also becomes "x", and so does a fraction whose result needs an exponent.
+ * The number before an "x" stays, so "5 ft 10 120/80" keeps its 10. A date such as
+ * "12/25/2020" has two slashes and stays as it is.
  */
 export function normalizeFractions(input: string): string {
   return input
-    .replace(/[\u00bc-\u00be\u2150-\u215e]/g, fraction => ` ${fraction.normalize('NFKD')}`)
+    .replace(/[\u00bc-\u00be\u2150-\u215e\u2189]/g, fraction => ` ${fraction.normalize('NFKD')}`)
     .replace(
-      /(?<![\d/.])(?:(\d+)\s+)?(\d+)[/\u2044](\d+)(?![\d/])/g,
-      (_, whole = 0, numerator: string, denominator: string) =>
-        +numerator < +denominator ? String(+whole + +numerator / +denominator) : 'x'
+      /(?<![\d/.])(?:(\d+(?:\.\d+)?)\s+)?(\d+)[/\u2044](\d+)(?![\d/])/g,
+      (_, whole = '', numerator: string, denominator: string) => {
+        const value = String(+whole + +numerator / +denominator);
+        return +numerator < +denominator && !whole.includes('.') && !value.includes('e')
+          ? value
+          : `${whole} x`;
+      }
     );
 }
 
@@ -49,7 +55,7 @@ export function normalizeNumericCommas(input: string): string {
   return valid ? normalized : '';
 }
 
-/** Normalize comma numbers before splitting standalone measurement text. */
+/** Normalize fractions and comma numbers before splitting standalone measurement text. */
 export function tokenize(input: string, fuzziness?: number): string[] {
   return tokenizeNormalized(normalizeNumericCommas(normalizeFractions(input)), fuzziness);
 }
