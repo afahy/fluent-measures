@@ -1,6 +1,6 @@
 import { matchUnit } from './matchUnit';
 import { normalizeFractions, normalizeNumericCommas, tokenizeNormalized } from './tokenize';
-import { wordsToNumber } from './wordsToNumber';
+import { NUMBER_WORDS, wordsToNumber } from './wordsToNumber';
 
 import {
   FIELD_MARK,
@@ -122,7 +122,15 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     throw new Error('allowUnqualified requires type');
   }
 
-  const shorthand = trimmed.match(/^(\d+)-((?:\d*\.)?\d+)$/);
+  // Two number words work too when the feet are 3 to 8, so "five-eleven" is "5-11". A part that
+  // isn't one number word, digits included, joins as an empty string, so the pattern doesn't match.
+  const parts = trimmed
+    .toLowerCase()
+    .split('-')
+    .map(word => NUMBER_WORDS.get(word));
+  const shorthand = (parts[0]! > 2 && parts[0]! < 9 ? parts.join('-') : trimmed).match(
+    /^(\d+)-((?:\d*\.)?\d+)$/
+  );
   if (shorthand) {
     // Bare N-M is ambiguous unless the caller explicitly requests a height. Feet too large to
     // represent return null when the measurement is read.
