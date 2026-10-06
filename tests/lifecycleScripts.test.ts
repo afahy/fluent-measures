@@ -12,7 +12,7 @@ import {
 import { tmpdir } from 'node:os';
 import { delimiter, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { withoutGitRepository } from './gitEnvironment';
+import { git, withoutGitRepository } from './gitEnvironment';
 
 const packageJson = JSON.parse(readFileSync(resolve('package.json'), 'utf8')) as Record<
   string,
@@ -30,7 +30,7 @@ function createDirectory(prefix: string): string {
 function createRepository({ withDependencies }: { withDependencies: boolean }): string {
   const repository = createDirectory('fluent-measures-lifecycle-');
 
-  execFileSync('git', ['init', '--initial-branch', 'main'], { cwd: repository, env });
+  git(repository, 'init', '--initial-branch', 'main');
   copyFileSync(resolve('package.json'), resolve(repository, 'package.json'));
   if (withDependencies) {
     symlinkSync(resolve('node_modules'), resolve(repository, 'node_modules'), 'dir');

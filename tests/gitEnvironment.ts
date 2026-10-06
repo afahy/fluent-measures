@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { env } from 'node:process';
 
 // The variables that tell git which repository to use, as `git rev-parse --local-env-vars` lists
@@ -33,4 +34,9 @@ export function withoutGitRepository(base: typeof env = env): typeof env {
       ([name]) => !REPOSITORY_VARIABLES.has(name) && !/^GIT_CONFIG_(?:KEY|VALUE)_\d+$/.test(name)
     )
   );
+}
+
+/** Runs git in `cwd` without the repository variables, and returns what it prints. */
+export function git(cwd: string, ...args: string[]): string {
+  return execFileSync('git', args, { cwd, encoding: 'utf8', env: withoutGitRepository() });
 }

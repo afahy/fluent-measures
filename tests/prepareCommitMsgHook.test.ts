@@ -1,17 +1,13 @@
-import { execFileSync, spawnSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { withoutGitRepository } from './gitEnvironment';
+import { git, withoutGitRepository } from './gitEnvironment';
 
 const hook = resolve('.husky/prepare-commit-msg');
 const repositories: string[] = [];
 const env = withoutGitRepository();
-
-function git(repository: string, ...args: string[]): void {
-  execFileSync('git', args, { cwd: repository, env });
-}
 
 function createRepository(branch: string): string {
   const repository = mkdtempSync(resolve(tmpdir(), 'fluent-measures-hook-'));
@@ -20,6 +16,8 @@ function createRepository(branch: string): string {
   git(repository, 'init', '--initial-branch', 'main');
   git(repository, 'config', 'user.email', 'test@example.com');
   git(repository, 'config', 'user.name', 'Test');
+  // Don't sign fixture commits with the developer's key, which may prompt for a passphrase.
+  git(repository, 'config', 'commit.gpgsign', 'false');
   writeFileSync(resolve(repository, 'example.txt'), 'initial content\n');
   git(repository, 'add', 'example.txt');
   git(repository, 'commit', '-m', 'test: initial commit');
