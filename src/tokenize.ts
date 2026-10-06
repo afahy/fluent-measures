@@ -15,6 +15,42 @@ const LABEL_PATTERN = new RegExp(
   'gu'
 );
 
+// A number in a fraction: digits with an optional decimal part, or a decimal part alone. The two
+// forms can't overlap, so a long number that isn't a fraction fails in linear time.
+const FRACTION_NUMBER = String.raw`(\d+(?:\.\d+)?|\.\d+)`;
+// A whole number is optional. Without one, the numerator can't follow a letter or quote mark,
+// even after spaces: there the slash separates two measurements, as in "5'10/180" and
+// "5 ft 10/180 lbs". The lookahead keeps that lookbehind from running at every space.
+const SLASH_FRACTION = new RegExp(
+  String.raw`(?<![\d/.])(?:${FRACTION_NUMBER}\s+|(?=[\d.])(?<![\p{L}'"]\s*))${FRACTION_NUMBER}[/⁄]${FRACTION_NUMBER}(?![\d/])`,
+  'gu'
+);
+
+/** Writes a fraction as a decimal, or as "x" when it isn't a proper fraction of whole numbers. */
+function writeFraction(text: string, whole = '', numerator: string, denominator: string): string {
+  const value = String(+whole + +numerator / +denominator);
+  return +numerator < +denominator && !text.includes('.') && !value.includes('e') ? value : 'x';
+}
+
+/**
+ * Write each proper fraction as a decimal, so "150 1/2" and "150½" are 150.5. A whole number
+ * before the fraction is part of it. Other numbers with a slash between them become "x", with
+ * their whole number, so "5/2" and "150 5/2" can't be read as a value. So does a fraction with a
+ * decimal in it, or one whose result needs an exponent. A date such as "12/25/2020" has two
+ * slashes and stays as it is. Run this after normalizeNumericCommas, so "1,000 1/2" is 1000.5.
+ */
+export function normalizeFractions(input: string): string {
+  return input
+    .replace(
+      /(?<![\d/.])(?:(\d+)\s*)?([¼-¾⅐-⅞↉])/gu,
+      (text: string, whole: string | undefined, fraction: string) => {
+        const [numerator, denominator] = fraction.normalize('NFKD').split('⁄');
+        return writeFraction(text, whole, numerator, denominator);
+      }
+    )
+    .replace(SLASH_FRACTION, writeFraction);
+}
+
 /** Normalize comma groups before interpreting numeric syntax or splitting tokens. */
 export function normalizeNumericCommas(input: string): string {
   let valid = true;
@@ -34,9 +70,9 @@ export function normalizeNumericCommas(input: string): string {
   return valid ? normalized : '';
 }
 
-/** Normalize comma numbers before splitting standalone measurement text. */
+/** Normalize fractions and comma numbers before splitting standalone measurement text. */
 export function tokenize(input: string, fuzziness?: number): string[] {
-  return tokenizeNormalized(normalizeNumericCommas(input), fuzziness);
+  return tokenizeNormalized(normalizeFractions(normalizeNumericCommas(input)), fuzziness);
 }
 
 /** Split normalized text while retaining negative signs and compound boundaries. */
