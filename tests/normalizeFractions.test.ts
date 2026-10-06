@@ -12,6 +12,9 @@ describe('normalizeFractions', () => {
     ['1.25/2', 'x'],
     ['1/2.25', 'x'],
     ['5.25 1/2', 'x'],
+    ['.5 1/2', 'x'],
+    ['.5/2', 'x'],
+    ["5'7 1/2", "5'7.5"],
     ['5½', '5.5'],
     ['¾ kg', '0.75 kg'],
     ['⅛', '0.125'],
@@ -26,6 +29,9 @@ describe('normalizeFractions', () => {
     '12/25/2020',
     '5/11/',
     '/5/11',
+    // A slash after a number that follows a letter or quote mark separates two measurements.
+    "5'10/180",
+    '5ft10/180lbs',
     // No slash, no fraction.
     '150 lbs',
   ])('leaves %s as it is', input => {

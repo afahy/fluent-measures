@@ -38,6 +38,9 @@ describe('fractions', () => {
   it.each([
     '5.25 1/2 ft',
     'feet 5.25 1/2',
+    '.5 1/2 ft',
+    ',5 1/2 ft',
+    '.5/2 lbs',
     '1.25/2 lbs',
     '1/2.25 lbs',
     '1/2000000 lbs',
@@ -56,6 +59,17 @@ describe('fractions', () => {
     ['1,234,56 kg', 1234.56, 'kg'],
   ] as const)('keeps reading %s as %s %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
+  });
+
+  // A slash after a number that follows a unit or quote mark separates two measurements.
+  it.each([
+    ["5'10/180", {}, 70, 'in'],
+    ['5ft10/180lbs', { type: 'weight' }, 180, 'lb'],
+    ['5ft10/72kg', { type: 'weight' }, 72, 'kg'],
+    ["6'1/200 lbs", { type: 'height' }, 73, 'in'],
+    ["6'1/200 lbs", { type: 'weight' }, 200, 'lb'],
+  ] as const)('reads %s with %o as %s %s', (raw, options, value, unit) => {
+    expect(parseMeasurement(raw, options)).toMatchObject({ value, unit });
   });
 
   it('keeps the README shorthand and range rules', () => {

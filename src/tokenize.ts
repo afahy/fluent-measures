@@ -20,13 +20,15 @@ const LABEL_PATTERN = new RegExp(
  * before the fraction is part of it. Other numbers with a slash between them become "x", with
  * their whole number, so "5/2" and "150 5/2" can't be read as a value. So does a fraction with a
  * decimal in it, or one whose result needs an exponent. A date such as "12/25/2020" has two
- * slashes and stays as it is. Run this after normalizeNumericCommas, so "1,000 1/2" is 1000.5.
+ * slashes and stays as it is. Without a whole number, a slash after a number that follows a
+ * letter or quote mark separates two measurements, as in "5'10/180", so it stays too. Run this
+ * after normalizeNumericCommas, so "1,000 1/2" is 1000.5.
  */
 export function normalizeFractions(input: string): string {
   return input
     .replace(/[\u00bc-\u00be\u2150-\u215e\u2189]/g, fraction => ` ${fraction.normalize('NFKD')}`)
     .replace(
-      /(?<![\d/.])(?:(\d+(?:\.\d+)?)\s+)?(\d+(?:\.\d+)?)[/\u2044](\d+(?:\.\d+)?)(?![\d/])/g,
+      /(?<![\d/.])(?:(\d*\.?\d+)\s+|(?<![\p{L}'"]))(\d*\.?\d+)[/\u2044](\d*\.?\d+)(?![\d/])/gu,
       (match: string, whole = '', numerator: string, denominator: string) => {
         const value = String(+whole + +numerator / +denominator);
         return +numerator < +denominator && !match.includes('.') && !value.includes('e')
