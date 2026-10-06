@@ -16,22 +16,24 @@ const LABEL_PATTERN = new RegExp(
 );
 
 /**
- * Write each proper fraction as a decimal, so "150 1/2" and "150½" are 150.5. Other numbers with
- * a slash between them become "x", so "5/2" and "120/80" can't be read as a value. A fraction
- * after a decimal number also becomes "x", and so does a fraction whose result needs an exponent.
- * The number before an "x" stays, so "5 ft 10 120/80" keeps its 10. A date such as
- * "12/25/2020" has two slashes and stays as it is.
+ * Write each proper fraction as a decimal, so "150 1/2" and "150½" are 150.5. A whole number
+ * before the fraction is part of it. Other numbers with a slash between them become "x", with
+ * their whole number, so "5/2" and "150 5/2" can't be read as a value. So does a fraction with a
+ * decimal in it, or one whose result needs an exponent. A date such as "12/25/2020" has two
+ * slashes and stays as it is. Run this after normalizeNumericCommas, so "1,000 1/2" is 1000.5.
  */
 export function normalizeFractions(input: string): string {
   return input
     .replace(/[\u00bc-\u00be\u2150-\u215e\u2189]/g, fraction => ` ${fraction.normalize('NFKD')}`)
     .replace(
-      /(?<![\d/.])(?:(\d+(?:\.\d+)?)\s+)?(\d+)[/\u2044](\d+)(?![\d/])/g,
+      /(?<![\d/.])(?:(\d+(?:\.\d+)?)\s+)?(\d+(?:\.\d+)?)[/\u2044](\d+(?:\.\d+)?)(?![\d/])/g,
       (_, whole = '', numerator: string, denominator: string) => {
         const value = String(+whole + +numerator / +denominator);
-        return +numerator < +denominator && !whole.includes('.') && !value.includes('e')
+        return +numerator < +denominator &&
+          !(whole + numerator + denominator).includes('.') &&
+          !value.includes('e')
           ? value
-          : `${whole} x`;
+          : 'x';
       }
     );
 }
@@ -57,7 +59,7 @@ export function normalizeNumericCommas(input: string): string {
 
 /** Normalize fractions and comma numbers before splitting standalone measurement text. */
 export function tokenize(input: string, fuzziness?: number): string[] {
-  return tokenizeNormalized(normalizeNumericCommas(normalizeFractions(input)), fuzziness);
+  return tokenizeNormalized(normalizeFractions(normalizeNumericCommas(input)), fuzziness);
 }
 
 /** Split normalized text while retaining negative signs and compound boundaries. */

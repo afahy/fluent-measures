@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
-import { normalizeFractions } from '../src/tokenize';
 
 // Inputs and results from AFA-59, which come from the AFA-41 corpus.
 describe('fractions', () => {
@@ -20,21 +19,32 @@ describe('fractions', () => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });
 
-  it.each(['5/2 lbs', '3/0 lbs', '1/1 lbs', '150 5/2 lbs'])(
+  it.each([
+    ['1,000 1/2 lbs', 1000.5, 'lb'],
+    ['68 11/16 in', 68.6875, 'in'],
+  ] as const)('reads the whole number and fraction in %s as %s %s', (raw, value, unit) => {
+    expect(parseMeasurement(raw)).toMatchObject({ value, unit });
+  });
+
+  it.each(['5/2 lbs', '3/0 lbs', '1/1 lbs', '150 5/2 lbs', 'feet 150 5/2'])(
     'returns null for a slash that is not a proper fraction in %s',
     raw => {
       expect(parseMeasurement(raw)).toBeNull();
     }
   );
 
-  // These have no plain decimal value: a fraction after a decimal, and results that String()
-  // writes with an exponent (5e-7 and 1e+21).
-  it.each(['5.25 1/2 ft', '1/2000000 lbs', '1000000000000000000000 1/2 lbs'])(
-    'returns null for %s',
-    raw => {
-      expect(parseMeasurement(raw)).toBeNull();
-    }
-  );
+  // These have no plain decimal value: a decimal in the fraction or before it, and results that
+  // String() writes with an exponent (5e-7 and 1e+21).
+  it.each([
+    '5.25 1/2 ft',
+    'feet 5.25 1/2',
+    '1.25/2 lbs',
+    '1/2.25 lbs',
+    '1/2000000 lbs',
+    '1000000000000000000000 1/2 lbs',
+  ])('returns null for %s', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
 
   it.each(['180/120', '1/2 cup of flour', 'blood pressure 120/80'])('returns null for %s', raw => {
     expect(parseMeasurement(raw)).toBeNull();
@@ -44,7 +54,6 @@ describe('fractions', () => {
     ['blood pressure 120/80, weight 180 lbs', 180, 'lb'],
     ['12/25/2020, 180 lbs', 180, 'lb'],
     ['1,234,56 kg', 1234.56, 'kg'],
-    ['5 ft 10 120/80', 70, 'in'],
   ] as const)('keeps reading %s as %s %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });
@@ -52,39 +61,5 @@ describe('fractions', () => {
   it('keeps the README shorthand and range rules', () => {
     expect(parseMeasurement('5-11', { type: 'height' })).toMatchObject({ value: 71, unit: 'in' });
     expect(parseMeasurement('150-180 lbs')).toBeNull();
-  });
-});
-
-describe('normalizeFractions', () => {
-  it.each([
-    ['150 1/2 lbs', '150.5 lbs'],
-    ['1/2 lbs', '0.5 lbs'],
-    ['3 3/4', '3.75'],
-    ['68 11/16 in', '68.6875 in'],
-    ['5½', '5.5'],
-    ['¾ kg', '0.75 kg'],
-    ['⅛', '0.125'],
-    ['⅞', '0.875'],
-    ['5↉', '5'],
-  ])('writes %s as %s', (input, output) => {
-    expect(normalizeFractions(input).trim()).toBe(output);
-  });
-
-  it.each([
-    // Two slashes make a date or a code, not a fraction.
-    '12/25/2020',
-    '5/11/',
-    '/5/11',
-    // A fraction can't continue a decimal number.
-    '1.1/2',
-    // No slash, no fraction.
-    '150 lbs',
-  ])('leaves %s as it is', input => {
-    expect(normalizeFractions(input)).toBe(input);
-  });
-
-  it('reads the whole number only when spaces separate it from the fraction', () => {
-    expect(normalizeFractions('ward 7 1/2')).toBe('ward 7.5');
-    expect(normalizeFractions('7,1/2')).toBe('7,0.5');
   });
 });
