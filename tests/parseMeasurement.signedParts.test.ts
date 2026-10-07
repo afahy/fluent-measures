@@ -22,8 +22,9 @@ describe('signed parts', () => {
   });
 
   // AFA-89: an inch mark is the unit too, so the hyphen after it joins two values, as in
-  // "5 in-5 in" (5 in). "″" is the double prime, which reads as an inch mark (AFA-61).
-  it.each(['5"-5 in', '5″-5 in'])('reads %s as 5 in', raw => {
+  // "5 in-5 in" (5 in). "″" is the double prime, which reads as an inch mark (AFA-61). A space
+  // can come between the number and its mark, as in "5 in".
+  it.each(['5"-5 in', '5″-5 in', '5 "-5 in'])('reads %s as 5 in', raw => {
     expect(parseMeasurement(raw)).toMatchObject({ value: 5, unit: 'in' });
   });
 
