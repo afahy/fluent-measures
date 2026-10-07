@@ -43,6 +43,19 @@ describe('matchUnit', () => {
       expect(matchUnit(word, 'height', 2)).toBeNull();
     });
 
+    // The British spellings match only exactly (AFA-64). Each word here is one edit from one of
+    // them, and more than one from any other alias, so it matches nothing.
+    it.each(['mere', 'meres', 'centimetry', 'centimetros', 'metro'])(
+      'rejects %s, a typo of a British spelling',
+      word => {
+        expect(matchUnit(word, 'height', 1)).toBeNull();
+      }
+    );
+
+    it.each(['centimetre', 'centimetres', 'metre', 'metres'])('still matches %s exactly', word => {
+      expect(matchUnit(word, 'height', 1)).toBe(word.startsWith('c') ? 'cm' : 'm');
+    });
+
     it('requires the first letter even for long aliases', () => {
       expect(matchUnit('xilograms', 'weight', 2)).toBeNull();
       expect(matchUnit('xentimeters', 'height', 2)).toBeNull();
