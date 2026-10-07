@@ -44,7 +44,8 @@ on the maintainer. Say so in your report.
 
 Before you end a turn, make sure something will wake you when the PR changes. Never end a turn
 while a PR is `needs-agent`, or while nothing is armed for a PR that's `waiting` or
-`waiting-human`.
+`waiting-human`. The one exception is when the timed check-ins in step 3 run out: then say so in
+your report and stop.
 
 1. If the session can run a background command, run `pnpm pr:status <pr>... --wait` in the
    background, with every PR you're watching in one call. It polls without spending tokens. It
