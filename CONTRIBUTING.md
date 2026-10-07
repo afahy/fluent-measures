@@ -69,7 +69,12 @@ fluent-measures/
 
 ## Development Setup
 
-Use Node.js 22.18 or a later 22.x release, or Node.js 24.11 or later. CI runs on Node 22 and 24. Some development dependencies need these versions: Stryker's Babel packages need `^22.18.0 || >=24.11.0`, and ESLint 10 needs `^20.19.0 || ^22.13.0 || >=24`.
+Use Node.js 22.22.1 or later in 22.x, 24.11 or later in 24.x, or 26 or later. Use Git 2.32.0 or later. CI runs on Node.js 22 and 24. These development dependencies need these versions:
+
+- Stryker's Babel packages: Node.js `^22.18.0 || >=24.11.0`.
+- ESLint 10: Node.js `^20.19.0 || ^22.13.0 || >=24`.
+- Changesets 3: Node.js `^22.11 || ^24 || >=26`.
+- lint-staged 17, which the pre-commit hook runs: Node.js `>=22.22.1` and Git 2.32.0 or later.
 
 ```bash
 # Clone the repository
@@ -183,8 +188,8 @@ comment without one. A line counts as changed even when only its formatting chan
 request that reformats or moves a line must also deal with any mutant on it that survives on
 `main`.
 
-Mutation testing needs Node 22.18 or a later 22.x release, or Node 24.11 or later. Stryker
-depends on Babel 8, which requires those versions.
+Mutation testing uses Stryker, which depends on Babel 8. The Node.js versions under "Development
+Setup" meet its requirements.
 
 `vite` is in `devDependencies` because vitest needs it as a peer dependency. When you upgrade
 vitest to a release that doesn't accept the installed vite major, raise the `vite` range in the
