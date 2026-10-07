@@ -33,6 +33,8 @@ async function serve(snapshots: Snapshot[]): Promise<{ url: string; polls: () =>
     const sha = s?.pull.head.sha;
     const routes: Record<string, unknown> = {
       [`${base}/pulls/43`]: s?.pull,
+      [`${base}/activity`]: s?.pushes,
+      [`${base}/issues/43/events`]: s?.events,
       [`${base}/git/commits/${sha}`]: s?.headCommit,
       [`${base}/commits/${sha}/check-runs`]: {
         total_count: s?.checkRuns.length,
@@ -89,7 +91,9 @@ describe('pr-status.mjs', () => {
     const result = await run(api.url, ['43']);
     expect(result.code).toBe(10);
     expect(result.stdout).toContain('#43 needs-agent: fix: read the number after any unit label');
-    expect(result.stdout).toContain('  CI: 13 passed');
+    expect(result.stdout).toContain('  Head 333a541, pushed 2026-10-05T17:51:02Z');
+    expect(result.stdout).toContain('  GitHub merge state: clean');
+    expect(result.stdout).toContain('  CI: 11 passed');
     expect(result.stdout).toContain(
       `    - chatgpt-codex-connector[bot] left a thread with no reply: https://github.com/${repo}/pull/43#discussion_r4187121862`
     );

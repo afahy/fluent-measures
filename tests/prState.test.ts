@@ -22,11 +22,12 @@ import {
 //                  threads. Items created after then are left out, and the PR is open.
 //   pr-43          #43 after it merged.
 //   pr-66          #66 at 2026-10-07T15:51Z. Codex reviewed 91a5d29 when the PR opened but not
-//                  the head c7ad2f4, pushed at 15:00:56. CodeRabbit was rate limited on the head
+//                  the head c7ad2f4, pushed at 15:00:44. CodeRabbit was rate limited on the head
 //                  and left no note saying for how long.
-//   pr-67          #67 at 2026-10-07T15:51Z. Codex completed a review of the head 318c1b7.
-//                  CodeRabbit's note at 14:51:45 says "Next included review available in 57
-//                  minutes".
+//   pr-67          #67 at 2026-10-07T15:51Z. The branch was pushed at 14:43:10 and the PR opened
+//                  at 14:51:34, so the bots could start then. Codex completed a review of the
+//                  head 318c1b7. CodeRabbit's note at 14:51:45 says "Next included review
+//                  available in 57 minutes".
 // Every expected value below was worked out by hand from those responses.
 function fixture(name: string): Snapshot {
   return JSON.parse(readFileSync(`tests/fixtures/pr-status/${name}.json`, 'utf8'));
@@ -104,7 +105,7 @@ describe('ciSummary', () => {
     status,
     conclusion,
     started_at: '2026-10-07T10:00:00Z',
-    check_suite: { id: 1 },
+    app: { slug: 'github-actions' },
   });
 
   it('uses the latest run of a re-run check', () => {
@@ -141,12 +142,6 @@ describe('ciSummary', () => {
       [
         { context: 'deploy', state: 'pending', description: null, created_at: '2026-10-07T10:00Z' },
         { context: 'deploy', state: 'failure', description: null, created_at: '2026-10-07T10:05Z' },
-        {
-          context: 'pr-status',
-          state: 'failure',
-          description: null,
-          created_at: '2026-10-07T10:06Z',
-        },
       ]
     );
     expect(summary).toEqual({ passed: [], pending: [], failed: ['deploy'] });
@@ -172,9 +167,10 @@ describe('classify', () => {
   it('needs the agent when bot threads have no reply (#43 at 18:10)', () => {
     const status = classify(fixture('pr-43-at-1810'), at('2026-10-05T18:10:00Z'));
     expect(status.state).toBe('needs-agent');
-    expect(status.pushedAt).toBe('2026-10-05T17:51:09Z');
+    expect(status.pushedAt).toBe('2026-10-05T17:51:02Z');
     expect(status.ci).toEqual(expect.objectContaining({ pending: [], failed: [] }));
-    expect(status.ci.passed).toHaveLength(13);
+    // 13 runs, but two checks ran twice after title edits, so 11 checks.
+    expect(status.ci.passed).toHaveLength(11);
     expect(status.codex.state).toBe('done');
     // CodeRabbit's status on 333a541 changed to "Review completed" at 18:09:09.
     expect(status.coderabbit.state).toBe('done');
@@ -197,13 +193,13 @@ describe('classify', () => {
   it("waits while Codex has 30 minutes to start and CodeRabbit's limit runs (#66 at 15:20)", () => {
     const status = classify(fixture('pr-66'), at('2026-10-07T15:20:00Z'));
     expect(status.state).toBe('waiting');
-    expect(status.pushedAt).toBe('2026-10-07T15:00:56Z');
-    expect(status.ci.passed).toHaveLength(14);
+    expect(status.pushedAt).toBe('2026-10-07T15:00:44Z');
+    expect(status.ci.passed).toHaveLength(12);
     expect(status.codex.state).toBe('pending');
     // The note gives no wait, so the limit is taken to end 60 minutes after the 15:01:19 status.
     expect(status.coderabbit.state).toBe('rate-limited');
     expect(status.waits).toEqual([
-      "Codex hasn't started on c7ad2f4; its last review was of 91a5d29 (until 2026-10-07T15:30:56.000Z)",
+      "Codex hasn't started on c7ad2f4; its last review was of 91a5d29 (until 2026-10-07T15:30:44.000Z)",
       'CodeRabbit is rate limited until 2026-10-07T16:01:19.000Z (assumed)',
     ]);
     expect(status.notes).toEqual([
@@ -212,12 +208,12 @@ describe('classify', () => {
   });
 
   it('asks for a Codex review 30 minutes after the push (#66 at 15:31)', () => {
-    const before = classify(fixture('pr-66'), at('2026-10-07T15:30:55Z'));
+    const before = classify(fixture('pr-66'), at('2026-10-07T15:30:43Z'));
     expect(before.state).toBe('waiting');
-    const status = classify(fixture('pr-66'), at('2026-10-07T15:30:56Z'));
+    const status = classify(fixture('pr-66'), at('2026-10-07T15:30:44Z'));
     expect(status.state).toBe('needs-agent');
     expect(status.reasons).toEqual([
-      "Codex hasn't reviewed c7ad2f4 30 minutes after the push; its last review was of 91a5d29",
+      "Codex hasn't reviewed c7ad2f4 30 minutes after it could start; its last review was of 91a5d29",
     ]);
     expect(status.actions).toEqual(['Post `@codex review`']);
   });
@@ -238,10 +234,10 @@ describe('classify', () => {
   });
 
   it('leaves the merge to the maintainer when Codex never reviews the head in 2 hours', () => {
-    // 15:00:56 plus 2 hours.
-    const before = classify(fixture('pr-66'), at('2026-10-07T17:00:55Z'));
+    // 15:00:44 plus 2 hours.
+    const before = classify(fixture('pr-66'), at('2026-10-07T17:00:43Z'));
     expect(before.codex.state).toBe('not-requested');
-    const status = classify(fixture('pr-66'), at('2026-10-07T17:00:56Z'));
+    const status = classify(fixture('pr-66'), at('2026-10-07T17:00:44Z'));
     expect(status.state).toBe('waiting-human');
     expect(status.codex.state).toBe('gave-up');
     expect(status.coderabbit.state).toBe('gave-up');
@@ -312,12 +308,12 @@ describe('classify', () => {
       state: 'requested',
       detail:
         'Asked at 2026-10-07T15:35:00Z for a review of c7ad2f4; its last review was of 91a5d29',
-      until: '2026-10-07T17:00:56.000Z',
+      until: '2026-10-07T17:00:44.000Z',
     });
     expect(status.state).toBe('waiting');
   });
 
-  it('gives up on CodeRabbit when it refuses a review request', () => {
+  it('waits out the 2 hours when CodeRabbit refuses its one review request', () => {
     const snapshot = fixture('pr-67');
     // CodeRabbit's real answer to a request on #43.
     const refusal = fixture('pr-43').issueComments.find(c =>
@@ -335,12 +331,18 @@ describe('classify', () => {
       { ...refusal!, created_at: '2026-10-07T15:50:08Z' }
     );
     const status = classify(snapshot, at('2026-10-07T15:51:00Z'));
+    // AGENTS.md asks each bot once per commit and lets a PR merge after 2 hours without
+    // CodeRabbit. The bots could start when the PR opened at 14:51:34.
     expect(status.coderabbit).toEqual({
-      state: 'gave-up',
+      state: 'refused',
       detail: 'CodeRabbit refused the review request: Pull request base or head changed.',
+      until: '2026-10-07T16:51:34.000Z',
     });
-    // AGENTS.md lets a PR merge without CodeRabbit, but not without Codex, which is done.
-    expect(status.state).toBe('ready');
+    expect(status.state).toBe('waiting');
+    const later = classify(snapshot, at('2026-10-07T16:51:34Z'));
+    expect(later.coderabbit.state).toBe('gave-up');
+    // Codex reviewed the head, so the PR is ready.
+    expect(later.state).toBe('ready');
   });
 
   it('is ready when CI passed, both bots reviewed the head and GitHub allows the merge', () => {
@@ -391,13 +393,15 @@ describe('classify', () => {
     const snapshot = fixture('pr-67');
     snapshot.checkRuns = [];
     snapshot.statuses = [];
-    // With no check runs, the push time is the commit's own date, 14:40:06.
-    const waiting = classify(snapshot, at('2026-10-07T15:10:05Z'));
+    // CI could start when the PR opened at 14:51:34.
+    const waiting = classify(snapshot, at('2026-10-07T15:21:33Z'));
     expect(waiting.state).toBe('waiting');
     expect(waiting.waits).toContain("CI hasn't started on 318c1b7");
-    const missing = classify(snapshot, at('2026-10-07T15:10:06Z'));
+    const missing = classify(snapshot, at('2026-10-07T15:21:34Z'));
     expect(missing.state).toBe('needs-agent');
-    expect(missing.reasons).toContain('No CI ran on 318c1b7 in the 30 minutes since the push');
+    expect(missing.reasons).toContain(
+      'No CI ran on 318c1b7 in the 30 minutes after it could start'
+    );
   });
 
   it("puts a draft on hold for a person, and doesn't ask the bots to review it", () => {

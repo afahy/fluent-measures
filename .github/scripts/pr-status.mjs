@@ -12,7 +12,8 @@
 //   closed         41
 //   waiting-human  30  Only a person can move it, such as a draft or a merge GitHub blocks.
 //   waiting        20  CI or a bot review is still running.
-// With several PRs, the exit code is that of the most urgent state. Errors exit with 1.
+// With several PRs, the exit code is that of the most urgent state. A bad argument exits with
+// 2, and an API error with 1.
 //
 // --wait prints nothing while it polls. It returns at once if a PR needs the agent, is ready,
 // or has closed. Otherwise it returns when a PR's state changes to anything but `waiting`, or
@@ -93,6 +94,7 @@ function describe(status) {
     `#${status.pr} ${status.state}: ${status.title}`,
     `  ${status.url}`,
     `  Head ${status.head.slice(0, 7)}, pushed ${status.pushedAt}`,
+    `  GitHub merge state: ${status.mergeableState ?? 'not worked out yet'}`,
   ];
   const { passed, pending, failed } = status.ci;
   const ci = [`${passed.length} passed`];

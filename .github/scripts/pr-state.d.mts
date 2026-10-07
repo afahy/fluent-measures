@@ -13,7 +13,8 @@ export interface Pull {
   merged_at?: string | null;
   draft?: boolean;
   mergeable_state?: string | null;
-  head: { sha: string };
+  created_at: string;
+  head: { sha: string; ref: string; repo?: { full_name: string } | null };
 }
 
 export interface CheckRun {
@@ -22,7 +23,7 @@ export interface CheckRun {
   status: string;
   conclusion: string | null;
   started_at: string | null;
-  check_suite?: { id: number } | null;
+  app?: { slug: string } | null;
 }
 
 export interface CommitStatus {
@@ -65,9 +66,24 @@ export interface Reaction {
   created_at: string;
 }
 
+/** An entry from GET /repos/{owner}/{repo}/activity. */
+export interface Activity {
+  activity_type: string;
+  after: string;
+  timestamp: string;
+}
+
+/** An entry from GET /repos/{owner}/{repo}/issues/{number}/events. */
+export interface IssueEvent {
+  event: string;
+  created_at: string;
+}
+
 export interface Snapshot {
   pull: Pull;
   headCommit: { committer: { date: string } };
+  pushes: Activity[];
+  events: IssueEvent[];
   checkRuns: CheckRun[];
   statuses: CommitStatus[];
   issueComments: IssueComment[];
@@ -89,6 +105,7 @@ export interface BotState {
     | 'pending'
     | 'requested'
     | 'rate-limited'
+    | 'refused'
     | 'not-requested'
     | 'gave-up'
     | 'skipped';
@@ -106,6 +123,7 @@ export interface PrStatus {
   state: PrState;
   head: string;
   pushedAt: string;
+  mergeableState: string | null;
   reasons: string[];
   actions: string[];
   notes: string[];
@@ -117,7 +135,6 @@ export interface PrStatus {
 
 export const CODEX: string;
 export const CODERABBIT: string;
-export const OWN_STATUS: string;
 export const BOT_START_WAIT: number;
 export const BOT_MAX_WAIT: number;
 export const RATE_LIMIT_DEFAULT_WAIT: number;
@@ -126,6 +143,7 @@ export const STATES: Record<PrState, number>;
 
 export function shaMatches(a: string | null | undefined, b: string | null | undefined): boolean;
 export function pushedAt(snapshot: Snapshot): string;
+export function clockStart(snapshot: Snapshot): string;
 export function ciSummary(checkRuns: CheckRun[], statuses: CommitStatus[]): CiSummary;
 export function codexSummaryRows(
   body: string
@@ -136,6 +154,7 @@ export function coderabbitState(snapshot: Snapshot, now: number): BotState;
 export function unansweredBotThreads(comments: ReviewComment[]): ReviewComment[];
 export function botFollowUps(comments: ReviewComment[]): ReviewComment[];
 export function unansweredReviewBodies(snapshot: Snapshot): Review[];
+export function botOutputSincePush(snapshot: Snapshot): string[];
 export function classify(snapshot: Snapshot, now?: number): PrStatus;
 export function mostUrgent(states: PrState[]): PrState;
 export function digest(status: PrStatus): string;

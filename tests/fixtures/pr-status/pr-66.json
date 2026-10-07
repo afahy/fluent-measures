@@ -9,14 +9,46 @@
     "draft": false,
     "mergeable_state": "clean",
     "head": {
-      "sha": "c7ad2f4b90595f059840e8a95dfa50f82b9a0593"
-    }
+      "sha": "c7ad2f4b90595f059840e8a95dfa50f82b9a0593",
+      "ref": "apfahy/afa-96-the-docs-page-loads-cdnjs-scripts-with-no-integrity-check-4",
+      "repo": {
+        "full_name": "afahy/fluent-measures"
+      }
+    },
+    "created_at": "2026-10-07T14:48:59Z"
   },
   "headCommit": {
     "committer": {
       "date": "2026-10-07T15:00:30Z"
     }
   },
+  "pushes": [
+    {
+      "activity_type": "push",
+      "after": "c7ad2f4b90595f059840e8a95dfa50f82b9a0593",
+      "timestamp": "2026-10-07T15:00:44Z"
+    },
+    {
+      "activity_type": "push",
+      "after": "91a5d29c8f62b5cbdececfcdb0a60e77d8209fc6",
+      "timestamp": "2026-10-07T14:48:57Z"
+    },
+    {
+      "activity_type": "branch_creation",
+      "after": "6dfbb8524484968efbac8fabde0d9ab005e64b46",
+      "timestamp": "2026-10-07T14:36:26Z"
+    }
+  ],
+  "events": [
+    {
+      "event": "mentioned",
+      "created_at": "2026-10-07T14:49:15Z"
+    },
+    {
+      "event": "subscribed",
+      "created_at": "2026-10-07T14:49:15Z"
+    }
+  ],
   "checkRuns": [
     {
       "id": 112864514260,
@@ -24,8 +56,8 @@
       "status": "completed",
       "conclusion": "success",
       "started_at": "2026-10-07T15:16:46Z",
-      "check_suite": {
-        "id": 101970446490
+      "app": {
+        "slug": "github-actions"
       }
     },
     {
@@ -34,8 +66,8 @@
       "status": "completed",
       "conclusion": "success",
       "started_at": "2026-10-07T15:01:53Z",
-      "check_suite": {
-        "id": 101970814683
+      "app": {
+        "slug": "github-actions"
       }
     },
     {
@@ -44,8 +76,8 @@
       "status": "completed",
       "conclusion": "success",
       "started_at": "2026-10-07T15:01:52Z",
-      "check_suite": {
-        "id": 101970814134
+      "app": {
+        "slug": "github-actions"
       }
     },
     {
@@ -54,8 +86,8 @@
       "status": "completed",
       "conclusion": "success",
       "started_at": "2026-10-07T15:01:33Z",
-      "check_suite": {
-        "id": 101970705292
+      "app": {
+        "slug": "github-advanced-security"
       }
     },
     {
@@ -64,8 +96,8 @@
       "status": "completed",
       "conclusion": "success",
       "started_at": "2026-10-07T15:01:02Z",
-      "check_suite": {
-        "id": 101970447284
+      "app": {
+        "slug": "github-actions"
       }
     },
     {
@@ -74,8 +106,8 @@
       "status": "completed",
       "conclusion": "success",
       "started_at": "2026-10-07T15:01:02Z",
-      "check_suite": {
-        "id": 101970446457
+      "app": {
+        "slug": "github-actions"
       }
     },
     {
@@ -84,8 +116,8 @@
       "status": "completed",
       "conclusion": "success",
       "started_at": "2026-10-07T15:01:02Z",
-      "check_suite": {
-        "id": 101970446490
+      "app": {
+        "slug": "github-actions"
       }
     },
     {
@@ -94,8 +126,8 @@
       "status": "completed",
       "conclusion": "success",
       "started_at": "2026-10-07T15:01:02Z",
-      "check_suite": {
-        "id": 101970446490
+      "app": {
+        "slug": "github-actions"
       }
     },
     {
@@ -104,8 +136,8 @@
       "status": "completed",
       "conclusion": "success",
       "started_at": "2026-10-07T15:01:01Z",
-      "check_suite": {
-        "id": 101970446490
+      "app": {
+        "slug": "github-actions"
       }
     },
     {
@@ -114,8 +146,8 @@
       "status": "completed",
       "conclusion": "success",
       "started_at": "2026-10-07T15:01:01Z",
-      "check_suite": {
-        "id": 101970446490
+      "app": {
+        "slug": "github-actions"
       }
     },
     {
@@ -124,8 +156,8 @@
       "status": "completed",
       "conclusion": "success",
       "started_at": "2026-10-07T15:01:01Z",
-      "check_suite": {
-        "id": 101970446490
+      "app": {
+        "slug": "github-actions"
       }
     },
     {
@@ -134,8 +166,8 @@
       "status": "completed",
       "conclusion": "success",
       "started_at": "2026-10-07T15:01:00Z",
-      "check_suite": {
-        "id": 101970446490
+      "app": {
+        "slug": "github-actions"
       }
     },
     {
@@ -144,8 +176,8 @@
       "status": "completed",
       "conclusion": "success",
       "started_at": "2026-10-07T15:00:57Z",
-      "check_suite": {
-        "id": 101970398027
+      "app": {
+        "slug": "github-actions"
       }
     },
     {
@@ -154,8 +186,8 @@
       "status": "completed",
       "conclusion": "success",
       "started_at": "2026-10-07T15:00:56Z",
-      "check_suite": {
-        "id": 101970398027
+      "app": {
+        "slug": "github-actions"
       }
     }
   ],
