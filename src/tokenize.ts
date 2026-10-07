@@ -153,7 +153,7 @@ export function tokenizeNormalized(input: string, fuzziness?: number): string[] 
         )
         // "#" right after a number means pounds, as in "185#". Before a number, or before a letter,
         // a digit or another "#", as in "#5", "185#kg" and "12#3", it isn't a unit.
-        .replace(/(?<=\d)#(?![\w#])/g, ' lb ')
+        .replace(/(?<=\d)#(?![\p{L}\p{N}_#])/gu, ' lb ')
         // Split punctuation, hyphens after quoted feet, and underscores before minus signs.
         .replace(/(?<=\d\s*')-(?=\.?\d)|_(?=-)|[^\w\s'".;-]/g, ' ')
         // After a number, a unit and a hyphen join two parts or values, as in "5 ft-11",

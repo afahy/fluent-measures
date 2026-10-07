@@ -32,7 +32,9 @@ describe('British spellings and "#" for pounds', () => {
     expect(parseMeasurement(raw, options)).toMatchObject({ value, unit });
   });
 
-  it('returns null for "#" before a number', () => {
-    expect(parseMeasurement('room #12')).toBeNull();
+  // "#" before a number isn't a unit, and neither is "#" before a letter, as in "185#é", or before
+  // another "#", as on main.
+  it.each(['room #12', '185#é', '185##'])('returns null for %s', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
   });
 });
