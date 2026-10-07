@@ -12,8 +12,8 @@ import {
   LABEL_ALIASES,
   NAME_MARK,
   NEXT_PART,
-  UNIT_ALIASES,
   UNIT_MARK,
+  UNIT_TYPES,
   UNSUPPORTED_WEIGHT_UNITS,
   unitConversions,
 } from './units';
@@ -223,9 +223,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     throw new Error('allowUnqualified requires type');
   }
   // normalizedUnit selects the measurement type, so { normalizedUnit: 'kg' } reads only a weight.
-  const unitType = (['height', 'weight'] as const).find(type =>
-    UNIT_ALIASES[type].some(([unit]) => unit === options.normalizedUnit)
-  );
+  const unitType = options.normalizedUnit && UNIT_TYPES[options.normalizedUnit];
   if (tokens.length && options.type && unitType && unitType !== options.type) {
     throw new Error(`normalizedUnit ${options.normalizedUnit} is not a ${options.type} unit`);
   }
