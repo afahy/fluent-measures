@@ -143,14 +143,18 @@ export function tokenizeNormalized(input: string, fuzziness?: number): string[] 
         )
         // Split punctuation, hyphens after quoted feet, and underscores before minus signs.
         .replace(/(?<=\d\s*')-(?=\.?\d)|_(?=-)|[^\w\s'".;-]/g, ' ')
-        // Populated feet introduce inches; standalone unit prefixes retain the minus sign.
-        // Check the prefix first so the lookbehind only scans the preceding token when needed.
+        // After a number, a unit and a hyphen join two parts or values, as in "5 ft-11",
+        // "1 m-80 cm" and "150 lbs-180 lbs". A unit prefix without a number before it keeps the
+        // minus sign, as in "kg-70.5". Check the prefix first so the lookbehind only scans the
+        // preceding token when needed.
         .replace(
           /(?<![\w-])(?=[a-z]+-)(?<=(\S*)\s*)([a-z]+)-(?=\.?\d)/g,
           (match, previous: string, word: string) => {
             const unit =
               matchUnit(word, 'height', fuzziness) || matchUnit(word, 'weight', fuzziness);
-            return unit && (unit !== 'ft' || previous === 'and' || wordsToNumber(previous) === null)
+            // A semicolon can come between a number and its unit, as in "1;m-80 cm".
+            // Stryker disable next-line Regex: only a token's last characters can be semicolons here.
+            return unit && wordsToNumber(previous.replace(/;+$/, '')) === null
               ? `${word} -`
               : match;
           }
