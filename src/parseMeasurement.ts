@@ -106,6 +106,7 @@ function skipMarks(tokens: string[], start: number, field?: boolean): number {
 /**
  * Read the number phrase after a unit, as before one, so "kg one hundred eighty" is 180 kg.
  * Return a null value when there's no number, or when the unit is a label and can't take it.
+ * `label` is also true for a unit right after a zero, which can't take a number either.
  */
 function readValueAfter(
   tokens: string[],
@@ -295,13 +296,14 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
           signedFields.add(fieldOf[i]).add(fieldOf[valueAt]);
           continue;
         }
-        // After a zero, the unit doesn't take a number that has its own unit, as a label doesn't,
-        // so "0 cm, 1.8 m" is 1.8 m. The zero is then the unit's own number.
+        // After a zero in the same field, the unit doesn't take a number that has its own unit, as a
+        // label doesn't, so "0 cm, 1.8 m" is 1.8 m. The zero is then the unit's own number. A zero
+        // in an earlier field isn't the unit's, as in "record 0; kg 70 lb", which is 70 kg.
         const [value, valueEnd] = readValueAfter(
           remainingTokens,
           matchEnd,
           unit,
-          label || num === 0,
+          label || (num === 0 && fieldOf[matchStart] === fieldOf[i]),
           fuzziness
         );
         num = value || null;

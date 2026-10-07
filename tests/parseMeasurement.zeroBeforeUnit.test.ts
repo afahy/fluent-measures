@@ -24,6 +24,9 @@ describe('a zero before a unit', () => {
     ['0-foot-11', 11, 'in'],
     ['5-foot-0-inches', 60, 'in'],
     ['0 kg 70', 70, 'kg'],
+    // A zero in an earlier field isn't the unit's own number, so the unit takes the next number,
+    // as in "kg 72 lbs 159" (72 kg, existing test).
+    ['record 0; kg 70 lb', 70, 'kg'],
   ] as const)('keeps reading %s as %s %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });
@@ -31,5 +34,11 @@ describe('a zero before a unit', () => {
   // A height after a zero weight isn't the weight's number.
   it('returns null for a zero weight before a height, read as a weight', () => {
     expect(parseMeasurement('0 lbs 70 feet', { type: 'weight' })).toBeNull();
+  });
+
+  // A part in stone after a zero isn't the zero's unit's number, so the weight has a part in an
+  // unsupported unit, which returns null (README).
+  it('returns null for a zero weight before a part in stone', () => {
+    expect(parseMeasurement('0 kg 70 st')).toBeNull();
   });
 });
