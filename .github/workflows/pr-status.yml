@@ -19,20 +19,30 @@ on:
   workflow_run:
     workflows: [CI, Commitlint, Regression test]
     types: [completed]
+  # A bot's or CI's time running out sends no event, so check every open PR now and then.
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+# Runs for the same PR take turns, so an older answer can't overwrite a newer one. A run that is
+# already going finishes; a newer one only replaces a run that is still queued, and it reads the
+# PR again anyway.
 concurrency:
-  group: pr-status-${{ github.event.pull_request.number || github.event.issue.number || github.event.sha || github.event.workflow_run.head_sha }}
-  cancel-in-progress: true
+  group: pr-status-${{ github.event.pull_request.number || github.event.issue.number || github.event.workflow_run.pull_requests[0].number || github.event.sha || github.event_name }}
+  cancel-in-progress: false
 
 jobs:
   status:
     name: Set the PR status
-    # Its own status doesn't need another run. Statuses set with GITHUB_TOKEN don't start
-    # workflows anyway, so this is a second guard.
-    if: github.event_name != 'status' || github.event.context != 'pr-status'
+    # Skips its own status (statuses set with GITHUB_TOKEN don't start workflows anyway), comments
+    # on issues that aren't PRs, and PR events from forks, whose token can't set a status.
+    if: >-
+      (github.event_name != 'status' || github.event.context != 'pr-status') &&
+      (github.event_name != 'issue_comment' || github.event.issue.pull_request) &&
+      (!github.event.pull_request || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

@@ -1,5 +1,12 @@
-import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { Buffer } from 'node:buffer';
+import { execFile } from 'node:child_process';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { createServer, type IncomingHttpHeaders, type Server } from 'node:http';
+import type { AddressInfo } from 'node:net';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { env as parentEnv, execPath } from 'node:process';
+import { afterEach, describe, expect, it } from 'vitest';
 import type { PrStatus, Snapshot } from '../.github/scripts/pr-state.mjs';
 import { classify } from '../.github/scripts/pr-state.mjs';
 import { describeStatus, prsForEvent, setStatus } from '../.github/scripts/pr-status-check.mjs';
@@ -44,10 +51,32 @@ describe('describeStatus', () => {
     );
   });
 
-  it('keeps the description to 140 characters', () => {
+  it('drops a link that follows "in"', () => {
+    const status = classify(ready67(), at('2026-10-07T16:00:00Z'));
+    const outside: PrStatus = {
+      ...status,
+      state: 'needs-agent',
+      reasons: [
+        'coderabbitai[bot] put comments outside the diff in https://github.com/afahy/fluent-measures/pull/67#pullrequestreview-1',
+      ],
+    };
+    expect(describeStatus(outside)).toBe(
+      'needs-agent: coderabbitai[bot] put comments outside the diff'
+    );
+    const bare: PrStatus = { ...outside, reasons: ['See https://github.com/afahy'] };
+    expect(describeStatus(bare)).toBe('needs-agent: See');
+  });
+
+  it('keeps the description to 140 characters, without splitting an emoji', () => {
     const status = classify(ready67(), at('2026-10-07T16:00:00Z'));
     const long: PrStatus = { ...status, state: 'waiting-human', reasons: ['x'.repeat(200)] };
     expect(describeStatus(long)).toBe(`waiting-human: ${'x'.repeat(124)}…`);
+    // 15 + 125 is exactly 140, so nothing is cut.
+    const full: PrStatus = { ...long, reasons: ['x'.repeat(125)] };
+    expect(describeStatus(full)).toBe(`waiting-human: ${'x'.repeat(125)}`);
+    // "waiting-human: " is 15 characters, so the 124th character after it is the 👍.
+    const emoji: PrStatus = { ...status, state: 'waiting-human', reasons: ['👍'.repeat(200)] };
+    expect(describeStatus(emoji)).toBe(`waiting-human: ${'👍'.repeat(124)}…`);
   });
 
   it("says only the state when there's nothing to name", () => {
@@ -66,8 +95,9 @@ describe('prsForEvent', () => {
         { number: 6, state: 'closed' },
       ];
     },
-    async getAll(): Promise<unknown[]> {
-      return [];
+    async getAll(path: string): Promise<unknown[]> {
+      this.paths.push(path);
+      return [{ number: 7 }, { number: 8 }];
     },
   };
 
@@ -104,6 +134,16 @@ describe('prsForEvent', () => {
       `/repos/${repo}/commits/def/pulls`,
     ]);
   });
+
+  it('checks every open PR on a schedule or when started by hand', async () => {
+    api.paths = [];
+    await expect(prsForEvent(api, repo, 'schedule', {})).resolves.toEqual([7, 8]);
+    await expect(prsForEvent(api, repo, 'workflow_dispatch', {})).resolves.toEqual([7, 8]);
+    expect(api.paths).toEqual([
+      `/repos/${repo}/pulls?state=open`,
+      `/repos/${repo}/pulls?state=open`,
+    ]);
+  });
 });
 
 describe('setStatus', () => {
@@ -114,6 +154,10 @@ describe('setStatus', () => {
   } {
     return {
       async get(path: string): Promise<unknown> {
+        if (path.includes('/contents/')) {
+          if (!snapshot.codeowners) throw Object.assign(new Error('Not Found'), { status: 404 });
+          return { content: Buffer.from(snapshot.codeowners).toString('base64') };
+        }
         if (path.includes('/pulls/')) return snapshot.pull;
         if (path.includes('/activity')) return snapshot.pushes;
         return snapshot.headCommit;
@@ -124,6 +168,7 @@ describe('setStatus', () => {
         if (path.endsWith('/statuses')) return snapshot.statuses;
         if (path.endsWith('/reviews')) return snapshot.reviews;
         if (path.endsWith('/reactions')) return snapshot.reactions;
+        if (path.endsWith('/files')) return snapshot.files.map(filename => ({ filename }));
         if (path.includes('/pulls/')) return snapshot.reviewComments;
         return snapshot.issueComments;
       },
@@ -160,15 +205,22 @@ describe('setStatus', () => {
     snapshot.statuses.push(
       {
         context: 'pr-status',
+        state: 'pending',
+        description: 'waiting: an older status',
+        created_at: '2026-10-07T15:58:00Z',
+      },
+      {
+        context: 'pr-status',
         state: 'success',
         description: 'ready: Nothing is left for the agent',
         created_at: '2026-10-07T15:59:00Z',
       },
+      // A newer status from another context isn't the PR's status.
       {
-        context: 'pr-status',
-        state: 'pending',
-        description: 'waiting: an older status',
-        created_at: '2026-10-07T15:58:00Z',
+        context: 'CodeRabbit',
+        state: 'success',
+        description: 'Review completed',
+        created_at: '2026-10-07T15:59:30Z',
       }
     );
     expect(classify(snapshot, at('2026-10-07T16:00:00Z')).state).toBe('ready');
@@ -177,6 +229,38 @@ describe('setStatus', () => {
       setStatus(fakeApi(snapshot), post, repo, 67, at('2026-10-07T16:00:00Z'))
     ).resolves.toBeNull();
     expect(posts).toEqual([]);
+  });
+
+  it("doesn't count its own status or its own workflow's check as CI", () => {
+    const snapshot = ready67();
+    snapshot.statuses.push({
+      context: 'pr-status',
+      state: 'pending',
+      description: 'waiting: CI is running: mutation',
+      created_at: '2026-10-07T15:59:00Z',
+    });
+    snapshot.checkRuns.push(
+      {
+        id: 1,
+        name: 'Set the PR status',
+        status: 'completed',
+        conclusion: 'cancelled',
+        started_at: '2026-10-07T15:58:00Z',
+        app: { slug: 'github-actions' },
+      },
+      {
+        id: 2,
+        name: 'Set the PR status',
+        status: 'in_progress',
+        conclusion: null,
+        started_at: '2026-10-07T15:59:00Z',
+        app: { slug: 'github-actions' },
+      }
+    );
+    const status = classify(snapshot, at('2026-10-07T16:00:00Z'));
+    expect(status.state).toBe('ready');
+    expect(status.ci.pending).toEqual([]);
+    expect(status.ci.failed).toEqual([]);
   });
 
   it('sets the status again when the state or description changed', async () => {
@@ -200,11 +284,155 @@ describe('setStatus', () => {
     expect(posts).toHaveLength(2);
   });
 
+  it.each([
+    // [fixture, time, commit state, description], from the describeStatus cases above.
+    [
+      'pr-43-at-1810',
+      '2026-10-05T18:10:00Z',
+      'failure',
+      'needs-agent: chatgpt-codex-connector[bot] left a thread with no reply (+1 more)',
+    ],
+    [
+      'pr-66',
+      '2026-10-07T15:20:00Z',
+      'pending',
+      "waiting: Codex hasn't started on c7ad2f4; its last review was of 91a5d29 (until 2026-10-07T15:30:44.000Z) (+1 more)",
+    ],
+    [
+      'pr-66',
+      '2026-10-07T17:01:00Z',
+      'pending',
+      'waiting-human: Codex never reviewed the head commit, so only the maintainer can merge it',
+    ],
+  ])('sets %s at %s to %s', async (name, time, state, description) => {
+    const { posts, post } = recorder();
+    const snapshot = fixture(name);
+    await setStatus(fakeApi(snapshot), post, repo, snapshot.pull.number, at(time));
+    expect(posts).toEqual([
+      [
+        `/repos/${repo}/statuses/${snapshot.pull.head.sha}`,
+        { state, context: 'pr-status', description, target_url: snapshot.pull.html_url },
+      ],
+    ]);
+  });
+
   it('leaves a merged PR alone', async () => {
     const { posts, post } = recorder();
     await expect(
       setStatus(fakeApi(fixture('pr-43')), post, repo, 43, at('2026-10-07T16:00:00Z'))
     ).resolves.toBeNull();
     expect(posts).toEqual([]);
+  });
+});
+
+describe('pr-status-check.mjs', () => {
+  const servers: Server[] = [];
+  afterEach(() => {
+    for (const server of servers.splice(0)) server.close();
+  });
+
+  /** Serves #67 the way GitHub's REST API does, and records each status it is sent. */
+  async function serve(postCode: number): Promise<{
+    url: string;
+    posts: { path: string; headers: IncomingHttpHeaders; body: unknown }[];
+  }> {
+    const snapshot = ready67();
+    const sha = snapshot.pull.head.sha;
+    const base = `/repos/${repo}`;
+    const routes: Record<string, unknown> = {
+      [`${base}/pulls/67`]: snapshot.pull,
+      [`/repos/${snapshot.pull.head.repo?.full_name}/activity`]: snapshot.pushes,
+      [`${base}/issues/67/events`]: snapshot.events,
+      [`${base}/git/commits/${sha}`]: snapshot.headCommit,
+      [`${base}/commits/${sha}/check-runs`]: {
+        total_count: snapshot.checkRuns.length,
+        check_runs: snapshot.checkRuns,
+      },
+      [`${base}/commits/${sha}/statuses`]: snapshot.statuses,
+      [`${base}/issues/67/comments`]: snapshot.issueComments,
+      [`${base}/pulls/67/reviews`]: snapshot.reviews,
+      [`${base}/pulls/67/comments`]: snapshot.reviewComments,
+      [`${base}/issues/67/reactions`]: snapshot.reactions,
+      [`${base}/pulls/67/files`]: snapshot.files.map(filename => ({ filename })),
+      [`${base}/contents/.github/CODEOWNERS`]: {
+        content: Buffer.from(snapshot.codeowners ?? '').toString('base64'),
+      },
+    };
+    const posts: { path: string; headers: IncomingHttpHeaders; body: unknown }[] = [];
+    const server = createServer((request, response) => {
+      const path = new URL(request.url ?? '', 'http://localhost').pathname;
+      let text = '';
+      request.on('data', chunk => (text += chunk));
+      request.on('end', () => {
+        if (request.method === 'POST') {
+          posts.push({ path, headers: request.headers, body: JSON.parse(text) });
+          response.writeHead(postCode, { 'Content-Type': 'application/json' });
+          response.end('{}');
+          return;
+        }
+        const body = routes[path];
+        response.writeHead(body === undefined ? 404 : 200, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify(body ?? { message: 'Not Found' }));
+      });
+    });
+    servers.push(server);
+    await new Promise<void>(done => server.listen(0, '127.0.0.1', done));
+    return { url: `http://127.0.0.1:${(server.address() as AddressInfo).port}`, posts };
+  }
+
+  /** Runs the script for a pull_request event on #67, without the proxy that cloud sessions set. */
+  function run(apiUrl: string): Promise<{ code: number | null; stdout: string; stderr: string }> {
+    const dir = mkdtempSync(join(tmpdir(), 'pr-status-check-'));
+    const eventPath = join(dir, 'event.json');
+    writeFileSync(eventPath, JSON.stringify({ pull_request: { number: 67 } }));
+    const env: Record<string, string | undefined> = { ...parentEnv };
+    for (const name of ['HTTPS_PROXY', 'https_proxy', 'HTTP_PROXY', 'http_proxy']) delete env[name];
+    Object.assign(env, {
+      GITHUB_API_URL: apiUrl,
+      GITHUB_TOKEN: 'test-token',
+      GITHUB_REPOSITORY: repo,
+      GITHUB_EVENT_NAME: 'pull_request',
+      GITHUB_EVENT_PATH: eventPath,
+    });
+    return new Promise(done => {
+      execFile(
+        execPath,
+        [resolve('.github/scripts/pr-status-check.mjs')],
+        { env },
+        (error, stdout, stderr) =>
+          done({ code: error ? (error.code as number) : 0, stdout, stderr })
+      );
+    });
+  }
+
+  it("posts the PR's status with the token and prints what it set", async () => {
+    const api = await serve(201);
+    const result = await run(api.url);
+    expect(result.code).toBe(0);
+    expect(result.stdout).toBe('#67: success, ready: Nothing is left for the agent\n');
+    expect(api.posts).toHaveLength(1);
+    const [sent] = api.posts;
+    expect(sent.path).toBe(`/repos/${repo}/statuses/318c1b7f27c418c6a53ecf1c3de26c32ea207cb0`);
+    expect(sent.headers).toMatchObject({
+      accept: 'application/vnd.github+json',
+      authorization: 'Bearer test-token',
+      'x-github-api-version': '2022-11-28',
+      'content-type': 'application/json',
+    });
+    expect(sent.body).toEqual({
+      state: 'success',
+      context: 'pr-status',
+      description: 'ready: Nothing is left for the agent',
+      target_url: 'https://github.com/afahy/fluent-measures/pull/67',
+    });
+  });
+
+  it('fails when GitHub refuses the status', async () => {
+    const api = await serve(403);
+    const result = await run(api.url);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain(
+      `POST /repos/${repo}/statuses/318c1b7f27c418c6a53ecf1c3de26c32ea207cb0 answered 403`
+    );
   });
 });

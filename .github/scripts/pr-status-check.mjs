@@ -30,13 +30,17 @@ const MAX_DESCRIPTION = 140;
  */
 export function describeStatus(status) {
   const items = status.state === 'waiting' ? status.waits : status.reasons;
-  const first = items[0]?.replace(/:? https?:\/\/\S+/g, '');
+  const first = items[0]?.replace(/(?::| in)? https:\/\/\S+/g, '');
   const more = items.length > 1 ? ` (+${items.length - 1} more)` : '';
   const text =
     status.state === 'ready'
       ? 'ready: Nothing is left for the agent'
       : `${status.state}${first ? `: ${first}` : ''}${more}`;
-  return text.length > MAX_DESCRIPTION ? `${text.slice(0, MAX_DESCRIPTION - 1)}…` : text;
+  // GitHub counts characters, not UTF-16 units, and a cut mustn't split an emoji.
+  const characters = Array.from(text);
+  return characters.length > MAX_DESCRIPTION
+    ? `${characters.slice(0, MAX_DESCRIPTION - 1).join('')}…`
+    : text;
 }
 
 /**
@@ -70,6 +74,14 @@ export async function prsForEvent(api, repo, name, event) {
     }
     case 'status':
       return openPrsWith(event.sha);
+    // Bots' and CI's timers run out without an event, so a schedule checks every open PR.
+    case 'schedule':
+    case 'workflow_dispatch': {
+      const pulls = /** @type {{ number: number }[]} */ (
+        await api.getAll(`/repos/${repo}/pulls?state=open`)
+      );
+      return pulls.map(p => p.number);
+    }
     default:
       return [];
   }

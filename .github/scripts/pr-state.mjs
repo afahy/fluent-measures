@@ -25,6 +25,8 @@ const REVIEW_BOTS = new Set([CODEX, CODERABBIT]);
 
 /** The commit status that pr-status.yml sets. It reports this script's answer, so it isn't CI. */
 export const OWN_STATUS = 'pr-status';
+/** pr-status.yml's job, whose check run is on the head commit while it sets that status. */
+export const OWN_CHECK = 'Set the PR status';
 
 const MINUTE = 60 * 1000;
 /** How long a bot gets to start before the agent asks it (AGENTS.md). */
@@ -145,8 +147,9 @@ export function clockStart(snapshot) {
 
 /**
  * Sums up CI on the head commit: the latest run of each check, and the latest status for each
- * context other than CodeRabbit's and pr-status.yml's. A workflow that runs again, for example when the PR's title
- * is edited, starts a new check suite, so a check's latest run is its latest in any suite.
+ * context other than CodeRabbit's. pr-status.yml's own status and check aren't CI either. A
+ * workflow that runs again, for example when the PR's title is edited, starts a new check suite,
+ * so a check's latest run is its latest in any suite.
  *
  * @param {import('./pr-state.d.mts').CheckRun[]} checkRuns
  * @param {import('./pr-state.d.mts').CommitStatus[]} statuses
@@ -156,6 +159,7 @@ export function ciSummary(checkRuns, statuses) {
   /** @type {Map<string, import('./pr-state.d.mts').CheckRun>} */
   const runs = new Map();
   for (const run of checkRuns) {
+    if (run.name === OWN_CHECK) continue;
     const key = `${run.app?.slug ?? ''}\u0000${run.name}`;
     const seen = runs.get(key);
     if (!seen || run.id > seen.id) runs.set(key, run);
