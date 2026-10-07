@@ -1,6 +1,8 @@
 // Helpers for .github/scripts/mutation-check.mjs: the lines that a pull request adds or changes,
 // and the mutants on them in a Stryker JSON report that no test kills.
 
+import { matchesGlob } from 'node:path';
+
 /**
  * Returns the revisions to compare: the base and HEAD in CI, where HEAD is a merge commit whose
  * first parent is the base, or `<base>...HEAD` for a `--base` from the command line. The second
@@ -87,16 +89,30 @@ export function unmatchedFiles(log, files) {
 }
 
 /**
- * Returns whether Stryker mutates `file`: a TypeScript source file, not a declaration file. The
- * `mutate` pattern in `stryker.config.json` leaves out test files too, so they aren't mutated here
- * either. Vitest finds tests only under `tests/`, so mutants in a test file under `src/` get no
- * coverage.
+ * Returns whether Stryker mutates `file`: a TypeScript source file, not a declaration file.
  *
  * @param {string} file
  * @returns {boolean}
  */
 export function isSourceFile(file) {
-  return file.endsWith('.ts') && !/\.(?:d|spec|test)\.ts$/.test(file);
+  return file.endsWith('.ts') && !file.endsWith('.d.ts');
+}
+
+/**
+ * Returns the files that the `mutate` patterns in the Stryker config cover. As in Stryker, a
+ * pattern that starts with "!" leaves files out. The project's pattern leaves out test files under
+ * `src/`: Vitest finds tests only under `tests/`, so their mutants would get no coverage.
+ *
+ * @param {string[]} files
+ * @param {string[]} patterns
+ * @returns {string[]}
+ */
+export function mutatedFiles(files, patterns) {
+  const matches = (/** @type {string} */ file, /** @type {boolean} */ negated) =>
+    patterns.some(
+      pattern => pattern.startsWith('!') === negated && matchesGlob(file, pattern.replace(/^!/, ''))
+    );
+  return files.filter(file => matches(file, false) && !matches(file, true));
 }
 
 /**
@@ -241,11 +257,36 @@ export function unexplainedIgnores(report, changed) {
     }));
 }
 
+// Stryker's own pattern for a directive, from `@stryker-mutator/instrumenter`
+// (`directive-bookkeeper.js`). Stryker matches it to the text of each comment, without `//`, `/*`
+// and `*/`. A directive with no text after the colon gets Stryker's default reason.
+const DIRECTIVE = /^\s?Stryker disable(?: next-line)? [a-zA-Z, ]+(?::(.+))?/;
+
 /**
- * Returns the changed lines of `source` that hold a `// Stryker disable` directive without a
- * reason. A directive can ignore mutants on lines that didn't change, such as the line after a
- * `disable next-line`, so the directive itself is checked. In a block comment, the `*\/` that
- * ends the comment isn't a reason.
+ * Returns the text of each comment that a line can hold: each block comment, and the rest of the
+ * line after each `//` outside them. A `//` inside a string, as in a URL, gives text that isn't a
+ * comment, but that text doesn't start with a directive.
+ *
+ * @param {string} line
+ * @returns {string[]}
+ */
+function commentTexts(line) {
+  /** @type {string[]} */
+  const texts = [];
+  const rest = line.replace(/\/\*(.*?)\*\//g, (_, text) => {
+    texts.push(text);
+    return ' ';
+  });
+  for (const [, text] of rest.matchAll(/\/\/(?=(.*))/g)) texts.push(text);
+  return texts;
+}
+
+/**
+ * Returns the changed lines of `source` that hold a Stryker disable directive without a reason.
+ * A directive can ignore mutants on lines that didn't change, such as the line after a
+ * `disable next-line`, so the directive itself is checked. Each comment on a line is read as
+ * Stryker reads it, so a block comment's closing `*\/` isn't a reason, and another directive on the
+ * same line doesn't give it one.
  *
  * @param {string} source
  * @param {Array<[number, number]>} ranges
@@ -258,8 +299,10 @@ export function reasonlessDirectives(source, ranges) {
     .filter(
       ({ text, line }) =>
         ranges.some(([from, to]) => line >= from && line <= to) &&
-        /\bStryker\s+disable\b/.test(text) &&
-        !/\bStryker\s+disable(?:\s+next-line)?\s+[\w\s,]+?:\s*(?!\*\/)\S/.test(text)
+        commentTexts(text).some(comment => {
+          const match = DIRECTIVE.exec(comment);
+          return match !== null && !match[1]?.trim();
+        })
     )
     .map(({ line }) => line);
 }
