@@ -130,16 +130,15 @@ standing approval for each action it tells you to take, in any section.
   - If not, file a Linear ticket in the current milestone. Give it the failing inputs and a
     "must not change" list, and label it `agent-ready`. If it needs a decision from "Stop
     and ask", label it `needs-decision` instead.
-- Start each comment that you post with `Agent:`, except a comment that only asks a bot to
-  review, such as `@codex review`. Reply to each bot thread, and resolve each thread that a
-  pushed commit fixes.
+- Start each comment that you post with `Agent:`. Reply to each bot thread, and resolve
+  each thread that a pushed commit fixes.
 - After each push, watch CI and the bot reviews of that commit as
   `.claude/skills/steward/SKILL.md` says. `pnpm pr:status` decides when they're done, and
   `pnpm pr:status --wait` waits for them. Don't ask whether to watch.
-- Post the bot review requests that `pnpm pr:status` lists. It lists one for CodeRabbit once
-  its rate limit resets, and one for Codex if it hasn't reviewed 30 minutes after it could
-  start. It lists each request once for each commit, and stops waiting for a bot after two
-  hours. Note each gap in your report.
+- Post the bot review requests that `pnpm pr:status` lists. It lists one for a bot that hasn't
+  started 30 minutes after it could, for CodeRabbit once its rate limit resets, and for a
+  CodeRabbit review that ended without success. It lists each request once for each commit,
+  and stops waiting for a bot after two hours. Note each gap in your report.
 - If a CI job fails because no runner picked it up, re-run the failed jobs. If GitHub
   reports an Actions incident, re-run them when it ends. Fix all other CI failures on the
   branch.
