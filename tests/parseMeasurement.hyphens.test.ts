@@ -86,4 +86,13 @@ describe('hyphenated heights', () => {
       expect(parseMeasurement(raw, { type: 'height' })).toBeNull();
     }
   );
+
+  // A number can end with a period, as in "5." for 5, so 5 ft 11 in is 5 × 12 + 11 = 71 in and
+  // 1 m 80 cm is 180 cm.
+  it.each([
+    ['5. ft-11', 71, 'in'],
+    ['1. m-80 cm', 180, 'cm'],
+  ] as const)('joins the parts of %s', (raw, value, unit) => {
+    expect(parseMeasurement(raw)).toMatchObject({ value, unit });
+  });
 });

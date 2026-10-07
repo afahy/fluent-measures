@@ -156,16 +156,16 @@ export function tokenizeNormalized(input: string, fuzziness?: number): string[] 
         // After a number, a unit and a hyphen join two parts or values, as in "5 ft-11",
         // "1 m-80 cm" and "150 lbs-180 lbs". A unit prefix without a number before it keeps the
         // minus sign, as in "kg-70.5". Check the prefix first so the lookbehind only runs when
-        // needed. The lookbehind captures the token before the unit only when all of it can be a
-        // number, without semicolons at its end, as in "1;m-80 cm". Any other token matches the
-        // "\S" and captures nothing. So the lookbehind reads back only over number characters,
-        // and a long token with many units in it takes linear time.
+        // needed. The lookbehind captures the token before the unit only when it has only letters,
+        // digits and periods. Semicolons at its end don't count, as in "1;m-80 cm". Any other
+        // token matches the "\S" and captures nothing. So the lookbehind reads back only over
+        // those characters, and a long token with many units in it takes linear time.
         .replace(
           /(?<![\w-])(?=[a-z]+-)(?<=(?:(?<!\S)([a-z\d.]*);*|\S)\s*)([a-z]+)-(?=\.?\d)/g,
           (match, previous: string | undefined, word: string) => {
             const unit =
               matchUnit(word, 'height', fuzziness) || matchUnit(word, 'weight', fuzziness);
-            // A token that can't be a number captures nothing.
+            // A token with other characters captures nothing, so it isn't a number either.
             return unit &&
               // Stryker disable next-line StringLiteral: any text that isn't a number gives null, as "" does.
               wordsToNumber(previous ?? '') === null
