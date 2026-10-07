@@ -136,15 +136,16 @@ standing approval for each action it tells you to take, in any section.
 - After each push, watch CI and the bot reviews of that commit as
   `.claude/skills/steward/SKILL.md` says. `pnpm pr:status` decides when they're done, and
   `pnpm pr:status --wait` waits for them. Don't ask whether to watch.
-- Post the bot review requests that `pnpm pr:status` lists. It asks CodeRabbit again once its
-  rate limit resets and asks Codex if it hasn't reviewed 30 minutes after it could start. It
-  asks each bot once for each commit, and stops waiting for a bot after two hours. Note each
-  gap in your report.
+- Post the bot review requests that `pnpm pr:status` lists. It lists one for CodeRabbit once
+  its rate limit resets, and one for Codex if it hasn't reviewed 30 minutes after it could
+  start. It lists each request once for each commit, and stops waiting for a bot after two
+  hours. Note each gap in your report.
 - If a CI job fails because no runner picked it up, re-run the failed jobs. If GitHub
   reports an Actions incident, re-run them when it ends. Fix all other CI failures on the
   branch.
 - A review round is one push and the bot reviews of that push. Codex reviews every push, so
-  the rounds don't stop by themselves. After three rounds, don't ask for more bot reviews.
+  the rounds don't stop by themselves. After three rounds, don't ask for more bot reviews, and
+  run `pnpm pr:status` with `--no-requests`.
   After the third round, fix only showstoppers. File the other findings that are valid and
   worth fixing together as one ticket, reply on each thread with its ID, and list them in
   your report.
@@ -175,9 +176,10 @@ without the fix`. A skipped check counts as passed.
     ID.
   - If not, reply on its thread with the reason.
   - Then merge or close the PR.
-- If "Merge your own PR" allows it, merge the PR. If not, wait for the maintainer with
-  `pnpm pr:status --wait`, as the steward skill says. Arm no timed check-ins while the PR
-  waits only on the maintainer, and don't ask the maintainer to tell you when it merges.
+- If "Merge your own PR" allows it, merge the PR. If not, wait for the maintainer as the
+  steward skill says: with `pnpm pr:status --wait` or the PR's GitHub events, else with a
+  check-in every 4 hours for up to 24 hours. Don't ask the maintainer to tell you when it
+  merges.
 - When the maintainer merges or closes the PR, do the same comment check at once. File
   each new finding that is valid and worth fixing. If one is a showstopper, give its ticket
   Urgent priority, and tell the maintainer in your report.
