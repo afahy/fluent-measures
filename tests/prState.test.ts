@@ -414,6 +414,25 @@ describe('classify', () => {
     expect(status.codex.state).toBe('skipped');
   });
 
+  it('keeps a draft on hold while its CI runs, and needs the agent when CI fails', () => {
+    const snapshot = fixture('pr-66');
+    snapshot.pull.draft = true;
+    snapshot.pull.mergeable_state = 'unknown';
+    const run = snapshot.checkRuns[0];
+    run.status = 'in_progress';
+    run.conclusion = null;
+    const running = classify(snapshot, at('2026-10-07T16:30:00Z'));
+    // Only a person can take a PR out of draft, so running CI doesn't make it wait on the agent.
+    expect(running.state).toBe('waiting-human');
+    expect(running.reasons).toEqual(['The PR is a draft']);
+
+    run.status = 'completed';
+    run.conclusion = 'failure';
+    const failed = classify(snapshot, at('2026-10-07T16:30:00Z'));
+    expect(failed.state).toBe('needs-agent');
+    expect(failed.reasons).toEqual([`CI failed: ${run.name}`]);
+  });
+
   it('needs the agent after a person requests changes, until that person approves', () => {
     const snapshot = fixture('pr-67');
     snapshot.statuses.push({

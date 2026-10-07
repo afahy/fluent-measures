@@ -956,9 +956,7 @@ describe('pr-state.mjs details', () => {
   it("ignores a person's copy of Codex's summary, and finds the summary after other Codex comments", () => {
     const snapshot = fixture('pr-66');
     const summary = snapshot.issueComments.find(c => c.user?.login === codexBot.login)!;
-    const fake = summary
-      .body!.replace('✅ **Completed**', '✅ **Completed**')
-      .replace('`91a5d29`', '`c7ad2f4`');
+    const fake = summary.body!.replace('`91a5d29`', '`c7ad2f4`');
     snapshot.issueComments.unshift(
       comment(80, human, fake, '2026-10-07T14:40:00Z'),
       comment(81, codexBot, '**Reviewed commit:** `91a5d29c8f`', '2026-10-07T14:41:00Z')

@@ -712,12 +712,13 @@ export function classify(snapshot, now = Date.now(), { requests = true } = {}) {
     waits.push('GitHub is still working out whether the PR can merge');
   }
   if (reasons.length > 0) return result('needs-agent');
-  if (waits.length > 0) return result('waiting');
-
+  // Only a person takes a PR out of draft, so running CI doesn't make a draft wait on the agent.
   if (pull.draft) {
     reasons.push('The PR is a draft');
     return result('waiting-human');
   }
+  if (waits.length > 0) return result('waiting');
+
   if (codex.state === 'gave-up') {
     // AGENTS.md lets an agent merge only after Codex reviews the last commit.
     reasons.push('Codex never reviewed the head commit, so only the maintainer can merge it');
