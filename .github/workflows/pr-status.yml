@@ -15,13 +15,15 @@ on:
   # CodeRabbit's review status.
   status:
   # GitHub doesn't send check_suite events for suites that Actions creates, so follow the
-  # workflows that a PR's checks come from.
+  # workflows that a PR's checks come from. They can start again without a push, for example
+  # after a title edit, so a start counts as well as the end.
   workflow_run:
     workflows: [CI, Commitlint, Regression test]
-    types: [completed]
-  # A bot's or CI's time running out sends no event, so check every open PR now and then.
+    types: [requested, completed]
+  # A bot's or CI's time running out sends no event, so check every open PR now and then. Each
+  # PR costs about 13 requests of the token's 1,000 an hour, so not more often than this.
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: '*/30 * * * *'
   workflow_dispatch:
 
 permissions:
