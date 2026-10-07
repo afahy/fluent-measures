@@ -69,7 +69,7 @@ fluent-measures/
 
 ## Development Setup
 
-Use Node.js 22.18 or a later 22.x release, or Node.js 24.11 or later. CI runs on Node 22 and 24. Some development dependencies need these versions: Stryker's Babel packages need `^22.18.0 || >=24.11.0`, and ESLint 10 needs `^20.19.0 || ^22.13.0 || >=24`.
+Use Node.js 22.22.1 or a later 22.x release, Node.js 24.11 or a later 24.x release, or Node.js 26 or later, and Git 2.32.0 or later. CI runs on Node 22 and 24. Some development dependencies need these versions: Stryker's Babel packages need `^22.18.0 || >=24.11.0`, ESLint 10 needs `^20.19.0 || ^22.13.0 || >=24`, Changesets 3 needs `^22.11 || ^24 || >=26`, and lint-staged 17, which the pre-commit hook runs, needs `>=22.22.1` and Git 2.32.0 or later.
 
 ```bash
 # Clone the repository
