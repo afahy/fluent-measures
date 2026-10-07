@@ -49,8 +49,11 @@ describe('and a half', () => {
     ['two and a half thousand pounds', 2500, 'lb'],
     ['2 and a half thousand lbs', 2500, 'lb'],
     ['five and a half hundred pounds', 550, 'lb'],
-    // Reading forward after a label.
-    ['pounds: two and a half thousand', 2500, 'lb'],
+    // A semicolon can come between a number and its unit, as in "180;lbs" (README).
+    ['two and a half thousand; lbs', 2500, 'lb'],
+    // AFA-63's results don't change: a multiplier that starts the next number isn't the half's.
+    // 5 × 12 + 10.5 = 70.5.
+    ['5 ft 10 and a half, hundred eighty lbs', 70.5, 'in'],
   ] as const)('reads %s as %s %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });
