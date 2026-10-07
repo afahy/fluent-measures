@@ -1,4 +1,5 @@
 import { Buffer } from 'node:buffer';
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   backslashPaths,
@@ -77,8 +78,21 @@ describe('isSourceFile', () => {
     ['src/café.ts', true],
     ['src/types.d.ts', false],
     ['src/data.json', false],
+    // AFA-72: stryker.config.json doesn't mutate test files in src/.
+    ['src/units.test.ts', false],
+    ['src/units.spec.ts', false],
+    ['src/test.ts', true],
   ])('returns %s → %s', (file, expected) => {
     expect(isSourceFile(file)).toBe(expected);
+  });
+
+  // isSourceFile repeats the files that this pattern leaves out, so a change to it must change
+  // isSourceFile too.
+  it('matches the mutate pattern in stryker.config.json', () => {
+    const config = JSON.parse(
+      readFileSync(new URL('../stryker.config.json', import.meta.url), 'utf8')
+    );
+    expect(config.mutate).toEqual(['src/**/!(*.spec|*.test).ts']);
   });
 });
 
@@ -280,5 +294,17 @@ describe('reasonlessDirectives', () => {
 
   it('ignores directives on unchanged lines', () => {
     expect(reasonlessDirectives(source, [[3, 4]])).toEqual([]);
+  });
+
+  // AFA-72: Stryker reads a directive in a block comment too. The "*/" that ends the comment
+  // isn't a reason.
+  it.each([
+    ['/* Stryker disable next-line all: */', [1]],
+    ['/* Stryker disable next-line all:*/', [1]],
+    ['/* Stryker disable next-line all */', [1]],
+    ['/* Stryker disable next-line all: the fallback is never read */', []],
+    ['x; /* Stryker disable all: generated table */ y;', []],
+  ])('checks the block comment %s', (line, expected) => {
+    expect(reasonlessDirectives(`${line}\nconst b = a ?? 2;`, [[1, 1]])).toEqual(expected);
   });
 });

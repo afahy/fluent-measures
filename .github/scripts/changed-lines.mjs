@@ -87,13 +87,16 @@ export function unmatchedFiles(log, files) {
 }
 
 /**
- * Returns whether Stryker mutates `file`: a TypeScript source file, not a declaration file.
+ * Returns whether Stryker mutates `file`: a TypeScript source file, not a declaration file. The
+ * `mutate` pattern in `stryker.config.json` leaves out test files too, so they aren't mutated here
+ * either. Vitest finds tests only under `tests/`, so mutants in a test file under `src/` get no
+ * coverage.
  *
  * @param {string} file
  * @returns {boolean}
  */
 export function isSourceFile(file) {
-  return file.endsWith('.ts') && !file.endsWith('.d.ts');
+  return file.endsWith('.ts') && !/\.(?:d|spec|test)\.ts$/.test(file);
 }
 
 /**
@@ -241,7 +244,8 @@ export function unexplainedIgnores(report, changed) {
 /**
  * Returns the changed lines of `source` that hold a `// Stryker disable` directive without a
  * reason. A directive can ignore mutants on lines that didn't change, such as the line after a
- * `disable next-line`, so the directive itself is checked.
+ * `disable next-line`, so the directive itself is checked. In a block comment, the `*\/` that
+ * ends the comment isn't a reason.
  *
  * @param {string} source
  * @param {Array<[number, number]>} ranges
@@ -255,7 +259,7 @@ export function reasonlessDirectives(source, ranges) {
       ({ text, line }) =>
         ranges.some(([from, to]) => line >= from && line <= to) &&
         /\bStryker\s+disable\b/.test(text) &&
-        !/\bStryker\s+disable(?:\s+next-line)?\s+[\w\s,]+?:\s*\S/.test(text)
+        !/\bStryker\s+disable(?:\s+next-line)?\s+[\w\s,]+?:\s*(?!\*\/)\S/.test(text)
     )
     .map(({ line }) => line);
 }
