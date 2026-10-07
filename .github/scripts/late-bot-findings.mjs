@@ -19,9 +19,13 @@ import { pathToFileURL } from 'node:url';
 export const BOTS = new Set(['chatgpt-codex-connector[bot]', 'coderabbitai[bot]']);
 export const LABEL = 'late-bot-finding';
 
-/** Bot comments that hold no finding: summaries, notes, replies to requests, clean reviews. */
+/**
+ * Bot comments that hold no finding, by how they start: CodeRabbit's summaries, rate-limit notes
+ * and replies to requests, which open with a marker; Codex's summary; and Codex's notes that it
+ * found nothing or ran out of reviews. A finding that only mentions these words still counts.
+ */
 const ROUTINE =
-  /codex-pull-request-review-summary|summarize by coderabbit|rate limited by coderabbit|auto-generated reply by coderabbit|didn't find any major issues|review limit reached|usage limit/i;
+  /^\s*(?:<!-- (?:This is an auto-generated (?:comment: (?:summarize|rate limited) by coderabbit\.ai|reply by CodeRabbit)|codex-pull-request-review-summary) -->|Codex Review: Didn't find any major issues|You have reached your Codex usage limits)/i;
 
 /** Sections of a CodeRabbit review body that hold findings outside its review threads. */
 const BODY_FINDINGS = /(outside diff range|nitpick) comments \((\d+)\)/gi;
@@ -235,9 +239,12 @@ export async function fileOnGitHub(
     'Content-Type': 'application/json',
   };
   const title = recordTitle(finding);
-  /** @returns {Promise<{ number: number, html_url: string }[]>} The PR's open records, oldest first. */
+  /**
+   * @returns {Promise<{ id: number, number: number, html_url: string }[]>} The PR's open records,
+   *   oldest first.
+   */
   const records = async () => {
-    /** @type {{ number: number, title: string, html_url: string }[]} */
+    /** @type {{ id: number, number: number, title: string, html_url: string }[]} */
     const issues = [];
     /** @type {string | null} */
     let url = `${apiUrl}/repos/${repo}/issues?labels=${LABEL}&state=open&per_page=100`;
@@ -288,7 +295,11 @@ export async function fileOnGitHub(
     await call(get, `${apiUrl}/repos/${repo}/issues/${created.number}`, {
       method: 'PATCH',
       headers,
-      body: JSON.stringify({ state: 'closed', state_reason: 'duplicate' }),
+      body: JSON.stringify({
+        state: 'closed',
+        state_reason: 'duplicate',
+        duplicate_issue_id: oldest.id,
+      }),
     });
     return oldest.html_url;
   }
@@ -314,6 +325,10 @@ export async function fileOnLinear(finding, { apiKey, teamId, projectId, fetch: 
       body: JSON.stringify({ query, variables }),
     });
     if (result.errors?.length) throw new Error(`Linear: ${result.errors[0].message}`);
+    // A mutation can fail without an error, with `success: false`.
+    for (const [name, value] of Object.entries(result.data ?? {})) {
+      if (value?.success === false) throw new Error(`Linear: ${name} did not succeed`);
+    }
     return result.data;
   };
   const title = recordTitle(finding);
@@ -358,7 +373,7 @@ export async function fileOnLinear(finding, { apiKey, teamId, projectId, fetch: 
     return existing.url;
   }
   const created = await graphql(
-    'mutation Create($input: IssueCreateInput!) { issueCreate(input: $input) { issue { id url } } }',
+    'mutation Create($input: IssueCreateInput!) { issueCreate(input: $input) { success issue { id url } } }',
     { input: { teamId, projectId, title, description: recordBody(finding) } }
   );
   const issue = created.issueCreate.issue;

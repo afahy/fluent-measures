@@ -101,6 +101,22 @@ describe('lateFinding', () => {
     expect(finding).toMatchObject({ closed: 'merged', summary: 'a comment' });
   });
 
+  it('reports a bot comment that only mentions the words of a routine note', () => {
+    for (const body of [
+      'The usage limit parser drops valid values.',
+      "This check didn't find any major issues in tests, but `1 ft` is still lost.",
+      'Review limit reached: the size check fails on `src/units.ts`.',
+      "**Codex Review: Didn't find any major issues** in tests, but `1 ft` is still lost.",
+      'Unlike <!-- codex-pull-request-review-summary --> notes, this one is a finding.',
+    ]) {
+      const finding = lateFinding('issue_comment', {
+        issue: mergedIssue43,
+        comment: { ...bot.codexNoFindings, body },
+      });
+      expect(finding?.summary).toBe('a comment');
+    }
+  });
+
   it.each([
     ['a summary', 'coderabbitSummary'],
     ["Codex's summary", 'codexSummary'],
@@ -271,7 +287,13 @@ describe('records', () => {
       'POST https://api.test/repos/o/r/issues',
       'GET https://api.test/repos/o/r/issues?labels=late-bot-finding&state=open&per_page=100',
     ]);
-    expect(created.calls[0].init.headers.Authorization).toBe('Bearer t');
+    // The headers GitHub's REST API asks for.
+    expect(created.calls[0].init.headers).toEqual({
+      Accept: 'application/vnd.github+json',
+      Authorization: 'Bearer t',
+      'X-GitHub-Api-Version': '2022-11-28',
+      'Content-Type': 'application/json',
+    });
     expect(JSON.parse(created.calls[1].init.body ?? '')).toMatchObject({
       name: 'late-bot-finding',
     });
@@ -305,11 +327,13 @@ describe('records', () => {
 
   it('moves its finding to an older record that another run opened at the same time', async () => {
     const older = {
+      id: 7007,
       number: 7,
       title: 'Bot findings after #43 merged',
       html_url: 'https://github.com/o/r/issues/7',
     };
     const ours = {
+      id: 8008,
       number: 8,
       title: 'Bot findings after #43 merged',
       html_url: 'https://github.com/o/r/issues/8',
@@ -322,9 +346,11 @@ describe('records', () => {
       'POST https://api.test/repos/o/r/issues/7/comments',
       'PATCH https://api.test/repos/o/r/issues/8',
     ]);
+    // GitHub needs the older issue's ID, not its number, to close ours as its duplicate.
     expect(JSON.parse(calls[5].init.body ?? '')).toEqual({
       state: 'closed',
       state_reason: 'duplicate',
+      duplicate_issue_id: 7007,
     });
   });
 
@@ -366,6 +392,15 @@ describe('records', () => {
     );
   });
 
+  it("uses GitHub's API by default, and quotes only the first 200 characters of an error", async () => {
+    const { fetch } = fakeFetch([new Response('x'.repeat(300), { status: 500 })]);
+    await expect(fileOnGitHub(finding, { repo: 'o/r', token: 't', fetch })).rejects.toThrow(
+      new RegExp(
+        `^GET https://api\\.github\\.com/repos/o/r/issues\\?labels=late-bot-finding&state=open&per_page=100 answered 500: x{200}$`
+      )
+    );
+  });
+
   it("files a Linear issue in the project when the PR has none, and comments on the PR's one", async () => {
     const ours = { id: 'new', url: 'https://linear.app/i/1', createdAt: '2026-10-07T12:00:00Z' };
     const created = fakeFetch([
@@ -381,7 +416,12 @@ describe('records', () => {
         fetch: created.fetch,
       })
     ).resolves.toBe('https://linear.app/i/1');
-    expect(created.calls[0].init.headers.Authorization).toBe('k');
+    expect(created.calls[0].url).toBe('https://api.linear.app/graphql');
+    expect(created.calls[0].init.method).toBe('POST');
+    expect(created.calls[0].init.headers).toEqual({
+      Authorization: 'k',
+      'Content-Type': 'application/json',
+    });
     // Only open records count.
     expect(JSON.parse(created.calls[0].init.body ?? '').query).toContain(
       'state: { type: { nin: ["completed", "canceled"] } }'
@@ -429,10 +469,30 @@ describe('records', () => {
     await expect(
       fileOnLinear(finding, { apiKey: 'k', teamId: 'team', projectId: 'project', fetch })
     ).resolves.toBe('https://linear.app/i/0');
+    expect(JSON.parse(calls[3].init.body ?? '').query).toContain('commentCreate(input: $input)');
     expect(JSON.parse(calls[3].init.body ?? '').variables).toEqual({
       input: { issueId: 'old', body: recordEntry(finding) },
     });
+    expect(JSON.parse(calls[4].init.body ?? '').query).toContain('issueDelete(id: $id)');
     expect(JSON.parse(calls[4].init.body ?? '').variables).toEqual({ id: 'new' });
+  });
+
+  it('fails when Linear answers that a comment or issue was not created', async () => {
+    const comment = fakeFetch([
+      { data: { issues: { nodes: [{ id: 'abc', url: 'https://linear.app/i/2' }] } } },
+      { data: { commentCreate: { success: false } } },
+    ]);
+    await expect(
+      fileOnLinear(finding, { apiKey: 'k', teamId: 't', projectId: 'p', fetch: comment.fetch })
+    ).rejects.toThrow('Linear: commentCreate did not succeed');
+    const issue = fakeFetch([
+      { data: { issues: { nodes: [] } } },
+      { data: { issueCreate: { success: false, issue: null } } },
+    ]);
+    await expect(
+      fileOnLinear(finding, { apiKey: 'k', teamId: 't', projectId: 'p', fetch: issue.fetch })
+    ).rejects.toThrow('Linear: issueCreate did not succeed');
+    expect(JSON.parse(issue.calls[1].init.body ?? '').query).toContain('success');
   });
 
   it("fails with Linear's error message", async () => {
