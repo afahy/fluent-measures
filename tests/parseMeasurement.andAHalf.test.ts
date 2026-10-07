@@ -54,7 +54,33 @@ describe('and a half', () => {
     // AFA-63's results don't change: a multiplier that starts the next number isn't the half's.
     // 5 × 12 + 10.5 = 70.5.
     ['5 ft 10 and a half, hundred eighty lbs', 70.5, 'in'],
+    // More than one multiplier: 2.5 × 100 × 1000 = 250,000.
+    ['two and a half hundred thousand pounds', 250_000, 'lb'],
+    // A semicolon between the half and the multiplier, and with no multiplier, as in "6.5; ft".
+    ['two and a half; thousand lbs', 2500, 'lb'],
+    ['6 and a half; ft', 6.5, 'ft'],
+    // The whole number is smaller than the multiplier, as in "one hundred thousand": 100.5 × 1000.
+    ['one hundred and a half thousand lbs', 100_500, 'lb'],
   ] as const)('reads %s as %s %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
+  });
+
+  // A number word that isn't smaller than the multiplier after it doesn't form a number with it,
+  // as "two thousand hundred" and "thousand thousand" don't. So these aren't 2000.5 × 100,
+  // 1000.5 × 1000, 2.5 × 1000 × 1000 or 2.5 × 1000 × 100.
+  it.each([
+    ['two thousand and a half hundred lbs', 200_050],
+    ['one thousand and a half thousand pounds', 1_000_500],
+    ['two and a half thousand thousand lbs', 2_500_000],
+    ['two and a half thousand hundred lbs', 250_000],
+  ] as const)('does not read %s as %s', (raw, value) => {
+    expect(parseMeasurement(raw)?.value).not.toBe(value);
+  });
+
+  // A read forward stops before a multiplier after "and a half", as "pounds: two and a half
+  // thousand" (2.5 lb) shows. So stone has its own number, 2.5, and "thousand lb" is another part,
+  // which gives null, as "stone 12, 4 lb" does in the README.
+  it('returns null for a stone amount before another weight part', () => {
+    expect(parseMeasurement('stone two and a half thousand lb')).toBeNull();
   });
 });
