@@ -159,7 +159,7 @@ export function tokenizeNormalized(input: string, fuzziness?: number): string[] 
         // needed. The lookbehind captures the token before the unit only when it has only letters,
         // digits and periods. Semicolons at its end don't count, as in "1;m-80 cm". Any other
         // token matches the "\S" and captures nothing. So the lookbehind reads back only over
-        // those characters, and a long token with many units in it takes linear time.
+        // those characters, and a long token with many words before hyphens takes linear time.
         .replace(
           /(?<![\w-])(?=[a-z]+-)(?<=(?:(?<!\S)([a-z\d.]*);*|\S)\s*)([a-z]+)-(?=\.?\d)/g,
           (match, previous: string | undefined, word: string) => {
