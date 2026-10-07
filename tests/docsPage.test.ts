@@ -45,39 +45,50 @@ const HASHES: Record<string, string> = {
     'sha512-7O5pXpc0oCRrxk8RUfDYFgn0nO1t+jLuIOQdOMRp4APB7uZ4vSjspzp5y6YDtDs4VzUSTbWzBFZ/LKJhnyFOKw==',
 };
 
-type Listener = () => void;
-type Toast = { dataset: Record<string, string>; setAttribute: () => void };
+type Listener = (event?: unknown) => void;
+type Toast = {
+  dataset: Record<string, string>;
+  attributes: Record<string, string>;
+  setAttribute: (name: string, value: string) => void;
+};
+type Toasts = Record<'success-toast' | 'error-toast', Toast>;
 
 /**
  * Run the page's copy-button script with stand-ins for the browser objects that it uses. The page
- * has one copy button here. Return its click listeners and the two toasts.
+ * has one copy button here. The stand-ins act only on the event names and the selector that the
+ * page should use. Return the button's click listeners and the two toasts.
  */
-function runCopyScript(clipboardJS?: unknown): {
-  clicks: Listener[];
-  toasts: Record<string, { dataset: Record<string, string> }>;
-} {
+function runCopyScript(clipboardJS?: unknown): { clicks: Listener[]; toasts: Toasts } {
   const script = page
     .split('<script>')
     .map(part => part.split('</script>')[0])
     .find(code => code.includes('DOMContentLoaded'));
-  const toast = (): Toast => ({
-    dataset: {},
-    setAttribute: () => undefined,
-  });
-  const toasts = { 'success-toast': toast(), 'error-toast': toast() };
+  expect(script, 'the copy-button script').toBeDefined();
+  const toast = (): Toast => {
+    const attributes: Record<string, string> = {};
+    return {
+      dataset: {},
+      attributes,
+      setAttribute: (name: string, value: string): void => {
+        attributes[name] = value;
+      },
+    };
+  };
+  const toasts: Toasts = { 'success-toast': toast(), 'error-toast': toast() };
   const clicks: Listener[] = [];
   let onReady: Listener = () => undefined;
   const button = {
-    addEventListener: (_: string, listener: Listener): void => {
-      clicks.push(listener);
+    addEventListener: (event: string, listener: Listener): void => {
+      if (event === 'click') clicks.push(listener);
     },
   };
   const document = {
-    addEventListener: (_: string, listener: Listener): void => {
-      onReady = listener;
+    addEventListener: (event: string, listener: Listener): void => {
+      if (event === 'DOMContentLoaded') onReady = listener;
     },
-    getElementById: (id: keyof typeof toasts): Toast => toasts[id],
-    querySelectorAll: (): (typeof button)[] => [button],
+    getElementById: (id: keyof Toasts): Toast => toasts[id],
+    querySelectorAll: (selector: string): (typeof button)[] =>
+      selector === '.copy-button' ? [button] : [],
   };
   const globals = { document, setTimeout: (): number => 0, clearTimeout: (): void => undefined };
   runInNewContext(script ?? '', clipboardJS ? { ...globals, ClipboardJS: clipboardJS } : globals);
@@ -93,14 +104,20 @@ describe('the docs page', () => {
 
   it.each(tags)('checks the integrity of $url', ({ tag, url }) => {
     expect(Object.keys(HASHES)).toContain(url);
-    expect(/\sintegrity="([^"]*)"/.exec(tag)?.[1]).toBe(HASHES[url]);
-    expect(tag).toMatch(/\scrossorigin="anonymous"/);
+    // Attribute names, and the value of "crossorigin", ignore case in HTML. A hash doesn't.
+    expect(/\sintegrity="([^"]*)"/i.exec(tag)?.[1]).toBe(HASHES[url]);
+    expect(tag).toMatch(/\scrossorigin="anonymous"/i);
   });
 
   // AFA-102: the tags that the checks above find in other pages.
   it.each([
     ['<link href="https://a.example/x.css" rel="preload stylesheet" />', 'https://a.example/x.css'],
     ['<link rel="Stylesheet" href="https://a.example/x.css" />', 'https://a.example/x.css'],
+    // The ticket's own example.
+    [
+      '<link rel="alternate stylesheet" href="https://a.example/x.css" />',
+      'https://a.example/x.css',
+    ],
     ['<SCRIPT src="//a.example/x.js"></SCRIPT>', '//a.example/x.js'],
     ['<script src="http://cdn.tailwindcss.com"></script>', 'http://cdn.tailwindcss.com'],
     [
@@ -127,17 +144,40 @@ describe('the docs page', () => {
     expect(clicks).toHaveLength(1);
     clicks[0]();
     expect(toasts['error-toast'].dataset.visible).toBe('true');
+    // A screen reader reads the toast only when it isn't hidden.
+    expect(toasts['error-toast'].attributes['aria-hidden']).toBe('false');
     expect(toasts['success-toast'].dataset.visible).toBe('false');
   });
 
   it('uses clipboard.js for the copy buttons when it loaded', () => {
     const selectors: string[] = [];
-    function ClipboardJS(selector: string): { on: () => void } {
+    const handlers: Record<string, Listener> = {};
+    function ClipboardJS(selector: string): { on: (event: string, handler: Listener) => void } {
       selectors.push(selector);
-      return { on: () => undefined };
+      return {
+        on: (event: string, handler: Listener): void => {
+          handlers[event] = handler;
+        },
+      };
     }
-    const { clicks } = runCopyScript(ClipboardJS);
+    const { clicks, toasts } = runCopyScript(ClipboardJS);
     expect(selectors).toEqual(['.copy-button']);
     expect(clicks).toEqual([]);
+    expect(Object.keys(handlers).sort()).toEqual(['error', 'success']);
+
+    // A copy marks its button and shows the success toast. A failed copy shows the error toast.
+    const classes: string[] = [];
+    let cleared = false;
+    handlers.success({
+      trigger: { classList: { add: (...names: string[]) => classes.push(...names) } },
+      clearSelection: () => (cleared = true),
+    });
+    expect(classes).toContain('copied');
+    expect(cleared).toBe(true);
+    expect(toasts['success-toast'].dataset.visible).toBe('true');
+    expect(toasts['success-toast'].attributes['aria-hidden']).toBe('false');
+    handlers.error({});
+    expect(toasts['error-toast'].dataset.visible).toBe('true');
+    expect(toasts['success-toast'].dataset.visible).toBe('false');
   });
 });
