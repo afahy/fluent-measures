@@ -43,15 +43,17 @@ describe('matchUnit', () => {
       expect(matchUnit(word, 'height', 2)).toBeNull();
     });
 
-    // "metro" is one edit from "metre" (AFA-64), so it's excluded too.
-    it.each(['metro', 'metros'])('rejects the prose word %s near metre', word => {
-      expect(matchUnit(word, 'height', 1)).toBeNull();
-    });
+    // The British spellings match only exactly (AFA-64). Each word here is one edit from one of
+    // them, and more than one from any other alias, so it matches nothing.
+    it.each(['mere', 'meres', 'centimetry', 'centimetros', 'metro'])(
+      'rejects %s, a typo of a British spelling',
+      word => {
+        expect(matchUnit(word, 'height', 1)).toBeNull();
+      }
+    );
 
-    // The exclusion is for whole words only. "centimetros" is one edit from "centimetres", which
-    // is less than a third of its 11 letters, so it matches.
-    it('still matches a longer word that ends in metros', () => {
-      expect(matchUnit('centimetros', 'height', 1)).toBe('cm');
+    it.each(['centimetre', 'centimetres', 'metre', 'metres'])('still matches %s exactly', word => {
+      expect(matchUnit(word, 'height', 1)).toBe(word.startsWith('c') ? 'cm' : 'm');
     });
 
     it('requires the first letter even for long aliases', () => {
