@@ -61,20 +61,26 @@ describe('and a half', () => {
     ['6 and a half; ft', 6.5, 'ft'],
     // The whole number is smaller than the multiplier, as in "one hundred thousand": 100.5 × 1000.
     ['one hundred and a half thousand lbs', 100_500, 'lb'],
+    // With no number before it, "and a half" isn't read, as in "and a half feet" (null above), so
+    // only "thousand" is, as on main.
+    ['and a half thousand pounds', 1000, 'lb'],
   ] as const)('reads %s as %s %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });
 
-  // A number word that isn't smaller than the multiplier after it doesn't form a number with it,
-  // as "two thousand hundred" and "thousand thousand" don't. So these aren't 2000.5 × 100,
-  // 1000.5 × 1000, 2.5 × 1000 × 1000 or 2.5 × 1000 × 100.
+  // As in "two thousand hundred" and "thousand thousand", a number word that isn't smaller than the
+  // multiplier after it doesn't form a number. Only a whole number takes "and a half", as
+  // "1.5 and a half m" shows, and a measurement can't be negative. So none of these has a number
+  // before the unit, and the half isn't dropped to read only the multiplier, as it was on main.
   it.each([
-    ['two thousand and a half hundred lbs', 200_050],
-    ['one thousand and a half thousand pounds', 1_000_500],
-    ['two and a half thousand thousand lbs', 2_500_000],
-    ['two and a half thousand hundred lbs', 250_000],
-  ] as const)('does not read %s as %s', (raw, value) => {
-    expect(parseMeasurement(raw)?.value).not.toBe(value);
+    'two thousand and a half hundred lbs',
+    'one thousand and a half thousand pounds',
+    'two and a half thousand thousand lbs',
+    'two and a half thousand hundred lbs',
+    '1.5 and a half thousand lbs',
+    '-2 and a half thousand lbs',
+  ])('returns null for %s', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
   });
 
   // A read forward stops before a multiplier after "and a half", as "pounds: two and a half
