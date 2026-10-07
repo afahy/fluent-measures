@@ -5,8 +5,8 @@ export const UNIT_ALIASES: Record<MeasurementType, [Unit, ...string[]][]> = {
   height: [
     ['ft', 'feet', 'foot', "'"],
     ['in', 'inch', 'inches', '"'],
-    ['cm', 'centimeter', 'centimeters'],
-    ['m', 'meter', 'meters'],
+    ['cm', 'centimeter', 'centimeters', 'centimetre', 'centimetres'],
+    ['m', 'meter', 'meters', 'metre', 'metres'],
   ],
   weight: [
     ['lb', 'lbs', 'pound', 'pounds'],
