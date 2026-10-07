@@ -48,6 +48,12 @@ describe('matchUnit', () => {
       expect(matchUnit(word, 'height', 1)).toBeNull();
     });
 
+    // The exclusion is for whole words only. "centimetros" is one edit from "centimetres", which
+    // is less than a third of its 11 letters, so it matches.
+    it('still matches a longer word that ends in metros', () => {
+      expect(matchUnit('centimetros', 'height', 1)).toBe('cm');
+    });
+
     it('requires the first letter even for long aliases', () => {
       expect(matchUnit('xilograms', 'weight', 2)).toBeNull();
       expect(matchUnit('xentimeters', 'height', 2)).toBeNull();
