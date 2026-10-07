@@ -33,8 +33,8 @@ describe('British spellings and "#" for pounds', () => {
   });
 
   // "#" before a number isn't a unit, and neither is "#" before a letter, as in "185#é", or before
-  // another "#", as on main.
-  it.each(['room #12', '185#é', '185##'])('returns null for %s', raw => {
+  // another "#" or "_", as on main.
+  it.each(['room #12', '185#é', '185##', '185#_'])('returns null for %s', raw => {
     expect(parseMeasurement(raw)).toBeNull();
   });
 });
