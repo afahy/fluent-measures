@@ -155,17 +155,17 @@ export function tokenizeNormalized(input: string, fuzziness?: number): string[] 
         .replace(/(?<=\d\s*')-(?=\.?\d)|_(?=-)|[^\w\s'".;-]/g, ' ')
         // After a number, a unit and a hyphen join two parts or values, as in "5 ft-11",
         // "1 m-80 cm" and "150 lbs-180 lbs". A unit prefix without a number before it keeps the
-        // minus sign, as in "kg-70.5". Check the prefix first so the lookbehind only scans the
-        // preceding token when needed.
+        // minus sign, as in "kg-70.5". Check the prefix first so the lookbehind only runs when
+        // needed. The lookbehind captures the token before the unit only when all of it can be a
+        // number, without semicolons at its end, as in "1;m-80 cm". Any other token matches the
+        // "\S" and captures nothing. So the lookbehind reads back only over number characters,
+        // and a long token with many units in it takes linear time.
         .replace(
-          /(?<![\w-])(?=[a-z]+-)(?<=(\S*)\s*)([a-z]+)-(?=\.?\d)/g,
-          (match, previous: string, word: string) => {
+          /(?<![\w-])(?=[a-z]+-)(?<=(?:(?:^|\s)([a-z\d.]*);*|\S)\s*)([a-z]+)-(?=\.?\d)/g,
+          (match, previous: string | undefined, word: string) => {
             const unit =
               matchUnit(word, 'height', fuzziness) || matchUnit(word, 'weight', fuzziness);
-            // A semicolon can come between a number and its unit, as in "1;m-80 cm".
-            return unit && wordsToNumber(trimTrailing(previous, ';')) === null
-              ? `${word} -`
-              : match;
+            return unit && wordsToNumber(previous ?? '') === null ? `${word} -` : match;
           }
         )
         // Separate numbers from attached units or quotes, retaining signs after opening quotes.

@@ -37,4 +37,20 @@ describe('long runs of periods and semicolons', () => {
     expect(parseMeasurement(`${run(';')}x kg-70.5`)).toBeNull();
     expect(performance.now() - start).toBeLessThan(3 * apart + 100);
   });
+
+  // AFA-91: at each unit word before a hyphen, the hyphen joiner read back over the whole token
+  // before it. So a long token with many units took quadratic time: 25,000 copies of ";kg-1"
+  // took about 1 s. With a space before each copy, each token is short. A unit prefix keeps its
+  // minus sign, and a lone number has no unit, so each input is null (README: "kg-70.5").
+  it.each([';a-1', ';kg-1', '.x-1', 'kg-1;', 'x-1;'])(
+    'returns null for a long token of %s repeated',
+    part => {
+      let start = performance.now();
+      parseMeasurement(` ${part}`.repeat(25_000));
+      const apart = performance.now() - start;
+      start = performance.now();
+      expect(parseMeasurement(part.repeat(25_000))).toBeNull();
+      expect(performance.now() - start).toBeLessThan(3 * apart + 100);
+    }
+  );
 });
