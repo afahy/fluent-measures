@@ -83,6 +83,12 @@ describe('and a half', () => {
     expect(parseMeasurement(raw)).toBeNull();
   });
 
+  // So "ft" has no number before it here, and it takes the number after it, as a unit before its
+  // number does in the README ("record 0; kg 70" → 70 kg).
+  it.each(['-2 and a half ft 4', '1.5 and a half thousand ft 4'])('reads %s as 4 ft', raw => {
+    expect(parseMeasurement(raw)).toMatchObject({ value: 4, unit: 'ft' });
+  });
+
   // A read forward stops before a multiplier after "and a half", as "pounds: two and a half
   // thousand" (2.5 lb) shows. So stone has its own number, 2.5, and "thousand lb" is another part,
   // which gives null, as "stone 12, 4 lb" does in the README.
