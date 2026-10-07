@@ -346,6 +346,8 @@ describe('pr-status-check.mjs', () => {
     const sha = snapshot.pull.head.sha;
     const base = `/repos/${repo}`;
     const routes: Record<string, unknown> = {
+      // Open PRs, for a scheduled run. #66 has no routes, so reading it answers 404.
+      [`${base}/pulls`]: [{ number: 66 }, { number: 67 }],
       [`${base}/pulls/67`]: snapshot.pull,
       [`/repos/${snapshot.pull.head.repo?.full_name}/activity`]: snapshot.pushes,
       [`${base}/issues/67/events`]: snapshot.events,
@@ -387,17 +389,21 @@ describe('pr-status-check.mjs', () => {
   }
 
   /** Runs the script for a pull_request event on #67, without the proxy that cloud sessions set. */
-  function run(apiUrl: string): Promise<{ code: number | null; stdout: string; stderr: string }> {
+  function run(
+    apiUrl: string,
+    name = 'pull_request',
+    event: unknown = { pull_request: { number: 67 } }
+  ): Promise<{ code: number | null; stdout: string; stderr: string }> {
     const dir = mkdtempSync(join(tmpdir(), 'pr-status-check-'));
     const eventPath = join(dir, 'event.json');
-    writeFileSync(eventPath, JSON.stringify({ pull_request: { number: 67 } }));
+    writeFileSync(eventPath, JSON.stringify(event));
     const env: Record<string, string | undefined> = { ...parentEnv };
     for (const name of ['HTTPS_PROXY', 'https_proxy', 'HTTP_PROXY', 'http_proxy']) delete env[name];
     Object.assign(env, {
       GITHUB_API_URL: apiUrl,
       GITHUB_TOKEN: 'test-token',
       GITHUB_REPOSITORY: repo,
-      GITHUB_EVENT_NAME: 'pull_request',
+      GITHUB_EVENT_NAME: name,
       GITHUB_EVENT_PATH: eventPath,
     });
     return new Promise(done => {
@@ -431,6 +437,17 @@ describe('pr-status-check.mjs', () => {
       description: 'ready: Nothing is left for the agent',
       target_url: 'https://github.com/afahy/fluent-measures/pull/67',
     });
+  });
+
+  it('sets the other PRs when one fails, then fails the run', async () => {
+    const api = await serve(201);
+    const result = await run(api.url, 'schedule', {});
+    expect(result.code).toBe(1);
+    expect(result.stdout).toBe('#67: success, ready: Nothing is left for the agent\n');
+    expect(result.stderr).toContain(
+      `#66: GitHub answered 404 for ${api.url}/repos/${repo}/pulls/66`
+    );
+    expect(api.posts).toHaveLength(1);
   });
 
   it('fails when GitHub refuses the status', async () => {

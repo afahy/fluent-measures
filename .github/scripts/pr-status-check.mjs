@@ -146,8 +146,14 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
     if (!response.ok) throw new Error(`POST ${path} answered ${response.status}`);
     return response.json();
   };
+  // One PR that fails, for example on a 502, doesn't stop the others. The run still fails.
   for (const number of await prsForEvent(api, repo, name, event)) {
-    const set = await setStatus(api, post, repo, number);
-    console.log(set ? `#${number}: ${set.state}, ${set.description}` : `#${number}: no change`);
+    try {
+      const set = await setStatus(api, post, repo, number);
+      console.log(set ? `#${number}: ${set.state}, ${set.description}` : `#${number}: no change`);
+    } catch (error) {
+      console.error(`#${number}: ${/** @type {Error} */ (error).message}`);
+      process.exitCode = 1;
+    }
   }
 }

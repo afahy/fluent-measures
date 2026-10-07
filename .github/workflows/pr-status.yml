@@ -2,7 +2,8 @@ name: PR status
 
 # Sets the `pr-status` commit status on a PR's head commit: what the PR waits on, from
 # .github/scripts/pr-state.mjs. It's informational, not a required check. Events other than
-# pull_request run this file from main, so changes here take effect once they merge.
+# pull_request, pull_request_review and pull_request_review_comment run this file from main, so
+# changes here take effect for them once they merge.
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
@@ -21,8 +22,9 @@ on:
   workflow_run:
     workflows: [CI, Commitlint, Regression test]
     types: [in_progress, completed]
-  # A bot's or CI's time running out sends no event, so check every open PR now and then. Each
-  # PR costs about 13 requests of the token's 1,000 an hour, so not more often than this.
+  # A bot's or CI's time running out sends no event, and nor does Codex's 👍 or 👀, so check
+  # every open PR now and then. Each PR costs about 13 requests of the token's 1,000 an hour,
+  # so not more often than this.
   schedule:
     - cron: '*/30 * * * *'
   workflow_dispatch:
