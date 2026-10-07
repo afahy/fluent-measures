@@ -295,7 +295,15 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
           signedFields.add(fieldOf[i]).add(fieldOf[valueAt]);
           continue;
         }
-        const [value, valueEnd] = readValueAfter(remainingTokens, matchEnd, unit, label, fuzziness);
+        // After a zero, the unit doesn't take a number that has its own unit, as a label doesn't,
+        // so "0 cm, 1.8 m" is 1.8 m. The zero is then the unit's own number.
+        const [value, valueEnd] = readValueAfter(
+          remainingTokens,
+          matchEnd,
+          unit,
+          label || num === 0,
+          fuzziness
+        );
         num = value || null;
         matchStart = i;
         matchEnd = valueEnd;
