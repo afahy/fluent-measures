@@ -1,0 +1,46 @@
+name: Late bot findings
+
+# Files a record when Codex or CodeRabbit posts a finding on a PR that has already merged or
+# closed, because no agent watches a closed PR. See .github/scripts/late-bot-findings.mjs.
+on:
+  pull_request_review:
+    types: [submitted]
+  pull_request_review_comment:
+    types: [created]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    name: Report a late bot finding
+    # Test the event only in this expression. The comment text stays in the event file, so it
+    # never reaches a shell.
+    if: >-
+      (github.event.pull_request.state == 'closed' || github.event.issue.state == 'closed') &&
+      contains(fromJSON('["chatgpt-codex-connector[bot]", "coderabbitai[bot]"]'), github.event.sender.login)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: File the finding
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
+          # The fluent-measures project in the Afahy team.
+          LINEAR_TEAM_ID: e4e3482c-97da-4c4f-9b2e-d98a7b8a841e
+          LINEAR_PROJECT_ID: 065de572-d6fc-4e15-8ded-d6e77f5c155e
+        run: node .github/scripts/late-bot-findings.mjs
