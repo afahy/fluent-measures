@@ -173,26 +173,25 @@ const directives = [...changed].flatMap(([file, ranges]) =>
   reasonlessDirectives(readFileSync(file, 'utf8'), ranges).map(line => ({ file, line }))
 );
 // Vitest runs only the tests that import a mutated file, and no test imports a file with only
-// types, such as src/types.ts, at runtime. So Stryker stops with "No tests were executed". When
-// the changed files have no mutants and no directive without a reason, there is nothing to
-// check (AFA-83).
-if (
+// types, such as src/types.ts, at runtime. So Stryker stops with "No tests were executed" and
+// writes no report. When the changed files have no mutants, no mutant can fail, so only the
+// directives are left to check (AFA-83).
+const noMutants =
   stryker.status !== 0 &&
   log.includes('No tests were executed') &&
-  /Instrumented \d+ source file\(s\) with 0 mutant\(s\)/.test(log) &&
-  directives.length === 0
-) {
+  /Instrumented \d+ source file\(s\) with 0 mutant\(s\)/.test(log);
+if (noMutants && directives.length === 0) {
   console.log('The changed files have no mutants, so there is nothing to check.');
   process.exit(0);
 }
-if (stryker.status !== 0) {
+if (stryker.status !== 0 && !noMutants) {
   console.error(
     `::error::Stryker exited with status ${stryker.status}. If its log says "No tests were executed", no test imports the changed files: add tests that do.`
   );
   process.exit(1);
 }
 
-const results = JSON.parse(readFileSync(report, 'utf8'));
+const results = noMutants ? { files: {} } : JSON.parse(readFileSync(report, 'utf8'));
 const unkilled = unkilledMutants(results, changed);
 const unexplained = unexplainedIgnores(results, changed);
 for (const mutant of unkilled) {

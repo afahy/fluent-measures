@@ -342,6 +342,10 @@ describe('mutation-check.mjs', () => {
 
     expect(check.status).toBe(1);
     expect(check.stdout).not.toContain('nothing to check');
+    expect(check.stderr).toContain(
+      '::error file=src/types.ts,line=1::This Stryker disable comment has no reason.'
+    );
+    expect(check.stderr).not.toContain('Stryker exited with status');
   });
 
   // Only "No tests were executed" means that no test imports the files. Another error still fails.
