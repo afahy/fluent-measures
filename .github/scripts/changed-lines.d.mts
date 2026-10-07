@@ -10,6 +10,8 @@ export function unmatchedFiles(log: string, files: string[]): string[];
 
 export function isSourceFile(file: string): boolean;
 
+export function controlPaths(files: string[]): string[];
+
 export function backslashPaths(files: string[]): string[];
 
 export function literalGlob(file: string): string;

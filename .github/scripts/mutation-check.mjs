@@ -8,11 +8,12 @@
 // Stryker then gives it the status Ignored, so this check doesn't count it. The reason is required.
 
 import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { lstatSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   backslashPaths,
+  controlPaths,
   decodeNames,
   gitEnvironment,
   hunkRanges,
@@ -43,12 +44,13 @@ if (baseFlag < 0 && spawnSync('git', ['rev-parse', '--quiet', '--verify', 'HEAD^
   process.exit(0);
 }
 
-// Fixed options and environment, so color, external diff tools, rename detection, pathspec and
-// diff variables, and binary detection can't change the output. Each pathspec is literal, so
-// `src/a\b.ts` and `src/[u]nits.ts` don't also match `src/ab.ts` and `src/units.ts`. With
-// `--text`, a file with a NUL byte or a `-diff` attribute still shows its changed lines.
-const gitDiff = ['diff', '--no-color', '--no-ext-diff', '--no-renames', '--text'];
-const gitOptions = { env: gitEnvironment(process.env) };
+// Fixed options and environment, so these can't change the output: color, external diff tools,
+// textconv filters, rename detection, binary detection, and pathspec and diff variables. Each
+// pathspec is literal, so `src/a\b.ts` doesn't also match `src/ab.ts`. With `--text`, a file
+// with a NUL byte or a `-diff` attribute still shows its changed lines. A large diff needs a
+// larger buffer than the default 1 MiB.
+const gitDiff = ['diff', '--no-color', '--no-ext-diff', '--no-textconv', '--no-renames', '--text'];
+const gitOptions = { env: gitEnvironment(process.env), maxBuffer: 64 * 1024 * 1024 };
 const range = revisions(base, { fromMergeBase: baseFlag >= 0 });
 
 // File names come NUL-separated and unquoted, so git prints each name as it is.
@@ -83,6 +85,17 @@ if (changed.size === 0) {
   console.log(`No lines under src/ change between ${base} and HEAD, so there is nothing to check.`);
   process.exit(0);
 }
+
+// A control character, such as a line break, would break the lines that this check prints and the
+// lines that it reads from Stryker's log.
+const controlled = controlPaths([...changed.keys()]);
+for (const file of controlled) {
+  console.error(
+    `::error::Rename ${JSON.stringify(file)}. Its path has a control character, so this check can't read Stryker's log about it.`
+  );
+}
+if (controlled.length > 0) process.exit(1);
+
 const lines = [...changed].flatMap(([file, ranges]) =>
   ranges.map(([from, to]) => `  ${file}:${from}${from === to ? '' : `-${to}`}`)
 );
@@ -119,10 +132,16 @@ writeFileSync(
 );
 
 // Stryker adds its warnings to stryker.log. Read only this run's lines, and remove the file if
-// this run made it.
+// this run made it. Stryker can't write to a symbolic link to /dev/null or to a missing file, so
+// those would hide its warnings.
 const logFile = 'stryker.log';
-const logExisted = existsSync(logFile);
-const logStart = logExisted ? statSync(logFile).size : 0;
+const logBefore = lstatSync(logFile, { throwIfNoEntry: false });
+if (logBefore && !logBefore.isFile()) {
+  console.error(
+    `::error::Remove ${logFile}, or make it a regular file. Stryker writes its warnings there, and this check reads them.`
+  );
+  process.exit(1);
+}
 
 // Run Stryker with this script's Node binary, not the node_modules/.bin shim.
 const stryker = spawnSync(
@@ -134,22 +153,26 @@ if (stryker.error) throw stryker.error;
 
 // Stryker never reads some folders, such as node_modules, so it can't mutate a file in them. It
 // only warns that the file's pattern matched no file, and the report then has no entry for it.
-const log = existsSync(logFile) ? readFileSync(logFile).subarray(logStart).toString('utf8') : '';
-if (!logExisted) rmSync(logFile, { force: true });
+const log = lstatSync(logFile, { throwIfNoEntry: false })
+  ? readFileSync(logFile)
+      .subarray(logBefore?.size ?? 0)
+      .toString('utf8')
+  : '';
+if (!logBefore) rmSync(logFile, { force: true });
 const unmatched = unmatchedFiles(log, [...changed.keys()]);
 for (const file of unmatched) {
   console.error(
     `::error file=${file}::Move ${file}. Stryker never reads some folders, such as node_modules, so this check can't find the file's mutants.`
   );
 }
+// Without the file, Stryker may find no tests to run, but the file is the problem to fix.
+if (unmatched.length > 0) process.exit(1);
 if (stryker.status !== 0) {
   console.error(
     `::error::Stryker exited with status ${stryker.status}. If its log says "No tests were executed", no test imports the changed files: add tests that do.`
   );
   process.exit(1);
 }
-
-if (unmatched.length > 0) process.exit(1);
 
 const results = JSON.parse(readFileSync(report, 'utf8'));
 const unkilled = unkilledMutants(results, changed);

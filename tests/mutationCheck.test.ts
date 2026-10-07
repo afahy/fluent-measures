@@ -1,6 +1,14 @@
 import { Buffer } from 'node:buffer';
-import { spawnSync, type SpawnSyncReturns } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync, spawnSync, type SpawnSyncReturns } from 'node:child_process';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { execPath } from 'node:process';
@@ -70,7 +78,8 @@ function commitFiles(repository: string, files: Record<string, string>): string 
     mkdirSync(dirname(resolve(repository, file)), { recursive: true });
     writeFileSync(resolve(repository, file), content);
   }
-  git(repository, 'add', '--all');
+  // --force, so a global gitignore that lists node_modules doesn't leave fixture files out.
+  git(repository, 'add', '--all', '--force');
   git(repository, 'commit', '-m', 'test: update files');
   return git(repository, 'rev-parse', 'HEAD').trim();
 }
@@ -146,7 +155,6 @@ describe('mutation-check.mjs', () => {
   // AFA-82: these variables change how git reads a pathspec or writes a diff.
   it.each([
     ['GIT_LITERAL_PATHSPECS', '1'],
-    ['GIT_GLOB_PATHSPECS', '1'],
     ['GIT_DIFF_OPTS', '--unified=3'],
   ])('reads the same changed lines with %s=%s', (name, value) => {
     const repository = createRepository();
@@ -163,19 +171,29 @@ describe('mutation-check.mjs', () => {
     );
   });
 
-  // AFA-82: Node opens a file by a UTF-8 name, so the check can't read this one.
+  // AFA-82: Node opens a file by a UTF-8 name, so the check can't read this one. The commit is
+  // made with git plumbing, because some file systems, such as APFS, reject such a name.
   it('fails for a changed file whose name is not valid UTF-8', () => {
     const repository = createRepository();
     const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
-    mkdirSync(resolve(repository, 'src'));
+    const env = withoutGitRepository();
+    const blob = execFileSync('git', ['hash-object', '-w', '--stdin'], {
+      cwd: repository,
+      input: 'export const a = 1;\n',
+      encoding: 'utf8',
+      env,
+    }).trim();
     // "src/caf" + the byte 0xE9 (é in Latin-1) + ".ts"
-    const name = Buffer.concat([
-      Buffer.from(resolve(repository, 'src/caf')),
+    const entry = Buffer.concat([
+      Buffer.from(`100644 ${blob}\tsrc/caf`),
       Buffer.from([0xe9]),
-      Buffer.from('.ts'),
+      Buffer.from('.ts\0'),
     ]);
-    writeFileSync(name, 'export const a = 1;\n');
-    git(repository, 'add', '--all');
+    execFileSync('git', ['update-index', '-z', '--index-info'], {
+      cwd: repository,
+      input: entry,
+      env,
+    });
     git(repository, 'commit', '-m', 'test: add a file');
 
     const check = runCheck(repository, base);
@@ -183,6 +201,42 @@ describe('mutation-check.mjs', () => {
     expect(check.status).toBe(1);
     expect(check.stderr).toContain("::error::Rename src/caf\uFFFD.ts. Its name isn't valid UTF-8");
     expect(check.stderr).not.toContain('Stryker exited');
+  });
+
+  // AFA-82 review: a line break or an escape in a name would break the check's output and its
+  // reading of Stryker's log.
+  it.each(['src/a\nb.ts', 'src/a\u001b[31mb.ts'])('fails for the changed path %j', file => {
+    const repository = createRepository();
+    const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
+    commitFiles(repository, { [file]: 'export const a = 1;\n' });
+
+    const check = runCheck(repository, base);
+
+    expect(check.status).toBe(1);
+    expect(check.stderr).toContain(
+      `::error::Rename ${JSON.stringify(file)}. Its path has a control`
+    );
+    expect(check.stdout).not.toContain('Changed lines');
+    expect(check.stderr).not.toContain('Stryker exited');
+  });
+
+  // AFA-82 review: --text doesn't turn off a textconv filter, which can drop changed lines.
+  it('reads the changed lines of a file that a textconv filter changes', () => {
+    const repository = createRepository();
+    const base = commitFiles(repository, {
+      'stryker.config.json': '{}\n',
+      '.gitattributes': 'src/*.ts diff=strip\n',
+      'src/units.ts': 'export const a = 1;\n',
+    });
+    commitFiles(repository, { 'src/units.ts': 'export const a = 2; // X\n' });
+
+    const check = runCheck(repository, base, {
+      GIT_CONFIG_COUNT: '1',
+      GIT_CONFIG_KEY_0: 'diff.strip.textconv',
+      GIT_CONFIG_VALUE_0: 'grep -v X',
+    });
+
+    expect(check.stdout).toContain('Changed lines:\n  src/units.ts:1\n');
   });
 
   // AFA-82: Stryker never reads a node_modules folder, so it doesn't mutate the file.
@@ -218,5 +272,47 @@ describe('mutation-check.mjs', () => {
     expect(check.stderr).toBe('');
     expect(check.stdout).toContain('Tests kill every mutant on the changed lines.');
     expect(check.status).toBe(0);
+  });
+
+  // AFA-82 review: the check reads only this run's warnings, and keeps a log that it didn't make.
+  it('ignores the warnings in an older stryker.log, and keeps that file', () => {
+    const repository = createRepository();
+    const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
+    commitFiles(repository, { 'src/units.ts': 'export const a = 1;\n' });
+    addStrykerStub(repository);
+    const old = 'WARN ProjectReader Glob pattern "src/units.ts" did not result in any files.\n';
+    writeFileSync(resolve(repository, 'stryker.log'), old);
+
+    const check = runCheck(repository, base);
+
+    expect(check.stdout).toContain('Tests kill every mutant on the changed lines.');
+    expect(check.status).toBe(0);
+    expect(readFileSync(resolve(repository, 'stryker.log'), 'utf8')).toBe(old);
+  });
+
+  // AFA-82 review: Stryker can't write its warnings through a link to /dev/null.
+  it('fails when stryker.log is not a regular file', () => {
+    const repository = createRepository();
+    const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
+    commitFiles(repository, { 'src/node_modules/x.ts': 'export const x = 1;\n' });
+    addStrykerStub(repository);
+    symlinkSync('/dev/null', resolve(repository, 'stryker.log'));
+
+    const check = runCheck(repository, base);
+
+    expect(check.status).toBe(1);
+    expect(check.stderr).toContain('::error::Remove stryker.log, or make it a regular file.');
+  });
+
+  // The check depends on three things in the installed Stryker: the warning's text, the log's name
+  // and that Stryker adds to the log. If an update changes one, this test fails.
+  it('matches the warning, the log file and the write mode of the installed Stryker', () => {
+    const core = resolve('node_modules/@stryker-mutator/core/dist/src');
+    expect(readFileSync(resolve(core, 'fs/project-reader.js'), 'utf8')).toContain(
+      'this.log.warn(`Glob pattern "${pattern}" did not result in any files.`);'
+    );
+    const backend = readFileSync(resolve(core, 'logging/logging-backend.js'), 'utf8');
+    expect(backend).toContain("const LOG_FILE_NAME = 'stryker.log';");
+    expect(backend).toContain("fs.createWriteStream(LOG_FILE_NAME, { flags: 'a' })");
   });
 });

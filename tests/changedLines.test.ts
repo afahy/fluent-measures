@@ -2,6 +2,7 @@ import { Buffer } from 'node:buffer';
 import { describe, expect, it } from 'vitest';
 import {
   backslashPaths,
+  controlPaths,
   decodeNames,
   gitEnvironment,
   hunkRanges,
@@ -130,6 +131,20 @@ describe('unmatchedFiles', () => {
 
   it('returns no files for a log without warnings', () => {
     expect(unmatchedFiles('', ['src/units.ts'])).toEqual([]);
+  });
+});
+
+describe('controlPaths', () => {
+  it('returns the paths with a control character', () => {
+    expect(
+      controlPaths([
+        'src/a\nb.ts',
+        'src/units.ts',
+        'src/c\u001bd.ts',
+        'src/e\u2028f.ts',
+        'src/café.ts',
+      ])
+    ).toEqual(['src/a\nb.ts', 'src/c\u001bd.ts', 'src/e\u2028f.ts']);
   });
 });
 

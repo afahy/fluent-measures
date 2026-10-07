@@ -97,6 +97,16 @@ export function isSourceFile(file) {
 }
 
 /**
+ * Returns the paths that have a control character, such as a line break or an escape.
+ *
+ * @param {string[]} files
+ * @returns {string[]}
+ */
+export function controlPaths(files) {
+  return files.filter(file => /[\p{Cc}\u2028\u2029]/u.test(file));
+}
+
+/**
  * Returns the paths that have a backslash. Stryker reads a backslash as a slash. So its report
  * names `src/a\b.ts` as `src/a/b.ts`, and the check can't find that file's mutants.
  *
