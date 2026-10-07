@@ -417,6 +417,17 @@ export function coderabbitState(snapshot, now) {
       action: 'Post `@coderabbitai review`',
     };
   }
+  if (
+    status?.state === 'success' &&
+    /disabled for this base branch/i.test(status.description ?? '')
+  ) {
+    // A PR on another PR's branch. CodeRabbit reviews it only when asked.
+    return {
+      state: 'not-requested',
+      detail: "CodeRabbit doesn't review PRs on this base branch unless asked",
+      action: 'Post `@coderabbitai review`',
+    };
+  }
   if (status?.state === 'success') {
     // For example "Review skipped", when every changed file is in an ignored path.
     return { state: 'done', detail: `CodeRabbit: ${status.description ?? 'success'}` };

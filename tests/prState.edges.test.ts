@@ -564,6 +564,27 @@ describe('coderabbitState edges', () => {
     });
   });
 
+  it('asks CodeRabbit to review a PR whose base branch it skips, and waits once asked', () => {
+    // CodeRabbit's real status on #71 and #73, whose base is another PR's branch. Its note says
+    // that `@coderabbitai review` starts a review anyway.
+    const snapshot = fixture('pr-67');
+    snapshot.statuses = [
+      {
+        context: 'CodeRabbit',
+        state: 'success',
+        description: 'Review skipped: reviews are disabled for this base branch',
+        created_at: '2026-10-07T14:52:00Z',
+      },
+    ];
+    expect(coderabbitState(snapshot, at('2026-10-07T15:00:00Z'))).toEqual({
+      state: 'not-requested',
+      detail: "CodeRabbit doesn't review PRs on this base branch unless asked",
+      action: 'Post `@coderabbitai review`',
+    });
+    snapshot.issueComments.push(comment(90, human, '@coderabbitai review', '2026-10-07T15:01:00Z'));
+    expect(coderabbitState(snapshot, at('2026-10-07T15:02:00Z')).state).toBe('requested');
+  });
+
   it('gives CodeRabbit 30 minutes to start, then asks it', () => {
     const snapshot = fixture('pr-67');
     snapshot.statuses = [];
