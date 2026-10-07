@@ -38,14 +38,17 @@ function readNumberPhrase(
     tokens[at] === 'and' && tokens[at + 1] === 'a' && tokens[at + 2] === 'half';
   // Reading backward, the phrase can start at "half", or at the multiplier words after it. They
   // multiply the half, as in "two and a half thousand" (2500) and "two and a half hundred
-  // thousand" (250,000). As in "two hundred thousand", each word must be smaller than the
-  // multiplier after it. A number before "and a half" that can't take it leaves no number, not
-  // only the multipliers, as in "1.5 and a half thousand" and "-2 and a half thousand". Semicolons
-  // are skipped, as the loop below skips them.
-  // A read forward doesn't do this, so it stops before a multiplier after "and a half", and "a"
-  // stops a read. The whole number before "and a half" can't end in another "and a half", so that
-  // read doesn't check for one. Then a long run of "and a half" doesn't read back one call deeper
-  // each time.
+  // thousand" (250,000). As in "two hundred thousand", each multiplier must be smaller than the one
+  // after it, and the whole number must be smaller than the nearest one. Semicolons are skipped, as
+  // the loop below skips them.
+  //
+  // A number before "and a half" that can't take it leaves no number, not only the multipliers, as
+  // in "1.5 and a half thousand". The read then stops at that number, so the check for a sign
+  // finds a signed one, as in "-2 and a half thousand".
+  //
+  // A read forward doesn't do this, so it stops before a multiplier after "and a half". The whole
+  // number before "and a half" can't end in another "and a half", so that read doesn't check for
+  // one. Then a long run of "and a half" doesn't read back one call deeper each time.
   // Stryker disable next-line EqualityOperator: step is 1 or -1, so "step <= 0" is the same.
   if (readHalf && step < 0) {
     let at = start;
@@ -63,7 +66,8 @@ function readNumberPhrase(
       if (ordered && Number.isInteger(whole) && whole! < nearest) {
         return [(whole! + 0.5) * multiplier, end];
       }
-      if (whole !== null || isSigned(tokens[end])) return [null, at];
+      if (isSigned(tokens[end])) return [null, end];
+      if (whole !== null) return [null, at];
     }
   }
   let end = start;

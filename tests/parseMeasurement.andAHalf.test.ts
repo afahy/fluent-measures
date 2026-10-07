@@ -68,8 +68,8 @@ describe('and a half', () => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });
 
-  // As in "two thousand hundred" and "thousand thousand", a number word that isn't smaller than the
-  // multiplier after it doesn't form a number. Only a whole number takes "and a half", as
+  // As in "two hundred thousand", each multiplier must be smaller than the one after it, and the
+  // whole number smaller than the nearest one. Only a whole number takes "and a half", as
   // "1.5 and a half m" shows, and a measurement can't be negative. So none of these has a number
   // before the unit, and the half isn't dropped to read only the multiplier, as it was on main.
   it.each([
@@ -85,10 +85,23 @@ describe('and a half', () => {
     expect(parseMeasurement(raw)).toBeNull();
   });
 
-  // So "ft" has no number before it here, and it takes the number after it, as a unit before its
-  // number does in the README ("record 0; kg 70" → 70 kg).
-  it.each(['-2 and a half ft 4', '1.5 and a half thousand ft 4'])('reads %s as 4 ft', raw => {
-    expect(parseMeasurement(raw)).toMatchObject({ value: 4, unit: 'ft' });
+  // A signed part drops its field, as "-2.5 ft 4" and "70 kg -2.5 lbs" do, with and without a
+  // multiplier after the half.
+  it.each([
+    '-2 and a half ft 4',
+    '-2 and a half thousand ft 4',
+    '70 kg -2 and a half thousand lbs',
+  ])('returns null for the signed part in %s', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
+
+  // "1.5 and a half thousand" isn't a number, so "ft" has no number before it, and it takes the
+  // number after it, as a unit before its number does (README: "record 0; kg 70" → 70 kg).
+  it('reads 1.5 and a half thousand ft 4 as 4 ft', () => {
+    expect(parseMeasurement('1.5 and a half thousand ft 4')).toMatchObject({
+      value: 4,
+      unit: 'ft',
+    });
   });
 
   // A read forward stops before a multiplier after "and a half", as "pounds: two and a half
