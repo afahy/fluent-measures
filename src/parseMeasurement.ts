@@ -22,12 +22,28 @@ import { ParseOptions, ParsedValue, Match, Unit } from './types';
 
 type QualifiedMatch = Match & { unit: NonNullable<Match['unit']> };
 
-/** Read the longest adjacent number phrase and return its first unconsumed token index. */
+/**
+ * Read the longest adjacent number phrase and return its first unconsumed token index. With
+ * `readHalf` false, a phrase that ends in "and a half" isn't read.
+ */
 function readNumberPhrase(
   tokens: string[],
   start: number,
-  step = 1
+  step = 1,
+  readHalf = true
 ): [value: number | null, end: number] {
+  // "and a half" after a whole number adds 0.5, as in "six and a half feet" and
+  // "5 foot 10 and a half". Number.isInteger is false for null.
+  const half = (at: number): boolean =>
+    tokens[at] === 'and' && tokens[at + 1] === 'a' && tokens[at + 2] === 'half';
+  // Reading backward, the phrase starts at "half". A read forward never starts there. It starts
+  // after a unit, a mark or a semicolon, or where another read stops, and "a" stops a read.
+  // The whole number before "and a half" can't end in another "and a half", so that read doesn't
+  // check for one. Then a long run of "and a half" doesn't read back one call deeper each time.
+  if (readHalf && half(start - 2)) {
+    const [whole, end] = readNumberPhrase(tokens, start - 3, -1, false);
+    if (Number.isInteger(whole)) return [whole! + 0.5, end];
+  }
   let end = start;
   let value: number | null = null;
   const words: string[] = [];
@@ -39,7 +55,9 @@ function readNumberPhrase(
     if (candidate === null) break;
     value = candidate;
   }
-  return [value, end];
+  // Reading forward, the loop skips "and" and stops at "a". A read backward never stops just
+  // before "a half", because "half" isn't a number.
+  return Number.isInteger(value) && half(end - 1) ? [value! + 0.5, end + 2] : [value, end];
 }
 
 /** The value of a token that starts with minus signs, without them, as in "-12" and "--12". */
