@@ -13,6 +13,9 @@ const WORDS = [
   '180',
   '1.8',
   '72.5',
+  // A number too large for a float, and one so small that it reads as 0.
+  '9'.repeat(400),
+  `0.${'0'.repeat(330)}1`,
   '0',
   '-3',
   '1/2',
@@ -98,9 +101,8 @@ const options: fc.Arbitrary<ParseOptions> = fc
   });
 
 // Stryker runs each test again for every mutant that it covers, and this test covers nearly all of
-// them. With 2000 inputs, CI's mutation job took 14 of its 15 minutes, and the property killed no
-// mutant that the other tests miss. So Stryker's workers, which set STRYKER_MUTATOR_WORKER, run
-// 100 inputs, and every other run checks 2000.
+// them. With 2000 inputs, the property killed no mutant that the other tests miss. So Stryker's
+// workers, which set STRYKER_MUTATOR_WORKER, run 100 inputs, and every other run checks 2000.
 const NUM_RUNS = env.STRYKER_MUTATOR_WORKER === undefined ? 2000 : 100;
 
 describe('invariants', () => {
