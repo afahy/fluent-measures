@@ -57,8 +57,9 @@ function runCheck(
 // A stand-in for Stryker. Like Stryker 10, it writes warnings to stryker.log only when the config
 // sets fileLogLevel to "warn" or lower, and it warns about each `mutate` pattern in a node_modules
 // folder. It writes a report with no mutants.
-const STRYKER_STUB = `const fs = require('node:fs');
-const config = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'));
+const STUB_CONFIG = `const fs = require('node:fs');
+const config = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'));`;
+const STRYKER_STUB = `${STUB_CONFIG}
 const logs = ['trace', 'debug', 'info', 'warn'].includes(config.fileLogLevel);
 for (const pattern of logs ? config.mutate : []) {
   if (/(^|\\/)node_modules\\//i.test(pattern)) {
@@ -73,8 +74,7 @@ fs.writeFileSync(config.jsonReporter.fileName, JSON.stringify({ files: {} }));
 const strykerWithNoTests = (
   mutants: number,
   error = 'No tests were executed. Stryker will exit prematurely.'
-): string => `const fs = require('node:fs');
-const config = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'));
+): string => `${STUB_CONFIG}
 if (['trace', 'debug', 'info'].includes(config.fileLogLevel)) {
   fs.appendFileSync('stryker.log', '12:00:00 (1) INFO Instrumenter Instrumented 1 source file(s) with ${mutants} mutant(s)\\n');
   fs.appendFileSync('stryker.log', '12:00:01 (1) ERROR Stryker ${error}\\n');
@@ -326,6 +326,21 @@ describe('mutation-check.mjs', () => {
 
     expect(check.status).toBe(1);
     expect(check.stderr).toContain('::error::Stryker exited with status 1.');
+    expect(check.stdout).not.toContain('nothing to check');
+  });
+
+  // The check still finds a directive without a reason in a changed file with no mutants.
+  it('fails for a directive without a reason when the changed files have no mutants', () => {
+    const repository = createRepository();
+    const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
+    commitFiles(repository, {
+      'src/types.ts': '// Stryker disable next-line all\nexport type Unit = string;\n',
+    });
+    addStrykerStub(repository, strykerWithNoTests(0));
+
+    const check = runCheck(repository, base);
+
+    expect(check.status).toBe(1);
     expect(check.stdout).not.toContain('nothing to check');
   });
 
