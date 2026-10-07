@@ -171,9 +171,13 @@ describe('mutation-check.mjs', () => {
     );
   });
 
-  // AFA-82: Node opens a file by a UTF-8 name, so the check can't read this one. The commit is
-  // made with git plumbing, because some file systems, such as APFS, reject such a name.
-  it('fails for a changed file whose name is not valid UTF-8', () => {
+  // AFA-82: Node opens a file by a UTF-8 name, so the check can't read these. The test makes the
+  // commit with git plumbing, because some file systems, such as APFS, reject such a name. The
+  // second name has line breaks, which must not start a line of their own in the output.
+  it.each([
+    ['src/caf', '.ts', 'src/caf\uFFFD.ts'],
+    ['src/caf', '\n::warning::x\n.ts', 'src/caf\uFFFD\n::warning::x\n.ts'],
+  ])('fails for a changed file whose name is %s + 0xE9 + %j', (start, end, shown) => {
     const repository = createRepository();
     const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
     const env = withoutGitRepository();
@@ -183,11 +187,11 @@ describe('mutation-check.mjs', () => {
       encoding: 'utf8',
       env,
     }).trim();
-    // "src/caf" + the byte 0xE9 (é in Latin-1) + ".ts"
+    // The byte 0xE9 is é in Latin-1 and isn't valid UTF-8 on its own.
     const entry = Buffer.concat([
-      Buffer.from(`100644 ${blob}\tsrc/caf`),
+      Buffer.from(`100644 ${blob}\t${start}`),
       Buffer.from([0xe9]),
-      Buffer.from('.ts\0'),
+      Buffer.from(`${end}\0`),
     ]);
     execFileSync('git', ['update-index', '-z', '--index-info'], {
       cwd: repository,
@@ -199,7 +203,10 @@ describe('mutation-check.mjs', () => {
     const check = runCheck(repository, base);
 
     expect(check.status).toBe(1);
-    expect(check.stderr).toContain("::error::Rename src/caf\uFFFD.ts. Its name isn't valid UTF-8");
+    expect(check.stderr).toContain(
+      `::error::Rename ${JSON.stringify(shown)}. Its name isn't valid UTF-8`
+    );
+    expect(check.stderr).not.toMatch(/^::warning::/m);
     expect(check.stderr).not.toContain('Stryker exited');
   });
 

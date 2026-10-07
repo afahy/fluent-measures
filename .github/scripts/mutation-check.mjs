@@ -65,7 +65,7 @@ const { names, invalid } = decodeNames(
 const unreadable = invalid.filter(isSourceFile);
 for (const name of unreadable) {
   console.error(
-    `::error::Rename ${name}. Its name isn't valid UTF-8, so this check can't read the file.`
+    `::error::Rename ${JSON.stringify(name)}. Its name isn't valid UTF-8, so this check can't read the file.`
   );
 }
 if (unreadable.length > 0) process.exit(1);

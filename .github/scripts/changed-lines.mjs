@@ -40,7 +40,7 @@ export function gitEnvironment(env) {
 /**
  * Splits the NUL-separated file names that git writes into the names that are valid UTF-8 and the
  * names that aren't. Node opens a file by a UTF-8 name, so it can't open a file in the second
- * group. Those names come back with U+FFFD in place of each byte that isn't valid.
+ * group. Those names come back with U+FFFD in place of each invalid byte sequence.
  *
  * @param {Uint8Array} output
  * @returns {{ names: string[], invalid: string[] }}
