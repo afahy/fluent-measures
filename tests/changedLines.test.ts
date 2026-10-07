@@ -1,6 +1,10 @@
+import { Buffer } from 'node:buffer';
 import { describe, expect, it } from 'vitest';
 import {
   backslashPaths,
+  controlPaths,
+  decodeNames,
+  gitEnvironment,
   hunkRanges,
   isSourceFile,
   literalGlob,
@@ -8,6 +12,7 @@ import {
   revisions,
   unexplainedIgnores,
   unkilledMutants,
+  unmatchedFiles,
 } from '../.github/scripts/changed-lines.mjs';
 
 // Output of `git diff --unified=0` for one file: an insertion, a one-line change, a deletion and
@@ -74,6 +79,72 @@ describe('isSourceFile', () => {
     ['src/data.json', false],
   ])('returns %s → %s', (file, expected) => {
     expect(isSourceFile(file)).toBe(expected);
+  });
+});
+
+describe('gitEnvironment', () => {
+  it('leaves out the variables that change pathspecs and diffs, and keeps the others', () => {
+    expect(
+      gitEnvironment({
+        PATH: '/bin',
+        GIT_DIR: '.git',
+        GIT_LITERAL_PATHSPECS: '1',
+        GIT_GLOB_PATHSPECS: '1',
+        GIT_NOGLOB_PATHSPECS: '1',
+        GIT_ICASE_PATHSPECS: '1',
+        GIT_DIFF_OPTS: '--unified=3',
+      })
+    ).toEqual({ PATH: '/bin', GIT_DIR: '.git' });
+  });
+});
+
+describe('decodeNames', () => {
+  it('splits the names that are valid UTF-8 from the others', () => {
+    // "src/caf" + the byte 0xE9 + ".ts" isn't valid UTF-8. Two NULs in a row make an empty name.
+    const output = Buffer.concat([
+      Buffer.from('src/a.ts\0src/caf'),
+      Buffer.from([0xe9]),
+      Buffer.from('.ts\0\0src/café.ts\0'),
+    ]);
+    expect(decodeNames(output)).toEqual({
+      names: ['src/a.ts', 'src/café.ts'],
+      invalid: ['src/caf\uFFFD.ts'],
+    });
+  });
+
+  it('returns no names for empty output', () => {
+    expect(decodeNames(new Uint8Array())).toEqual({ names: [], invalid: [] });
+  });
+});
+
+describe('unmatchedFiles', () => {
+  it('returns the files whose pattern Stryker says matched no file', () => {
+    const log = [
+      '10:00:00 (1) WARN ProjectReader Glob pattern "src/node_modules/x.ts" did not result in any files.',
+      '10:00:00 (1) WARN ProjectReader Glob pattern "src/[[]u[]]nits.ts" did not result in any files.',
+      '10:00:00 (1) WARN ProjectReader Glob pattern "!src/units.ts" did not exclude any files.',
+    ].join('\n');
+    expect(
+      unmatchedFiles(log, ['src/node_modules/x.ts', 'src/[u]nits.ts', 'src/units.ts'])
+    ).toEqual(['src/node_modules/x.ts', 'src/[u]nits.ts']);
+  });
+
+  it('returns no files for a log without warnings', () => {
+    expect(unmatchedFiles('', ['src/units.ts'])).toEqual([]);
+  });
+});
+
+describe('controlPaths', () => {
+  it('returns the paths with a control character', () => {
+    expect(
+      controlPaths([
+        'src/a\nb.ts',
+        'src/units.ts',
+        'src/c\u001bd.ts',
+        'src/e\u2028f.ts',
+        'src/café.ts',
+      ])
+    ).toEqual(['src/a\nb.ts', 'src/c\u001bd.ts', 'src/e\u2028f.ts']);
   });
 });
 
