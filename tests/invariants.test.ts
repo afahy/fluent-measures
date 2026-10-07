@@ -1,4 +1,5 @@
 import fc from 'fast-check';
+import { env } from 'node:process';
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement, type MeasurementType, type ParseOptions, type Unit } from '../src';
 
@@ -96,6 +97,12 @@ const options: fc.Arbitrary<ParseOptions> = fc
     };
   });
 
+// Stryker runs each test again for every mutant that it covers, and this test covers nearly all of
+// them. With 2000 inputs, CI's mutation job took 14 of its 15 minutes, and the property killed no
+// mutant that the other tests miss. So Stryker's workers, which set STRYKER_MUTATOR_WORKER, run
+// 100 inputs, and every other run checks 2000.
+const NUM_RUNS = env.STRYKER_MUTATOR_WORKER === undefined ? 2000 : 100;
+
 describe('invariants', () => {
   it('never throws, and gives null or a finite value above 0 in a unit of its type', () => {
     const types: MeasurementType[] = [];
@@ -112,7 +119,7 @@ describe('invariants', () => {
         expect(result.type).toBe(parseOptions.type ?? result.type);
         expect(result.unit).toBe(parseOptions.normalizedUnit ?? result.unit);
       }),
-      { numRuns: 2000, seed: 26 }
+      { numRuns: NUM_RUNS, seed: 26 }
     );
     // Most inputs give null, so check that some give each type, or a parser that returns null for
     // every input would pass.
