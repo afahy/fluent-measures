@@ -2,7 +2,7 @@
 
 exports[`measurement corpus > matches the committed score 1`] = `
 "Category                 total   agree   wrong  missed  throws
-all                        406     387       7      12       0
+all                        406     389       5      12       0
 
 symbols                     27      27       0       0       0
 words                       30      30       0       0       0
@@ -15,30 +15,18 @@ unicode                     29      29       0       0       0
 typos                       30      30       0       0       0
 surrounding-text            29      29       0       0       0
 multiple-measurements       30      30       0       0       0
-unqualified                 23      21       2       0       0
+unqualified                 23      23       0       0       0
 conversion                  28      28       0       0       0
 unsupported                 26      26       0       0       0
 prose                       29      25       4       0       0
 
-Entries with the outcome "wrong" (7):
+Entries with the outcome "wrong" (5):
 
 decimals-5-11-ft (decimals)
   input:    "5.11 ft"
   options:  {}
   expected: 71 in (height) | null
   actual:   5.11 ft (height)
-
-unqualified-1-75-metric-height (unqualified)
-  input:    "1.75"
-  options:  {"type":"height","allowUnqualified":true,"inferUnit":"metric"}
-  expected: 1.75 m (height) | 175 cm (height)
-  actual:   1.75 cm (height)
-
-unqualified-1-8-metric-height (unqualified)
-  input:    "1.8"
-  options:  {"type":"height","allowUnqualified":true,"inferUnit":"metric"}
-  expected: 1.8 m (height) | 180 cm (height)
-  actual:   1.8 cm (height)
 
 prose-top-10-in (prose)
   input:    "Top 10 in the class"
@@ -140,12 +128,14 @@ compact-ft-in-dots (compact)
 
 Entries with the outcome "throws" (0):
 
-Entries that agree with one of several outputs (6):
+Entries that agree with one of several outputs (8):
 
 unicode-en-dash-shorthand: null
 unicode-hyphen-shorthand: null
 multiple-kg-with-lbs: 70 kg (weight)
 multiple-height-weight-no-type: 71 in (height)
 multiple-6-1-190-no-type: 73 in (height)
-unqualified-no-infer-unit: 150 lb (weight)"
+unqualified-1-75-metric-height: 1.75 m (height)
+unqualified-no-infer-unit: 150 lb (weight)
+unqualified-1-8-metric-height: 1.8 m (height)"
 `;

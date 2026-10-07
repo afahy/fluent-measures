@@ -346,7 +346,9 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       // Stryker disable next-line ConditionalExpression: num > 0 is false for null too.
       if (num !== null && num > 0) {
         const metric = options.inferUnit === 'metric';
-        const unit = type === 'height' ? (metric ? 'cm' : 'in') : metric ? 'kg' : 'lb';
+        // A metric height below 3 can only be meters, as in "1.75", because no one is 3 cm tall.
+        const unit =
+          type === 'height' ? (metric ? (num < 3 ? 'm' : 'cm') : 'in') : metric ? 'kg' : 'lb';
         matches.push({ value: num, unit });
       }
     }
