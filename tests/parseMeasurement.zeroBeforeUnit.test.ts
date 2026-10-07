@@ -27,6 +27,8 @@ describe('a zero before a unit', () => {
     // A zero in an earlier field isn't the unit's own number, so the unit takes the next number,
     // as in "kg 72 lbs 159" (72 kg, existing test).
     ['record 0; kg 70 lb', 70, 'kg'],
+    // The rule is only for a zero. With a word before the prefix, "kg" still takes 72, as without it.
+    ['about kg 72 lbs 159', 72, 'kg'],
   ] as const)('keeps reading %s as %s %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });
