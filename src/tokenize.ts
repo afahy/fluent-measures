@@ -165,7 +165,7 @@ export function tokenizeNormalized(input: string, fuzziness?: number): string[] 
           (match, previous: string | undefined, word: string) => {
             const unit =
               matchUnit(word, 'height', fuzziness) || matchUnit(word, 'weight', fuzziness);
-            return unit && wordsToNumber(previous ?? '') === null ? `${word} -` : match;
+            return unit && (!previous || wordsToNumber(previous) === null) ? `${word} -` : match;
           }
         )
         // Separate numbers from attached units or quotes, retaining signs after opening quotes.
