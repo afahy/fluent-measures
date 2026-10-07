@@ -5,6 +5,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -55,11 +56,9 @@ function runCheck(
 
 // A stand-in for Stryker. Like Stryker 10, it writes warnings to stryker.log only when the config
 // sets fileLogLevel to "warn" or lower, and it warns about each `mutate` pattern in a node_modules
-// folder. It writes a report with no mutants. It adds each run's vitest.related option to
-// stryker-runs.txt, so a test can count the runs.
+// folder. It writes a report with no mutants.
 const STRYKER_STUB = `const fs = require('node:fs');
 const config = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'));
-fs.appendFileSync('stryker-runs.txt', String(config.vitest?.related) + '\\n');
 const logs = ['trace', 'debug', 'info', 'warn'].includes(config.fileLogLevel);
 for (const pattern of logs ? config.mutate : []) {
   if (/(^|\\/)node_modules\\//i.test(pattern)) {
@@ -69,14 +68,18 @@ for (const pattern of logs ? config.mutate : []) {
 fs.writeFileSync(config.jsonReporter.fileName, JSON.stringify({ files: {} }));
 `;
 
-// A stand-in for Stryker's Vitest runner in related mode, which runs only the tests that import a
-// mutated file. No test in the fixture imports anything, so, like Stryker, it stops with "No tests
-// were executed" unless the config turns related mode off.
-const STRYKER_RELATED_STUB = `${STRYKER_STUB}
-if (config.vitest?.related !== false) {
-  if (logs) fs.appendFileSync('stryker.log', 'ERROR Stryker No tests were executed. Stryker will exit prematurely.\\n');
-  process.exit(1);
+// A stand-in for Stryker when no test imports the changed files. Like Stryker 10, it logs how many
+// mutants it made when fileLogLevel is "info" or lower, then stops with "No tests were executed".
+const strykerWithNoTests = (
+  mutants: number,
+  error = 'No tests were executed. Stryker will exit prematurely.'
+): string => `const fs = require('node:fs');
+const config = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'));
+if (['trace', 'debug', 'info'].includes(config.fileLogLevel)) {
+  fs.appendFileSync('stryker.log', '12:00:00 (1) INFO Instrumenter Instrumented 1 source file(s) with ${mutants} mutant(s)\\n');
+  fs.appendFileSync('stryker.log', '12:00:01 (1) ERROR Stryker ${error}\\n');
 }
+process.exit(1);
 `;
 
 /** Puts a Stryker stand-in where the check runs Stryker from. Git doesn't track it. */
@@ -281,36 +284,65 @@ describe('mutation-check.mjs', () => {
   });
 
   // A file with only types has no mutants, but Stryker still finds it, so the check doesn't flag
-  // it. AFA-83: no test imports it at runtime, so in the Vitest runner's related mode Stryker runs
-  // no test and stops. The check then runs Stryker again with related mode off.
+  // it as a file that Stryker never reads.
   it("doesn't flag a changed file that Stryker finds but that has no mutants", () => {
     const repository = createRepository();
     const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
     commitFiles(repository, { 'src/types.ts': 'export type Unit = string;\n' });
-    addStrykerStub(repository, STRYKER_RELATED_STUB);
+    addStrykerStub(repository);
 
     const check = runCheck(repository, base);
 
     expect(check.stderr).toBe('');
     expect(check.stdout).toContain('Tests kill every mutant on the changed lines.');
     expect(check.status).toBe(0);
-    expect(readFileSync(resolve(repository, 'stryker-runs.txt'), 'utf8')).toBe(
-      'undefined\nfalse\n'
-    );
   });
 
-  // Running every test makes each mutant run every test that covers it, which took 304 s instead
-  // of 13 s for a change to src/units.ts. So a run that passes in related mode is the only run.
-  it('runs Stryker once when related mode finds tests', () => {
+  // AFA-83: no test imports a file with only types at runtime, so Stryker stops with "No tests
+  // were executed". When the changed files have no mutants, there is nothing to check.
+  it('passes when no test imports the changed files and they have no mutants', () => {
     const repository = createRepository();
     const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
-    commitFiles(repository, { 'src/units.ts': 'export const a = 1;\n' });
-    addStrykerStub(repository);
+    commitFiles(repository, { 'src/types.ts': 'export type Unit = string;\n' });
+    addStrykerStub(repository, strykerWithNoTests(0));
 
     const check = runCheck(repository, base);
 
+    expect(check.stderr).toBe('');
+    expect(check.stdout).toContain(
+      'The changed files have no mutants, so there is nothing to check.'
+    );
     expect(check.status).toBe(0);
-    expect(readFileSync(resolve(repository, 'stryker-runs.txt'), 'utf8')).toBe('undefined\n');
+  });
+
+  // A changed file with mutants that no test imports still fails, as on main.
+  it('fails when no test imports the changed files and they have mutants', () => {
+    const repository = createRepository();
+    const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
+    commitFiles(repository, { 'src/orphan.ts': 'export const addOne = (a: number) => a + 1;\n' });
+    addStrykerStub(repository, strykerWithNoTests(2));
+
+    const check = runCheck(repository, base);
+
+    expect(check.status).toBe(1);
+    expect(check.stderr).toContain('::error::Stryker exited with status 1.');
+    expect(check.stdout).not.toContain('nothing to check');
+  });
+
+  // Only "No tests were executed" means that no test imports the files. Another error still fails.
+  it('fails when Stryker stops for another reason, even with no mutants', () => {
+    const repository = createRepository();
+    const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
+    commitFiles(repository, { 'src/types.ts': 'export type Unit = string;\n' });
+    addStrykerStub(
+      repository,
+      strykerWithNoTests(0, 'There were failed tests in the initial test run.')
+    );
+
+    const check = runCheck(repository, base);
+
+    expect(check.status).toBe(1);
+    expect(check.stderr).toContain('::error::Stryker exited with status 1.');
   });
 
   // AFA-82 review: the check reads only this run's warnings, and keeps a log that it didn't make.
@@ -358,26 +390,15 @@ describe('mutation-check.mjs', () => {
     expect(backend).toContain('this.activeFileLevel = fileLogLevel;');
   });
 
-  // The check depends on the Vitest runner's related option, on by default. If an update renames
-  // it or changes its default, this test fails.
-  it('matches the related option in the installed Vitest runner', () => {
-    const runner = resolve('node_modules/@stryker-mutator/vitest-runner/dist');
-    const schema = JSON.parse(
-      readFileSync(resolve(runner, 'schema/vitest-runner-options.json'), 'utf8')
-    ) as { properties: { vitest: { properties: { related: unknown } } } };
-    expect(schema.properties.vitest.properties.related).toMatchObject({
-      type: 'boolean',
-      default: true,
-    });
-    expect(readFileSync(resolve(runner, 'src/vitest-test-runner.js'), 'utf8')).toContain(
-      'this.options.vitest.related'
-    );
-    // The check looks for this error in stryker.log before it runs Stryker again.
+  // AFA-83: the check reads two lines that Stryker logs: the mutant count, at "info" level, and the
+  // error when no test runs. If an update changes either text, this test fails.
+  it('matches the mutant count and the no-tests error in the installed Stryker', () => {
+    const core = realpathSync('node_modules/@stryker-mutator/core');
     expect(
-      readFileSync(
-        resolve('node_modules/@stryker-mutator/core/dist/src/process/3-dry-run-executor.js'),
-        'utf8'
-      )
-    ).toContain('No tests were executed');
+      readFileSync(resolve(core, '../instrumenter/dist/src/instrumenter.js'), 'utf8')
+    ).toContain("this.logger.info('Instrumented %d source file(s) with %d mutant(s)'");
+    expect(readFileSync(resolve(core, 'dist/src/process/3-dry-run-executor.js'), 'utf8')).toContain(
+      "throw new ConfigError('No tests were executed."
+    );
   });
 });

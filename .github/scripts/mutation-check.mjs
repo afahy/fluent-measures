@@ -119,14 +119,18 @@ const directory = mkdtempSync(join(tmpdir(), 'fluent-measures-mutation-'));
 const report = join(directory, 'mutation.json');
 const { $schema: _schema, ...config } = JSON.parse(readFileSync('stryker.config.json', 'utf8'));
 const configFile = join(directory, 'stryker.config.json');
-const strykerConfig = {
-  ...config,
-  mutate: [...changed.keys()].map(literalGlob),
-  reporters: ['clear-text', 'json'],
-  jsonReporter: { fileName: report },
-  thresholds: { ...config.thresholds, break: null },
-  fileLogLevel: 'warn',
-};
+writeFileSync(
+  configFile,
+  JSON.stringify({
+    ...config,
+    mutate: [...changed.keys()].map(literalGlob),
+    reporters: ['clear-text', 'json'],
+    jsonReporter: { fileName: report },
+    thresholds: { ...config.thresholds, break: null },
+    // "info" also logs how many mutants Stryker makes, which the check reads below.
+    fileLogLevel: 'info',
+  })
+);
 
 // Stryker adds its warnings to stryker.log. Read only this run's lines, and remove the file if
 // this run made it. A symbolic link would send the warnings to /dev/null or to another file, so
@@ -140,36 +144,23 @@ if (logBefore && !logBefore.isFile()) {
   process.exit(1);
 }
 
-// Run Stryker with this script's Node binary, not the node_modules/.bin shim, and with these
-// options added to its config. Return its exit status and this run's lines of stryker.log.
-let logEnd = logBefore?.size ?? 0;
-function runStryker(options) {
-  writeFileSync(configFile, JSON.stringify({ ...strykerConfig, ...options }));
-  const run = spawnSync(
-    process.execPath,
-    ['node_modules/@stryker-mutator/core/bin/stryker.js', 'run', configFile],
-    { stdio: 'inherit' }
-  );
-  if (run.error) throw run.error;
-  const all = lstatSync(logFile, { throwIfNoEntry: false }) ? readFileSync(logFile) : undefined;
-  const log = all ? all.subarray(logEnd).toString('utf8') : '';
-  logEnd = all?.length ?? logEnd;
-  return { status: run.status, log };
-}
-
-// In related mode, Vitest runs only the tests that import a mutated file. No test imports a file
-// with only types, such as src/types.ts, at runtime, so Stryker stops with "No tests were
-// executed". Then run every test in the dry run. That takes much longer, because each mutant runs
-// every test that covers it, so do it only when related mode finds no test.
-let stryker = runStryker({});
-if (stryker.status !== 0 && stryker.log.includes('No tests were executed')) {
-  stryker = runStryker({ vitest: { ...config.vitest, related: false } });
-}
-if (!logBefore) rmSync(logFile, { force: true });
+// Run Stryker with this script's Node binary, not the node_modules/.bin shim.
+const stryker = spawnSync(
+  process.execPath,
+  ['node_modules/@stryker-mutator/core/bin/stryker.js', 'run', configFile],
+  { stdio: 'inherit' }
+);
+if (stryker.error) throw stryker.error;
 
 // Stryker never reads some folders, such as node_modules, so it can't mutate a file in them. It
 // only warns that the file's pattern matched no file, and the report then has no entry for it.
-const unmatched = unmatchedFiles(stryker.log, [...changed.keys()]);
+const log = lstatSync(logFile, { throwIfNoEntry: false })
+  ? readFileSync(logFile)
+      .subarray(logBefore?.size ?? 0)
+      .toString('utf8')
+  : '';
+if (!logBefore) rmSync(logFile, { force: true });
+const unmatched = unmatchedFiles(log, [...changed.keys()]);
 for (const file of unmatched) {
   console.error(
     `::error file=${file}::Move ${file}. Stryker never reads some folders, such as node_modules, so this check can't find the file's mutants.`
@@ -177,6 +168,17 @@ for (const file of unmatched) {
 }
 // Without the file, Stryker may find no tests to run, but the file is the problem to fix.
 if (unmatched.length > 0) process.exit(1);
+// Vitest runs only the tests that import a mutated file, and no test imports a file with only
+// types, such as src/types.ts, at runtime. So Stryker stops with "No tests were executed". When
+// the changed files have no mutants, there is nothing to check (AFA-83).
+if (
+  stryker.status !== 0 &&
+  log.includes('No tests were executed') &&
+  /INFO Instrumenter Instrumented \d+ source file\(s\) with 0 mutant\(s\)/.test(log)
+) {
+  console.log('The changed files have no mutants, so there is nothing to check.');
+  process.exit(0);
+}
 if (stryker.status !== 0) {
   console.error(
     `::error::Stryker exited with status ${stryker.status}. If its log says "No tests were executed", no test imports the changed files: add tests that do.`
