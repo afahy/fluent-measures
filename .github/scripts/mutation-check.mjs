@@ -127,18 +127,19 @@ writeFileSync(
     reporters: ['clear-text', 'json'],
     jsonReporter: { fileName: report },
     thresholds: { ...config.thresholds, break: null },
-    fileLogLevel: 'warn',
+    // "info" also logs how many mutants Stryker makes, which the check reads below.
+    fileLogLevel: 'info',
   })
 );
 
-// Stryker adds its warnings to stryker.log. Read only this run's lines, and remove the file if
-// this run made it. A symbolic link would send the warnings to /dev/null or to another file, so
-// this check couldn't read them.
+// Stryker adds its log lines to stryker.log: its warnings, its errors and its mutant count. Read
+// only this run's lines, and remove the file if this run made it. A symbolic link would send the
+// lines to /dev/null or to another file, so this check couldn't read them.
 const logFile = 'stryker.log';
 const logBefore = lstatSync(logFile, { throwIfNoEntry: false });
 if (logBefore && !logBefore.isFile()) {
   console.error(
-    `::error::Remove ${logFile}, or make it a regular file. Stryker writes its warnings there, and this check reads them.`
+    `::error::Remove ${logFile}, or make it a regular file. Stryker writes its log there, and this check reads it.`
   );
   process.exit(1);
 }
@@ -167,20 +168,32 @@ for (const file of unmatched) {
 }
 // Without the file, Stryker may find no tests to run, but the file is the problem to fix.
 if (unmatched.length > 0) process.exit(1);
-if (stryker.status !== 0) {
+// A new directive can ignore a mutant on a line that didn't change, so check the directives too.
+const directives = [...changed].flatMap(([file, ranges]) =>
+  reasonlessDirectives(readFileSync(file, 'utf8'), ranges).map(line => ({ file, line }))
+);
+// Vitest runs only the tests that import a mutated file, and no test imports a file with only
+// types, such as src/types.ts, at runtime. So Stryker stops with "No tests were executed" and
+// writes no report. When the changed files have no mutants, no mutant can fail, so only the
+// directives are left to check (AFA-83).
+const noMutants =
+  stryker.status !== 0 &&
+  log.includes('No tests were executed') &&
+  /Instrumented \d+ source file\(s\) with 0 mutant\(s\)/.test(log);
+if (noMutants && directives.length === 0) {
+  console.log('The changed files have no mutants, so there is nothing to check.');
+  process.exit(0);
+}
+if (stryker.status !== 0 && !noMutants) {
   console.error(
     `::error::Stryker exited with status ${stryker.status}. If its log says "No tests were executed", no test imports the changed files: add tests that do.`
   );
   process.exit(1);
 }
 
-const results = JSON.parse(readFileSync(report, 'utf8'));
+const results = noMutants ? { files: {} } : JSON.parse(readFileSync(report, 'utf8'));
 const unkilled = unkilledMutants(results, changed);
 const unexplained = unexplainedIgnores(results, changed);
-// A new directive can ignore a mutant on a line that didn't change, so check the directives too.
-const directives = [...changed].flatMap(([file, ranges]) =>
-  reasonlessDirectives(readFileSync(file, 'utf8'), ranges).map(line => ({ file, line }))
-);
 for (const mutant of unkilled) {
   const what = `${mutant.mutator} mutant ${JSON.stringify(mutant.replacement)}`;
   const why = mutant.status === 'NoCoverage' ? 'no test covers it' : 'it survived';
