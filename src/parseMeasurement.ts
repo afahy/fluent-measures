@@ -22,11 +22,15 @@ import { ParseOptions, ParsedValue, Match, Unit } from './types';
 
 type QualifiedMatch = Match & { unit: NonNullable<Match['unit']> };
 
-/** Read the longest adjacent number phrase and return its first unconsumed token index. */
+/**
+ * Read the longest adjacent number phrase and return its first unconsumed token index. With
+ * `readHalf` false, a phrase that ends in "and a half" isn't read.
+ */
 function readNumberPhrase(
   tokens: string[],
   start: number,
-  step = 1
+  step = 1,
+  readHalf = true
 ): [value: number | null, end: number] {
   // "and a half" after a whole number adds 0.5, as in "six and a half feet" and
   // "5 foot 10 and a half". Number.isInteger is false for null.
@@ -34,10 +38,10 @@ function readNumberPhrase(
     tokens[at] === 'and' && tokens[at + 1] === 'a' && tokens[at + 2] === 'half';
   // Reading backward, the phrase starts at "half". A read forward never starts there. It starts
   // after a unit, a mark or a semicolon, or where another read stops, and "a" stops a read.
-  // A number read through "and a half" isn't whole, so it can't take another one. Stop there, so
-  // a long run of "and a half" doesn't read back one call deeper each time.
-  if (half(start - 2) && tokens[start - 3] !== 'half') {
-    const [whole, end] = readNumberPhrase(tokens, start - 3, -1);
+  // The whole number before "and a half" can't end in another "and a half", so that read doesn't
+  // check for one. Then a long run of "and a half" doesn't read back one call deeper each time.
+  if (readHalf && half(start - 2)) {
+    const [whole, end] = readNumberPhrase(tokens, start - 3, -1, false);
     if (Number.isInteger(whole)) return [whole! + 0.5, end];
   }
   let end = start;
