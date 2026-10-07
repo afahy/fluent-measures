@@ -15,8 +15,9 @@ const tags = [
   ),
 ]
   .map(([tag, src, href]) => ({ tag, url: src ?? href }))
-  // The Tailwind Play CDN sends no CORS header, so it can't take a hash (AFA-97).
-  .filter(({ url }) => !url.startsWith('https://cdn.tailwindcss.com'));
+  // The Tailwind Play CDN sends no CORS header, so it can't take a hash (AFA-97). Compare the whole
+  // host name, so a host such as "cdn.tailwindcss.com.example" is still checked.
+  .filter(({ url }) => new URL(url, 'https://localhost/').hostname !== 'cdn.tailwindcss.com');
 
 describe('the docs page', () => {
   // Prism's stylesheet and three scripts, and clipboard.js, all from cdnjs.
