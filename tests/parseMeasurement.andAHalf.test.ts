@@ -22,7 +22,7 @@ describe('and a half', () => {
     ['one hundred and 50 pounds', 150, 'lb'],
     ['5 foot 10 inches', 70, 'in'],
     ['a hundred and sixty pounds', 160, 'lb'],
-    // "half" with a hyphen and another word after it isn't a number.
+    // "a half-hour" with no number before "and" doesn't add to the feet.
     ['5 ft and a half-hour walk', 5, 'ft'],
   ] as const)('keeps reading %s as %s %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });

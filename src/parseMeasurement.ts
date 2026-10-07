@@ -31,9 +31,9 @@ function readNumberPhrase(
   // "and a half" after a whole number adds 0.5, as in "six and a half feet" and
   // "5 foot 10 and a half". Number.isInteger is false for null.
   const half = (at: number): boolean =>
-    [tokens[at], tokens[at + 1], tokens[at + 2]].join(' ') === 'and a half';
-  // Reading backward, the phrase starts at "half". A read forward never starts there, because it
-  // starts after a unit, a mark or a semicolon, or where another read stops, and "a" stops a read.
+    tokens[at] === 'and' && tokens[at + 1] === 'a' && tokens[at + 2] === 'half';
+  // Reading backward, the phrase starts at "half". A read forward never starts there. It starts
+  // after a unit, a mark or a semicolon, or where another read stops, and "a" stops a read.
   if (half(start - 2)) {
     const [whole, end] = readNumberPhrase(tokens, start - 3, -1);
     if (Number.isInteger(whole)) return [whole! + 0.5, end];
