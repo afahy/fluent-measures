@@ -15,6 +15,7 @@ export interface Pull {
   mergeable_state?: string | null;
   created_at: string;
   head: { sha: string; ref: string; repo?: { full_name: string } | null };
+  base: { ref: string };
 }
 
 export interface CheckRun {
@@ -90,6 +91,10 @@ export interface Snapshot {
   reviews: Review[];
   reviewComments: ReviewComment[];
   reactions: Reaction[];
+  /** The paths that the PR changes. */
+  files: string[];
+  /** The base branch's CODEOWNERS file, or null if it has none. */
+  codeowners: string | null;
 }
 
 export interface CiSummary {
@@ -155,7 +160,13 @@ export function unansweredBotThreads(comments: ReviewComment[]): ReviewComment[]
 export function botFollowUps(comments: ReviewComment[]): ReviewComment[];
 export function unansweredReviewBodies(snapshot: Snapshot): Review[];
 export function botOutputSincePush(snapshot: Snapshot): string[];
-export function classify(snapshot: Snapshot, now?: number): PrStatus;
+export function classify(
+  snapshot: Snapshot,
+  now?: number,
+  options?: { requests?: boolean }
+): PrStatus;
+export function codeownersPattern(pattern: string): RegExp;
+export function ownedFiles(codeowners: string, files: string[]): string[];
 export function mostUrgent(states: PrState[]): PrState;
 export function digest(status: PrStatus): string;
 

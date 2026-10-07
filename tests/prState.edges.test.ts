@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
@@ -8,11 +9,13 @@ import {
   clockStart,
   coderabbitState,
   codexState,
+  codeownersPattern,
   codexSummaryRows,
   collect,
   createClient,
   digest,
   mostUrgent,
+  ownedFiles,
   pushedAt,
   rateLimitResetAt,
   unansweredBotThreads,
@@ -390,6 +393,7 @@ describe('codexState edges', () => {
   it('leaves out the last review when the summary names none', () => {
     const snapshot = fixture('pr-67');
     snapshot.issueComments = [];
+    snapshot.reactions = [];
     expect(codexState(snapshot, at('2026-10-07T15:00:00Z'))).toEqual({
       state: 'pending',
       detail: "Codex hasn't started on 318c1b7",
@@ -715,6 +719,7 @@ describe('classify edges', () => {
       created_at: '2026-10-07T15:50:00Z',
     });
     snapshot.issueComments = [comment(1, human, '@codex review', '2026-10-07T15:00:00Z')];
+    snapshot.reactions = [];
     const status = classify(snapshot, at('2026-10-07T15:51:00Z'));
     expect(status.mergeableState).toBeNull();
     expect(status.waits).toEqual([
@@ -868,18 +873,27 @@ describe('collect', () => {
           paths.push(`get ${path}`);
           if (path.endsWith('/pulls/7')) return pull;
           if (path.includes('/activity')) return ['push'];
+          // The base branch has no .github/CODEOWNERS, but has one at the root.
+          if (path.includes('/contents/.github/'))
+            throw Object.assign(new Error('404'), { status: 404 });
+          if (path.includes('/contents/CODEOWNERS')) {
+            return { content: Buffer.from('* @afahy\n').toString('base64') };
+          }
           return { committer: { date: 'd' } };
         },
         async getAll(path: string, key?: string): Promise<unknown[]> {
           paths.push(`all ${path}${key ? ` ${key}` : ''}`);
-          return [path];
+          return path.endsWith('/files') ? [{ filename: 'a.ts' }] : [path];
         },
       },
     };
   }
 
   it("reads the PR, then its head commit, the branch's pushes, its events and its comments", async () => {
-    const pull = { head: { sha: 'abc1234', ref: 'feature/a b', repo: { full_name: 'fork/r' } } };
+    const pull = {
+      head: { sha: 'abc1234', ref: 'feature/a b', repo: { full_name: 'fork/r' } },
+      base: { ref: 'main' },
+    };
     const { paths, api } = fakeApi(pull);
     const snapshot = await collect(api, 'o/r', 7);
     expect(paths).toEqual([
@@ -893,6 +907,9 @@ describe('collect', () => {
       'all /repos/o/r/pulls/7/reviews',
       'all /repos/o/r/pulls/7/comments',
       'all /repos/o/r/issues/7/reactions',
+      'all /repos/o/r/pulls/7/files',
+      'get /repos/o/r/contents/.github/CODEOWNERS?ref=main',
+      'get /repos/o/r/contents/CODEOWNERS?ref=main',
     ]);
     expect(snapshot).toEqual({
       pull,
@@ -905,11 +922,16 @@ describe('collect', () => {
       reviews: ['/repos/o/r/pulls/7/reviews'],
       reviewComments: ['/repos/o/r/pulls/7/comments'],
       reactions: ['/repos/o/r/issues/7/reactions'],
+      files: ['a.ts'],
+      codeowners: '* @afahy\n',
     });
   });
 
   it("skips the pushes when the PR's fork was deleted", async () => {
-    const { paths, api } = fakeApi({ head: { sha: 'abc1234', ref: 'x', repo: null } });
+    const { paths, api } = fakeApi({
+      head: { sha: 'abc1234', ref: 'x', repo: null },
+      base: { ref: 'main' },
+    });
     const snapshot = await collect(api, 'o/r', 7);
     expect(snapshot.pushes).toEqual([]);
     expect(paths.some(p => p.includes('/activity'))).toBe(false);
@@ -1058,5 +1080,104 @@ describe('pr-state.mjs details', () => {
       state: 'skipped',
       detail: "The bots don't review drafts",
     });
+  });
+});
+
+describe('CODEOWNERS', () => {
+  const codeowners = readFileSync('tests/fixtures/pr-status/CODEOWNERS', 'utf8');
+
+  it("finds the changed files that this repository's CODEOWNERS covers", () => {
+    const files = [
+      '.github/scripts/pr-state.mjs',
+      'package.json',
+      'tests/prState.test.ts',
+      '.claude/skills/steward/SKILL.md',
+      'AGENTS.md',
+      'src/index.ts',
+      '.changeset/x.md',
+      '.changeset/config.json',
+      // A pattern with no slash matches at any depth.
+      'docs/AGENTS.md',
+    ];
+    expect(ownedFiles(codeowners, files)).toEqual([
+      '.github/scripts/pr-state.mjs',
+      'package.json',
+      '.claude/skills/steward/SKILL.md',
+      'AGENTS.md',
+      '.changeset/config.json',
+      'docs/AGENTS.md',
+    ]);
+  });
+
+  it.each([
+    ['docs/*', 'docs/a.md', true],
+    ['docs/*', 'docs/b/c.md', false],
+    ['docs/*', 'x/docs/a.md', false],
+    ['/apps/github', 'apps/github/x.ts', true],
+    ['/apps/github', 'apps/github', true],
+    ['/apps/github', 'apps/githubx', false],
+    ['**/logs', 'x/y/logs/a', true],
+    ['**/logs', 'logs/a', true],
+    ['a/**/b', 'a/b', true],
+    ['a/**/b', 'a/x/y/b', true],
+    ['*.js', 'src/y.js', true],
+    ['*.js', 'x.jsx', false],
+    ['apps/', 'x/apps/a', true],
+    ['apps/', 'apps', false],
+    ['?.md', 'a.md', true],
+    ['?.md', 'ab.md', false],
+    ['a+b.txt', 'a+b.txt', true],
+    ['a+b.txt', 'aab.txt', false],
+  ])('reads %s as matching %s: %s', (pattern, path, expected) => {
+    expect(codeownersPattern(pattern).test(path)).toBe(expected);
+  });
+
+  it('lets a later line with no owners take the owner away, and skips comments', () => {
+    const file = '# Everything\n* @afahy\n/docs/\nREADME.md @afahy # owned again\n';
+    expect(ownedFiles(file, ['src/a.ts', 'docs/a.md', 'README.md', 'docs/README.md'])).toEqual([
+      'src/a.ts',
+      'README.md',
+      'docs/README.md',
+    ]);
+  });
+
+  it('leaves a PR that changes covered files to the maintainer, and only such a PR', () => {
+    const snapshot = reviewed67();
+    expect(classify(snapshot, at('2026-10-07T16:00:00Z')).state).toBe('ready');
+    snapshot.files.push('.github/workflows/x.yml', 'AGENTS.md', 'package.json', '.claude/a.md');
+    const status = classify(snapshot, at('2026-10-07T16:00:00Z'));
+    expect(status.state).toBe('waiting-human');
+    expect(status.reasons).toEqual([
+      'It changes files that CODEOWNERS covers, so only the maintainer can merge it: .github/workflows/x.yml, AGENTS.md, package.json and 1 more',
+    ]);
+    snapshot.codeowners = null;
+    expect(classify(snapshot, at('2026-10-07T16:00:00Z')).state).toBe('ready');
+  });
+});
+
+describe("Codex's 👍 and the review rounds", () => {
+  it('counts a 👍 from Codex after the push as a finished review, but not a person’s', () => {
+    const snapshot = fixture('pr-66');
+    snapshot.reactions.push({ user: human, content: '+1', created_at: '2026-10-07T15:10:00Z' });
+    expect(codexState(snapshot, at('2026-10-07T15:40:00Z')).state).toBe('not-requested');
+    snapshot.reactions.push({ user: codexBot, content: '+1', created_at: '2026-10-07T15:00:44Z' });
+    expect(codexState(snapshot, at('2026-10-07T15:40:00Z'))).toEqual({
+      state: 'done',
+      detail: 'Codex reacted 👍 after c7ad2f4 was pushed',
+    });
+  });
+
+  it('waits for a bot instead of asking it when the review rounds are used up', () => {
+    const status = classify(fixture('pr-66'), at('2026-10-07T15:31:00Z'), { requests: false });
+    expect(status.state).toBe('waiting');
+    expect(status.actions).toEqual([]);
+    expect(status.codex).toEqual({
+      state: 'pending',
+      detail:
+        "Codex hasn't reviewed c7ad2f4 30 minutes after it could start; its last review was of 91a5d29, and the review rounds are used up",
+      until: '2026-10-07T17:00:44.000Z',
+    });
+    const later = classify(fixture('pr-66'), at('2026-10-07T17:00:44Z'), { requests: false });
+    expect(later.state).toBe('waiting-human');
   });
 });

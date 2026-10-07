@@ -2,7 +2,7 @@
 // write its own checks (AFA-98). pr-state.mjs holds the rules.
 //
 // Usage: pnpm pr:status <pr>... [--json] [--wait] [--timeout <minutes>] [--interval <seconds>]
-//                               [--repo <owner/name>]
+//                               [--no-requests] [--repo <owner/name>]
 //
 // The state of each PR, from most to least urgent, with the exit code:
 //   needs-agent    10  The agent has something to do: failed CI, a bot thread with no reply,
@@ -20,6 +20,9 @@
 // when a waiting-human PR gets news, such as a bot reply. It stops after --timeout minutes
 // (default 100, under the 2-hour limit for a background command). 304 answers to its polls
 // don't count against GitHub's rate limit.
+//
+// --no-requests is for after the third review round, when AGENTS.md says not to ask the bots
+// again: a bot that hasn't reviewed is waited for until its 2 hours are up, not asked.
 //
 // The token comes from GH_TOKEN, GITHUB_TOKEN or `gh auth token`. The repository comes from
 // --repo, GITHUB_REPOSITORY or the origin remote.
@@ -42,13 +45,13 @@ if ((process.env.HTTPS_PROXY || process.env.https_proxy) && !process.env.NODE_US
 
 const USAGE =
   'Usage: pnpm pr:status <pr>... [--json] [--wait] [--timeout <minutes>] ' +
-  '[--interval <seconds>] [--repo <owner/name>]';
+  '[--interval <seconds>] [--no-requests] [--repo <owner/name>]';
 
 /**
  * @param {string[]} args
  */
 function parseArgs(args) {
-  const options = { prs: /** @type {number[]} */ ([]), json: false, wait: false };
+  const options = { prs: /** @type {number[]} */ ([]), json: false, wait: false, requests: true };
   let timeout = 100;
   let interval = 60;
   let repo = '';
@@ -56,6 +59,7 @@ function parseArgs(args) {
     const arg = args[i];
     if (arg === '--json') options.json = true;
     else if (arg === '--wait') options.wait = true;
+    else if (arg === '--no-requests') options.requests = false;
     else if (arg === '--timeout') timeout = Number(args[++i]);
     else if (arg === '--interval') interval = Number(args[++i]);
     else if (arg === '--repo') repo = args[++i] ?? '';
@@ -140,13 +144,15 @@ try {
   console.error(/** @type {Error} */ (error).message);
   process.exit(2);
 }
-const { prs, json, wait, timeout, interval, repo } = options;
+const { prs, json, wait, timeout, interval, repo, requests } = options;
 const api = createClient({
   token: findToken(),
   apiUrl: process.env.GITHUB_API_URL || 'https://api.github.com',
 });
 const check = async () =>
-  Promise.all(prs.map(async pr => classify(await collect(api, repo, pr), Date.now())));
+  Promise.all(
+    prs.map(async pr => classify(await collect(api, repo, pr), Date.now(), { requests }))
+  );
 
 try {
   const first = await check();

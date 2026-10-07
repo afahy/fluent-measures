@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 import { execFile } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
@@ -45,6 +46,10 @@ async function serve(snapshots: Snapshot[]): Promise<{ url: string; polls: () =>
       [`${base}/pulls/43/reviews`]: s?.reviews,
       [`${base}/pulls/43/comments`]: s?.reviewComments,
       [`${base}/issues/43/reactions`]: s?.reactions,
+      [`${base}/pulls/43/files`]: s?.files.map(filename => ({ filename })),
+      [`${base}/contents/.github/CODEOWNERS`]: s?.codeowners && {
+        content: Buffer.from(s.codeowners).toString('base64'),
+      },
     };
     const body = routes[path];
     response.writeHead(body === undefined ? 404 : 200, { 'Content-Type': 'application/json' });
@@ -127,6 +132,12 @@ describe('pr-status.mjs', () => {
     expect(result.code).toBe(40);
     expect(api.polls()).toBe(3);
     expect(result.stdout.split('\n')[0]).toBe('After 0 min: #43 is now merged.');
+  });
+
+  it('accepts --no-requests', async () => {
+    const api = await serve([fixture('pr-43-at-1810')]);
+    const result = await run(api.url, ['43', '--no-requests']);
+    expect(result.code).toBe(10);
   });
 
   it('with --wait, returns at once when the PR already needs the agent', async () => {
