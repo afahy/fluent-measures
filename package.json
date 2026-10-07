@@ -47,6 +47,7 @@
     "prepack": "pnpm release:lifecycle:prepack",
     "prepare": "node -e \"import('husky').then(({ default: husky }) => process.stdout.write(husky()), () => {})\"",
     "prepublishOnly": "pnpm release:lifecycle:prepublish",
+    "pr:status": "node .github/scripts/pr-status.mjs",
     "release": "pnpm release:validate && pnpm release:publish",
     "release:changeset": "changeset",
     "release:lifecycle:prepack": "pnpm clean && pnpm build",
