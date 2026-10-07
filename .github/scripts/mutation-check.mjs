@@ -132,8 +132,8 @@ writeFileSync(
 );
 
 // Stryker adds its warnings to stryker.log. Read only this run's lines, and remove the file if
-// this run made it. Stryker can't write to a symbolic link to /dev/null or to a missing file, so
-// those would hide its warnings.
+// this run made it. A symbolic link would send the warnings to /dev/null or to another file, so
+// this check couldn't read them.
 const logFile = 'stryker.log';
 const logBefore = lstatSync(logFile, { throwIfNoEntry: false });
 if (logBefore && !logBefore.isFile()) {

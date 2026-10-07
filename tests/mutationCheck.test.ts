@@ -53,11 +53,13 @@ function runCheck(
   });
 }
 
-// A stand-in for Stryker. Like Stryker 10, it warns in stryker.log about each `mutate` pattern in
-// a node_modules folder, and it writes a report with no mutants.
+// A stand-in for Stryker. Like Stryker 10, it writes warnings to stryker.log only when the config
+// sets fileLogLevel to "warn" or lower, and it warns about each `mutate` pattern in a node_modules
+// folder. It writes a report with no mutants.
 const STRYKER_STUB = `const fs = require('node:fs');
 const config = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'));
-for (const pattern of config.mutate) {
+const logs = ['trace', 'debug', 'info', 'warn'].includes(config.fileLogLevel);
+for (const pattern of logs ? config.mutate : []) {
   if (/(^|\\/)node_modules\\//i.test(pattern)) {
     fs.appendFileSync('stryker.log', 'WARN ProjectReader Glob pattern "' + pattern + '" did not result in any files.\\n');
   }
@@ -297,7 +299,7 @@ describe('mutation-check.mjs', () => {
     expect(readFileSync(resolve(repository, 'stryker.log'), 'utf8')).toBe(old);
   });
 
-  // AFA-82 review: Stryker can't write its warnings through a link to /dev/null.
+  // AFA-82 review: Stryker's warnings through a link to /dev/null are lost.
   it('fails when stryker.log is not a regular file', () => {
     const repository = createRepository();
     const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
@@ -313,7 +315,7 @@ describe('mutation-check.mjs', () => {
 
   // The check depends on three things in the installed Stryker: the warning's text, the log's name
   // and that Stryker adds to the log. If an update changes one, this test fails.
-  it('matches the warning, the log file and the write mode of the installed Stryker', () => {
+  it('matches the warning, the log file, its write mode and its option in the installed Stryker', () => {
     const core = resolve('node_modules/@stryker-mutator/core/dist/src');
     expect(readFileSync(resolve(core, 'fs/project-reader.js'), 'utf8')).toContain(
       'this.log.warn(`Glob pattern "${pattern}" did not result in any files.`);'
@@ -321,5 +323,8 @@ describe('mutation-check.mjs', () => {
     const backend = readFileSync(resolve(core, 'logging/logging-backend.js'), 'utf8');
     expect(backend).toContain("const LOG_FILE_NAME = 'stryker.log';");
     expect(backend).toContain("fs.createWriteStream(LOG_FILE_NAME, { flags: 'a' })");
+    // The file log is off unless the config's fileLogLevel turns it on.
+    expect(backend).toContain('activeFileLevel = "off"');
+    expect(backend).toContain('this.activeFileLevel = fileLogLevel;');
   });
 });
