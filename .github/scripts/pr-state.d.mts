@@ -135,6 +135,7 @@ export interface PrStatus {
 
 export const CODEX: string;
 export const CODERABBIT: string;
+export const OWN_STATUS: string;
 export const BOT_START_WAIT: number;
 export const BOT_MAX_WAIT: number;
 export const RATE_LIMIT_DEFAULT_WAIT: number;

@@ -23,6 +23,9 @@ export const CODEX = 'chatgpt-codex-connector[bot]';
 export const CODERABBIT = 'coderabbitai[bot]';
 const REVIEW_BOTS = new Set([CODEX, CODERABBIT]);
 
+/** The commit status that pr-status.yml sets. It reports this script's answer, so it isn't CI. */
+export const OWN_STATUS = 'pr-status';
+
 const MINUTE = 60 * 1000;
 /** How long a bot gets to start before the agent asks it (AGENTS.md). */
 export const BOT_START_WAIT = 30 * MINUTE;
@@ -142,7 +145,7 @@ export function clockStart(snapshot) {
 
 /**
  * Sums up CI on the head commit: the latest run of each check, and the latest status for each
- * context other than CodeRabbit's. A workflow that runs again, for example when the PR's title
+ * context other than CodeRabbit's and pr-status.yml's. A workflow that runs again, for example when the PR's title
  * is edited, starts a new check suite, so a check's latest run is its latest in any suite.
  *
  * @param {import('./pr-state.d.mts').CheckRun[]} checkRuns
@@ -160,7 +163,7 @@ export function ciSummary(checkRuns, statuses) {
   /** @type {Map<string, import('./pr-state.d.mts').CommitStatus>} */
   const contexts = new Map();
   for (const status of statuses) {
-    if (status.context === 'CodeRabbit') continue;
+    if (status.context === 'CodeRabbit' || status.context === OWN_STATUS) continue;
     const seen = contexts.get(status.context);
     if (!seen || byTime(status.created_at, seen.created_at) > 0)
       contexts.set(status.context, status);
