@@ -5,7 +5,7 @@ import {
   normalizeNumericCommas,
   tokenizeNormalized,
 } from './tokenize';
-import { NUMBER_WORDS, wordsToNumber } from './wordsToNumber';
+import { MULTIPLIERS, NUMBER_WORDS, wordsToNumber } from './wordsToNumber';
 
 import {
   FIELD_MARK,
@@ -40,9 +40,12 @@ function readNumberPhrase(
   // after a unit, a mark or a semicolon, or where another read stops, and "a" stops a read.
   // The whole number before "and a half" can't end in another "and a half", so that read doesn't
   // check for one. Then a long run of "and a half" doesn't read back one call deeper each time.
-  if (readHalf && half(start - 2)) {
-    const [whole, end] = readNumberPhrase(tokens, start - 3, -1, false);
-    if (Number.isInteger(whole)) return [whole! + 0.5, end];
+  // A multiplier word after the half multiplies it, as in "two and a half thousand" (2500).
+  const multiplier = MULTIPLIERS.get(tokens[start]);
+  const halfEnd = multiplier ? start - 1 : start;
+  if (readHalf && half(halfEnd - 2)) {
+    const [whole, end] = readNumberPhrase(tokens, halfEnd - 3, -1, false);
+    if (Number.isInteger(whole)) return [(whole! + 0.5) * (multiplier ?? 1), end];
   }
   let end = start;
   let value: number | null = null;
@@ -57,7 +60,11 @@ function readNumberPhrase(
   }
   // Reading forward, the loop skips "and" and stops at "a". A read backward never stops just
   // before "a half", because "half" isn't a number.
-  return Number.isInteger(value) && half(end - 1) ? [value! + 0.5, end + 2] : [value, end];
+  if (Number.isInteger(value) && half(end - 1)) {
+    const after = MULTIPLIERS.get(tokens[end + 2]);
+    return [(value! + 0.5) * (after ?? 1), end + (after ? 3 : 2)];
+  }
+  return [value, end];
 }
 
 /** The value of a token that starts with minus signs, without them, as in "-12" and "--12". */

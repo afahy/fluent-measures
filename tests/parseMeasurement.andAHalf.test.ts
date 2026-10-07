@@ -42,4 +42,16 @@ describe('and a half', () => {
   it('returns null for many copies of "and a half"', () => {
     expect(parseMeasurement(`1${' and a half'.repeat(10_000)} m`)).toBeNull();
   });
+
+  // AFA-94: a multiplier word after "and a half" multiplies the whole number plus 0.5, so
+  // "two and a half thousand" is 2.5 × 1000 = 2500, and "five and a half hundred" is 550.
+  it.each([
+    ['two and a half thousand pounds', 2500, 'lb'],
+    ['2 and a half thousand lbs', 2500, 'lb'],
+    ['five and a half hundred pounds', 550, 'lb'],
+    // Reading forward after a label.
+    ['pounds: two and a half thousand', 2500, 'lb'],
+  ] as const)('reads %s as %s %s', (raw, value, unit) => {
+    expect(parseMeasurement(raw)).toMatchObject({ value, unit });
+  });
 });
