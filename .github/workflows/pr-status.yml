@@ -16,10 +16,11 @@ on:
   status:
   # GitHub doesn't send check_suite events for suites that Actions creates, so follow the
   # workflows that a PR's checks come from. They can start again without a push, for example
-  # after a title edit, so a start counts as well as the end.
+  # after a title edit or a re-run, so a start counts as well as the end. GitHub sends
+  # `requested` only for new runs, but `in_progress` for re-runs too.
   workflow_run:
     workflows: [CI, Commitlint, Regression test]
-    types: [requested, completed]
+    types: [in_progress, completed]
   # A bot's or CI's time running out sends no event, so check every open PR now and then. Each
   # PR costs about 13 requests of the token's 1,000 an hour, so not more often than this.
   schedule:

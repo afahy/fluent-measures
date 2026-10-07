@@ -68,9 +68,16 @@ export async function prsForEvent(api, repo, name, event) {
     case 'issue_comment':
       return event.issue.pull_request ? [event.issue.number] : [];
     case 'workflow_run': {
-      // A fork's PRs aren't listed in the run, so look them up by the commit.
-      const listed = event.workflow_run.pull_requests.map((/** @type {any} */ p) => p.number);
-      return listed.length > 0 ? listed : openPrsWith(event.workflow_run.head_sha);
+      // A run for a fork's PR lists no PRs, and GitHub doesn't find them by the fork's commit
+      // either, so look them up by the fork's owner and branch.
+      const run = event.workflow_run;
+      const listed = run.pull_requests.map((/** @type {any} */ p) => p.number);
+      if (listed.length > 0) return listed;
+      const head = encodeURIComponent(`${run.head_repository.owner.login}:${run.head_branch}`);
+      const pulls = /** @type {{ number: number }[]} */ (
+        await api.getAll(`/repos/${repo}/pulls?state=open&head=${head}`)
+      );
+      return pulls.map(p => p.number);
     }
     case 'status':
       return openPrsWith(event.sha);

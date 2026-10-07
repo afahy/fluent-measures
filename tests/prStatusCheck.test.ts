@@ -116,14 +116,20 @@ describe('prsForEvent', () => {
     await expect(prsForEvent(api, repo, 'push', {})).resolves.toEqual([]);
   });
 
-  it("finds the open PRs for a commit's status, or for a workflow run that lists none", async () => {
+  it("finds the open PRs for a commit's status, or a fork's PRs by the run's branch", async () => {
     api.paths = [];
     await expect(prsForEvent(api, repo, 'status', { sha: 'abc' })).resolves.toEqual([5]);
+    // A run for a fork's PR lists no PRs, and GitHub can't find them by the fork's commit.
     await expect(
       prsForEvent(api, repo, 'workflow_run', {
-        workflow_run: { pull_requests: [], head_sha: 'def' },
+        workflow_run: {
+          pull_requests: [],
+          head_sha: 'def',
+          head_branch: 'fix/units',
+          head_repository: { owner: { login: 'someone' } },
+        },
       })
-    ).resolves.toEqual([5]);
+    ).resolves.toEqual([7, 8]);
     await expect(
       prsForEvent(api, repo, 'workflow_run', {
         workflow_run: { pull_requests: [{ number: 9 }], head_sha: 'ghi' },
@@ -131,7 +137,7 @@ describe('prsForEvent', () => {
     ).resolves.toEqual([9]);
     expect(api.paths).toEqual([
       `/repos/${repo}/commits/abc/pulls`,
-      `/repos/${repo}/commits/def/pulls`,
+      `/repos/${repo}/pulls?state=open&head=someone%3Afix%2Funits`,
     ]);
   });
 
