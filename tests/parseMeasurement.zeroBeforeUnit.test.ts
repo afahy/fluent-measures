@@ -16,13 +16,14 @@ describe('a zero before a unit', () => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });
 
-  // "Must not change" in AFA-81, from the README. A number with no unit of its own after a unit
-  // still belongs to it, as in "kg 70", also after a zero in another field.
+  // "Must not change" in AFA-81: the README's examples.
   it.each([
     ['0 feet; actual 1.8 meters', 1.8, 'm'],
     ['record 0; kg 70', 70, 'kg'],
     ['0-foot-11', 11, 'in'],
     ['5-foot-0-inches', 60, 'in'],
+    // A number with no unit of its own after a unit belongs to it, as in the README's "kg 70",
+    // also after a zero. This keeps main's result.
     ['0 kg 70', 70, 'kg'],
     // A zero in an earlier field isn't the unit's own number, so the unit takes the next number,
     // as in "kg 72 lbs 159" (72 kg, existing test).
@@ -31,6 +32,15 @@ describe('a zero before a unit', () => {
     ['about kg 72 lbs 159', 72, 'kg'],
   ] as const)('keeps reading %s as %s %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
+  });
+
+  // A zero part of a height is that part's own number, so the weight after it stays a weight:
+  // 1 m + 0 cm = 1 m. On main, "cm" took 80 and gave 180 cm.
+  it.each([
+    ['1 m 0 cm 80 kg', {}],
+    ['1 m 0 cm 80 kg', { type: 'height' }],
+  ] as const)('reads %s with %o as 1 m', (raw, options) => {
+    expect(parseMeasurement(raw, options)).toMatchObject({ value: 1, unit: 'm' });
   });
 
   // A height after a zero weight isn't the weight's number.
