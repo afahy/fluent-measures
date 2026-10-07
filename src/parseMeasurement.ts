@@ -34,7 +34,9 @@ function readNumberPhrase(
     tokens[at] === 'and' && tokens[at + 1] === 'a' && tokens[at + 2] === 'half';
   // Reading backward, the phrase starts at "half". A read forward never starts there. It starts
   // after a unit, a mark or a semicolon, or where another read stops, and "a" stops a read.
-  if (half(start - 2)) {
+  // A number read through "and a half" isn't whole, so it can't take another one. Stop there, so
+  // a long run of "and a half" doesn't read back one call deeper each time.
+  if (half(start - 2) && tokens[start - 3] !== 'half') {
     const [whole, end] = readNumberPhrase(tokens, start - 3, -1);
     if (Number.isInteger(whole)) return [whole! + 0.5, end];
   }

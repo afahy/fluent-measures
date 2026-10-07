@@ -36,4 +36,10 @@ describe('and a half', () => {
   it.each(['1.5 and a half m', 'a half inch', 'and a half feet'])('returns null for %s', raw => {
     expect(parseMeasurement(raw)).toBeNull();
   });
+
+  // "1 and a half and a half" isn't a number, so the input has no measurement. Reading it back
+  // must not call itself once for each "and a half", which overflowed the stack.
+  it('returns null for many copies of "and a half"', () => {
+    expect(parseMeasurement(`1${' and a half'.repeat(10_000)} m`)).toBeNull();
+  });
 });
