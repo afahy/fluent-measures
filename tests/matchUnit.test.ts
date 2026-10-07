@@ -43,6 +43,11 @@ describe('matchUnit', () => {
       expect(matchUnit(word, 'height', 2)).toBeNull();
     });
 
+    // "metro" is one edit from "metre" (AFA-64), so it's excluded too.
+    it.each(['metro', 'metros'])('rejects the prose word %s near metre', word => {
+      expect(matchUnit(word, 'height', 1)).toBeNull();
+    });
+
     it('requires the first letter even for long aliases', () => {
       expect(matchUnit('xilograms', 'weight', 2)).toBeNull();
       expect(matchUnit('xentimeters', 'height', 2)).toBeNull();

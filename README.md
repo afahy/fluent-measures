@@ -178,14 +178,16 @@ interface ParsedValue {
 
 ## Supported Units
 
+<!-- cspell:ignore centimetres -->
+
 ### Height
 
 - **Imperial**: ft (feet, foot, '), in (inches, ")
-- **Metric**: cm (centimeters), m (meters)
+- **Metric**: cm (centimeters, centimetres), m (meters, metres)
 
 ### Weight
 
-- **Imperial**: lb (lbs, pounds)
+- **Imperial**: lb (lbs, pounds, and `#` right after a number, as in `185#`)
 - **Metric**: kg (kilo, kilos, kilograms)
 
 Stone, ounces and grams aren't supported. A weight with a part in one of them returns `null`, so
@@ -312,8 +314,8 @@ Enabling fuzzy matching allows the parser to be more forgiving with typos and va
 Exact aliases take priority. Fuzzy candidates must share the alias's first letter, and the
 edit distance must be no greater than `fuzziness` and less than a third of the alias's length.
 Aliases of three characters or fewer require exact matches. The prose words `food`,
-`feel`, `feed`, `fool`, `kill`, and `kills` are excluded from fuzzy matching because they are too
-close to `foot`, `feet`, `kilo`, or `kilos`. The closest qualifying alias wins; equal distances
+`feel`, `feed`, `fool`, `kill`, `kills`, `metro`, and `metros` are excluded from fuzzy matching
+because they are too close to `foot`, `feet`, `kilo`, `kilos`, `metre`, or `metres`. The closest qualifying alias wins; equal distances
 keep the first unit in the supported-unit order (`ft`, `in`, `cm`, `m` for height; `lb`, `kg` for weight).
 
 These spelling checks reduce false matches; fuzzy matching can still mistake prose for units.

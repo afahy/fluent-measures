@@ -2,10 +2,10 @@
 
 exports[`measurement corpus > matches the committed score 1`] = `
 "Category                 total   agree   wrong  missed  throws
-all                        406     384       7      15       0
+all                        406     387       7      12       0
 
-symbols                     27      26       0       1       0
-words                       30      28       0       2       0
+symbols                     27      27       0       0       0
+words                       30      30       0       0       0
 mixed-numbers               24      24       0       0       0
 decimals                    22      21       1       0       0
 commas                      26      26       0       0       0
@@ -64,25 +64,7 @@ prose-kilns-fuzzy (prose)
   expected: null
   actual:   2 kg (weight)
 
-Entries with the outcome "missed" (15):
-
-symbols-hash-pounds (symbols)
-  input:    "185#"
-  options:  {}
-  expected: 185 lb (weight)
-  actual:   null
-
-words-centimetres (words)
-  input:    "170 centimetres"
-  options:  {}
-  expected: 170 cm (height)
-  actual:   null
-
-words-metres (words)
-  input:    "1.8 metres"
-  options:  {}
-  expected: 1.8 m (height)
-  actual:   null
+Entries with the outcome "missed" (12):
 
 compact-5ft11 (compact)
   input:    "5ft11"

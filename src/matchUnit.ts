@@ -8,8 +8,8 @@ export function matchUnit(word: string, type: MeasurementType, fuzziness?: numbe
   for (const aliases of UNIT_ALIASES[type]) {
     for (const alias of aliases) {
       if (word === alias) return aliases[0];
-      // Exclude common prose near foot/feet and kilo/kilos.
-      if (!fuzziness || /^(f(oo|ee)[dl]|kills?)$/.test(word)) continue;
+      // Exclude common prose near foot/feet, kilo/kilos and metre/metres.
+      if (!fuzziness || /^(f(oo|ee)[dl]|kills?|metros?)$/.test(word)) continue;
       if (word[0] !== alias[0]) continue;
       const distance = levenshtein(word, alias);
       // Keep edits below a third of the alias length; short abbreviations stay exact-only.

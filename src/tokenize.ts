@@ -151,6 +151,8 @@ export function tokenizeNormalized(input: string, fuzziness?: number): string[] 
             return `${field && `${field}${FIELD_MARK} `}${open}${short && (assign || name) ? NAME_MARK : UNIT_MARK} ${short ?? word}`;
           }
         )
+        // "#" right after a number means pounds, as in "185#". Before a number, it isn't a unit.
+        .replace(/(?<=\d)#/g, ' lb ')
         // Split punctuation, hyphens after quoted feet, and underscores before minus signs.
         .replace(/(?<=\d\s*')-(?=\.?\d)|_(?=-)|[^\w\s'".;-]/g, ' ')
         // After a number, a unit and a hyphen join two parts or values, as in "5 ft-11",
