@@ -29,6 +29,28 @@ const BODY_FINDINGS = /(outside diff range|nitpick) comments \((\d+)\)/gi;
 /** How much of a bot's text a record quotes. */
 const EXCERPT_LENGTH = 600;
 
+const HTML_COMMENT = /<!--[\s\S]*?-->/g;
+const TAG = /<\/?[a-z][^>]*>/gi;
+/** A collapsed section with no section inside it. */
+const INNERMOST_DETAILS = /<details\b[^>]*>(?:(?!<details\b)[\s\S])*?<\/details>/gi;
+
+/**
+ * Removes each pattern's matches again and again until none is left. One pass isn't enough:
+ * removing `<!---->` from `<!<!---->-- x -->` leaves a new comment behind.
+ *
+ * @param {string} text
+ * @param {RegExp[]} patterns Global patterns, removed in this order on each pass.
+ * @returns {string}
+ */
+function removeAll(text, patterns) {
+  let previous;
+  do {
+    previous = text;
+    for (const pattern of patterns) text = text.replace(pattern, '');
+  } while (text !== previous);
+  return text;
+}
+
 /**
  * @typedef {{ pr: number, title: string, prUrl: string, closed: string, author: string,
  *   url: string, summary: string, excerpt: string }} Finding
@@ -90,7 +112,7 @@ export function lateFinding(name, event) {
     // Drop the prompts for AI agents, which repeat the findings as instructions.
     const prompts =
       /<details\b[^>]*>\s*<summary>[^<]*prompt[^<]*<\/summary>(?:(?!<details\b)[\s\S])*?<\/details>/gi;
-    text = plainText(body.slice(sections[0].index).replace(prompts, ''));
+    text = plainText(removeAll(body.slice(sections[0].index), [prompts]));
   } else {
     if (ROUTINE.test(body)) return null;
     summary = 'a comment';
@@ -115,9 +137,7 @@ export function lateFinding(name, event) {
  * @returns {string}
  */
 export function plainText(html) {
-  return html
-    .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/<\/?[a-z][^>]*>/gi, '')
+  return removeAll(html, [HTML_COMMENT, TAG])
     .replace(/\n\s*\n\s*(?:\n\s*)+/g, '\n\n')
     .trim();
 }
@@ -131,11 +151,10 @@ export function plainText(html) {
  * @returns {string}
  */
 export function excerpt(body) {
-  let text = body.replace(/<!--[\s\S]*?-->/g, '');
-  // Remove the innermost sections first, until none is left.
-  const innermost = /<details\b[^>]*>(?:(?!<details\b)[\s\S])*?<\/details>/gi;
-  while (innermost.test(text)) text = text.replace(innermost, '');
-  text = text.replace(/\n\s*\n\s*(?:\n\s*)+/g, '\n\n').trim();
+  // Innermost sections go first, so a nested section goes with the one around it.
+  const text = removeAll(body, [HTML_COMMENT, INNERMOST_DETAILS])
+    .replace(/\n\s*\n\s*(?:\n\s*)+/g, '\n\n')
+    .trim();
   // Count characters, not UTF-16 units, so the cut doesn't split an emoji.
   const characters = Array.from(text);
   const short =

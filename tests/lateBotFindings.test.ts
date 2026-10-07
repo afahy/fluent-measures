@@ -82,6 +82,17 @@ describe('lateFinding', () => {
     );
   });
 
+  it('drops a prompt section with attributes and no space before its summary', () => {
+    const finding = lateFinding('pull_request_review', {
+      pull_request: merged43,
+      review: {
+        ...bot.coderabbitReview,
+        body: 'Intro\n🧹 Nitpick comments (1)\nKeep this\n<details open><summary>🤖 Prompt for AI Agents</summary>\nDrop this\n</details>',
+      },
+    });
+    expect(finding?.excerpt).toBe('> Nitpick comments (1)\n> Keep this');
+  });
+
   it('reports a bot comment on a merged PR that is not one of its routine notes', () => {
     const finding = lateFinding('issue_comment', {
       issue: mergedIssue43,
@@ -132,7 +143,15 @@ describe('lateFinding', () => {
       })
     ).toBeNull();
     expect(
-      lateFinding('push', { pull_request: merged43, comment: bot.codexThreadComment })
+      lateFinding('push', {
+        pull_request: merged43,
+        comment: bot.codexThreadComment,
+        review: bot.coderabbitNitpickReview,
+      })
+    ).toBeNull();
+    const ghost = { ...bot.codexThreadComment, user: null };
+    expect(
+      lateFinding('pull_request_review_comment', { pull_request: merged43, comment: ghost })
     ).toBeNull();
     expect(lateFinding('pull_request_review', { pull_request: merged43 })).toBeNull();
   });
@@ -155,6 +174,15 @@ describe('excerpt', () => {
     expect(excerpt(nested)).toBe('> Intro\n>\n> Tail');
     expect(excerpt(`${'a'.repeat(599)}🧹 tail`)).toBe(`> ${'a'.repeat(599)}🧹…`);
   });
+
+  it('keeps one blank line where there were several, even with spaces on them', () => {
+    expect(excerpt('a\n\nb\n\n\nc\n \n\nd\n\n \ne')).toBe('> a\n>\n> b\n>\n> c\n>\n> d\n>\n> e');
+  });
+
+  it('removes an HTML comment that is left behind when an inner one is removed', () => {
+    // Removing `<!---->` from `<!<!---->--` leaves `<!--` (CodeQL alert 9).
+    expect(excerpt('<!<!---->-- hidden -->Shown')).toBe('> Shown');
+  });
 });
 
 describe('plainText', () => {
@@ -162,6 +190,18 @@ describe('plainText', () => {
     expect(
       plainText('<summary>Title</summary><blockquote>\n\n\n<!-- x -->\nBody `a < b`\n</blockquote>')
     ).toBe('Title\n\nBody `a < b`');
+  });
+
+  it('keeps one blank line where there were several, even with spaces on them', () => {
+    expect(plainText('a\n\nb\n\n\nc\n \n\nd\n\n \ne')).toBe('a\n\nb\n\nc\n\nd\n\ne');
+  });
+
+  it('removes tags and comments that are left behind when inner ones are removed', () => {
+    // CodeQL alerts 8 and 10: removing `<b>` from `<<b>i>` leaves `<i>`, and removing `<b>`
+    // from `<!<b>-- -->` leaves an HTML comment.
+    expect(plainText('<<b>i>Shown')).toBe('Shown');
+    expect(plainText('<!<b>-- hidden -->Shown')).toBe('Shown');
+    expect(plainText('<!<!---->-- hidden -->Shown')).toBe('Shown');
   });
 });
 
