@@ -161,11 +161,16 @@ export function tokenizeNormalized(input: string, fuzziness?: number): string[] 
         // "\S" and captures nothing. So the lookbehind reads back only over number characters,
         // and a long token with many units in it takes linear time.
         .replace(
-          /(?<![\w-])(?=[a-z]+-)(?<=(?:(?:^|\s)([a-z\d.]*);*|\S)\s*)([a-z]+)-(?=\.?\d)/g,
+          /(?<![\w-])(?=[a-z]+-)(?<=(?:(?<!\S)([a-z\d.]*);*|\S)\s*)([a-z]+)-(?=\.?\d)/g,
           (match, previous: string | undefined, word: string) => {
             const unit =
               matchUnit(word, 'height', fuzziness) || matchUnit(word, 'weight', fuzziness);
-            return unit && (!previous || wordsToNumber(previous) === null) ? `${word} -` : match;
+            // A token that can't be a number captures nothing.
+            return unit &&
+              // Stryker disable next-line StringLiteral: any text that isn't a number gives null, as "" does.
+              wordsToNumber(previous ?? '') === null
+              ? `${word} -`
+              : match;
           }
         )
         // Separate numbers from attached units or quotes, retaining signs after opening quotes.
