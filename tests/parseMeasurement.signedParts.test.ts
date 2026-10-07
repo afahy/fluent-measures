@@ -147,6 +147,25 @@ describe('signed parts', () => {
     expect(parseMeasurement('x--5 kg, 70 kg')).toMatchObject({ value: 70, unit: 'kg' });
   });
 
+  // Round 1 (Codex). A signed value with its own unit isn't the label's value, a semicolon can
+  // stand between a number and its unit, and implied inches belong to their own field.
+  it.each([
+    ['180 cm = -82 kg', 180, 'cm'],
+    ['1;m-80 cm', 180, 'cm'],
+    ['1;;m-80 cm', 180, 'cm'],
+    ['180;lbs-180 lbs', 180, 'lb'],
+    ['5 ft 11; -2 cm', 71, 'in'],
+  ] as const)('reads %s as %s %s', (raw, value, unit) => {
+    expect(parseMeasurement(raw)).toMatchObject({ value, unit });
+  });
+
+  // Each signed label value is read without its sign in place, not in a copy of the tokens.
+  it('reads many signed label values quickly', () => {
+    const start = Date.now();
+    expect(parseMeasurement('kg: -5 '.repeat(20_000))).toBeNull();
+    expect(Date.now() - start).toBeLessThan(1000);
+  });
+
   // "5 ft -11" has no inch unit, so -11 isn't a part (existing test).
   it('keeps 5 ft from 5 ft -11', () => {
     expect(parseMeasurement('5 ft -11')?.matches).toEqual([{ value: 5, unit: 'ft' }]);

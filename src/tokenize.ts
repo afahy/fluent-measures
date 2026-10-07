@@ -152,7 +152,11 @@ export function tokenizeNormalized(input: string, fuzziness?: number): string[] 
           (match, previous: string, word: string) => {
             const unit =
               matchUnit(word, 'height', fuzziness) || matchUnit(word, 'weight', fuzziness);
-            return unit && wordsToNumber(previous) === null ? `${word} -` : match;
+            // A semicolon can come between a number and its unit, as in "1;m-80 cm".
+            // Stryker disable next-line Regex: only a token's last characters can be semicolons here.
+            return unit && wordsToNumber(previous.replace(/;+$/, '')) === null
+              ? `${word} -`
+              : match;
           }
         )
         // Separate numbers from attached units or quotes, retaining signs after opening quotes.

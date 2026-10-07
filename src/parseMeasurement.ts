@@ -240,11 +240,17 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       const mark = remainingTokens[i - 1];
       const label = mark === NAME_MARK || mark === UNIT_MARK;
       // A signed value after a label is its value too, so the check for a sign below finds it.
+      // As for a value without a sign, one with its own unit isn't, as in "180 cm = -82 kg". The
+      // check reads the value without its sign in place, and then puts the token back.
+      const valueAt = skipMarks(remainingTokens, i + 1);
+      const value = remainingTokens[valueAt];
+      const signedValue = label && isSigned(value);
+      if (signedValue) remainingTokens[valueAt] = String(withoutSign(value));
       const valueFollows =
-        (label && isSigned(remainingTokens[skipMarks(remainingTokens, i + 1)])) ||
-        (mark === NAME_MARK
-          ? readNumberPhrase(remainingTokens, skipMarks(remainingTokens, i + 1))[0] !== null
-          : label && readValueAfter(remainingTokens, i + 1, unit, label, fuzziness)[0] !== null);
+        mark === NAME_MARK
+          ? readNumberPhrase(remainingTokens, valueAt)[0] !== null
+          : label && readValueAfter(remainingTokens, i + 1, unit, label, fuzziness)[0] !== null;
+      if (signedValue) remainingTokens[valueAt] = value;
       let [num, end]: [number | null, number] = valueFollows
         ? [null, i - 1]
         : readNumberPhrase(remainingTokens, label ? i - 2 : i - 1, -1);
@@ -298,7 +304,8 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
             (inches > 0 && inches < 12 && !nextUnit && !matchUnit(nextWord, 'weight', fuzziness)))
         ) {
           const inchesMatch: QualifiedMatch = { value: inches, unit: 'in' };
-          matchFields.set(inchesMatch, [fieldOf[matchEnd], fieldOf[inchesEnd]]);
+          // The inches' number starts at matchEnd, and reading forward stops at a semicolon.
+          matchFields.set(inchesMatch, [fieldOf[matchEnd]]);
           // Stryker disable next-line ConditionalExpression: "true" keeps zero parts, which add up to zero and don't count. The tests kill "false".
           if (num || inches) matches.push(inchesMatch);
           else matches.pop();
