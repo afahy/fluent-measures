@@ -98,4 +98,11 @@ describe('tokenize', () => {
     expect(tokenize('72.5kg.')).toEqual(['72.5', 'kg']);
     expect(tokenize('Six-Foot-Two')).toEqual(['six', 'foot', 'two']);
   });
+
+  // Only the periods at the end of a token go. A period inside a token stays (AFA-36).
+  it('removes every period from the end of a token', () => {
+    expect(tokenize('6 ft.. 70 kg...')).toEqual(['6', 'ft', '70', 'kg']);
+    expect(tokenize('5.5. ft')).toEqual(['5.5', 'ft']);
+    expect(tokenize('a.b. 5 ft')).toEqual(['a.b', '5', 'ft']);
+  });
 });

@@ -33,6 +33,16 @@ function writeFraction(text: string, whole = '', numerator: string, denominator:
 }
 
 /**
+ * Removes each copy of a mark from the end of a text. A scan back from the end takes linear time.
+ * A regex such as `/\.+$/` starts again at each character of a long run, so it takes quadratic time.
+ */
+function trimEnd(text: string, mark: string): string {
+  let end = text.length;
+  while (text[end - 1] === mark) end--;
+  return text.slice(0, end);
+}
+
+/**
  * Write each proper fraction as a decimal, so "150 1/2" and "150½" are 150.5. A whole number
  * before the fraction is part of it. Other numbers with a slash between them become "x", with
  * their whole number, so "5/2" and "150 5/2" can't be read as a value. So does a fraction with a
@@ -153,10 +163,7 @@ export function tokenizeNormalized(input: string, fuzziness?: number): string[] 
             const unit =
               matchUnit(word, 'height', fuzziness) || matchUnit(word, 'weight', fuzziness);
             // A semicolon can come between a number and its unit, as in "1;m-80 cm".
-            // Stryker disable next-line Regex: only a token's last characters can be semicolons here.
-            return unit && wordsToNumber(previous.replace(/;+$/, '')) === null
-              ? `${word} -`
-              : match;
+            return unit && wordsToNumber(trimEnd(previous, ';')) === null ? `${word} -` : match;
           }
         )
         // Separate numbers from attached units or quotes, retaining signs after opening quotes.
@@ -164,6 +171,6 @@ export function tokenizeNormalized(input: string, fuzziness?: number): string[] 
         .replace(/(?<=\d)(?=[a-z'"])|(?<=['"])(?=-?\.?\d)|(?<!-)\b-(?=\b|\.\d)/g, ' ')
         // Keep semicolons as separate tokens without adding surrounding whitespace.
         .match(/;|[^\s;]+/g) || []
-    ).map(token => token.replace(/\.+$/, ''))
+    ).map(token => trimEnd(token, '.'))
   );
 }
