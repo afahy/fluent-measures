@@ -5,6 +5,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -56,8 +57,9 @@ function runCheck(
 // A stand-in for Stryker. Like Stryker 10, it writes warnings to stryker.log only when the config
 // sets fileLogLevel to "warn" or lower, and it warns about each `mutate` pattern in a node_modules
 // folder. It writes a report with no mutants.
-const STRYKER_STUB = `const fs = require('node:fs');
-const config = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'));
+const STUB_CONFIG = `const fs = require('node:fs');
+const config = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'));`;
+const STRYKER_STUB = `${STUB_CONFIG}
 const logs = ['trace', 'debug', 'info', 'warn'].includes(config.fileLogLevel);
 for (const pattern of logs ? config.mutate : []) {
   if (/(^|\\/)node_modules\\//i.test(pattern)) {
@@ -67,11 +69,24 @@ for (const pattern of logs ? config.mutate : []) {
 fs.writeFileSync(config.jsonReporter.fileName, JSON.stringify({ files: {} }));
 `;
 
-/** Puts the Stryker stand-in where the check runs Stryker from. Git doesn't track it. */
-function addStrykerStub(repository: string): void {
+// A stand-in for Stryker when no test imports the changed files. Like Stryker 10, it logs how many
+// mutants it made when fileLogLevel is "info" or lower, then stops with "No tests were executed".
+const strykerWithNoTests = (
+  mutants: number,
+  error = 'No tests were executed. Stryker will exit prematurely.'
+): string => `${STUB_CONFIG}
+if (['trace', 'debug', 'info'].includes(config.fileLogLevel)) {
+  fs.appendFileSync('stryker.log', '12:00:00 (1) INFO Instrumenter Instrumented 1 source file(s) with ${mutants} mutant(s)\\n');
+  fs.appendFileSync('stryker.log', '12:00:01 (1) ERROR Stryker ${error}\\n');
+}
+process.exit(1);
+`;
+
+/** Puts a Stryker stand-in where the check runs Stryker from. Git doesn't track it. */
+function addStrykerStub(repository: string, stub = STRYKER_STUB): void {
   const bin = resolve(repository, 'node_modules/@stryker-mutator/core/bin');
   mkdirSync(bin, { recursive: true });
-  writeFileSync(resolve(bin, 'stryker.js'), STRYKER_STUB);
+  writeFileSync(resolve(bin, 'stryker.js'), stub);
 }
 
 /** Writes the files, commits them, and returns the commit's hash. */
@@ -269,7 +284,7 @@ describe('mutation-check.mjs', () => {
   });
 
   // A file with only types has no mutants, but Stryker still finds it, so the check doesn't flag
-  // it. (The real Stryker then finds no test that imports it: AFA-83 tracks that.)
+  // it as a file that Stryker never reads.
   it("doesn't flag a changed file that Stryker finds but that has no mutants", () => {
     const repository = createRepository();
     const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
@@ -281,6 +296,72 @@ describe('mutation-check.mjs', () => {
     expect(check.stderr).toBe('');
     expect(check.stdout).toContain('Tests kill every mutant on the changed lines.');
     expect(check.status).toBe(0);
+  });
+
+  // AFA-83: no test imports a file with only types at runtime, so Stryker stops with "No tests
+  // were executed". When the changed files have no mutants, there is nothing to check.
+  it('passes when no test imports the changed files and they have no mutants', () => {
+    const repository = createRepository();
+    const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
+    commitFiles(repository, { 'src/types.ts': 'export type Unit = string;\n' });
+    addStrykerStub(repository, strykerWithNoTests(0));
+
+    const check = runCheck(repository, base);
+
+    expect(check.stderr).toBe('');
+    expect(check.stdout).toContain(
+      'The changed files have no mutants, so there is nothing to check.'
+    );
+    expect(check.status).toBe(0);
+  });
+
+  // A changed file with mutants that no test imports still fails, as on main.
+  it('fails when no test imports the changed files and they have mutants', () => {
+    const repository = createRepository();
+    const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
+    commitFiles(repository, { 'src/orphan.ts': 'export const addOne = (a: number) => a + 1;\n' });
+    addStrykerStub(repository, strykerWithNoTests(2));
+
+    const check = runCheck(repository, base);
+
+    expect(check.status).toBe(1);
+    expect(check.stderr).toContain('::error::Stryker exited with status 1.');
+    expect(check.stdout).not.toContain('nothing to check');
+  });
+
+  // The check still finds a directive without a reason in a changed file with no mutants.
+  it('fails for a directive without a reason when the changed files have no mutants', () => {
+    const repository = createRepository();
+    const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
+    commitFiles(repository, {
+      'src/types.ts': '// Stryker disable next-line all\nexport type Unit = string;\n',
+    });
+    addStrykerStub(repository, strykerWithNoTests(0));
+
+    const check = runCheck(repository, base);
+
+    expect(check.status).toBe(1);
+    expect(check.stdout).not.toContain('nothing to check');
+    expect(check.stderr).toContain(
+      '::error file=src/types.ts,line=1::This Stryker disable comment has no reason.'
+    );
+    expect(check.stderr).not.toContain('Stryker exited with status');
+  });
+
+  // Only "No tests were executed" means that no test imports the files. Another error still fails.
+  it('fails when Stryker stops for another reason, even with no mutants', () => {
+    const repository = createRepository();
+    const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
+    commitFiles(repository, { 'src/types.ts': 'export type Unit = string;\n' });
+    addStrykerStub(
+      repository,
+      strykerWithNoTests(0, 'There were failed tests in the initial test run.')
+    );
+
+    const check = runCheck(repository, base);
+
+    expect(check.status).toBe(1);
+    expect(check.stderr).toContain('::error::Stryker exited with status 1.');
   });
 
   // AFA-82 review: the check reads only this run's warnings, and keeps a log that it didn't make.
@@ -326,5 +407,17 @@ describe('mutation-check.mjs', () => {
     // The file log is off unless the config's fileLogLevel turns it on.
     expect(backend).toContain('activeFileLevel = "off"');
     expect(backend).toContain('this.activeFileLevel = fileLogLevel;');
+  });
+
+  // AFA-83: the check reads two lines that Stryker logs: the mutant count, at "info" level, and the
+  // error when no test runs. If an update changes either text, this test fails.
+  it('matches the mutant count and the no-tests error in the installed Stryker', () => {
+    const core = realpathSync('node_modules/@stryker-mutator/core');
+    expect(
+      readFileSync(resolve(core, '../instrumenter/dist/src/instrumenter.js'), 'utf8')
+    ).toContain("this.logger.info('Instrumented %d source file(s) with %d mutant(s)'");
+    expect(readFileSync(resolve(core, 'dist/src/process/3-dry-run-executor.js'), 'utf8')).toContain(
+      "throw new ConfigError('No tests were executed."
+    );
   });
 });
