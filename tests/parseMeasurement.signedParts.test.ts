@@ -1,3 +1,4 @@
+import { performance } from 'node:perf_hooks';
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement, type ParseOptions } from '../src';
 
@@ -160,11 +161,16 @@ describe('signed parts', () => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });
 
-  // Each signed label value is read without its sign in place, not in a copy of the tokens.
-  it('reads many signed label values quickly', () => {
-    const start = Date.now();
+  // Each signed label value is read without its sign in place, not in a copy of the tokens. A copy
+  // made 20,000 signed labels take 3.5 s. The limit compares them with the same labels without
+  // signs, because a slow run, such as Stryker's instrumented one, slows both.
+  it('reads many signed label values about as fast as unsigned ones', () => {
+    let start = performance.now();
+    parseMeasurement('kg: 5 '.repeat(20_000));
+    const unsigned = performance.now() - start;
+    start = performance.now();
     expect(parseMeasurement('kg: -5 '.repeat(20_000))).toBeNull();
-    expect(Date.now() - start).toBeLessThan(1000);
+    expect(performance.now() - start).toBeLessThan(3 * unsigned + 100);
   });
 
   // "5 ft -11" has no inch unit, so -11 isn't a part (existing test).
