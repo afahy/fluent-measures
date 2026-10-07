@@ -32,7 +32,9 @@ function readNumberPhrase(
   // "5 foot 10 and a half". Number.isInteger is false for null.
   const half = (at: number): boolean =>
     [tokens[at], tokens[at + 1], tokens[at + 2]].join(' ') === 'and a half';
-  if (step < 0 && half(start - 2)) {
+  // Reading backward, the phrase starts at "half". A read forward never starts there, because it
+  // starts after a unit, a mark or a semicolon, or where another read stops, and "a" stops a read.
+  if (half(start - 2)) {
     const [whole, end] = readNumberPhrase(tokens, start - 3, -1);
     if (Number.isInteger(whole)) return [whole! + 0.5, end];
   }
@@ -47,10 +49,9 @@ function readNumberPhrase(
     if (candidate === null) break;
     value = candidate;
   }
-  // Reading forward, the loop skips "and" and stops at "a".
-  return step > 0 && Number.isInteger(value) && half(end - 1)
-    ? [value! + 0.5, end + 2]
-    : [value, end];
+  // Reading forward, the loop skips "and" and stops at "a". A read backward never stops just
+  // before "a half", because "half" isn't a number.
+  return Number.isInteger(value) && half(end - 1) ? [value! + 0.5, end + 2] : [value, end];
 }
 
 /** The value of a token that starts with minus signs, without them, as in "-12" and "--12". */
