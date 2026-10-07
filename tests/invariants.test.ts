@@ -61,39 +61,49 @@ const UNITS: Record<MeasurementType, readonly Unit[]> = {
   weight: ['lb', 'kg'],
 };
 
+// One to six words, each joined to the word before it by a space or by nothing, so compact forms
+// such as "5ft" occur too.
 const input = fc
-  .array(fc.constantFrom(...WORDS), { minLength: 1, maxLength: 6 })
-  .chain(words =>
-    fc
-      .array(fc.constantFrom(' ', ''), { minLength: words.length - 1, maxLength: words.length - 1 })
-      .map(joins => words.reduce((text, word, at) => text + (at ? joins[at - 1] : '') + word))
-  );
+  .array(fc.tuple(fc.constantFrom(' ', ''), fc.constantFrom(...WORDS)), {
+    minLength: 1,
+    maxLength: 6,
+  })
+  .map(pairs => pairs.map(([join, word], at) => (at ? join : '') + word).join(''));
 
-// normalizedUnit selects the type, and a normalizedUnit of the other type throws on purpose, so the
-// options only pair a type with its own units.
+// normalizedUnit selects the type, and a normalizedUnit of the other type throws on purpose, as
+// tests/parseMeasurement.unitConversions.test.ts checks. So the options only pair a type with its
+// own units. allowUnqualified without a type throws on purpose too, so it comes only with a type.
 const options: fc.Arbitrary<ParseOptions> = fc
   .record({
     type: fc.option(fc.constantFrom<MeasurementType>('height', 'weight'), { nil: undefined }),
     unitType: fc.constantFrom<MeasurementType>('height', 'weight'),
     unitAt: fc.nat(3),
     withUnit: fc.boolean(),
+    allowUnqualified: fc.boolean(),
+    inferUnit: fc.option(fc.constantFrom('metric' as const, 'imperial' as const), {
+      nil: undefined,
+    }),
     fuzziness: fc.option(fc.integer({ min: 0, max: 2 }), { nil: undefined }),
   })
-  .map(({ type, unitType, unitAt, withUnit, fuzziness }) => {
+  .map(({ type, unitType, unitAt, withUnit, allowUnqualified, inferUnit, fuzziness }) => {
     const units = UNITS[type ?? unitType];
     return {
       type,
       normalizedUnit: withUnit ? units[unitAt % units.length] : undefined,
+      allowUnqualified: allowUnqualified && type !== undefined,
+      inferUnit,
       fuzziness,
     };
   });
 
 describe('invariants', () => {
   it('never throws, and gives null or a finite value above 0 in a unit of its type', () => {
+    const types: MeasurementType[] = [];
     fc.assert(
       fc.property(input, options, (raw, parseOptions) => {
         const result = parseMeasurement(raw, parseOptions);
         if (result === null) return;
+        types.push(result.type);
         expect(typeof result.value).toBe('number');
         expect(Number.isFinite(result.value)).toBe(true);
         expect(result.value).toBeGreaterThan(0);
@@ -104,12 +114,9 @@ describe('invariants', () => {
       }),
       { numRuns: 2000, seed: 26 }
     );
-  });
-
-  // The options that the property leaves out throw on purpose (AFA-7).
-  it('throws for a normalizedUnit of the other type', () => {
-    expect(() => parseMeasurement('180 cm', { type: 'height', normalizedUnit: 'kg' })).toThrow(
-      'normalizedUnit kg is not a height unit'
-    );
+    // Most inputs give null, so check that some give each type, or a parser that returns null for
+    // every input would pass.
+    expect(types).toContain('height');
+    expect(types).toContain('weight');
   });
 });
