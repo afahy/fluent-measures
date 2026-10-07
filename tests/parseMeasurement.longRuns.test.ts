@@ -27,8 +27,14 @@ describe('long runs of periods and semicolons', () => {
 
   // The hyphen joiner removes the semicolons at the end of the text before a unit. Here the run
   // doesn't end that text, and a regex tried a match at each semicolon. The README returns null
-  // for "kg-70.5": a unit prefix without a number before it keeps the minus sign.
+  // for "kg-70.5": a unit prefix without a number before it keeps the minus sign. Each semicolon
+  // is a token, so the limit compares with the same semicolons apart, as a slow run slows both.
   it('returns null for a long run of semicolons before x kg-70.5', () => {
-    expect(parseQuickly(`${run(';')}x kg-70.5`)).toBeNull();
+    let start = performance.now();
+    parseMeasurement(`${'; '.repeat(100_000)}x kg-70.5`);
+    const apart = performance.now() - start;
+    start = performance.now();
+    expect(parseMeasurement(`${run(';')}x kg-70.5`)).toBeNull();
+    expect(performance.now() - start).toBeLessThan(3 * apart + 100);
   });
 });
