@@ -41,7 +41,8 @@ describe('a label reads the number after it', () => {
 
   it('keeps consecutive label fields as one height', () => {
     const result = parseMeasurement('m: 1 cm: 80');
-    expect(result?.value).toBeCloseTo(180 / 2.54);
+    expect(result?.value).toBe(180);
+    expect(result?.unit).toBe('cm');
     expect(result?.matches).toEqual([
       { value: 1, unit: 'm' },
       { value: 80, unit: 'cm' },

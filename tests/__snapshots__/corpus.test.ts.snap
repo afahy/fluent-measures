@@ -2,7 +2,7 @@
 
 exports[`measurement corpus > matches the committed score 1`] = `
 "Category                 total   agree   wrong  missed  throws
-all                        406     380       9      17       0
+all                        406     381       8      17       0
 
 symbols                     27      26       0       1       0
 words                       30      28       0       2       0
@@ -11,7 +11,7 @@ decimals                    22      21       1       0       0
 commas                      26      26       0       0       0
 hyphens                     29      29       0       0       0
 compact                     24      12       0      12       0
-unicode                     29      28       1       0       0
+unicode                     29      29       0       0       0
 typos                       30      30       0       0       0
 surrounding-text            29      29       0       0       0
 multiple-measurements       30      30       0       0       0
@@ -20,7 +20,7 @@ conversion                  28      28       0       0       0
 unsupported                 26      26       0       0       0
 prose                       29      25       4       0       0
 
-Entries with the outcome "wrong" (9):
+Entries with the outcome "wrong" (8):
 
 mixed-ten-and-a-half (mixed-numbers)
   input:    "5 foot 10 and a half"
@@ -33,12 +33,6 @@ decimals-5-11-ft (decimals)
   options:  {}
   expected: 71 in (height) | null
   actual:   5.11 ft (height)
-
-unicode-minus-sign (unicode)
-  input:    "\\u22125 ft"
-  options:  {}
-  expected: null
-  actual:   5 ft (height)
 
 unqualified-1-75-metric-height (unqualified)
   input:    "1.75"
@@ -117,7 +111,7 @@ compact-5ft11 (compact)
 compact-1m80 (compact)
   input:    "1m80"
   options:  {}
-  expected: 1.8 m (height) | 180 cm (height) | 70.86614173228347 in (height)
+  expected: 180 cm (height)
   actual:   null
 
 compact-70kgs (compact)

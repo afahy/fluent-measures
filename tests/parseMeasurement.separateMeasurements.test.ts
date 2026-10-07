@@ -92,7 +92,8 @@ describe('separate measurements in one input', () => {
 
   it('keeps the compound height 1 m 80 cm', () => {
     const result = parseMeasurement('1 m 80 cm');
-    expect(result?.value).toBeCloseTo(180 / 2.54);
+    expect(result?.value).toBe(180);
+    expect(result?.unit).toBe('cm');
     expect(result?.matches).toEqual([
       { value: 1, unit: 'm' },
       { value: 80, unit: 'cm' },
