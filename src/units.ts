@@ -14,6 +14,17 @@ export const UNIT_ALIASES: Record<MeasurementType, [Unit, ...string[]][]> = {
   ],
 };
 
+// The measurement type of each unit. With no prototype, a name such as "constructor" isn't a unit.
+export const UNIT_TYPES = {
+  __proto__: null,
+  ft: 'height',
+  in: 'height',
+  cm: 'height',
+  m: 'height',
+  lb: 'weight',
+  kg: 'weight',
+} as unknown as Readonly<Record<Unit, MeasurementType>>;
+
 // Short aliases that are usually ordinary words before a number, as in "in 2020" and "M 28".
 // They can come before their number only as a label, such as "(in)" or "m:", which the
 // tokenizer spells out as the alias given here.
