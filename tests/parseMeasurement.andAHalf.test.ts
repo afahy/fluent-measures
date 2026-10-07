@@ -79,6 +79,8 @@ describe('and a half', () => {
     'two and a half thousand hundred lbs',
     '1.5 and a half thousand lbs',
     '-2 and a half thousand lbs',
+    // A semicolon can come between a number and the next word (README: "180;lbs").
+    '-2; and a half thousand lbs',
   ])('returns null for %s', raw => {
     expect(parseMeasurement(raw)).toBeNull();
   });

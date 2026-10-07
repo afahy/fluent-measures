@@ -63,7 +63,7 @@ function readNumberPhrase(
       if (ordered && Number.isInteger(whole) && whole! < nearest) {
         return [(whole! + 0.5) * multiplier, end];
       }
-      if (whole !== null || isSigned(tokens[at - 3])) return [null, at];
+      if (whole !== null || isSigned(tokens[end])) return [null, at];
     }
   }
   let end = start;
