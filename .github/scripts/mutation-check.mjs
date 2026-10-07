@@ -128,6 +128,11 @@ writeFileSync(
     jsonReporter: { fileName: report },
     thresholds: { ...config.thresholds, break: null },
     fileLogLevel: 'warn',
+    // In related mode, Vitest runs only the tests that import a mutated file. A file with only
+    // types, such as src/types.ts, has none at runtime, so Stryker stopped with "No tests were
+    // executed". The dry run now runs every test, and each mutant still runs only the tests that
+    // cover it.
+    vitest: { ...config.vitest, related: false },
   })
 );
 
