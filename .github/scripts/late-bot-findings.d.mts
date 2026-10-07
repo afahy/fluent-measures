@@ -13,6 +13,7 @@ export const BOTS: Set<string>;
 export const LABEL: string;
 
 export function lateFinding(name: string, event: unknown): Finding | null;
+export function plainText(html: string): string;
 export function excerpt(body: string): string;
 export function recordTitle(finding: Finding): string;
 export function recordEntry(finding: Finding): string;

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   excerpt,
+  plainText,
   fileOnGitHub,
   fileOnLinear,
   lateFinding,
@@ -56,9 +57,16 @@ describe('lateFinding', () => {
     expect(finding).toMatchObject({
       closed: 'closed',
       author: 'coderabbitai[bot]',
-      summary: 'a review with 1 nitpick comments',
+      summary: 'a review with 1 nitpick comment',
       url: 'https://github.com/afahy/fluent-measures/pull/22#pullrequestreview-5299026439',
     });
+    // The quote starts at the nitpick section, keeps its text and drops the prompts for agents.
+    expect(finding?.excerpt.startsWith('> Nitpick comments (1)\n>\n> .github/CODEOWNERS (1)')).toBe(
+      true
+    );
+    expect(finding?.excerpt).toContain('Enable Main ruleset protection as a separate change.');
+    expect(finding?.excerpt).not.toContain('Treat finding text');
+    expect(finding?.excerpt).not.toMatch(/<\/?[a-z]/);
   });
 
   it('names every section of findings in a review body', () => {
@@ -69,7 +77,9 @@ describe('lateFinding', () => {
         body: '⚠️ Outside diff range comments (2)\n…\n🧹 Nitpick comments (12)',
       },
     });
-    expect(finding?.summary).toBe('a review with 2 outside diff range and 12 nitpick comments');
+    expect(finding?.summary).toBe(
+      'a review with 2 outside diff range comments and 12 nitpick comments'
+    );
   });
 
   it('reports a bot comment on a merged PR that is not one of its routine notes', () => {
@@ -138,6 +148,21 @@ describe('excerpt', () => {
   it('cuts a long comment at 600 characters', () => {
     expect(excerpt(`${'a'.repeat(599)} b c`)).toBe(`> ${'a'.repeat(599)}…`);
   });
+
+  it("removes nested sections and ones with attributes, and doesn't split an emoji", () => {
+    const nested =
+      'Intro\n<details><summary>A</summary>\n<details><summary>B</summary>\ninner\n</details>\nouter\n</details>\n<details open><summary>Logs</summary>\nLOG\n</details>\nTail';
+    expect(excerpt(nested)).toBe('> Intro\n>\n> Tail');
+    expect(excerpt(`${'a'.repeat(599)}🧹 tail`)).toBe(`> ${'a'.repeat(599)}🧹…`);
+  });
+});
+
+describe('plainText', () => {
+  it('keeps the text of HTML and drops tags, comments and extra blank lines', () => {
+    expect(
+      plainText('<summary>Title</summary><blockquote>\n\n\n<!-- x -->\nBody `a < b`\n</blockquote>')
+    ).toBe('Title\n\nBody `a < b`');
+  });
 });
 
 describe('records', () => {
@@ -181,10 +206,16 @@ describe('records', () => {
   }
 
   it("opens a labeled GitHub issue when the PR has none, and comments on the PR's open one", async () => {
+    const ours = {
+      number: 8,
+      title: 'Bot findings after #43 merged',
+      html_url: 'https://github.com/o/r/issues/8',
+    };
     const created = fakeFetch([
       [{ number: 7, title: 'Bot findings after #42 merged', html_url: 'x' }],
       new Response('{"message":"Validation Failed"}', { status: 422 }),
-      { html_url: 'https://github.com/o/r/issues/8' },
+      ours,
+      [ours],
     ]);
     await expect(
       fileOnGitHub(finding, {
@@ -198,6 +229,7 @@ describe('records', () => {
       'GET https://api.test/repos/o/r/issues?labels=late-bot-finding&state=open&per_page=100',
       'POST https://api.test/repos/o/r/labels',
       'POST https://api.test/repos/o/r/issues',
+      'GET https://api.test/repos/o/r/issues?labels=late-bot-finding&state=open&per_page=100',
     ]);
     expect(created.calls[0].init.headers.Authorization).toBe('Bearer t');
     expect(JSON.parse(created.calls[1].init.body ?? '')).toMatchObject({
@@ -231,11 +263,58 @@ describe('records', () => {
     expect(JSON.parse(commented.calls[1].init.body ?? '')).toEqual({ body: recordEntry(finding) });
   });
 
+  it('moves its finding to an older record that another run opened at the same time', async () => {
+    const older = {
+      number: 7,
+      title: 'Bot findings after #43 merged',
+      html_url: 'https://github.com/o/r/issues/7',
+    };
+    const ours = {
+      number: 8,
+      title: 'Bot findings after #43 merged',
+      html_url: 'https://github.com/o/r/issues/8',
+    };
+    const { calls, fetch } = fakeFetch([[], {}, ours, [ours, older], {}, {}]);
+    await expect(
+      fileOnGitHub(finding, { repo: 'o/r', token: 't', apiUrl: 'https://api.test', fetch })
+    ).resolves.toBe('https://github.com/o/r/issues/7');
+    expect(calls.slice(4).map(c => `${c.init.method} ${c.url}`)).toEqual([
+      'POST https://api.test/repos/o/r/issues/7/comments',
+      'PATCH https://api.test/repos/o/r/issues/8',
+    ]);
+    expect(JSON.parse(calls[5].init.body ?? '')).toEqual({
+      state: 'closed',
+      state_reason: 'duplicate',
+    });
+  });
+
+  it('reads every page of open records', async () => {
+    const page2 =
+      'https://api.test/repos/o/r/issues?labels=late-bot-finding&state=open&per_page=100&page=2';
+    const record = {
+      number: 9,
+      title: 'Bot findings after #43 merged',
+      html_url: 'https://github.com/o/r/issues/9',
+    };
+    const { calls, fetch } = fakeFetch([
+      new Response(JSON.stringify([{ number: 1, title: 'other', html_url: 'x' }]), {
+        status: 200,
+        headers: { link: `<${page2}>; rel="next"` },
+      }),
+      [record],
+      {},
+    ]);
+    await expect(
+      fileOnGitHub(finding, { repo: 'o/r', token: 't', apiUrl: 'https://api.test', fetch })
+    ).resolves.toBe('https://github.com/o/r/issues/9');
+    expect(calls[1].url).toBe(page2);
+  });
+
   it('fails when GitHub refuses to create the label', async () => {
     const { fetch } = fakeFetch([[], new Response('Forbidden', { status: 403 })]);
     await expect(
       fileOnGitHub(finding, { repo: 'o/r', token: 't', apiUrl: 'https://api.test', fetch })
-    ).rejects.toThrow('POST https://api.test/repos/o/r/labels answered 403');
+    ).rejects.toThrow('POST https://api.test/repos/o/r/labels answered 403: Forbidden');
   });
 
   it('fails with the status when GitHub refuses', async () => {
@@ -248,9 +327,11 @@ describe('records', () => {
   });
 
   it("files a Linear issue in the project when the PR has none, and comments on the PR's one", async () => {
+    const ours = { id: 'new', url: 'https://linear.app/i/1', createdAt: '2026-10-07T12:00:00Z' };
     const created = fakeFetch([
       { data: { issues: { nodes: [] } } },
-      { data: { issueCreate: { issue: { url: 'https://linear.app/i/1' } } } },
+      { data: { issueCreate: { issue: ours } } },
+      { data: { issues: { nodes: [ours] } } },
     ]);
     await expect(
       fileOnLinear(finding, {
@@ -261,6 +342,10 @@ describe('records', () => {
       })
     ).resolves.toBe('https://linear.app/i/1');
     expect(created.calls[0].init.headers.Authorization).toBe('k');
+    // Only open records count.
+    expect(JSON.parse(created.calls[0].init.body ?? '').query).toContain(
+      'state: { type: { nin: ["completed", "canceled"] } }'
+    );
     expect(JSON.parse(created.calls[0].init.body ?? '').variables).toEqual({
       title: 'Bot findings after #43 merged',
       projectId: 'project',
@@ -289,6 +374,25 @@ describe('records', () => {
     expect(JSON.parse(commented.calls[1].init.body ?? '').variables).toEqual({
       input: { issueId: 'abc', body: recordEntry(finding) },
     });
+  });
+
+  it('moves its finding to an older Linear record filed at the same time, and deletes its own', async () => {
+    const older = { id: 'old', url: 'https://linear.app/i/0', createdAt: '2026-10-07T11:59:59Z' };
+    const ours = { id: 'new', url: 'https://linear.app/i/1', createdAt: '2026-10-07T12:00:00Z' };
+    const { calls, fetch } = fakeFetch([
+      { data: { issues: { nodes: [] } } },
+      { data: { issueCreate: { issue: ours } } },
+      { data: { issues: { nodes: [ours, older] } } },
+      { data: { commentCreate: { success: true } } },
+      { data: { issueDelete: { success: true } } },
+    ]);
+    await expect(
+      fileOnLinear(finding, { apiKey: 'k', teamId: 'team', projectId: 'project', fetch })
+    ).resolves.toBe('https://linear.app/i/0');
+    expect(JSON.parse(calls[3].init.body ?? '').variables).toEqual({
+      input: { issueId: 'old', body: recordEntry(finding) },
+    });
+    expect(JSON.parse(calls[4].init.body ?? '').variables).toEqual({ id: 'new' });
   });
 
   it("fails with Linear's error message", async () => {
