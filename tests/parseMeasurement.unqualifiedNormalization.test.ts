@@ -33,19 +33,21 @@ describe('unqualified measurement normalization', () => {
     });
   });
 
+  // Inches to feet divides by 12, so the smallest number underflows to zero. A metric height
+  // can't show this since AFA-66: a lone number below 3 is meters, and meters only multiply.
   it('retains an inferred result when conversion underflows to zero', () => {
     const raw = `0.${'0'.repeat(323)}5`;
     expect(
       parseMeasurement(raw, {
         type: 'height',
         allowUnqualified: true,
-        inferUnit: 'metric',
-        normalizedUnit: 'm',
+        inferUnit: 'imperial',
+        normalizedUnit: 'ft',
       })
     ).toEqual({
-      matches: [{ value: Number.MIN_VALUE, unit: 'cm' }],
+      matches: [{ value: Number.MIN_VALUE, unit: 'in' }],
       value: 0,
-      unit: 'm',
+      unit: 'ft',
       type: 'height',
       raw,
     });
