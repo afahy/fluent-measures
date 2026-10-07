@@ -9,12 +9,23 @@ const unicode = (raw: string): string => raw.replace(/-(?=[\d.])/g, '−');
 describe('signed parts', () => {
   // A range that repeats its unit is two measurements that disagree (README). After a number and
   // its unit, a hyphen joins two parts or values and isn't a sign.
-  it.each(['150 lbs-180 lbs', '70 kg-80 kg', '5 ft 11 in-6 ft 1 in'])(
-    'returns null for the range %s',
-    raw => {
-      expect(parseMeasurement(raw)).toBeNull();
-    }
-  );
+  it.each([
+    '150 lbs-180 lbs',
+    '70 kg-80 kg',
+    '5 ft 11 in-6 ft 1 in',
+    // With marks for the units (AFA-89).
+    "5'-6'",
+    '72"-74"',
+    '5\'11"-6\'1"',
+  ])('returns null for the range %s', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
+
+  // AFA-89: an inch mark is the unit too, so the hyphen after it joins two values, as in
+  // "5 in-5 in" (5 in). "″" is the double prime, which reads as an inch mark (AFA-61).
+  it.each(['5"-5 in', '5″-5 in'])('reads %s as 5 in', raw => {
+    expect(parseMeasurement(raw)).toMatchObject({ value: 5, unit: 'in' });
+  });
 
   // The README's "1 m 80 cm" is one height: 100 + 80 = 180 cm.
   it('reads 1 m-80 cm as one height', () => {
@@ -67,6 +78,7 @@ describe('signed parts', () => {
     // A space before the sign makes it a sign, as in "5 ft -11 in".
     '1 m -80 cm',
     '5 ft -11 in',
+    '5" -5 in',
   ];
   it.each(signed)('returns null for %s', raw => {
     expect(parseMeasurement(raw)).toBeNull();
@@ -91,6 +103,8 @@ describe('signed parts', () => {
     ['kg-70.5', {}],
     ['150 lbs - 180 lbs', {}],
     ['150-180 lbs', {}],
+    // AFA-89: a range with spaces around the hyphen.
+    ['72" - 74"', {}],
     // Existing test: a signed fragment before a semicolon in one measurement.
     ['-5;feet 11 inches', {}],
   ] as const)('keeps returning null for %s with %o', (raw, options: ParseOptions) => {
