@@ -24,6 +24,10 @@ describe('and a half', () => {
     ['a hundred and sixty pounds', 160, 'lb'],
     // "a half-hour" with no number before "and" doesn't add to the feet.
     ['5 ft and a half-hour walk', 5, 'ft'],
+    // Only the words "and a half" add 0.5, so other words after 10 leave 5 × 12 + 10 = 70 in.
+    ['5 ft 10 and a hat', 70, 'in'],
+    ['5 ft 10 and the half', 70, 'in'],
+    ['5 ft 10 a half', 70, 'in'],
   ] as const)('keeps reading %s as %s %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });
