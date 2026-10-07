@@ -246,8 +246,10 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       const value = remainingTokens[valueAt];
       const signedValue = label && isSigned(value);
       if (signedValue) remainingTokens[valueAt] = String(withoutSign(value));
+      // A field name takes any number after it, but not a signed one with its own unit, as in
+      // "72 in: -180 lbs".
       const valueFollows =
-        mark === NAME_MARK
+        mark === NAME_MARK && !signedValue
           ? readNumberPhrase(remainingTokens, valueAt)[0] !== null
           : label && readValueAfter(remainingTokens, i + 1, unit, label, fuzziness)[0] !== null;
       if (signedValue) remainingTokens[valueAt] = value;

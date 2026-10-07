@@ -151,6 +151,7 @@ describe('signed parts', () => {
   // stand between a number and its unit, and implied inches belong to their own field.
   it.each([
     ['180 cm = -82 kg', 180, 'cm'],
+    ['72 in: -180 lbs', 72, 'in'],
     ['1;m-80 cm', 180, 'cm'],
     ['1;;m-80 cm', 180, 'cm'],
     ['180;lbs-180 lbs', 180, 'lb'],
