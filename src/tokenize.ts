@@ -36,7 +36,7 @@ function writeFraction(text: string, whole = '', numerator: string, denominator:
  * Removes each copy of a mark from the end of a text. A scan back from the end takes linear time.
  * A regex such as `/\.+$/` starts again at each character of a long run, so it takes quadratic time.
  */
-function trimEnd(text: string, mark: string): string {
+function trimTrailing(text: string, mark: string): string {
   let end = text.length;
   while (text[end - 1] === mark) end--;
   return text.slice(0, end);
@@ -163,7 +163,9 @@ export function tokenizeNormalized(input: string, fuzziness?: number): string[] 
             const unit =
               matchUnit(word, 'height', fuzziness) || matchUnit(word, 'weight', fuzziness);
             // A semicolon can come between a number and its unit, as in "1;m-80 cm".
-            return unit && wordsToNumber(trimEnd(previous, ';')) === null ? `${word} -` : match;
+            return unit && wordsToNumber(trimTrailing(previous, ';')) === null
+              ? `${word} -`
+              : match;
           }
         )
         // Separate numbers from attached units or quotes, retaining signs after opening quotes.
@@ -171,6 +173,6 @@ export function tokenizeNormalized(input: string, fuzziness?: number): string[] 
         .replace(/(?<=\d)(?=[a-z'"])|(?<=['"])(?=-?\.?\d)|(?<!-)\b-(?=\b|\.\d)/g, ' ')
         // Keep semicolons as separate tokens without adding surrounding whitespace.
         .match(/;|[^\s;]+/g) || []
-    ).map(token => trimEnd(token, '.'))
+    ).map(token => trimTrailing(token, '.'))
   );
 }
