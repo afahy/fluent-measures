@@ -112,4 +112,38 @@ describe('unsupported weight units', () => {
     });
     expect(parseMeasurement('180 cm, 7 lb 8 oz')?.value).toBe(180);
   });
+
+  // AFA-103: after a feet part, a number with a stone, ounce or gram unit isn't inches. It is an
+  // unrelated amount, as the README says for "I drink 8 oz of water, weight 180 lbs".
+  it.each([
+    ['5 ft 8 oz', 5, 'ft'],
+    ["5' 8 oz", 5, 'ft'],
+    ['5 ft 8 ounces', 5, 'ft'],
+    ['5 ft 8 g', 5, 'ft'],
+    ['5 ft 8 st', 5, 'ft'],
+    ['5 ft eight oz', 5, 'ft'],
+    // "1st" is an ordinal, as above, so 1 stays inches: 5 × 12 + 1 = 61. "11st" is stone.
+    ['5 ft 1st place', 61, 'in'],
+    ['5 ft 11st', 5, 'ft'],
+    // "Must not change" in AFA-103: 5 × 12 + 8 = 68.
+    ['5 ft 8', 68, 'in'],
+    ['5 ft 8 in', 68, 'in'],
+  ] as const)('reads %s as %s %s', (raw, value, unit) => {
+    expect(parseMeasurement(raw)).toMatchObject({ value, unit });
+  });
+
+  // An amount with an unsupported unit acts as a supported weight does after feet. So
+  // `5 ft 8 lbs 3 in` gives 5 × 12 + 3 = 63 in, and `5 ft 8 kg 11 in` gives 71 in.
+  it.each([
+    ['5 ft 8 oz 3 in', 63],
+    ['5 ft 8 g 11 in', 71],
+  ] as const)('joins the feet and inches around the amount in %s: %s in', (raw, value) => {
+    expect(parseMeasurement(raw)).toMatchObject({ value, unit: 'in' });
+  });
+
+  // The only height left is a zero, which doesn't count. And 5 ft and 68 in are two heights that
+  // disagree, as in `5 ft 8 lbs; 68 in`.
+  it.each(['0 ft 8 oz', '5 ft 8 oz; 68 in', '5 ft 8 grams, 68 in'])('returns null for %s', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
 });
