@@ -14,8 +14,7 @@ on:
     types: [created, deleted]
   issue_comment:
     types: [created, edited, deleted]
-  # CodeRabbit's review status.
-  status:
+  # No status events: only CodeRabbit sent them, and its state is only a note (AFA-143).
   # GitHub doesn't send check_suite events for suites that Actions creates, so follow the
   # workflows that a PR's checks come from. They can start again without a push, for example
   # after a title edit or a re-run, so a start counts as well as the end. GitHub sends
@@ -38,16 +37,15 @@ permissions:
 # PR again anyway. A workflow run for a fork's PR lists no PRs, so its group is the fork's
 # repository and branch.
 concurrency:
-  group: pr-status-${{ github.event.pull_request.number || github.event.issue.number || github.event.workflow_run.pull_requests[0].number || github.event.sha || (github.event.workflow_run && format('{0}:{1}', github.event.workflow_run.head_repository.full_name, github.event.workflow_run.head_branch)) || github.event_name }}
+  group: pr-status-${{ github.event.pull_request.number || github.event.issue.number || github.event.workflow_run.pull_requests[0].number || (github.event.workflow_run && format('{0}:{1}', github.event.workflow_run.head_repository.full_name, github.event.workflow_run.head_branch)) || github.event_name }}
   cancel-in-progress: false
 
 jobs:
   status:
     name: Set the PR status
-    # Skips its own status (statuses set with GITHUB_TOKEN don't start workflows anyway), comments
-    # on issues that aren't PRs, and PR events from forks, whose token can't set a status.
+    # Skips comments on issues that aren't PRs, and PR events from forks, whose token can't set a
+    # status.
     if: >-
-      (github.event_name != 'status' || github.event.context != 'pr-status') &&
       (github.event_name != 'issue_comment' || github.event.issue.pull_request) &&
       (!github.event.pull_request || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest

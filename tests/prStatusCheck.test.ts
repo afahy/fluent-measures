@@ -156,9 +156,11 @@ describe('prsForEvent', () => {
     await expect(prsForEvent(api, repo, 'push', {})).resolves.toEqual([]);
   });
 
-  it("finds the open PRs for a commit's status, or a fork's PRs by the run's branch", async () => {
+  // AFA-143: the workflow no longer runs on status events, so a status event finds no PR and
+  // reads nothing.
+  it("finds no PR for a status event, and a fork's PRs by the run's branch", async () => {
     api.paths = [];
-    await expect(prsForEvent(api, repo, 'status', { sha: 'abc' })).resolves.toEqual([5]);
+    await expect(prsForEvent(api, repo, 'status', { sha: 'abc' })).resolves.toEqual([]);
     // A run for a fork's PR lists no PRs, and GitHub can't find them by the fork's commit.
     await expect(
       prsForEvent(api, repo, 'workflow_run', {
@@ -175,10 +177,7 @@ describe('prsForEvent', () => {
         workflow_run: { pull_requests: [{ number: 9 }], head_sha: 'ghi' },
       })
     ).resolves.toEqual([9]);
-    expect(api.paths).toEqual([
-      `/repos/${repo}/commits/abc/pulls`,
-      `/repos/${repo}/pulls?state=open&head=someone%3Afix%2Funits`,
-    ]);
+    expect(api.paths).toEqual([`/repos/${repo}/pulls?state=open&head=someone%3Afix%2Funits`]);
   });
 
   it('checks every open PR on a schedule or when started by hand', async () => {
