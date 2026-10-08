@@ -315,6 +315,23 @@ describe('mutation-check.mjs', () => {
     expect(check.status).toBe(0);
   });
 
+  // A changed declaration or data file under src/ isn't one either.
+  it.each(['src/types.d.ts', 'src/data.json'])(
+    'says that %s is not a file that Stryker mutates',
+    file => {
+      const repository = createRepository();
+      const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
+      commitFiles(repository, { [file]: 'export type Unit = string;\n' });
+
+      const check = runCheck(repository, base);
+
+      expect(check.stdout).toContain(
+        'None of the changed files under src/ is one that Stryker mutates'
+      );
+      expect(check.status).toBe(0);
+    }
+  );
+
   // AFA-83: no test imports a file with only types at runtime, so Stryker stops with "No tests
   // were executed". When the changed files have no mutants, there is nothing to check.
   it('passes when no test imports the changed files and they have no mutants', () => {

@@ -385,8 +385,17 @@ describe('reasonlessDirectives', () => {
     ['const re = /^\\/*/;\n// Stryker disable next-line all', [2]],
     ['const t = `${a}/*`;\n// Stryker disable next-line all', [2]],
     ["const a = 1;\nconst s = '// Stryker disable all';", []],
-    ['/**\n * Write // Stryker disable next-line all: a reason\n */', []],
+    // A JSDoc tag starts a node inside the comment. The "//" after it is still part of the JSDoc.
+    ['/**\n * @param a // Stryker disable next-line all\n */', []],
   ])('reads only real comments in %j', (code, expected) => {
     expect(reasonlessDirectives(`${code}\nconst b = a ?? 2;`, [[2, 2]])).toEqual(expected);
+  });
+
+  // AFA-113: the walk keeps its own stack, so a long expression doesn't overflow the call stack.
+  it('reads a directive after an expression with 20,000 terms', () => {
+    const code = `const x = ${Array.from({ length: 20_000 }, () => 'a').join(' + ')};`;
+    expect(reasonlessDirectives(`${code}\n// Stryker disable next-line all\nx;`, [[2, 2]])).toEqual(
+      [2]
+    );
   });
 });

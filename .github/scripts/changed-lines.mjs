@@ -101,11 +101,11 @@ export function isSourceFile(file) {
 
 /**
  * Returns the files that the `mutate` patterns in the Stryker config cover. As in Stryker, the
- * patterns apply in order: a pattern that starts with "!" leaves files out, and a later pattern
- * can put them back. Stryker reads a pattern from the project folder, so `./src/a.ts` and an
- * absolute path to it are `src/a.ts`, and a line range after a pattern, as in `src/a.ts:1-10`,
- * doesn't change which files match. The project's pattern leaves out test files under `src/`: Vitest finds tests only
- * under `tests/`, so their mutants would get no coverage.
+ * patterns apply in order: a pattern that starts with "!" leaves files out, and a later pattern can
+ * put them back. Stryker reads a pattern from the project folder, so `./src/a.ts` and an absolute
+ * path to it are `src/a.ts`, and a line range after a pattern, as in `src/a.ts:1-10`, doesn't
+ * change which files match. The project's pattern leaves out test files under `src/`: Vitest finds
+ * tests only under `tests/`, so their mutants would get no coverage.
  *
  * @param {string[]} files
  * @param {string[]} patterns
@@ -272,9 +272,11 @@ const DIRECTIVE = /^\s?Stryker disable(?: next-line)? [a-zA-Z, ]+(?::(.+))?/;
 /**
  * Returns each comment in `source`: where its text starts, and its text without `//`, or `/*` and
  * `*\/`, as Babel gives it to Stryker. The TypeScript parser finds the comments, so a `/*` or `//`
- * inside a string, a template literal or a regex literal isn't one. A comment on its own line
- * leads the next token, and a comment after code on the same line trails the token before it. A
- * JSDoc node's children start inside its comment, so the walk skips them.
+ * inside a string, a template literal or a regex literal isn't one. Each comment sits between two
+ * tokens: on its own line it leads the next token, and after code on its line it trails the token
+ * before it. So the walk reads the comments around each token. It keeps its own stack, so a deeply
+ * nested expression doesn't overflow the call stack. A JSDoc node's children start inside its
+ * comment, so the walk skips them.
  *
  * @param {string} source
  * @returns {Array<{ start: number, text: string }>}
@@ -283,19 +285,24 @@ function comments(source) {
   const file = ts.createSourceFile('source.ts', source, ts.ScriptTarget.Latest, true);
   /** @type {Map<number, ts.CommentRange>} */
   const ranges = new Map();
-  const visit = (/** @type {ts.Node} */ node) => {
+  /** @type {ts.Node[]} */
+  const stack = [file];
+  for (let node = stack.pop(); node; node = stack.pop()) {
+    if (node.kind >= ts.SyntaxKind.FirstJSDocNode && node.kind <= ts.SyntaxKind.LastJSDocNode) {
+      continue;
+    }
+    const children = node.getChildren(file);
+    if (children.length > 0) {
+      stack.push(...children);
+      continue;
+    }
     for (const range of [
       ...(ts.getLeadingCommentRanges(source, node.pos) ?? []),
       ...(ts.getTrailingCommentRanges(source, node.end) ?? []),
     ]) {
       ranges.set(range.pos, range);
     }
-    if (node.kind >= ts.SyntaxKind.FirstJSDocNode && node.kind <= ts.SyntaxKind.LastJSDocNode) {
-      return;
-    }
-    for (const child of node.getChildren(file)) visit(child);
-  };
-  visit(file);
+  }
   return [...ranges.values()].map(({ pos, end, kind }) => ({
     start: pos + 2,
     text: source.slice(
@@ -306,13 +313,14 @@ function comments(source) {
 }
 
 /**
- * Returns the changed lines of `source` that hold a Stryker disable directive without a reason.
- * A directive can ignore mutants on lines that didn't change, such as the line after a
- * `disable next-line`, so the directive itself is checked. Stryker reads each comment's text with
- * its pattern: a block comment can span lines, and a directive must start the text, after at most
- * one space or line break. So a block comment's closing `*\/` isn't a reason, and another
- * directive on the same line doesn't give it one. The line of a directive is the line of its
- * "Stryker".
+ * Returns the changed lines of `source` that hold a Stryker disable directive without a reason. A
+ * directive can ignore mutants on lines that didn't change, such as the line after a `disable
+ * next-line`, so the directive itself is checked. Each comment's text is matched with Stryker's
+ * pattern: a block comment can span lines, and a directive must start the text, after at most one
+ * space or line break. So a block comment's closing `*\/` isn't a reason, and another directive on
+ * the same line doesn't give it one. The line of a directive is the line of its "Stryker". Stryker
+ * reads only the comments before code, so this check also flags a directive with no code after
+ * it, which fails safe.
  *
  * @param {string} source
  * @param {Array<[number, number]>} ranges
