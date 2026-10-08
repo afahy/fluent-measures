@@ -47,19 +47,23 @@ const HASHES: Record<string, string> = {
  */
 function cssClasses(css: string): Set<string> {
   const escape = String.raw`\\[\da-f]{1,6}(?:\r\n|[ \t\n\r\f])?|\\[^\da-f\n\r\f]`;
-  // Read up to each brace that isn't escaped. The text before a "{" is a selector or an at-rule,
-  // after the last ";", which ends an at-rule such as @charset.
-  const selectors = [
-    ...css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/((?:\\[\s\S]|[^{}\\])*)([{}])/g),
-  ]
-    .filter(([, , brace]) => brace === '{')
-    .map(([, text]) => text.slice(text.lastIndexOf(';') + 1).trim())
-    .filter(text => !text.startsWith('@'))
-    .map(text =>
-      text.replace(/\\[\s\S]|"(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*'/g, match =>
-        match.startsWith('\\') ? match : ''
-      )
-    );
+  // Read the style sheet in tokens: an escape, a quoted string, a comment, a brace, a semicolon
+  // or other text. So a brace, a semicolon or a comment marker in a string or an escape ends
+  // nothing. The text before a "{" is a selector, or an at-rule, which starts with "@".
+  const tokens =
+    /\\[\s\S]|"(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*'|\/\*[\s\S]*?\*\/|[{};]|[^\\"'/{};]+|\//g;
+  const selectors: string[] = [];
+  let text = '';
+  for (const [token] of css.matchAll(tokens)) {
+    if (token === '{') {
+      if (!text.trim().startsWith('@')) selectors.push(text);
+      text = '';
+    } else if (token === '}' || token === ';') {
+      text = '';
+    } else if (!/^(?:["']|\/\*)/.test(token)) {
+      text += token;
+    }
+  }
   const name = new RegExp(
     String.raw`\.((?:${escape}|[a-z_-]|[^\x00-\x7f])(?:${escape}|[\w-]|[^\x00-\x7f])*)`,
     'gi'
@@ -220,6 +224,13 @@ describe('the docs page', () => {
     ['a[href$=".pdf"] { } .b { }', ['b']],
     ['@keyframes k { 33.3% { opacity: 0; } } .c { }', ['c']],
     [".content-\\[\\'\\{\\'\\] { } .d { }", ["content-['{']", 'd']],
+    // Codex on #95: an escaped ";", and a brace or comment marker in a quoted value.
+    [".content-\\[\\'\\;\\'\\] { }", ["content-[';']"]],
+    ['.defined { content: ".phantom{"; } .e { }', ['defined', 'e']],
+    [
+      '.open { content: "/*"; } .needed { display: block; } .close { content: "*/"; }',
+      ['open', 'needed', 'close'],
+    ],
   ])('reads the classes in %s', (css, names) => {
     expect([...cssClasses(css)]).toEqual(names);
   });
