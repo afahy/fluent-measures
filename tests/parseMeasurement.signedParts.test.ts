@@ -282,6 +282,10 @@ describe('a sign on the first word of a phrase', () => {
     // As "12 lb -25 oz" and "70 kg -500 g" return null (the AFA-114 comment).
     '12 lb -twenty five oz',
     '70 kg -5 hundred g',
+    '12 lb -a hundred oz',
+    // The Unicode minus sign, as "−5 ft" returns null (README).
+    '−a hundred kg',
+    '﹣an eighty kg',
     // A signed part drops each part of its type in its field, as in "lost -5 lbs, now 180 lbs".
     '-a hundred kg, 70 kg',
     'kg -a hundred, 70 kg',

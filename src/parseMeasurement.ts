@@ -43,8 +43,8 @@ function readNumberPhrase(
   // the loop below skips them.
   //
   // A number before "and a half" that can't take it leaves no number, not only the multipliers, as
-  // in "1.5 and a half thousand". The read then stops at that number, so the check for a sign
-  // finds a signed one, as in "-2 and a half thousand".
+  // in "1.5 and a half thousand". A signed one leaves no number too, and the read stops at its
+  // sign, so readSignedPhrase finds it there, as in "-2 and a half thousand".
   //
   // A read forward doesn't do this, so it stops before a multiplier after "and a half". The whole
   // number before "and a half" can't end in another "and a half", so that read doesn't check for
@@ -62,11 +62,11 @@ function readNumberPhrase(
       multiplier *= nearest = next;
     }
     if (half(at - 2)) {
-      const [whole, end] = readNumberPhrase(tokens, at - 3, -1, false);
+      const [whole, end, signed] = readSignedPhrase(tokens, at - 3, -1, false);
+      if (signed) return [null, end + 1];
       if (ordered && Number.isInteger(whole) && whole! < nearest) {
         return [(whole! + 0.5) * multiplier, end];
       }
-      if (isSigned(tokens[end])) return [null, end];
       if (whole !== null) return [null, at];
     }
   }
@@ -86,11 +86,6 @@ function readNumberPhrase(
   return Number.isInteger(value) && half(end - 1) ? [value! + 0.5, end + 2] : [value, end];
 }
 
-/** The value of a token that starts with minus signs, without them, as in "-12" and "--12". */
-const withoutSign = (token: string): number | null =>
-  // Stryker disable next-line Regex: callers pass only tokens that start with a minus sign, so "/-+/" removes the same signs.
-  wordsToNumber(token.replace(/^-+/, ''));
-
 /**
  * Whether a word is a stone, ounce or gram unit after the number token before it. "st" after a
  * whole number that ends in 1, except 11, is an ordinal, as in "Oct 1st", but "10.1st" is stone.
@@ -98,22 +93,20 @@ const withoutSign = (token: string): number | null =>
 const isUnsupportedUnit = (word: string, number: string): boolean =>
   UNSUPPORTED_WEIGHT_UNITS.test(word) && !(word === 'st' && /^-*(?:\d*[02-9])?1$/.test(number));
 
-/** Whether a token is a number with a minus sign, as in "-5". A sign before a word doesn't count. */
-const isSigned = (token: string | undefined): boolean =>
-  token?.startsWith('-') === true && withoutSign(token) !== null;
-
 /**
- * Read a number phrase as readNumberPhrase does, but let minus signs start its first word. They
- * sign the whole phrase, as in "-5", "-twenty five" and "-a hundred", so `signed` is true and
- * the value is read without them. Reading forward, the first word is at `start`. Reading
- * backward, it's the word where readNumberPhrase stops, and `end` is the token before it.
+ * Read a number phrase as readNumberPhrase does, but let minus signs start its first word, as in
+ * "-5" and "--12". They sign the whole phrase, as in "-twenty five" and "-a hundred", so `signed`
+ * is true and the value is read without them. A sign before another word doesn't count. Reading
+ * forward, the first word is at `start`. Reading backward, it's the word where readNumberPhrase
+ * stops, and `end` is the token before it.
  */
 function readSignedPhrase(
   tokens: string[],
   start: number,
-  step = 1
+  step = 1,
+  readHalf = true
 ): [value: number | null, end: number, signed: boolean] {
-  const [value, end] = readNumberPhrase(tokens, start, step);
+  const [value, end] = readNumberPhrase(tokens, start, step, readHalf);
   // Stryker disable next-line EqualityOperator: step is 1 or -1, so "step >= 0" is the same.
   const forward = step > 0;
   const at = forward ? start : end;
@@ -133,7 +126,7 @@ function readSignedPhrase(
     // Read again with the word in place of the token, and then put the token back. A copy of the
     // tokens would make long inputs with many signs slow.
     tokens[at] = word;
-    const [signedValue, signedEnd] = readNumberPhrase(tokens, start, step);
+    const [signedValue, signedEnd] = readNumberPhrase(tokens, start, step, readHalf);
     tokens[at] = token;
     // Reading backward, the word must join the phrase, so "-5 12 kg" is 12 kg. The phrase then
     // starts at the signed word, as after "a" and "an".
