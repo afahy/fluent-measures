@@ -32,23 +32,33 @@ it('lints every test format that Vitest runs with the rule-11 checks', async () 
   expect(scripts['lint:eslint:fix'].split(' ')).toContain('tests');
 });
 
-// The final review of #91: a JavaScript test gets the rule-11 checks but not `no-undef`, because
-// Vitest's globals and Node's are defined at run time. The TypeScript formats get its parser.
+// The final review of #91: each JavaScript format gets the rule-11 checks, and each TypeScript
+// format gets TypeScript's parser. A test imports its globals in every format, as the repo's
+// tests do, so `no-undef` stays on.
 describe('the lint config for each test format', () => {
   const eslint = new ESLint();
+  /** An import in each format: a .cjs file is CommonJS, so it uses require. */
+  const load = (format: string, names: string, from: string): string =>
+    format === 'cjs'
+      ? `const { ${names} } = require('${from}');`
+      : `import { ${names} } from '${from}';`;
 
-  it.each(['js', 'mjs', 'cjs', 'jsx'])('lints a .%s test that uses globals', async format => {
-    const [result] = await eslint.lintText(
-      "it('reads X', () => {\n  expect(process.env.X ?? 'x').toBe('x');\n});\n",
-      { filePath: `tests/a/x.test.${format}` }
-    );
-    expect(result.messages).toEqual([]);
-  });
+  it.each(['js', 'mjs', 'cjs', 'jsx'])(
+    'lints a .%s test that imports its globals',
+    async format => {
+      const code = [
+        load(format, 'env', 'node:process'),
+        load(format, 'expect, it', 'vitest'),
+        "it('reads X', () => {\n  expect(env.X ?? 'x').toBe('x');\n});\n",
+      ].join('\n');
+      const [result] = await eslint.lintText(code, { filePath: `tests/a/x.test.${format}` });
+      expect(result.messages).toEqual([]);
+    }
+  );
 
   it.each(['js', 'mjs', 'cjs', 'jsx'])('finds a .%s test with no expect', async format => {
-    const [result] = await eslint.lintText("it('does nothing', () => {});\n", {
-      filePath: `tests/a/x.test.${format}`,
-    });
+    const code = `${load(format, 'it', 'vitest')}\nit('does nothing', () => {});\n`;
+    const [result] = await eslint.lintText(code, { filePath: `tests/a/x.test.${format}` });
     expect(result.messages.map(message => message.ruleId)).toEqual(['vitest/expect-expect']);
   });
 
