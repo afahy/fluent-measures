@@ -27,6 +27,9 @@ export const LABEL = 'late-bot-finding';
 const ROUTINE =
   /^\s*(?:<!-- (?:This is an auto-generated (?:comment: (?:summarize|rate limited) by coderabbit\.ai|reply by CodeRabbit)|codex-pull-request-review-summary) -->|Codex Review: Didn't find any major issues|You have reached your Codex usage limits)/i;
 
+/** Codex's reply when it finishes a task that someone asked it for: a summary and a link. */
+const CODEX_TASK = /^\s*### Summary\b[\s\S]*\[View task →\]\(https:\/\/chatgpt\.com\/[^\s)]*\)\s*$/;
+
 /** Sections of a CodeRabbit review body that hold findings outside its review threads. */
 const BODY_FINDINGS = /(outside diff range|nitpick) comments \((\d+)\)/gi;
 
@@ -34,13 +37,64 @@ const BODY_FINDINGS = /(outside diff range|nitpick) comments \((\d+)\)/gi;
 const EXCERPT_LENGTH = 600;
 
 const HTML_COMMENT = /<!--[\s\S]*?-->/g;
-const TAG = /<\/?[a-z][^>]*>/gi;
+/**
+ * A tag that the bots write, in lower case, with attributes in HTML form. Text such as
+ * `Promise<string>`, `f<T>(a: Array<T>)` or the placeholder `<sha>` isn't a tag.
+ */
+const TAG =
+  /<\/?(?:a|b|blockquote|br|code|details|em|hr|i|img|li|ol|p|pre|relative-time|strong|sub|summary|sup|table|tbody|td|th|thead|tr|ul)(?:\s+[\w:.-]+(?:=(?:"[^"]*"|'[^']*'|[^\s"'>]+))?)*\s*\/?>/g;
+/** Three or more line breaks with only spaces between them. The next line keeps its indent. */
+const BLANK_LINES = /\n(?:[^\S\n]*\n){2,}/g;
 /** A collapsed section with no section inside it. */
 const INNERMOST_DETAILS = /<details\b[^>]*>(?:(?!<details\b)[\s\S])*?<\/details>/gi;
 
 /**
- * Removes each pattern's matches again and again until none is left. One pass isn't enough:
- * removing `<!---->` from `<!<!---->-- x -->` leaves a new comment behind.
+ * The text with each code span and fenced block blanked out, so that the patterns don't read
+ * HTML in code. A code span starts at a run of backticks and ends at the next run of the same
+ * length, as in CommonMark. An odd number of backslashes before a backtick makes it plain text,
+ * and an inline span ends at a blank line, so a stray backtick can't hide a collapsed section.
+ * Only a fence, three or more backticks after at most three spaces at the start of a line, can
+ * hold blank lines. Line breaks stay, and the length doesn't change, so an index is the same in
+ * both.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+function maskCode(text) {
+  let masked = '';
+  let done = 0;
+  let at = text.indexOf('`');
+  while (at !== -1) {
+    let slashes = 0;
+    while (text[at - 1 - slashes] === '\\') slashes += 1;
+    if (slashes % 2 === 1) {
+      at = text.indexOf('`', at + 1);
+      continue;
+    }
+    let end = at;
+    while (text[end] === '`') end += 1;
+    const run = text.slice(at, end);
+    const lineStart = text.lastIndexOf('\n', at - 1) + 1;
+    const fence = run.length >= 3 && /^ {0,3}$/.test(text.slice(lineStart, at));
+    let close = text.indexOf(run, end);
+    // A run of a different length doesn't close the span.
+    while (close !== -1 && (text[close - 1] === '`' || text[close + run.length] === '`')) {
+      close = text.indexOf(run, close + 1);
+    }
+    if (close === -1 || (!fence && /\n[^\S\n]*\n/.test(text.slice(end, close)))) {
+      at = text.indexOf('`', end);
+      continue;
+    }
+    masked += text.slice(done, end) + text.slice(end, close).replace(/[^\n]/g, ' ');
+    done = close;
+    at = text.indexOf('`', close + run.length);
+  }
+  return masked + text.slice(done);
+}
+
+/**
+ * Removes each pattern's matches outside code again and again until none is left. One pass
+ * isn't enough: removing `<!---->` from `<!<!---->-- x -->` leaves a new comment behind.
  *
  * @param {string} text
  * @param {RegExp[]} patterns Global patterns, removed in this order on each pass.
@@ -50,7 +104,13 @@ function removeAll(text, patterns) {
   let previous;
   do {
     previous = text;
-    for (const pattern of patterns) text = text.replace(pattern, '');
+    for (const pattern of patterns) {
+      // Matches don't overlap, so removing the last one first keeps each index right.
+      for (const match of [...maskCode(text).matchAll(pattern)].reverse()) {
+        const start = match.index ?? 0;
+        text = text.slice(0, start) + text.slice(start + match[0].length);
+      }
+    }
   } while (text !== previous);
   return text;
 }
@@ -106,19 +166,22 @@ export function lateFinding(name, event) {
     summary = `a review comment on \`${item.path}\``;
   } else if (kind === 'review') {
     // The findings in a review's threads arrive as their own events. Only CodeRabbit puts
-    // findings in the review body, inside collapsed sections, so quote from the first one.
+    // findings in the review body, inside collapsed sections.
     const sections = [...body.matchAll(BODY_FINDINGS)];
     if (sections.length === 0) return null;
     const names = sections.map(
       m => `${m[2]} ${m[1].toLowerCase()} comment${m[2] === '1' ? '' : 's'}`
     );
     summary = `a review with ${names.join(' and ')}`;
-    // Drop the prompts for AI agents, which repeat the findings as instructions.
+    // Quote only the sections of findings, so the collapsed sections after them, such as the
+    // review's settings, stay out. Drop the prompts for AI agents, which repeat the findings as
+    // instructions.
     const prompts =
       /<details\b[^>]*>\s*<summary>[^<]*prompt[^<]*<\/summary>(?:(?!<details\b)[\s\S])*?<\/details>/gi;
-    text = plainText(removeAll(body.slice(sections[0].index), [prompts]));
+    text = plainText(removeAll(findingSections(body, sections), [prompts]));
   } else {
     if (ROUTINE.test(body)) return null;
+    if (author === 'chatgpt-codex-connector[bot]' && CODEX_TASK.test(body)) return null;
     summary = 'a comment';
   }
   const merged = Boolean(pull.merged_at || pull.pull_request?.merged_at);
@@ -135,15 +198,43 @@ export function lateFinding(name, event) {
 }
 
 /**
- * HTML reduced to its text: tags go, and so do the blank lines they leave.
+ * The text of each section of findings in a review body, from its title to the `</details>`
+ * that closes the collapsed section around it, or to the end if none does.
+ *
+ * @param {string} body
+ * @param {RegExpMatchArray[]} sections The matches of BODY_FINDINGS.
+ * @returns {string}
+ */
+function findingSections(body, sections) {
+  const masked = maskCode(body);
+  const parts = [];
+  let end = 0;
+  for (const { index = 0 } of sections) {
+    // A title inside a section that is already quoted adds nothing.
+    if (index < end) continue;
+    end = body.length;
+    let depth = 1;
+    for (const tag of masked.slice(index).matchAll(/<(\/?)details\b[^>]*>/gi)) {
+      depth += tag[1] ? -1 : 1;
+      if (depth === 0) {
+        end = index + (tag.index ?? 0);
+        break;
+      }
+    }
+    parts.push(body.slice(index, end));
+  }
+  return parts.join('\n\n');
+}
+
+/**
+ * HTML reduced to its text: the tags that the bots write go, outside code, and so do the blank
+ * lines that they leave.
  *
  * @param {string} html
  * @returns {string}
  */
 export function plainText(html) {
-  return removeAll(html, [HTML_COMMENT, TAG])
-    .replace(/\n\s*\n\s*(?:\n\s*)+/g, '\n\n')
-    .trim();
+  return removeAll(html, [HTML_COMMENT, TAG]).replace(BLANK_LINES, '\n\n').trim();
 }
 
 /**
@@ -157,7 +248,7 @@ export function plainText(html) {
 export function excerpt(body) {
   // Innermost sections go first, so a nested section goes with the one around it.
   const text = removeAll(body, [HTML_COMMENT, INNERMOST_DETAILS])
-    .replace(/\n\s*\n\s*(?:\n\s*)+/g, '\n\n')
+    .replace(BLANK_LINES, '\n\n')
     .trim();
   // Count characters, not UTF-16 units, so the cut doesn't split an emoji.
   const characters = Array.from(text);
