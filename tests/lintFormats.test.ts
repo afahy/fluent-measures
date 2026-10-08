@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { matchesGlob } from 'node:path';
 import { expect, it } from 'vitest';
 import vitestConfig from '../vitest.config';
@@ -20,4 +21,10 @@ it('lints every test format that Vitest runs with the rule-11 checks', async () 
     format => !vitestFiles.some(glob => matchesGlob(`tests/a/x.test.${format}`, glob))
   );
   expect(unlinted).toEqual([]);
+  // The lint script must read the whole tests/ folder, so the config's patterns decide.
+  const scripts = JSON.parse(readFileSync('package.json', 'utf8')).scripts as Record<
+    string,
+    string
+  >;
+  expect(scripts['lint:eslint'].split(' ')).toContain('tests');
 });

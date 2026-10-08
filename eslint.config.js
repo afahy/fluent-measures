@@ -8,6 +8,9 @@ import vitest from '@vitest/eslint-plugin';
 // parser, and tests/lintFormats.test.ts checks that the two lists cover Vitest's formats.
 const TS_TESTS = 'tests/**/*.{ts,mts,cts,tsx}';
 const JS_TESTS = 'tests/**/*.{js,mjs,cjs,jsx}';
+// Options that the TypeScript and JavaScript blocks share.
+const UNUSED = { argsIgnorePattern: '^_', varsIgnorePattern: '^_' };
+const CONSOLE = ['warn', { allow: ['warn', 'error'] }];
 
 export default [
   eslint.configs.recommended,
@@ -28,23 +31,17 @@ export default [
     rules: {
       ...tseslint.configs.recommended.rules,
       '@typescript-eslint/explicit-function-return-type': 'warn',
-      '@typescript-eslint/no-unused-vars': [
-        'error',
-        {
-          argsIgnorePattern: '^_',
-          varsIgnorePattern: '^_',
-        },
-      ],
+      '@typescript-eslint/no-unused-vars': ['error', UNUSED],
       '@typescript-eslint/no-explicit-any': 'error',
-      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'no-console': CONSOLE,
     },
   },
   {
     files: [JS_TESTS],
     languageOptions: { parserOptions: { ecmaFeatures: { jsx: true } } },
     rules: {
-      'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
-      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'no-unused-vars': ['error', UNUSED],
+      'no-console': CONSOLE,
     },
   },
   // Every test must be able to fail (AGENTS.md rule 11): it must reach an expect, and no expect
