@@ -311,6 +311,11 @@ describe('plainText', () => {
     expect(plainText('Use \\`<b>x</b>\\` here')).toBe('Use \\`x\\` here');
     const fence = '```html\n<b>a</b>\n\n<i>b</i>\n```';
     expect(plainText(`${fence}\n<b>c</b>`)).toBe(`${fence}\nc`);
+    // A fence can start after up to three spaces.
+    const indented = '   ```html\n   <b>a</b>\n\n   <i>b</i>\n   ```';
+    expect(plainText(`x\n${indented}\n<b>c</b>`)).toBe(`x\n${indented}\nc`);
+    // Two backslashes are one plain backslash, so the backtick after them opens a span.
+    expect(plainText('a \\\\`<b>x</b>` b')).toBe('a \\\\`<b>x</b>` b');
   });
 
   it('drops the tags that the bots write, with their attributes', () => {
