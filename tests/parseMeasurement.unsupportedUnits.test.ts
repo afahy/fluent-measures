@@ -112,4 +112,27 @@ describe('unsupported weight units', () => {
     });
     expect(parseMeasurement('180 cm, 7 lb 8 oz')?.value).toBe(180);
   });
+
+  // AFA-103: after a feet part, a number with a stone, ounce or gram unit isn't inches. It is an
+  // unrelated amount, as the README says for "I drink 8 oz of water, weight 180 lbs".
+  it.each([
+    ['5 ft 8 oz', 5, 'ft'],
+    ["5' 8 oz", 5, 'ft'],
+    ['5 ft 8 ounces', 5, 'ft'],
+    ['5 ft 8 g', 5, 'ft'],
+    ['5 ft 8 st', 5, 'ft'],
+    ['5 ft eight oz', 5, 'ft'],
+    // "1st" is an ordinal, as above, so 1 stays inches: 5 × 12 + 1 = 61.
+    ['5 ft 1st place', 61, 'in'],
+    // "Must not change" in AFA-103: 5 × 12 + 8 = 68.
+    ['5 ft 8', 68, 'in'],
+    ['5 ft 8 in', 68, 'in'],
+  ] as const)('reads %s as %s %s', (raw, value, unit) => {
+    expect(parseMeasurement(raw)).toMatchObject({ value, unit });
+  });
+
+  // The only height left is a zero, which doesn't count.
+  it('returns null for 0 ft 8 oz', () => {
+    expect(parseMeasurement('0 ft 8 oz')).toBeNull();
+  });
 });
