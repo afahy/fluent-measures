@@ -81,7 +81,9 @@ function readNumberPhrase(
   let value: number | null = null;
   const phrase: string[] = [];
   for (let word = words(end); word !== undefined; word = words((end += step))) {
+    // Stryker disable next-line EqualityOperator: step is 1 or -1, so "step <= 0" is the same.
     if (word === 'and' || (step < 0 && word === ';')) continue;
+    // Stryker disable next-line EqualityOperator: step is 1 or -1, so "step >= 0" is the same.
     if (step > 0) phrase.push(word);
     else phrase.unshift(word);
     const candidate = wordsToNumber(phrase.join(' '));
