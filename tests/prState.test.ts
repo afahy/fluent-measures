@@ -763,6 +763,64 @@ describe('createClient', () => {
     });
   });
 
+  // AFA-148 item 8: a body that stops doesn't hide the status of an answer that isn't a server
+  // error, so a refused token and a missing path still end the call.
+  it.each([
+    [401, { retryable: false, refused: true }],
+    [404, { retryable: false, refused: false }],
+  ])('reads a %s whose body stops by its status', async (status, marks) => {
+    const fetch = (async () =>
+      new Response(
+        new ReadableStream({
+          start(controller): void {
+            controller.error(new TypeError('terminated'));
+          },
+        }),
+        { status }
+      )) as unknown as typeof globalThis.fetch;
+    const api = createClient({ apiUrl: 'https://api.test', fetch });
+    await expect(api.get('/pull')).rejects.toMatchObject({
+      message: `GitHub answered ${status} for https://api.test/pull: `,
+      status,
+      retryAt: null,
+      ...marks,
+    });
+  });
+
+  // AFA-148 item 4: Node's fetch gives the reason for a network error as its cause.
+  it('keeps the cause of a network error in its message', async () => {
+    const cause = new Error('read ECONNRESET');
+    const fetch = (async () => {
+      throw new TypeError('fetch failed', { cause });
+    }) as unknown as typeof globalThis.fetch;
+    const api = createClient({ apiUrl: 'https://api.test', fetch });
+    const error = (await api.get('/pull').catch(e => e)) as Error;
+    expect(error.message).toBe(
+      "GitHub didn't answer for https://api.test/pull: fetch failed (read ECONNRESET)"
+    );
+    expect((error.cause as Error).cause).toBe(cause);
+  });
+
+  // AFA-148 item 5: a proxy can answer 200 with a page that isn't JSON, and that can pass.
+  it("marks a 200 whose body isn't JSON as one that another try can help", async () => {
+    const fetch = (async () =>
+      new Response('<html>', { status: 200 })) as unknown as typeof globalThis.fetch;
+    const api = createClient({ apiUrl: 'https://api.test', fetch });
+    await expect(api.get('/pull')).rejects.toMatchObject({
+      message: "GitHub's answer for https://api.test/pull isn't JSON: <html>",
+      retryable: true,
+      refused: false,
+      retryAt: null,
+    });
+  });
+
+  // AFA-148 item 3: a bad URL can't pass, so the client rejects it before any request.
+  it("rejects an API URL that isn't a URL", () => {
+    expect(() => createClient({ apiUrl: 'not-a-url' })).toThrow(
+      "The GitHub API URL isn't a URL: not-a-url"
+    );
+  });
+
   it('reports any other error with its status', async () => {
     const url = 'https://api.test/pull';
     const { fetch } = fakeFetch({ [url]: [{ status: 404, body: { message: 'Not Found' } }] });

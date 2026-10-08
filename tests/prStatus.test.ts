@@ -24,11 +24,12 @@ type Failure = { status: number; headers?: Record<string, string> };
 
 /**
  * Serves a PR's responses the way GitHub's REST API does. `snapshots` gives the answer to each
- * poll in turn; the last one repeats. `failures` answers the first requests for the PR instead.
+ * poll in turn; the last one repeats. `failures` answers the first requests for the PR instead,
+ * except where it has no entry.
  */
 async function serve(
   snapshots: Snapshot[],
-  failures: Failure[] = []
+  failures: (Failure | undefined)[] = []
 ): Promise<{ url: string; polls: () => number; hits: (end: string) => number }> {
   let polls = 0;
   let requests = 0;
@@ -265,6 +266,48 @@ describe('pr-status.mjs', () => {
       expect(api.polls()).toBe(0);
     }
   );
+
+  // AFA-148 item 1: a rate limit that lasts past --timeout ends a call that has a result with that
+  // result, as before AFA-147, not with exit 1.
+  it('with --wait, prints the last result when a later rate limit lasts past --timeout', async () => {
+    const blocked = answered();
+    blocked.pull.mergeable_state = 'blocked';
+    const limit = { status: 429, headers: { 'retry-after': '3600' } };
+    const api = await serve([blocked], [undefined, limit]);
+    const result = await run(api.url, ['43', '--wait', '--interval', '1', '--timeout', '0.05']);
+    expect(result.code).toBe(30);
+    expect(result.stdout.split('\n')[0]).toBe('Nothing changed in 0.05 min.');
+    expect(api.hits('/pulls/43')).toBe(2);
+  });
+
+  // AFA-148 item 2: after a rate limit ends, the next try still waits --interval. Here a try at
+  // 0 s and one at 2 s fail, and the next would come after the 3 s --timeout.
+  it('with --wait, waits at least --interval after a short rate limit', async () => {
+    const limit = { status: 429, headers: { 'retry-after': '1' } };
+    const api = await serve([fixture('pr-43-at-1810')], Array(10).fill(limit));
+    const result = await run(api.url, ['43', '--wait', '--interval', '2', '--timeout', '0.05']);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain('GitHub answered 429');
+    expect(api.hits('/pulls/43')).toBe(2);
+  });
+
+  // AFA-148 item 9: rate limits count toward the five errors in a row, so a limit that keeps
+  // coming back ends the call. Its four waits of --interval take 4 s.
+  it('with --wait, exits with 1 after five rate limits in a row', { timeout: 20_000 }, async () => {
+    const limit = { status: 429, headers: { 'retry-after': '1' } };
+    const api = await serve([fixture('pr-43-at-1810')], Array(10).fill(limit));
+    const result = await run(api.url, ['43', '--wait', '--interval', '1', '--timeout', '1']);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain('GitHub answered 429');
+    expect(api.hits('/pulls/43')).toBe(5);
+  });
+
+  // AFA-148 item 3: another try can't fix a bad URL, so the call ends before its first request.
+  it("with --wait, exits with 1 at once for an API URL that isn't a URL", async () => {
+    const result = await run('not-a-url', ['43', '--wait', '--interval', '1']);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain("The GitHub API URL isn't a URL: not-a-url");
+  });
 
   it('exits with 2 and the usage for a bad argument, and 1 for an API error', async () => {
     const api = await serve([fixture('pr-43-at-1810')]);
