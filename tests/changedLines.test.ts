@@ -372,20 +372,17 @@ describe('reasonlessDirectives', () => {
     expect(reasonlessDirectives(`${line}\nconst b = a ?? 2;`, [[1, 1]])).toEqual(expected);
   });
 
-  // AFA-115: git breaks lines only at "\n", so a lone "\r", U+2028 or U+2029 before the directive
-  // leaves it on line 1, which the range covers. "\r\n" ends a line, as before.
-  it.each([
+  // AFA-115: git breaks lines only at "\n". So a lone "\r", U+2028 or U+2029 before a directive
+  // leaves it on git's line 1, and "\r\n" ends a line, as before.
+  it.each<[string, Array<[number, number]>, number[]]>([
     ['const a = 1;\r// Stryker disable next-line all\nconst b = a ?? 2;', [[1, 1]], [1]],
     ['const a = 1;\u2028// Stryker disable next-line all\nconst b = a ?? 2;', [[1, 1]], [1]],
     ['const a = 1;\u2029// Stryker disable next-line all\nconst b = a ?? 2;', [[1, 1]], [1]],
     ['const a = 1;\r\n// Stryker disable next-line all\r\nconst b = a ?? 2;', [[2, 2]], [2]],
-  ] as const)('counts lines as git does in %j', (source, ranges, expected) => {
-    expect(
-      reasonlessDirectives(
-        source,
-        ranges.map(([from, to]) => [from, to])
-      )
-    ).toEqual(expected);
+    // Git's line 2 holds only "y;", so the directive isn't on a changed line.
+    ['x;\u2028// Stryker disable all\ny;', [[2, 2]], []],
+  ])('counts lines as git does in %j', (source, ranges, expected) => {
+    expect(reasonlessDirectives(source, ranges)).toEqual(expected);
   });
 
   // Codex, round 1 of #81: a block comment can end on a later line. Stryker reads its directive
