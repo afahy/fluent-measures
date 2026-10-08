@@ -983,6 +983,41 @@ describe('pr-state.mjs details', () => {
     });
   });
 
+  it('follows a review that starts after a rate-limited refusal', () => {
+    const snapshot = fixture('pr-67');
+    snapshot.issueComments.push(
+      comment(1, human, '@coderabbitai review', '2026-10-07T15:50:00Z'),
+      comment(
+        2,
+        rabbit,
+        '<summary>⚠️ Action not completed</summary>\n\nReview rate limited.',
+        '2026-10-07T15:50:05Z'
+      )
+    );
+    snapshot.statuses.push({
+      context: 'CodeRabbit',
+      state: 'pending',
+      description: 'Review in progress',
+      created_at: '2026-10-07T15:55:00Z',
+    });
+    expect(coderabbitState(snapshot, at('2026-10-07T15:56:00Z')).state).toBe('running');
+  });
+
+  it('asks again after a failed review, even when its status names a rate limit', () => {
+    const snapshot = fixture('pr-67');
+    snapshot.statuses.push({
+      context: 'CodeRabbit',
+      state: 'failure',
+      description: 'Review failed: rate limit exceeded',
+      created_at: '2026-10-07T14:55:00Z',
+    });
+    expect(coderabbitState(snapshot, at('2026-10-07T15:00:00Z'))).toEqual({
+      state: 'not-requested',
+      detail: 'CodeRabbit\'s review of 318c1b7 ended with "Review failed: rate limit exceeded"',
+      action: 'Post `@coderabbitai review`',
+    });
+  });
+
   it('waits for a request made after the rate limit, but not for a limit set after it', () => {
     const snapshot = fixture('pr-67');
     // #67's rate-limit status is from 14:51:46, before this request.

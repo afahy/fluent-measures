@@ -355,12 +355,16 @@ export function coderabbitState(snapshot, now) {
   // Don't wait for a rate-limited CodeRabbit, and don't ask it again for this commit. It's rate
   // limited when its status since the last request says so, or when it refused the last request
   // for that reason. CodeRabbit reviews the next push if its limit allows.
+  // A pending status means that it's reviewing, even after it refused a request.
   const lastAsked = asked[asked.length - 1]?.created_at;
   const limitedStatus =
-    /rate limit/i.test(status?.description ?? '') &&
-    (!lastAsked || byTime(status?.created_at ?? '', lastAsked) >= 0);
+    status?.state === 'success' &&
+    /rate limit/i.test(status.description ?? '') &&
+    (!lastAsked || byTime(status.created_at, lastAsked) >= 0);
   const limitedReply =
-    /action not completed/i.test(reply?.body ?? '') && /rate limit/i.test(reply?.body ?? '');
+    status?.state !== 'pending' &&
+    /action not completed/i.test(reply?.body ?? '') &&
+    /rate limit/i.test(reply?.body ?? '');
   if (limitedStatus || limitedReply) {
     return {
       state: 'rate-limited',
