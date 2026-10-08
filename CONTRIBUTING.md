@@ -122,7 +122,8 @@ pnpm docs
 
 Codex reviews each push to a pull request, and CodeRabbit reviews when its rate limit allows.
 `.github/workflows/claude-review.yml` asks Claude for one review when a pull request opens or
-becomes ready for review. The review posts comments only and blocks no merge.
+becomes ready for review. The review posts comments only and blocks no merge. Claude posts its
+inline comments, and `github-actions` posts its summary.
 
 The Claude review needs this setup, which only the maintainer can do:
 
