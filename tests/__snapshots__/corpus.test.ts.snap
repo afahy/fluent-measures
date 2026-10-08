@@ -2,7 +2,7 @@
 
 exports[`measurement corpus > matches the committed score 1`] = `
 "Category                 total   agree   wrong  missed  throws
-all                        406     389       5      12       0
+all                        409     393       4      12       0
 
 symbols                     27      27       0       0       0
 words                       30      30       0       0       0
@@ -18,21 +18,15 @@ multiple-measurements       30      30       0       0       0
 unqualified                 23      23       0       0       0
 conversion                  28      28       0       0       0
 unsupported                 26      26       0       0       0
-prose                       29      25       4       0       0
+prose                       32      29       3       0       0
 
-Entries with the outcome "wrong" (5):
+Entries with the outcome "wrong" (4):
 
 decimals-5-11-ft (decimals)
   input:    "5.11 ft"
   options:  {}
   expected: 71 in (height) | null
   actual:   5.11 ft (height)
-
-prose-top-10-in (prose)
-  input:    "Top 10 in the class"
-  options:  {}
-  expected: null
-  actual:   10 in (height)
 
 prose-fees-fuzzy (prose)
   input:    "I paid 5 fees"
