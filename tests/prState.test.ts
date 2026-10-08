@@ -635,23 +635,27 @@ describe('createClient', () => {
     expect(calls[1].headers['If-None-Match']).toBe('"abc"');
   });
 
-  it('says when the rate limit ends, and gives the reset time to retry at', async () => {
-    const url = 'https://api.test/pull';
-    const { fetch } = fakeFetch({
-      [url]: [
-        {
-          status: 403,
-          body: { message: 'API rate limit exceeded' },
-          headers: { 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': '1791400000' },
-        },
-      ],
-    });
-    const api = createClient({ apiUrl: 'https://api.test', fetch });
-    await expect(api.get('/pull')).rejects.toMatchObject({
-      message: "GitHub's rate limit is used up until 2026-10-07T19:06:40.000Z",
-      retryAt: 1791400000000,
-    });
-  });
+  // GitHub answers a used-up rate limit with a 403 or a 429.
+  it.each([403, 429])(
+    'says when the rate limit ends after a %s, and gives the reset time to retry at',
+    async status => {
+      const url = 'https://api.test/pull';
+      const { fetch } = fakeFetch({
+        [url]: [
+          {
+            status,
+            body: { message: 'API rate limit exceeded' },
+            headers: { 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': '1791400000' },
+          },
+        ],
+      });
+      const api = createClient({ apiUrl: 'https://api.test', fetch });
+      await expect(api.get('/pull')).rejects.toMatchObject({
+        message: "GitHub's rate limit is used up until 2026-10-07T19:06:40.000Z",
+        retryAt: 1791400000000,
+      });
+    }
+  );
 
   // AFA-147: an error says whether another try can help, and whether GitHub refused the token.
   it.each([
@@ -714,6 +718,47 @@ describe('createClient', () => {
       message: "GitHub didn't answer for https://api.test/pull: fetch failed",
       retryable: true,
       refused: false,
+    });
+  });
+
+  // AFA-147, Codex on #114: a connection that drops while the body is read is a network error
+  // too, for an answer that failed and for one that didn't.
+  it.each([200, 503])(
+    'marks a %s whose body stops as one that another try can help',
+    async status => {
+      const fetch = (async () =>
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.error(new TypeError('terminated'));
+            },
+          }),
+          { status }
+        )) as unknown as typeof globalThis.fetch;
+      const api = createClient({ apiUrl: 'https://api.test', fetch });
+      await expect(api.get('/pull')).rejects.toMatchObject({
+        message: "GitHub didn't answer for https://api.test/pull: terminated",
+        retryable: true,
+        refused: false,
+      });
+    }
+  );
+
+  // AFA-147, Codex on #114: GitHub sends the rate-limit headers with every answer, so the last
+  // request before the limit can get another error with them.
+  it.each([
+    [401, { retryable: false, refused: true }],
+    [404, { retryable: false, refused: false }],
+  ])('reads a %s with no requests left as that error', async (status, marks) => {
+    const url = 'https://api.test/pull';
+    const headers = { 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': '1791400000' };
+    const { fetch } = fakeFetch({ [url]: [{ status, body: { message: 'No' }, headers }] });
+    const api = createClient({ apiUrl: 'https://api.test', fetch });
+    await expect(api.get('/pull')).rejects.toMatchObject({
+      message: `GitHub answered ${status} for ${url}: {"message":"No"}`,
+      status,
+      retryAt: null,
+      ...marks,
     });
   });
 
