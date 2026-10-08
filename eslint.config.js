@@ -58,11 +58,20 @@ export default [
     rules: {
       ...vitest.configs.recommended.rules,
       // The preset sets these too. They're repeated so rule 11's checks stay errors if the preset
-      // changes.
-      'vitest/expect-expect': 'error',
+      // changes. Only expect counts as an assertion, not assert (AFA-70).
+      'vitest/expect-expect': ['error', { assertFunctionNames: ['expect'] }],
       'vitest/no-conditional-expect': 'error',
       // An early return or other branch can skip a test's only expect.
       'vitest/no-conditional-in-test': 'error',
+      // An expect only inside a loop or a callback can run zero times, so such a test must say how
+      // many assertions it expects (AFA-70).
+      'vitest/prefer-expect-assertions': [
+        'error',
+        { onlyFunctionsWithExpectInLoop: true, onlyFunctionsWithExpectInCallback: true },
+      ],
+      // The preset only warns, and lint passes with warnings. AGENTS.md rule 3 forbids skipping a
+      // test to make CI pass (AFA-70).
+      'vitest/no-disabled-tests': 'error',
       // Vitest's expect takes an optional message as its second argument.
       'vitest/valid-expect': ['error', { maxArgs: 2 }],
     },
