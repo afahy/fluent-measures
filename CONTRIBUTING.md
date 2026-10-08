@@ -187,9 +187,11 @@ changes that the tests catch. The job fails when the score is below the `break` 
 code. Add tests that catch either kind.
 
 On pull requests, this job runs Stryker in incremental mode. It reuses each result from the
-pull request's last run, or from `main`'s, when the mutant's code and the tests that killed it
-haven't changed. A change to a file that tests read, such as `README.md` or the corpus, or to the
-packages, starts a full run. Pushes to `main` always run every mutant.
+pull request's last run, or from `main`'s, when the mutant's code and the tests that cover it
+haven't changed. It doesn't check other code that the mutant depends on, so a pull request's
+score can differ from a full run. A change to a file that tests read, such as `README.md` or the
+corpus, or to the packages, starts a full run. Pushes to `main` always run every mutant, and so
+does a re-run of the job.
 
 A second job, "Mutants on changed lines are killed", runs Stryker on the files that a pull
 request changes under `src/`. It fails when a mutant whose code overlaps a line that the pull

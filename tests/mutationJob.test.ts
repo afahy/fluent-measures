@@ -15,10 +15,10 @@ const isHashed = (file: string): boolean =>
   hashed.includes(file) || (file.startsWith('tests/') && !file.endsWith('.test.ts'));
 
 describe('the mutation job in CI', () => {
-  it('runs Stryker in incremental mode, and every mutant on a push to main', () => {
+  it('runs Stryker in incremental mode, and every mutant on main or a re-run', () => {
     const run = /^ +run: (pnpm test:mutation .*)$/m.exec(job)?.[1] ?? '';
     expect(run).toContain('--incremental');
-    expect(run).toContain("github.event_name == 'push' && '--force'");
+    expect(run).toContain("(github.event_name == 'push' || github.run_attempt > 1) && '--force'");
   });
 
   it('restores and saves the incremental file under a key that changes with the inputs', () => {
@@ -46,6 +46,8 @@ describe('the mutation job in CI', () => {
       relative('.', join('tests', url))
     ),
     ...(source.includes('toMatchSnapshot(') ? [`tests/__snapshots__/${name}.snap`] : []),
+    // A path in quotes, as in readFileSync('README.md'), is from the repository root.
+    ...[...source.matchAll(/readFileSync\('([^']+)'/g)].map(([, file]) => file),
   ]);
 
   it('finds the files that the parser tests read', () => {
