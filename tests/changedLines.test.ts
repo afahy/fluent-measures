@@ -127,6 +127,17 @@ describe('mutatedFiles', () => {
     expect(mutatedFiles(['src/a.ts', 'src/b.ts'], patterns)).toEqual(expected);
   });
 
+  // Stryker resolves each pattern from the project folder, so "../repo/" names the same files.
+  it('reads a pattern that leaves the project folder and comes back', () => {
+    expect(
+      mutatedFiles(
+        ['src/a.ts', 'src/b.ts'],
+        ['../repo/src/**/*.ts', '!../repo/src/b.ts'],
+        '/x/repo'
+      )
+    ).toEqual(['src/a.ts']);
+  });
+
   it('leaves out the files that a pattern with "!" matches, as Stryker does', () => {
     expect(
       mutatedFiles(['src/a.ts', 'src/b.ts', 'lib/c.ts'], ['src/**/*.ts', '!src/b.ts'])
@@ -389,6 +400,31 @@ describe('reasonlessDirectives', () => {
     ['/**\n * @param a // Stryker disable next-line all\n */', []],
   ])('reads only real comments in %j', (code, expected) => {
     expect(reasonlessDirectives(`${code}\nconst b = a ?? 2;`, [[2, 2]])).toEqual(expected);
+  });
+
+  // A list with more children than a call can take as arguments.
+  it('reads a directive after a list with 70,000 elements', () => {
+    const code = `const x = [${Array.from({ length: 70_000 }, () => '1').join(', ')}];`;
+    expect(reasonlessDirectives(`${code}\n// Stryker disable next-line all\nx;`, [[2, 2]])).toEqual(
+      [2]
+    );
+  });
+
+  // The parser itself overflows on code nested thousands of levels deep. The check then fails safe
+  // and flags each changed line with "Stryker disable" and no reason, as main did.
+  it('fails safe for code nested 5,000 levels deep', () => {
+    const code = `const x = ${'('.repeat(5000)}1${')'.repeat(5000)};`;
+    expect(reasonlessDirectives(`${code}\n// Stryker disable next-line all\nx;`, [[2, 2]])).toEqual(
+      [2]
+    );
+  });
+
+  // TypeScript builds JSDoc-type nodes for some code too, as for "?" here. Only JSDoc comments are
+  // skipped.
+  it('reads a directive inside a JSDoc-type node', () => {
+    expect(
+      reasonlessDirectives('let a: ?\n// Stryker disable next-line all\nstring;', [[2, 2]])
+    ).toEqual([2]);
   });
 
   // AFA-113: the walk keeps its own stack, so a long expression doesn't overflow the call stack.

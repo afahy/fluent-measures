@@ -1,7 +1,7 @@
 // Helpers for .github/scripts/mutation-check.mjs: the lines that a pull request adds or changes,
 // and the mutants on them in a Stryker JSON report that no test kills.
 
-import { isAbsolute, matchesGlob, normalize, relative } from 'node:path';
+import { matchesGlob, resolve } from 'node:path';
 import ts from 'typescript';
 
 /**
@@ -101,23 +101,24 @@ export function isSourceFile(file) {
 
 /**
  * Returns the files that the `mutate` patterns in the Stryker config cover. As in Stryker, the
- * patterns apply in order: a pattern that starts with "!" leaves files out, and a later pattern can
- * put them back. Stryker reads a pattern from the project folder, so `./src/a.ts` and an absolute
- * path to it are `src/a.ts`, and a line range after a pattern, as in `src/a.ts:1-10`, doesn't
- * change which files match. The project's pattern leaves out test files under `src/`: Vitest finds
- * tests only under `tests/`, so their mutants would get no coverage.
+ * patterns apply in order: a pattern that starts with "!" leaves files out, and a later pattern
+ * can put them back. Stryker's `FileMatcher` resolves each pattern and each file from the project
+ * folder, so this does too: `./src/a.ts`, `../repo/src/a.ts` and an absolute path all name
+ * `src/a.ts`. A line range after a pattern, as in `src/a.ts:1-10`, doesn't change which files
+ * match. The project's pattern leaves out test files under `src/`: Vitest finds tests only under
+ * `tests/`, so their mutants would get no coverage.
  *
  * @param {string[]} files
  * @param {string[]} patterns
+ * @param {string} [root] the project folder
  * @returns {string[]}
  */
-export function mutatedFiles(files, patterns) {
+export function mutatedFiles(files, patterns, root = process.cwd()) {
   return files.filter(file =>
     patterns.reduce((mutated, pattern) => {
       const negated = pattern.startsWith('!');
       const glob = pattern.replace(/^!/, '').replace(/:\d+(?::\d+)?-\d+(?::\d+)?$/, '');
-      const fromProject = isAbsolute(glob) ? relative(process.cwd(), glob) : normalize(glob);
-      return matchesGlob(file, fromProject) ? !negated : mutated;
+      return matchesGlob(resolve(root, file), resolve(root, glob)) ? !negated : mutated;
     }, false)
   );
 }
@@ -270,16 +271,16 @@ export function unexplainedIgnores(report, changed) {
 const DIRECTIVE = /^\s?Stryker disable(?: next-line)? [a-zA-Z, ]+(?::(.+))?/;
 
 /**
- * Returns each comment in `source`: where its text starts, and its text without `//`, or `/*` and
- * `*\/`, as Babel gives it to Stryker. The TypeScript parser finds the comments, so a `/*` or `//`
- * inside a string, a template literal or a regex literal isn't one. Each comment sits between two
- * tokens: on its own line it leads the next token, and after code on its line it trails the token
- * before it. So the walk reads the comments around each token. It keeps its own stack, so a deeply
- * nested expression doesn't overflow the call stack. A JSDoc node's children start inside its
- * comment, so the walk skips them.
+ * Returns each comment in `source`: the line where its text starts, and its text without `//`, or
+ * `/*` and `*\/`, as Babel gives it to Stryker. The TypeScript parser finds the comments, so a
+ * `/*` or `//` inside a string, a template literal or a regex literal isn't one. Each comment sits
+ * between two tokens: on its own line it leads the next token, and after code on its line it
+ * trails the token before it. So the walk reads the comments around each token. It keeps its own
+ * stack, so a long expression or a long list doesn't overflow the call stack. A JSDoc comment's
+ * nodes start inside the comment, so the walk skips them.
  *
  * @param {string} source
- * @returns {Array<{ start: number, text: string }>}
+ * @returns {Array<{ line: number, text: string }>}
  */
 function comments(source) {
   const file = ts.createSourceFile('source.ts', source, ts.ScriptTarget.Latest, true);
@@ -288,14 +289,10 @@ function comments(source) {
   /** @type {ts.Node[]} */
   const stack = [file];
   for (let node = stack.pop(); node; node = stack.pop()) {
-    if (node.kind >= ts.SyntaxKind.FirstJSDocNode && node.kind <= ts.SyntaxKind.LastJSDocNode) {
-      continue;
-    }
+    if (node.kind === ts.SyntaxKind.JSDoc) continue;
     const children = node.getChildren(file);
-    if (children.length > 0) {
-      stack.push(...children);
-      continue;
-    }
+    for (const child of children) stack.push(child);
+    if (children.length > 0) continue;
     for (const range of [
       ...(ts.getLeadingCommentRanges(source, node.pos) ?? []),
       ...(ts.getTrailingCommentRanges(source, node.end) ?? []),
@@ -303,13 +300,14 @@ function comments(source) {
       ranges.set(range.pos, range);
     }
   }
-  return [...ranges.values()].map(({ pos, end, kind }) => ({
-    start: pos + 2,
-    text: source.slice(
+  return [...ranges.values()].map(({ pos, end, kind }) => {
+    const text = source.slice(
       pos + 2,
       kind === ts.SyntaxKind.MultiLineCommentTrivia && source.endsWith('*/', end) ? end - 2 : end
-    ),
-  }));
+    );
+    const at = pos + 2 + Math.max(text.indexOf('Stryker'), 0);
+    return { line: file.getLineAndCharacterOfPosition(at).line + 1, text };
+  });
 }
 
 /**
@@ -327,13 +325,31 @@ function comments(source) {
  * @returns {number[]}
  */
 export function reasonlessDirectives(source, ranges) {
+  const changed = (/** @type {number} */ line) =>
+    ranges.some(([from, to]) => line >= from && line <= to);
+  /** @type {Array<{ line: number, text: string }>} */
+  let found;
+  try {
+    found = comments(source);
+  } catch {
+    // The parser recurses, so code nested thousands of levels deep overflows its stack. Then fail
+    // safe: flag each changed line with "Stryker disable" and no reason after a colon.
+    return source
+      .split('\n')
+      .map((text, index) => ({ text, line: index + 1 }))
+      .filter(
+        ({ text, line }) =>
+          changed(line) &&
+          /\bStryker\s+disable\b/.test(text) &&
+          !/\bStryker\s+disable(?:\s+next-line)?\s+[\w\s,]+?:\s*\S/.test(text)
+      )
+      .map(({ line }) => line);
+  }
   /** @type {Set<number>} */
   const lines = new Set();
-  for (const { start, text } of comments(source)) {
+  for (const { line, text } of found) {
     const directive = DIRECTIVE.exec(text);
-    if (directive === null || directive[1]?.trim()) continue;
-    const line = source.slice(0, start + text.indexOf('Stryker')).split('\n').length;
-    if (ranges.some(([from, to]) => line >= from && line <= to)) lines.add(line);
+    if (directive !== null && !directive[1]?.trim() && changed(line)) lines.add(line);
   }
   return [...lines].sort((a, b) => a - b);
 }

@@ -310,7 +310,7 @@ describe('mutation-check.mjs', () => {
     const check = runCheck(repository, base);
 
     expect(check.stdout).toContain(
-      'None of the changed files under src/ is one that Stryker mutates'
+      'No added or changed line under src/ is in a file that Stryker mutates'
     );
     expect(check.status).toBe(0);
   });
@@ -326,11 +326,31 @@ describe('mutation-check.mjs', () => {
       const check = runCheck(repository, base);
 
       expect(check.stdout).toContain(
-        'None of the changed files under src/ is one that Stryker mutates'
+        'No added or changed line under src/ is in a file that Stryker mutates'
       );
       expect(check.status).toBe(0);
     }
   );
+
+  // A changed file that only loses lines has no added or changed line to check either.
+  it('says that no added or changed line is in a file that Stryker mutates', () => {
+    const repository = createRepository();
+    const base = commitFiles(repository, {
+      'stryker.config.json': '{ "mutate": ["src/**/!(*.spec|*.test).ts"] }\n',
+      'src/b.ts': 'export const a = 1;\nexport const b = 2;\n',
+    });
+    commitFiles(repository, {
+      'src/b.ts': 'export const a = 1;\n',
+      'src/units.test.ts': 'export const x = 1;\n',
+    });
+
+    const check = runCheck(repository, base);
+
+    expect(check.stdout).toContain(
+      'No added or changed line under src/ is in a file that Stryker mutates'
+    );
+    expect(check.status).toBe(0);
+  });
 
   // AFA-83: no test imports a file with only types at runtime, so Stryker stops with "No tests
   // were executed". When the changed files have no mutants, there is nothing to check.
