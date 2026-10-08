@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
 
 // AFA-130: after a number, "in" means inches, also in ordinary text (README, AFA-67). These pin
-// what such inches do next to another measurement. Each reason is a README rule or option.
+// what such inches do next to another measurement. Each reason is a README rule or option, or the
+// ticket's row.
 describe('"N in" in ordinary text next to another measurement', () => {
   it.each([
     // Separate Measurements: feet then inches, which are the next smaller unit, form one height.
@@ -15,6 +16,7 @@ describe('"N in" in ordinary text next to another measurement', () => {
     expect(parseMeasurement(raw)).toMatchObject({
       value,
       unit: 'in',
+      type: 'height',
       matches: [
         { value: feet, unit: 'ft' },
         { value: inches, unit: 'in' },
@@ -24,10 +26,11 @@ describe('"N in" in ordinary text next to another measurement', () => {
 
   // The `type` option reads only that measurement (ParseOptions). Without a type, the corpus
   // accepts the height, the weight or null for text with both (multiple-height-weight-no-type),
-  // so this test doesn't pin that case.
+  // and the ticket's row gives 10 in, so this test pins that.
   it.each([
     [{ type: 'weight' }, 180, 'lb'],
     [{ type: 'height' }, 10, 'in'],
+    [{}, 10, 'in'],
   ] as const)('reads 180 lbs, top 10 in the class with %j as %s %s', (options, value, unit) => {
     expect(parseMeasurement('180 lbs, top 10 in the class', options)).toMatchObject({
       value,
@@ -43,15 +46,25 @@ describe('"N in" in ordinary text next to another measurement', () => {
     expect(parseMeasurement('5G in the house, 6 ft')).toMatchObject({
       value: 6,
       unit: 'ft',
+      type: 'height',
       matches: [{ value: 6, unit: 'ft' }],
     });
   });
 
+  // Separate Measurements: inches before feet aren't parts of one height, so they are two
+  // measurements. When they agree, the first is returned: 72 in is 6 ft.
+  it('reads ranked 72 in the state and 6 ft as 72 in', () => {
+    expect(parseMeasurement('ranked 72 in the state and 6 ft')).toMatchObject({
+      value: 72,
+      unit: 'in',
+      type: 'height',
+    });
+  });
+
   it.each([
-    // Separate Measurements: inches before feet aren't parts of one height, so 3 in and 6 ft
-    // (72 in) are two measurements that disagree.
+    // Separate Measurements: 3 in and 6 ft (72 in) are two measurements that disagree.
     'ranked 3 in the state and 6 ft',
-    // "in.the" is one word, not "in" after a number, so 10 has no unit.
+    // The ticket's row: "in.the" is one word, not "in" after a number, so 10 has no unit.
     'Top 10 in.the class',
   ])('returns null for %s', raw => {
     expect(parseMeasurement(raw)).toBeNull();
