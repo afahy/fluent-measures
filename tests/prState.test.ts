@@ -729,7 +729,7 @@ describe('createClient', () => {
       const fetch = (async () =>
         new Response(
           new ReadableStream({
-            start(controller) {
+            start(controller): void {
               controller.error(new TypeError('terminated'));
             },
           }),
