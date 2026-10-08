@@ -1,4 +1,3 @@
-import { Buffer } from 'node:buffer';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
@@ -9,13 +8,11 @@ import {
   clockStart,
   coderabbitState,
   codexState,
-  codeownersPattern,
   codexSummaryRows,
   collect,
   createClient,
   digest,
   mostUrgent,
-  ownedFiles,
   pushedAt,
   rateLimitResetAt,
   unansweredBotThreads,
@@ -894,17 +891,11 @@ describe('collect', () => {
           paths.push(`get ${path}`);
           if (path.endsWith('/pulls/7')) return pull;
           if (path.includes('/activity')) return ['push'];
-          // The base branch has no .github/CODEOWNERS, but has one at the root.
-          if (path.includes('/contents/.github/'))
-            throw Object.assign(new Error('404'), { status: 404 });
-          if (path.includes('/contents/CODEOWNERS')) {
-            return { content: Buffer.from('* @afahy\n').toString('base64') };
-          }
           return { committer: { date: 'd' } };
         },
         async getAll(path: string, key?: string): Promise<unknown[]> {
           paths.push(`all ${path}${key ? ` ${key}` : ''}`);
-          return path.endsWith('/files') ? [{ filename: 'a.ts' }] : [path];
+          return [path];
         },
       },
     };
@@ -928,9 +919,6 @@ describe('collect', () => {
       'all /repos/o/r/pulls/7/reviews',
       'all /repos/o/r/pulls/7/comments',
       'all /repos/o/r/issues/7/reactions',
-      'all /repos/o/r/pulls/7/files',
-      'get /repos/o/r/contents/.github/CODEOWNERS?ref=main',
-      'get /repos/o/r/contents/CODEOWNERS?ref=main',
     ]);
     expect(snapshot).toEqual({
       pull,
@@ -943,8 +931,6 @@ describe('collect', () => {
       reviews: ['/repos/o/r/pulls/7/reviews'],
       reviewComments: ['/repos/o/r/pulls/7/comments'],
       reactions: ['/repos/o/r/issues/7/reactions'],
-      files: ['a.ts'],
-      codeowners: '* @afahy\n',
     });
   });
 
@@ -1102,75 +1088,17 @@ describe('pr-state.mjs details', () => {
   });
 });
 
-describe('CODEOWNERS', () => {
-  const codeowners = readFileSync('tests/fixtures/pr-status/CODEOWNERS', 'utf8');
-
-  it("finds the changed files that this repository's CODEOWNERS covers", () => {
-    const files = [
-      '.github/scripts/pr-state.mjs',
-      'package.json',
-      'tests/prState.test.ts',
-      '.claude/skills/steward/SKILL.md',
-      'AGENTS.md',
-      'src/index.ts',
-      '.changeset/x.md',
-      '.changeset/config.json',
-      // A pattern with no slash matches at any depth.
-      'docs/AGENTS.md',
-    ];
-    expect(ownedFiles(codeowners, files)).toEqual([
-      '.github/scripts/pr-state.mjs',
-      'package.json',
-      '.claude/skills/steward/SKILL.md',
-      'AGENTS.md',
-      '.changeset/config.json',
-      'docs/AGENTS.md',
-    ]);
-  });
-
-  it.each([
-    ['docs/*', 'docs/a.md', true],
-    ['docs/*', 'docs/b/c.md', false],
-    ['docs/*', 'x/docs/a.md', false],
-    ['/apps/github', 'apps/github/x.ts', true],
-    ['/apps/github', 'apps/github', true],
-    ['/apps/github', 'apps/githubx', false],
-    ['**/logs', 'x/y/logs/a', true],
-    ['**/logs', 'logs/a', true],
-    ['a/**/b', 'a/b', true],
-    ['a/**/b', 'a/x/y/b', true],
-    ['*.js', 'src/y.js', true],
-    ['*.js', 'x.jsx', false],
-    ['apps/', 'x/apps/a', true],
-    ['apps/', 'apps', false],
-    ['?.md', 'a.md', true],
-    ['?.md', 'ab.md', false],
-    ['a+b.txt', 'a+b.txt', true],
-    ['a+b.txt', 'aab.txt', false],
-  ])('reads %s as matching %s: %s', (pattern, path, expected) => {
-    expect(codeownersPattern(pattern).test(path)).toBe(expected);
-  });
-
-  it('lets a later line with no owners take the owner away, and skips comments', () => {
-    const file = '# Everything\n* @afahy\n/docs/\nREADME.md @afahy # owned again\n';
-    expect(ownedFiles(file, ['src/a.ts', 'docs/a.md', 'README.md', 'docs/README.md'])).toEqual([
-      'src/a.ts',
-      'README.md',
-      'docs/README.md',
-    ]);
-  });
-
-  it('leaves a PR that changes covered files to the maintainer, and only such a PR', () => {
-    const snapshot = reviewed67();
-    expect(classify(snapshot, at('2026-10-07T16:00:00Z')).state).toBe('ready');
-    snapshot.files.push('.github/workflows/x.yml', 'AGENTS.md', 'package.json', '.claude/a.md');
+describe('files that CODEOWNERS covers', () => {
+  it('lets an agent merge a PR that changes them when nothing else holds it', () => {
+    // AFA-133 removed the CODEOWNERS check. Before it, these fields held this PR for the
+    // maintainer. collect() no longer reads them, and classify() ignores them.
+    const snapshot = Object.assign(reviewed67(), {
+      files: ['AGENTS.md', '.github/workflows/ci.yml', '.size-limit.cjs'],
+      codeowners: '.github/** @afahy\nAGENTS.md @afahy\n.size-limit.cjs @afahy\n',
+    });
     const status = classify(snapshot, at('2026-10-07T16:00:00Z'));
-    expect(status.state).toBe('waiting-human');
-    expect(status.reasons).toEqual([
-      'It changes files that CODEOWNERS covers, so only the maintainer can merge it: .github/workflows/x.yml, AGENTS.md, package.json and 1 more',
-    ]);
-    snapshot.codeowners = null;
-    expect(classify(snapshot, at('2026-10-07T16:00:00Z')).state).toBe('ready');
+    expect(status.state).toBe('ready');
+    expect(status.reasons).toEqual([]);
   });
 });
 
