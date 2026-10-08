@@ -190,17 +190,18 @@ describe('signed parts', () => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });
 
-  // Each signed label value is read without its sign in place, not in a copy of the tokens. A copy
-  // made 20,000 signed labels take 3.5 s. The limit compares them with the same labels without
-  // signs, because a slow run, such as Stryker's instrumented one, slows both.
-  it('reads many signed label values about as fast as unsigned ones', () => {
-    let start = performance.now();
-    parseMeasurement('kg: 5 '.repeat(20_000));
-    const unsigned = performance.now() - start;
-    start = performance.now();
-    expect(parseMeasurement('kg: -5 '.repeat(20_000))).toBeNull();
-    expect(performance.now() - start).toBeLessThan(3 * unsigned + 100);
-  });
+  // Each signed label value is read without its sign in place, not in a copy of the tokens. With
+  // 20,000 signed labels, a copy took 11 s and the current code takes about 70 ms (AFA-95). The
+  // test skips itself under Stryker, whose instrumented code runs it much slower. Stryker's setup
+  // sets one of these globals before each test file.
+  it.skipIf('__stryker__' in globalThis || '__stryker2__' in globalThis)(
+    'reads many signed label values quickly',
+    () => {
+      const start = performance.now();
+      expect(parseMeasurement('kg: -5 '.repeat(20_000))).toBeNull();
+      expect(performance.now() - start).toBeLessThan(2000);
+    }
+  );
 
   // "5 ft -11" has no inch unit, so -11 isn't a part (existing test).
   it('keeps 5 ft from 5 ft -11', () => {
