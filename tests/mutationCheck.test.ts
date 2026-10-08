@@ -244,6 +244,24 @@ describe('mutation-check.mjs', () => {
     expect(check.stderr).not.toContain('Stryker exited');
   });
 
+  // AFA-79: a comma ended the `file=` property early, so the annotation pointed to `src/a`. A colon
+  // and a "%" need escapes in a property too.
+  it('escapes a changed path with a comma, a colon and a "%" in its annotation', () => {
+    const repository = createRepository();
+    const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
+    commitFiles(repository, {
+      'src/a,b:%c.ts': '// Stryker disable next-line all\nexport type Unit = string;\n',
+    });
+    addStrykerStub(repository, strykerWithNoTests(0));
+
+    const check = runCheck(repository, base);
+
+    expect(check.status).toBe(1);
+    expect(check.stderr).toContain(
+      '::error file=src/a%2Cb%3A%25c.ts,line=1::This Stryker disable comment has no reason.'
+    );
+  });
+
   // AFA-82 review: --text doesn't turn off a textconv filter, which can drop changed lines.
   it('reads the changed lines of a file that a textconv filter changes', () => {
     const repository = createRepository();

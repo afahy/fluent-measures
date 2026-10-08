@@ -26,6 +26,7 @@ import {
   unkilledMutants,
   unmatchedFiles,
 } from './changed-lines.mjs';
+import { escapeData, escapeProperty, logText } from './workflow-commands.mjs';
 
 const baseFlag = process.argv.indexOf('--base');
 const base = baseFlag >= 0 ? process.argv[baseFlag + 1] : 'HEAD^1';
@@ -66,7 +67,7 @@ const { names, invalid } = decodeNames(
 const unreadable = invalid.filter(isSourceFile);
 for (const name of unreadable) {
   console.error(
-    `::error::Rename ${JSON.stringify(name)}. Its name isn't valid UTF-8, so this check can't read the file.`
+    `::error::Rename ${escapeData(JSON.stringify(name))}. Its name isn't valid UTF-8, so this check can't read the file.`
   );
 }
 if (unreadable.length > 0) process.exit(1);
@@ -100,13 +101,13 @@ if (changed.size === 0) {
 const controlled = controlPaths([...changed.keys()]);
 for (const file of controlled) {
   console.error(
-    `::error::Rename ${JSON.stringify(file)}. Its path has a control character, so this check can't read Stryker's log about it.`
+    `::error::Rename ${escapeData(JSON.stringify(file))}. Its path has a control character, so this check can't read Stryker's log about it.`
   );
 }
 if (controlled.length > 0) process.exit(1);
 
 const lines = [...changed].flatMap(([file, ranges]) =>
-  ranges.map(([from, to]) => `  ${file}:${from}${from === to ? '' : `-${to}`}`)
+  ranges.map(([from, to]) => `  ${logText(file)}:${from}${from === to ? '' : `-${to}`}`)
 );
 console.log(`Changed lines:\n${lines.join('\n')}`);
 
@@ -115,7 +116,7 @@ console.log(`Changed lines:\n${lines.join('\n')}`);
 const backslashed = backslashPaths([...changed.keys()]);
 for (const file of backslashed) {
   console.error(
-    `::error file=${file}::Rename ${file}. Its path has a backslash, and Stryker reads a backslash as a slash, so this check can't find the file's mutants.`
+    `::error file=${escapeProperty(file)}::Rename ${escapeData(file)}. Its path has a backslash, and Stryker reads a backslash as a slash, so this check can't find the file's mutants.`
   );
 }
 if (backslashed.length > 0) process.exit(1);
@@ -171,7 +172,7 @@ if (!logBefore) rmSync(logFile, { force: true });
 const unmatched = unmatchedFiles(log, [...changed.keys()]);
 for (const file of unmatched) {
   console.error(
-    `::error file=${file}::Move ${file}. Stryker never reads some folders, such as node_modules, so this check can't find the file's mutants.`
+    `::error file=${escapeProperty(file)}::Move ${escapeData(file)}. Stryker never reads some folders, such as node_modules, so this check can't find the file's mutants.`
   );
 }
 // Without the file, Stryker may find no tests to run, but the file is the problem to fix.
@@ -203,15 +204,15 @@ const results = noMutants ? { files: {} } : JSON.parse(readFileSync(report, 'utf
 const unkilled = unkilledMutants(results, changed);
 const unexplained = unexplainedIgnores(results, changed);
 for (const mutant of unkilled) {
-  const what = `${mutant.mutator} mutant ${JSON.stringify(mutant.replacement)}`;
+  const what = escapeData(`${mutant.mutator} mutant ${JSON.stringify(mutant.replacement)}`);
   const why = mutant.status === 'NoCoverage' ? 'no test covers it' : 'it survived';
   console.error(
-    `::error file=${mutant.file},line=${mutant.line},col=${mutant.column}::The ${what} on a changed line isn't killed: ${why}.`
+    `::error file=${escapeProperty(mutant.file)},line=${mutant.line},col=${mutant.column}::The ${what} on a changed line isn't killed: ${why}.`
   );
 }
 for (const mutant of unexplained) {
   console.error(
-    `::error file=${mutant.file},line=${mutant.line},col=${mutant.column}::A Stryker disable comment ignores the ${mutant.mutator} mutant without a reason. Add ": <why behavior can't change>" after the mutator name.`
+    `::error file=${escapeProperty(mutant.file)},line=${mutant.line},col=${mutant.column}::A Stryker disable comment ignores the ${escapeData(mutant.mutator)} mutant without a reason. Add ": <why behavior can't change>" after the mutator name.`
   );
 }
 if (unkilled.length > 0) {
@@ -221,7 +222,7 @@ if (unkilled.length > 0) {
 }
 for (const { file, line } of directives) {
   console.error(
-    `::error file=${file},line=${line}::This Stryker disable comment has no reason. Add ": <why behavior can't change>" after the mutator name.`
+    `::error file=${escapeProperty(file)},line=${line}::This Stryker disable comment has no reason. Add ": <why behavior can't change>" after the mutator name.`
   );
 }
 if (unexplained.length + directives.length > 0) {
