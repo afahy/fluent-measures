@@ -38,19 +38,51 @@ const EXCERPT_LENGTH = 600;
 
 const HTML_COMMENT = /<!--[\s\S]*?-->/g;
 /**
- * A tag that the bots write, in lower case, with attributes in HTML form. Code such as
- * `Promise<string>` or `f<T>(a: Array<T>)`, and placeholders such as `<sha>`, aren't tags.
+ * A tag that the bots write, in lower case, with attributes in HTML form. Text such as
+ * `Promise<string>`, `f<T>(a: Array<T>)` or the placeholder `<sha>` isn't a tag.
  */
 const TAG =
-  /<\/?(?:a|b|blockquote|br|code|details|em|hr|i|img|li|ol|p|pre|relative-time|strong|sub|summary|sup|table|tbody|td|th|thead|tr|ul)(?:\s+[a-z-]+(?:=(?:"[^"]*"|'[^']*'|[^\s"'>]+))?)*\s*\/?>/g;
+  /<\/?(?:a|b|blockquote|br|code|details|em|hr|i|img|li|ol|p|pre|relative-time|strong|sub|summary|sup|table|tbody|td|th|thead|tr|ul)(?:\s+[\w:.-]+(?:=(?:"[^"]*"|'[^']*'|[^\s"'>]+))?)*\s*\/?>/g;
 /** Three or more line breaks with only spaces between them. The next line keeps its indent. */
 const BLANK_LINES = /\n(?:[^\S\n]*\n){2,}/g;
 /** A collapsed section with no section inside it. */
 const INNERMOST_DETAILS = /<details\b[^>]*>(?:(?!<details\b)[\s\S])*?<\/details>/gi;
 
 /**
- * Removes each pattern's matches again and again until none is left. One pass isn't enough:
- * removing `<!---->` from `<!<!---->-- x -->` leaves a new comment behind.
+ * The text with each code span and fenced block blanked out, so that HTML in code isn't read
+ * as HTML. A code span starts at a run of backticks and ends at the next run of the same
+ * length. Line breaks stay, and the length doesn't change, so an index is the same in both.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+function maskCode(text) {
+  let masked = '';
+  let done = 0;
+  let at = text.indexOf('`');
+  while (at !== -1) {
+    let end = at;
+    while (text[end] === '`') end += 1;
+    const run = text.slice(at, end);
+    let close = text.indexOf(run, end);
+    // A run of a different length doesn't close the span.
+    while (close !== -1 && (text[close - 1] === '`' || text[close + run.length] === '`')) {
+      close = text.indexOf(run, close + 1);
+    }
+    if (close === -1) {
+      at = text.indexOf('`', end);
+      continue;
+    }
+    masked += text.slice(done, end) + text.slice(end, close).replace(/[^\n]/g, ' ');
+    done = close;
+    at = text.indexOf('`', close + run.length);
+  }
+  return masked + text.slice(done);
+}
+
+/**
+ * Removes each pattern's matches outside code again and again until none is left. One pass
+ * isn't enough: removing `<!---->` from `<!<!---->-- x -->` leaves a new comment behind.
  *
  * @param {string} text
  * @param {RegExp[]} patterns Global patterns, removed in this order on each pass.
@@ -60,7 +92,13 @@ function removeAll(text, patterns) {
   let previous;
   do {
     previous = text;
-    for (const pattern of patterns) text = text.replace(pattern, '');
+    for (const pattern of patterns) {
+      // Matches don't overlap, so removing the last one first keeps each index right.
+      for (const match of [...maskCode(text).matchAll(pattern)].reverse()) {
+        const start = match.index ?? 0;
+        text = text.slice(0, start) + text.slice(start + match[0].length);
+      }
+    }
   } while (text !== previous);
   return text;
 }
@@ -116,7 +154,7 @@ export function lateFinding(name, event) {
     summary = `a review comment on \`${item.path}\``;
   } else if (kind === 'review') {
     // The findings in a review's threads arrive as their own events. Only CodeRabbit puts
-    // findings in the review body, inside collapsed sections, so quote from the first one.
+    // findings in the review body, inside collapsed sections.
     const sections = [...body.matchAll(BODY_FINDINGS)];
     if (sections.length === 0) return null;
     const names = sections.map(
@@ -130,7 +168,8 @@ export function lateFinding(name, event) {
       /<details\b[^>]*>\s*<summary>[^<]*prompt[^<]*<\/summary>(?:(?!<details\b)[\s\S])*?<\/details>/gi;
     text = plainText(removeAll(findingSections(body, sections), [prompts]));
   } else {
-    if (ROUTINE.test(body) || CODEX_TASK.test(body)) return null;
+    if (ROUTINE.test(body)) return null;
+    if (author === 'chatgpt-codex-connector[bot]' && CODEX_TASK.test(body)) return null;
     summary = 'a comment';
   }
   const merged = Boolean(pull.merged_at || pull.pull_request?.merged_at);
@@ -155,6 +194,7 @@ export function lateFinding(name, event) {
  * @returns {string}
  */
 function findingSections(body, sections) {
+  const masked = maskCode(body);
   const parts = [];
   let end = 0;
   for (const { index = 0 } of sections) {
@@ -162,7 +202,7 @@ function findingSections(body, sections) {
     if (index < end) continue;
     end = body.length;
     let depth = 1;
-    for (const tag of body.slice(index).matchAll(/<(\/?)details\b[^>]*>/gi)) {
+    for (const tag of masked.slice(index).matchAll(/<(\/?)details\b[^>]*>/gi)) {
       depth += tag[1] ? -1 : 1;
       if (depth === 0) {
         end = index + (tag.index ?? 0);
@@ -175,7 +215,8 @@ function findingSections(body, sections) {
 }
 
 /**
- * HTML reduced to its text: tags go, and so do the blank lines they leave.
+ * HTML reduced to its text: the tags that the bots write go, outside code, and so do the blank
+ * lines that they leave.
  *
  * @param {string} html
  * @returns {string}

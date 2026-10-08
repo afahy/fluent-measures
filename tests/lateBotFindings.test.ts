@@ -114,6 +114,18 @@ describe('lateFinding', () => {
     );
   });
 
+  it('reads no section tags inside code', () => {
+    const body =
+      '<details>\n<summary>🧹 Nitpick comments (1)</summary><blockquote>\n\nThe pattern `<details\\b[^>]*>` misses `<summary>` tags.\n\n</blockquote></details>\n\n<details>\n<summary>📜 Review details</summary>\n\n**Configuration used**: CodeRabbit UI\n\n</details>';
+    const finding = lateFinding('pull_request_review', {
+      pull_request: merged43,
+      review: { ...bot.coderabbitReview, body },
+    });
+    expect(finding?.excerpt).toBe(
+      '> Nitpick comments (1)\n>\n> The pattern `<details\\b[^>]*>` misses `<summary>` tags.'
+    );
+  });
+
   it('reports a bot comment on a merged PR that is not one of its routine notes', () => {
     const finding = lateFinding('issue_comment', {
       issue: mergedIssue43,
@@ -154,6 +166,15 @@ describe('lateFinding', () => {
     const finding = lateFinding('issue_comment', {
       issue: mergedIssue43,
       comment: { ...bot.codexTaskReply, body },
+    });
+    expect(finding?.summary).toBe('a comment');
+  });
+
+  it('skips a task reply only from Codex', () => {
+    const coderabbit = { login: 'coderabbitai[bot]', type: 'Bot' };
+    const finding = lateFinding('issue_comment', {
+      issue: mergedIssue43,
+      comment: { ...bot.codexTaskReply, user: coderabbit },
     });
     expect(finding?.summary).toBe('a comment');
   });
@@ -255,7 +276,19 @@ describe('plainText', () => {
     expect(plainText('Map<A, B> and <a, b>')).toBe('Map<A, B> and <a, b>');
   });
 
+  it('keeps tags inside code spans and fenced blocks', () => {
+    const inline = 'Wrap it in `<details>` and ``<summary>`x`</summary>``, then use `<b>`.';
+    expect(plainText(inline)).toBe(inline);
+    expect(plainText('```html\n<details><summary>x</summary></details>\n```\n<b>bold</b>')).toBe(
+      '```html\n<details><summary>x</summary></details>\n```\nbold'
+    );
+    // A run of backticks with no closing run of the same length starts no code span.
+    expect(plainText('it`s <b>bold</b>')).toBe('it`s bold');
+    expect(plainText('`` x ` <i>y</i>')).toBe('`` x ` y');
+  });
+
   it('drops the tags that the bots write, with their attributes', () => {
+    expect(plainText('<img data-x2="1" aria-label="i" src="a">x')).toBe('x');
     expect(
       plainText(
         '<sub><sub>P2</sub></sub> <strong>Fix</strong>\n<a href="https://example.com/a">link</a> <img src="https://example.com/i.png" alt="i" width="220">\n<relative-time datetime="2026-10-08T04:39:34Z">today</relative-time><br/>'
