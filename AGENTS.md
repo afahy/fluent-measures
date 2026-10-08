@@ -133,18 +133,18 @@ standing approval for each action it tells you to take, in any section.
 - Start each comment that you post with `Agent:`. Reply to each bot thread, and resolve
   each thread that a pushed commit fixes.
 - After each push, watch CI and the bot reviews of that commit as
-  `.claude/skills/steward/SKILL.md` says. `pnpm pr:status` decides when they're done, and
-  `pnpm pr:status --wait` waits for them. Don't ask whether to watch.
-- Post the bot review requests that `pnpm pr:status` lists. It lists one for a bot that hasn't
-  started 30 minutes after it could, for CodeRabbit once its rate limit resets, and for a
-  CodeRabbit review that ended without success. It lists each request once for each commit,
-  and stops waiting for a bot after two hours. Note each gap in your report.
+  `.claude/skills/steward/SKILL.md` says. `pnpm pr:status <pr>...` decides when they're
+  done, and `pnpm pr:status <pr>... --wait` waits for them. Don't ask whether to watch.
+- Post the bot review requests that `pnpm pr:status <pr>...` lists. It lists one for a bot
+  that hasn't started 30 minutes after it could, for CodeRabbit once its rate limit resets,
+  and for a CodeRabbit review that ended without success. It lists each request once for each
+  commit, and stops waiting for a bot after two hours. Note each gap in your report.
 - If a CI job fails because no runner picked it up, re-run the failed jobs. If GitHub
   reports an Actions incident, re-run them when it ends. Fix all other CI failures on the
   branch.
 - A review round is one push and the bot reviews of that push. Codex reviews every push, so
   the rounds don't stop by themselves. After three rounds, don't ask for more bot reviews, and
-  run `pnpm pr:status` with `--no-requests`.
+  run `pnpm pr:status <pr>... --no-requests`.
   After the third round, fix only showstoppers. File the other findings that are valid and
   worth fixing together as one ticket, reply on each thread with its ID, and list them in
   your report.
@@ -165,8 +165,8 @@ standing approval for each action it tells you to take, in any section.
 without the fix`. A skipped check counts as passed.
 - Right before you merge or close a PR, check its comments one last time. A bot can post a
   finding after you report a PR as ready, such as Codex's review of the last commit. Run
-  `pnpm pr:status`, which lists bot threads with no reply, then read all review threads,
-  reviews and PR comments with `gh api --paginate`. Judge each finding
+  `pnpm pr:status <pr>...`, which lists bot threads with no reply, then read all review
+  threads, reviews and PR comments with `gh api --paginate`. Judge each finding
   that you haven't answered as "Handle findings and CI" says. Then:
   - If it is a showstopper, don't merge or close the PR. Fix it, even after the third
     round, and do this check again after the fix.
@@ -176,9 +176,9 @@ without the fix`. A skipped check counts as passed.
   - If not, reply on its thread with the reason.
   - Then merge or close the PR.
 - If "Merge your own PR" allows it, merge the PR. If not, wait for the maintainer as the
-  steward skill says: with `pnpm pr:status --wait` or the PR's GitHub events, else with a
-  check-in every 4 hours for up to 24 hours. Don't ask the maintainer to tell you when it
-  merges.
+  steward skill says: with `pnpm pr:status <pr>... --wait` or the PR's GitHub events, else
+  with a check-in every 4 hours for up to 24 hours. Don't ask the maintainer to tell you when
+  it merges.
 - When the maintainer merges or closes the PR, do the same comment check at once. File
   each new finding that is valid and worth fixing. If one is a showstopper, give its ticket
   Urgent priority, and tell the maintainer in your report.
@@ -198,8 +198,8 @@ when all of these are true:
 
 - It is ready to merge, as "Finish the PR" says, and the last comment check found no
   showstopper.
-- `pnpm pr:status` reports it as `ready`: CI passed, Codex has completed a review of its last
-  commit, and CodeRabbit has reviewed it or had two hours to.
+- `pnpm pr:status <pr>...` reports it as `ready`: CI passed, Codex has completed a review of
+  its last commit, and CodeRabbit has reviewed it or had two hours to.
 - Its last review round found nothing new, or it has had three rounds.
 - It changes no file that matches `.github/CODEOWNERS`, and it needs no "Stop and ask"
   decision.

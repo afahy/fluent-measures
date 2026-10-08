@@ -21,14 +21,14 @@ prints. Add `--json` if you need to parse the output. After a PR's third review 
 to ask them again. The flag applies to every PR in the call, so check PRs past their third round
 in a separate call.
 
-| State           | Exit code | What to do                                                                                                                                     |
-| --------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `needs-agent`   | 10        | Do each item under "Do", and handle each item under "Why" as AGENTS.md "Handle findings and CI" says. Push if you changed code, then wait.     |
-| `waiting`       | 20        | Wait, as the next section says.                                                                                                                |
-| `waiting-human` | 30        | Say once, in one line, what the maintainer needs to do. Then wait for the maintainer, as the next section says.                                |
-| `ready`         | 0         | Do "Finish the PR" in AGENTS.md, then merge as "Merge your own PR" says. A PR that changes CODEOWNERS files is `waiting-human`, never `ready`. |
-| `merged`        | 40        | Do the comment check from "Finish the PR" at once. `pr:status` still lists bot threads with no reply. Then do the rest of "Finish the PR".     |
-| `closed`        | 41        | The same as `merged`.                                                                                                                          |
+| State           | Exit code | What to do                                                                                                                                                 |
+| --------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `needs-agent`   | 10        | Do each item under "Do", and handle each item under "Why" as AGENTS.md "Handle findings and CI" says. Push if you changed code, then wait.                 |
+| `waiting`       | 20        | Wait, as the next section says.                                                                                                                            |
+| `waiting-human` | 30        | Say once, in one line, what the maintainer needs to do. Then wait for the maintainer, as the next section says.                                            |
+| `ready`         | 0         | Do "Finish the PR" in AGENTS.md, then merge as "Merge your own PR" says. A PR that changes files that CODEOWNERS covers is `waiting-human`, never `ready`. |
+| `merged`        | 40        | Do the comment check from "Finish the PR" at once. `pr:status` still lists bot threads with no reply. Then do the rest of "Finish the PR".                 |
+| `closed`        | 41        | The same as `merged`.                                                                                                                                      |
 
 Read "Notes" as well. They list bot replies after yours, nitpicks, other bot comments since the
 push, and bots that never reviewed the head commit. Act on findings as AGENTS.md says, and list
@@ -65,8 +65,8 @@ that's `waiting` or `waiting-human`. There are two exceptions:
    step 3 says instead.
 2. In a cloud session, also subscribe to the PR's GitHub events. The container can stop and take
    the background command with it. On each event or check-in, run `pnpm pr:status` first, and
-   start `--wait` again if it isn't running. If the output is the same as last time, end the
-   turn in one short line.
+   start `--wait` again if it isn't running, unless every PR is `waiting-human`. If the output
+   is the same as last time, end the turn in one short line.
 3. Use a timed check-in (`send_later`, a scheduled wake-up or cron) only when neither of those
    can wake you. Each check-in that misses the 1-hour prompt cache rewrites the whole
    conversation, which cost $1 to $3 a wake in earlier sessions. Hourly check-ins fire just past
@@ -82,5 +82,7 @@ that's `waiting` or `waiting-human`. There are two exceptions:
 `pnpm pr:status` doesn't cover `main`. After a merge, watch CI on `main` by the merge commit's
 full SHA, for example with `gh api repos/afahy/fluent-measures/commits/<sha>/check-runs`. An
 empty or short list right after the merge means the runs haven't started yet, so wait until the
-CI workflow's checks are there and finished. Don't use `gh run list --branch main`, which hid
-queued runs during an Actions incident.
+CI workflow's checks are there and finished. Ignore the `Set the PR status` and
+`Report a late bot finding` check runs: they come from `pr-status.yml` and `late-bot-findings.yml`,
+not CI, and GitHub cancels some of them while they're queued. Don't use
+`gh run list --branch main`, which hid queued runs during an Actions incident.
