@@ -12,7 +12,7 @@ import {
   type Finding,
 } from '../.github/scripts/late-bot-findings.mjs';
 
-// Real Codex and CodeRabbit comments and reviews from PRs in this repo (#22, #43, #57, #67).
+// Real Codex and CodeRabbit comments and reviews from PRs in this repo (#22, #43, #57, #67, #71).
 const bot = JSON.parse(readFileSync('tests/fixtures/late-bot-findings/comments.json', 'utf8'));
 
 const merged43 = {
@@ -93,6 +93,27 @@ describe('lateFinding', () => {
     expect(finding?.excerpt).toBe('> Nitpick comments (1)\n> Keep this');
   });
 
+  // AFA-109: CodeRabbit puts its review's settings in a collapsed section after the findings.
+  it('quotes only the sections of findings, not the collapsed sections after them', () => {
+    const nitpicks =
+      '<details>\n<summary>🧹 Nitpick comments (1)</summary><blockquote>\n\nKeep this\n\n</blockquote></details>';
+    const settings =
+      '<details>\n<summary>📜 Review details</summary>\n\n**Configuration used**: CodeRabbit UI\n\n</details>';
+    const review = (body: string): Finding | null =>
+      lateFinding('pull_request_review', {
+        pull_request: merged43,
+        review: { ...bot.coderabbitReview, body },
+      });
+    expect(review(`${nitpicks}\n\n${settings}`)?.excerpt).toBe(
+      '> Nitpick comments (1)\n>\n> Keep this'
+    );
+    const outside =
+      '<details>\n<summary>⚠️ Outside diff range comments (1)</summary><blockquote>\n\n<details>\n<summary>src/a.ts (1)</summary><blockquote>\n\nAlso this\n\n</blockquote></details>\n\n</blockquote></details>';
+    expect(review(`${outside}\n\n${settings}\n\n${nitpicks}\n\n${settings}`)?.excerpt).toBe(
+      '> Outside diff range comments (1)\n>\n> src/a.ts (1)\n>\n> Also this\n>\n> Nitpick comments (1)\n>\n> Keep this'
+    );
+  });
+
   it('reports a bot comment on a merged PR that is not one of its routine notes', () => {
     const finding = lateFinding('issue_comment', {
       issue: mergedIssue43,
@@ -123,8 +144,18 @@ describe('lateFinding', () => {
     ['a reply to a review request', 'coderabbitRefusal'],
     ['a rate-limit note', 'coderabbitRateLimitNote'],
     ["Codex's no-findings comment", 'codexNoFindings'],
+    ["Codex's reply to a task (AFA-109)", 'codexTaskReply'],
   ])('skips %s', (_, name) => {
     expect(lateFinding('issue_comment', { issue: mergedIssue43, comment: bot[name] })).toBeNull();
+  });
+
+  it('reports a summary that has no link to a Codex task', () => {
+    const body = bot.codexTaskReply.body.replace(/\[View task →\]\([^)]*\)\s*$/, '');
+    const finding = lateFinding('issue_comment', {
+      issue: mergedIssue43,
+      comment: { ...bot.codexTaskReply, body },
+    });
+    expect(finding?.summary).toBe('a comment');
   });
 
   it("skips a bot's reply in a thread, and reviews whose findings are all in threads", () => {
@@ -191,6 +222,11 @@ describe('excerpt', () => {
     expect(excerpt(`${'a'.repeat(599)}🧹 tail`)).toBe(`> ${'a'.repeat(599)}🧹…`);
   });
 
+  // AFA-109: the old pattern also took the spaces that start the next line.
+  it('keeps the indent of the line after removed blank lines', () => {
+    expect(excerpt('x\n\n\n    indented code')).toBe('> x\n>\n>     indented code');
+  });
+
   it('keeps one blank line where there were several, even with spaces on them', () => {
     expect(excerpt('a\n\nb\n\n\nc\n \n\nd\n\n \ne')).toBe('> a\n>\n> b\n>\n> c\n>\n> d\n>\n> e');
   });
@@ -210,6 +246,25 @@ describe('plainText', () => {
 
   it('keeps one blank line where there were several, even with spaces on them', () => {
     expect(plainText('a\n\nb\n\n\nc\n \n\nd\n\n \ne')).toBe('a\n\nb\n\nc\n\nd\n\ne');
+  });
+
+  // AFA-109: a nitpick quoted `Promise<string>` as `Promise`.
+  it('keeps code and placeholders that look like tags', () => {
+    const code = 'Use `Promise<string>` and `function f<T>(a: Array<T>) {}`, then check `<sha>`.';
+    expect(plainText(code)).toBe(code);
+    expect(plainText('Map<A, B> and <a, b>')).toBe('Map<A, B> and <a, b>');
+  });
+
+  it('drops the tags that the bots write, with their attributes', () => {
+    expect(
+      plainText(
+        '<sub><sub>P2</sub></sub> <strong>Fix</strong>\n<a href="https://example.com/a">link</a> <img src="https://example.com/i.png" alt="i" width="220">\n<relative-time datetime="2026-10-08T04:39:34Z">today</relative-time><br/>'
+      )
+    ).toBe('P2 Fix\nlink \ntoday');
+  });
+
+  it('keeps the indent of the line after removed blank lines', () => {
+    expect(plainText('x\n\n\n    indented')).toBe('x\n\n    indented');
   });
 
   it('removes tags and comments that are left behind when inner ones are removed', () => {

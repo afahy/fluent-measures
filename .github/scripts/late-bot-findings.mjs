@@ -27,6 +27,9 @@ export const LABEL = 'late-bot-finding';
 const ROUTINE =
   /^\s*(?:<!-- (?:This is an auto-generated (?:comment: (?:summarize|rate limited) by coderabbit\.ai|reply by CodeRabbit)|codex-pull-request-review-summary) -->|Codex Review: Didn't find any major issues|You have reached your Codex usage limits)/i;
 
+/** Codex's reply when it finishes a task that someone asked it for: a summary and a link. */
+const CODEX_TASK = /^\s*### Summary\b[\s\S]*\[View task →\]\(https:\/\/chatgpt\.com\/[^\s)]*\)\s*$/;
+
 /** Sections of a CodeRabbit review body that hold findings outside its review threads. */
 const BODY_FINDINGS = /(outside diff range|nitpick) comments \((\d+)\)/gi;
 
@@ -34,7 +37,14 @@ const BODY_FINDINGS = /(outside diff range|nitpick) comments \((\d+)\)/gi;
 const EXCERPT_LENGTH = 600;
 
 const HTML_COMMENT = /<!--[\s\S]*?-->/g;
-const TAG = /<\/?[a-z][^>]*>/gi;
+/**
+ * A tag that the bots write, in lower case, with attributes in HTML form. Code such as
+ * `Promise<string>` or `f<T>(a: Array<T>)`, and placeholders such as `<sha>`, aren't tags.
+ */
+const TAG =
+  /<\/?(?:a|b|blockquote|br|code|details|em|hr|i|img|li|ol|p|pre|relative-time|strong|sub|summary|sup|table|tbody|td|th|thead|tr|ul)(?:\s+[a-z-]+(?:=(?:"[^"]*"|'[^']*'|[^\s"'>]+))?)*\s*\/?>/g;
+/** Three or more line breaks with only spaces between them. The next line keeps its indent. */
+const BLANK_LINES = /\n(?:[^\S\n]*\n){2,}/g;
 /** A collapsed section with no section inside it. */
 const INNERMOST_DETAILS = /<details\b[^>]*>(?:(?!<details\b)[\s\S])*?<\/details>/gi;
 
@@ -113,12 +123,14 @@ export function lateFinding(name, event) {
       m => `${m[2]} ${m[1].toLowerCase()} comment${m[2] === '1' ? '' : 's'}`
     );
     summary = `a review with ${names.join(' and ')}`;
-    // Drop the prompts for AI agents, which repeat the findings as instructions.
+    // Quote only the sections of findings, so the collapsed sections after them, such as the
+    // review's settings, stay out. Drop the prompts for AI agents, which repeat the findings as
+    // instructions.
     const prompts =
       /<details\b[^>]*>\s*<summary>[^<]*prompt[^<]*<\/summary>(?:(?!<details\b)[\s\S])*?<\/details>/gi;
-    text = plainText(removeAll(body.slice(sections[0].index), [prompts]));
+    text = plainText(removeAll(findingSections(body, sections), [prompts]));
   } else {
-    if (ROUTINE.test(body)) return null;
+    if (ROUTINE.test(body) || CODEX_TASK.test(body)) return null;
     summary = 'a comment';
   }
   const merged = Boolean(pull.merged_at || pull.pull_request?.merged_at);
@@ -135,15 +147,41 @@ export function lateFinding(name, event) {
 }
 
 /**
+ * The text of each section of findings in a review body, from its title to the `</details>`
+ * that closes the collapsed section around it, or to the end if none does.
+ *
+ * @param {string} body
+ * @param {RegExpMatchArray[]} sections The matches of BODY_FINDINGS.
+ * @returns {string}
+ */
+function findingSections(body, sections) {
+  const parts = [];
+  let end = 0;
+  for (const { index = 0 } of sections) {
+    // A title inside a section that is already quoted adds nothing.
+    if (index < end) continue;
+    end = body.length;
+    let depth = 1;
+    for (const tag of body.slice(index).matchAll(/<(\/?)details\b[^>]*>/gi)) {
+      depth += tag[1] ? -1 : 1;
+      if (depth === 0) {
+        end = index + (tag.index ?? 0);
+        break;
+      }
+    }
+    parts.push(body.slice(index, end));
+  }
+  return parts.join('\n\n');
+}
+
+/**
  * HTML reduced to its text: tags go, and so do the blank lines they leave.
  *
  * @param {string} html
  * @returns {string}
  */
 export function plainText(html) {
-  return removeAll(html, [HTML_COMMENT, TAG])
-    .replace(/\n\s*\n\s*(?:\n\s*)+/g, '\n\n')
-    .trim();
+  return removeAll(html, [HTML_COMMENT, TAG]).replace(BLANK_LINES, '\n\n').trim();
 }
 
 /**
@@ -157,7 +195,7 @@ export function plainText(html) {
 export function excerpt(body) {
   // Innermost sections go first, so a nested section goes with the one around it.
   const text = removeAll(body, [HTML_COMMENT, INNERMOST_DETAILS])
-    .replace(/\n\s*\n\s*(?:\n\s*)+/g, '\n\n')
+    .replace(BLANK_LINES, '\n\n')
     .trim();
   // Count characters, not UTF-16 units, so the cut doesn't split an emoji.
   const characters = Array.from(text);
