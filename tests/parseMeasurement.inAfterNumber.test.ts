@@ -34,6 +34,16 @@ describe('"N in" in ordinary text next to another measurement', () => {
     });
   });
 
+  // Weight: a capital G right after a number is a network generation, so "5G" isn't a number
+  // and "in" after it isn't inches. Only 6 ft is read, unlike "ranked 3 in the state and 6 ft".
+  it('reads 5G in the house, 6 ft as 6 ft', () => {
+    expect(parseMeasurement('5G in the house, 6 ft')).toMatchObject({
+      value: 6,
+      unit: 'ft',
+      matches: [{ value: 6, unit: 'ft' }],
+    });
+  });
+
   it.each([
     // Separate Measurements: inches before feet aren't parts of one height, so 3 in and 6 ft
     // (72 in) are two measurements that disagree.
