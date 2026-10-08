@@ -635,17 +635,32 @@ describe('answers to a bot review', () => {
     expect(answered).toEqual([12]);
   });
 
-  it('takes a quote of a line of the review as an answer, but not a short one', () => {
-    const quoted = unanswered(snapshot =>
+  it('takes no link to a review whose ID starts with this one as an answer to this one', () => {
+    const answered = unanswered(snapshot =>
+      snapshot.issueComments.push(
+        comment(2, human, `Fixed: ${pull67}#pullrequestreview-12`, '2026-10-07T15:01:00Z')
+      )
+    );
+    expect(answered).toEqual([1]);
+  });
+
+  it('takes no quote as an answer, only a link', () => {
+    const answered = unanswered(snapshot =>
       snapshot.issueComments.push(
         comment(2, human, '> The label check misses `kg:`.\n\nFixed.', '2026-10-07T15:01:00Z')
       )
     );
-    expect(quoted).toEqual([12]);
-    const short = unanswered(snapshot =>
-      snapshot.issueComments.push(comment(2, human, '> misses\n\nFixed.', '2026-10-07T15:01:00Z'))
+    expect(answered).toEqual([1, 12]);
+  });
+
+  it('takes a comment that an edit after the review links to it as an answer', () => {
+    const answered = unanswered(snapshot =>
+      snapshot.issueComments.push({
+        ...comment(2, human, `Fixed: ${pull67}#pullrequestreview-1`, '2026-10-07T14:59:00Z'),
+        updated_at: '2026-10-07T15:01:00Z',
+      })
     );
-    expect(short).toEqual([1, 12]);
+    expect(answered).toEqual([12]);
   });
 
   it('takes no answer from a comment before the review or from a bot', () => {
@@ -658,14 +673,15 @@ describe('answers to a bot review', () => {
     expect(answered).toEqual([1, 12]);
   });
 
-  it("takes a person's reply in one of the review's threads as an answer", () => {
-    const answered = unanswered(snapshot => {
+  it("takes a person's thread reply as an answer to a request for changes only", () => {
+    const reply = (review: number) => (snapshot: Snapshot) =>
       snapshot.reviewComments.push(
-        { ...threadComment(20, rabbit, '2026-10-07T15:00:00Z'), pull_request_review_id: 1 },
+        { ...threadComment(20, rabbit, '2026-10-07T15:00:00Z'), pull_request_review_id: review },
         threadComment(21, human, '2026-10-07T15:01:00Z', 20)
       );
-    });
-    expect(answered).toEqual([12]);
+    expect(unanswered(reply(12))).toEqual([1]);
+    // A reply in a thread is about that thread, not about the comments outside the diff.
+    expect(unanswered(reply(1))).toEqual([1, 12]);
   });
 });
 

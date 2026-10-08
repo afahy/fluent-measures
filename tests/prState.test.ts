@@ -463,7 +463,7 @@ describe('classify', () => {
     const status = classify(snapshot, at('2026-10-07T16:00:00Z'));
     expect(status.state).toBe('needs-agent');
     expect(status.reasons).toEqual([
-      'coderabbitai[bot] requested changes: https://github.com/afahy/fluent-measures/pull/67#pullrequestreview-2',
+      'coderabbitai[bot] requested changes: https://github.com/afahy/fluent-measures/pull/67#pullrequestreview-2. Answer in its threads or in a PR comment that links to it.',
     ]);
     snapshot.issueComments.push({
       id: 3,
@@ -506,7 +506,7 @@ describe('classify', () => {
     });
     expect(classify(snapshot, at('2026-10-07T16:00:00Z')).reasons).toEqual([
       'coderabbitai[bot] left a thread with no reply: https://github.com/afahy/fluent-measures/pull/67#discussion_r10',
-      'coderabbitai[bot] requested changes: https://github.com/afahy/fluent-measures/pull/67#pullrequestreview-2',
+      'coderabbitai[bot] requested changes: https://github.com/afahy/fluent-measures/pull/67#pullrequestreview-2. Answer in its threads or in a PR comment that links to it.',
     ]);
     snapshot.reviewComments.push({
       id: 11,
@@ -563,12 +563,12 @@ describe('classify', () => {
       html_url: 'https://github.com/afahy/fluent-measures/pull/67#pullrequestreview-2',
     });
     expect(classify(snapshot, at('2026-10-07T16:00:00Z')).reasons).toEqual([
-      'coderabbitai[bot] put comments outside the diff in https://github.com/afahy/fluent-measures/pull/67#pullrequestreview-2',
+      'coderabbitai[bot] put comments outside the diff in https://github.com/afahy/fluent-measures/pull/67#pullrequestreview-2. Answer in a PR comment that links to it.',
     ]);
     snapshot.issueComments.push({
       id: 3,
       user: { login: 'afahy', type: 'User' },
-      body: 'Agent:\n\n> ⚠️ Outside diff range comments (1)\n\nThis is about code that this PR does not change.',
+      body: 'Agent: https://github.com/afahy/fluent-measures/pull/67#pullrequestreview-2 is about code that this PR does not change.',
       created_at: '2026-10-07T15:58:00Z',
       updated_at: '2026-10-07T15:58:00Z',
       html_url: 'https://github.com/afahy/fluent-measures/pull/67#issuecomment-3',
