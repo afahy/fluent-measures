@@ -57,6 +57,7 @@ export interface ReviewComment {
   id: number;
   user: User | null;
   in_reply_to_id?: number | null;
+  pull_request_review_id?: number | null;
   created_at: string;
   html_url: string;
 }
@@ -107,6 +108,7 @@ export interface BotState {
     | 'requested'
     | 'rate-limited'
     | 'refused'
+    | 'failed'
     | 'not-requested'
     | 'gave-up'
     | 'skipped';
@@ -151,10 +153,11 @@ export function codexSummaryRows(
   body: string
 ): { review: string; status: string; commit: string | null }[];
 export function codexState(snapshot: Snapshot, now: number): BotState;
-export function coderabbitState(snapshot: Snapshot, now: number): BotState;
+export function coderabbitState(snapshot: Snapshot): BotState;
 export function unansweredBotThreads(comments: ReviewComment[]): ReviewComment[];
 export function botFollowUps(comments: ReviewComment[]): ReviewComment[];
 export function unansweredReviewBodies(snapshot: Snapshot): Review[];
+export function botChangeRequests(snapshot: Snapshot): Review[];
 export function botOutputSincePush(snapshot: Snapshot): string[];
 export function classify(
   snapshot: Snapshot,

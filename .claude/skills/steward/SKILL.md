@@ -16,9 +16,9 @@ and most of them misjudged the head commit, Codex's 👀 or CodeRabbit's rate li
 
 Run `pnpm pr:status <pr>` (or `pnpm pr:status 61 62 63` for several) and act on the state it
 prints. Add `--json` if you need to parse the output. After a PR's third review round (AGENTS.md
-"Handle findings and CI"), add `--no-requests`, so it waits for the bots instead of telling you
-to ask them again. The flag applies to every PR in the call, so check PRs past their third round
-in a separate call.
+"Handle findings and CI"), add `--no-requests`, so it waits for Codex instead of telling you to
+ask it again. The flag applies to every PR in the call, so check PRs past their third round in a
+separate call.
 
 | State           | Exit code | What to do                                                                                                                                 |
 | --------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -35,11 +35,15 @@ each gap in your report.
 
 ## Bot reviews
 
-`pr:status` doesn't post anything. When "Do" lists `Post @codex review` or
-`Post @coderabbitai review`, post that comment yourself, for example `Agent: @codex review`. Both
-bots act on a request with the `Agent:` prefix. Don't offer to post it. `pr:status` lists each request once per commit, as AGENTS.md says, and stops
-waiting for a bot 2 hours after the bot could start. A PR that Codex never reviewed then waits
-on the maintainer. Say so in your report.
+`pr:status` doesn't post anything. When "Do" lists `Post @codex review`, post that comment
+yourself, as `Agent: @codex review`. Codex acts on a request with the `Agent:` prefix. Don't
+offer to post it. `pr:status` lists each request once per commit, as AGENTS.md says, and stops
+waiting for Codex 2 hours after it could start. A PR that Codex never reviewed then waits on the
+maintainer. Say so in your report.
+
+`pr:status` never waits for CodeRabbit and never asks it to review (AFA-138). Its threads, its
+comments outside the diff and its requested changes still make a PR `needs-agent`. When it
+hasn't reviewed the head commit, a note says so. List that gap in your report.
 
 ## Waiting
 
@@ -71,7 +75,7 @@ that's `waiting` or `waiting-human`. There are two exceptions:
    conversation, which cost $1 to $3 a wake in earlier sessions. Hourly check-ins fire just past
    the cache's hour, so they always miss it.
    - While a PR is `waiting`, check in 40 to 50 minutes after the last turn, so the cache is
-     still warm. After 3 check-ins in a row that find nothing new, the bots' 2 hours are over.
+     still warm. After 3 check-ins in a row that find nothing new, Codex's 2 hours are over.
      If CI is still running then, report that it's stuck and stop.
    - While every PR is `waiting-human`, check in every 4 hours, for up to 24 hours. Don't ask
      the maintainer to tell you when they merge.

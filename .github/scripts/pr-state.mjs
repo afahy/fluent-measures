@@ -10,9 +10,11 @@
 //   - Codex is done when it reviews the head commit, comments that it found no major issues in
 //     it, or its summary comment says the review of the head commit is Completed. 👀 means it's
 //     still running.
+//   - A PR never waits for CodeRabbit, and pr:status never asks it to review (AFA-138): it
+//     reviews in time or it doesn't. Its threads, its comments outside the diff and its requested
+//     changes still need the agent, and its state for the head commit is a note.
 //   - CodeRabbit sets a "CodeRabbit" commit status on each commit it looks at. "Review rate
-//     limited" is a success status, so it must not count as a passing check or a review. The
-//     PR doesn't wait for a rate-limited CodeRabbit, and doesn't ask it again for that commit.
+//     limited" is a success status, so it must not count as a passing check or a review.
 //   - CodeRabbit's summary and rate-limit comments also name a commit range, but only its
 //     reviews mean that it reviewed the commit.
 //   - Bots name commits by short SHAs, so a SHA matches any prefix of 7 or more characters.
@@ -313,17 +315,16 @@ export function codexState(snapshot, now) {
 }
 
 /**
- * CodeRabbit's state for the head commit.
+ * CodeRabbit's state for the head commit. A PR doesn't wait for CodeRabbit (AFA-138), so the
+ * state only gives the note that tells the agent what CodeRabbit did.
  *
  * @param {import('./pr-state.d.mts').Snapshot} snapshot
- * @param {number} now
  * @returns {import('./pr-state.d.mts').BotState}
  */
-export function coderabbitState(snapshot, now) {
+export function coderabbitState(snapshot) {
   const head = snapshot.pull.head.sha;
   const short = head.slice(0, 7);
   const pushed = pushedAt(snapshot);
-  const start = Date.parse(clockStart(snapshot));
   const status = snapshot.statuses
     .filter(s => s.context === 'CodeRabbit')
     .sort((a, b) => byTime(b.created_at, a.created_at))[0];
@@ -349,13 +350,14 @@ export function coderabbitState(snapshot, now) {
     : undefined;
   const finished =
     /action performed/i.test(reply?.body ?? '') && /review finished/i.test(reply?.body ?? '');
+  const refused = /action not completed/i.test(reply?.body ?? '');
   if (reviewedHead || finished || /review completed/i.test(status?.description ?? '')) {
     return { state: 'done', detail: `CodeRabbit reviewed ${short}` };
   }
-  // Don't wait for a rate-limited CodeRabbit, and don't ask it again for this commit. It's rate
-  // limited when its status since the last request says so, or when it refused the last request
-  // for that reason. CodeRabbit reviews the next push if its limit allows.
-  // A status after the refusal wins, and so does a pending one, which means it's reviewing.
+  // It's rate limited when its status since the last request says so, or when it refused the
+  // last request for that reason. A status after the refusal wins: a pending one means it's
+  // reviewing. CodeRabbit edits the refusal's text into its reply a few seconds after it creates
+  // the reply, so the edit time counts (AFA-137).
   const lastAsked = asked[asked.length - 1]?.created_at;
   const limitedStatus =
     status?.state === 'success' &&
@@ -363,50 +365,36 @@ export function coderabbitState(snapshot, now) {
     (!lastAsked || byTime(status.created_at, lastAsked) >= 0);
   const limitedReply =
     reply !== undefined &&
-    status?.state !== 'pending' &&
-    /action not completed/i.test(reply.body ?? '') &&
+    refused &&
     /rate limit/i.test(reply.body ?? '') &&
-    (!status || byTime(reply.created_at, status.created_at) >= 0);
+    (!status || byTime(reply.updated_at, status.created_at) >= 0);
   if (limitedStatus || limitedReply) {
-    return {
-      state: 'rate-limited',
-      detail: `CodeRabbit was rate limited on ${short}, so the PR doesn't wait for it`,
-    };
-  }
-  if (now - start >= BOT_MAX_WAIT) {
-    return {
-      state: 'gave-up',
-      detail: `CodeRabbit hasn't reviewed ${short} in the 2 hours it has had`,
-    };
+    return { state: 'rate-limited', detail: `CodeRabbit was rate limited on ${short}` };
   }
   if (status?.state === 'pending') {
     return { state: 'running', detail: `CodeRabbit is reviewing ${short}` };
   }
-  if (/action not completed/i.test(reply?.body ?? '')) {
-    // AGENTS.md asks each bot once per commit, so wait out the two hours.
+  if (refused) {
     const reason = /<\/summary>\s*([^<\s][^\n]*)/i.exec(reply?.body ?? '')?.[1]?.trim();
     return {
       state: 'refused',
       detail: `CodeRabbit refused the review request${reason ? `: ${reason}` : ''}`,
-      until: after(start, BOT_MAX_WAIT),
     };
   }
   if (asked.length > 0) {
     return {
       state: 'requested',
-      detail: `Asked at ${asked[0].created_at} for a review of ${short}`,
-      until: after(start, BOT_MAX_WAIT),
+      detail: `CodeRabbit was asked at ${asked[0].created_at} for a review of ${short}`,
     };
   }
   if (
     status?.state === 'success' &&
     /disabled for this base branch/i.test(status.description ?? '')
   ) {
-    // A PR on another PR's branch. CodeRabbit reviews it only when asked.
+    // A PR on another PR's branch. CodeRabbit doesn't review it, and AGENTS.md says not to ask.
     return {
-      state: 'not-requested',
-      detail: "CodeRabbit doesn't review PRs on this base branch unless asked",
-      action: 'Post `@coderabbitai review`',
+      state: 'skipped',
+      detail: "CodeRabbit doesn't review PRs on this base branch",
     };
   }
   if (status?.state === 'success') {
@@ -415,23 +403,11 @@ export function coderabbitState(snapshot, now) {
   }
   if (status) {
     return {
-      state: 'not-requested',
+      state: 'failed',
       detail: `CodeRabbit's review of ${short} ended with "${status.description ?? status.state}"`,
-      action: 'Post `@coderabbitai review`',
     };
   }
-  if (now - start < BOT_START_WAIT) {
-    return {
-      state: 'pending',
-      detail: `CodeRabbit hasn't started on ${short}`,
-      until: after(start, BOT_START_WAIT),
-    };
-  }
-  return {
-    state: 'not-requested',
-    detail: `CodeRabbit hasn't started on ${short} 30 minutes after it could start`,
-    action: 'Post `@coderabbitai review`',
-  };
+  return { state: 'pending', detail: `CodeRabbit hasn't reviewed ${short}` };
 }
 
 /**
@@ -477,14 +453,14 @@ export function botFollowUps(comments) {
 }
 
 /**
- * Codex and CodeRabbit reviews since the push that put comments in the review body instead of
- * in a thread ("Outside diff range comments"), with no later comment or review from a person.
- * A comment that only asks a bot to review isn't an answer.
+ * Codex and CodeRabbit reviews since the push that `test` matches, with no later comment or
+ * review from a person. A comment that only asks a bot to review isn't an answer.
  *
  * @param {import('./pr-state.d.mts').Snapshot} snapshot
+ * @param {(review: import('./pr-state.d.mts').Review) => boolean} test
  * @returns {import('./pr-state.d.mts').Review[]}
  */
-export function unansweredReviewBodies(snapshot) {
+function unansweredBotReviews(snapshot, test) {
   const pushed = pushedAt(snapshot);
   const answers = [
     ...snapshot.issueComments
@@ -497,8 +473,44 @@ export function unansweredReviewBodies(snapshot) {
       byReviewBot(r) &&
       r.submitted_at &&
       byTime(r.submitted_at, pushed) >= 0 &&
-      /outside diff range comments \(\d+\)/i.test(r.body ?? '') &&
+      test(r) &&
       !answers.some(t => byTime(t, r.submitted_at ?? '') > 0)
+  );
+}
+
+/**
+ * Codex and CodeRabbit reviews since the push that put comments in the review body instead of
+ * in a thread ("Outside diff range comments"), with no later comment or review from a person.
+ *
+ * @param {import('./pr-state.d.mts').Snapshot} snapshot
+ * @returns {import('./pr-state.d.mts').Review[]}
+ */
+export function unansweredReviewBodies(snapshot) {
+  return unansweredBotReviews(snapshot, r =>
+    /outside diff range comments \(\d+\)/i.test(r.body ?? '')
+  );
+}
+
+/**
+ * Codex and CodeRabbit reviews since the push that request changes, with no later comment or
+ * review from a person. An answer from a person clears it, as for comments outside the diff
+ * (AFA-138), because the bot may never review again. A reply in a thread that the review started
+ * is an answer too. GitHub also records such a reply as a review from that person, but AFA-144
+ * will count only answers tied to the review, so the thread check stays.
+ * unansweredBotThreads lists each of the review's threads that has no reply.
+ *
+ * @param {import('./pr-state.d.mts').Snapshot} snapshot
+ * @returns {import('./pr-state.d.mts').Review[]}
+ */
+export function botChangeRequests(snapshot) {
+  const replied = new Set(
+    snapshot.reviewComments.filter(c => !byBot(c) && c.in_reply_to_id).map(c => c.in_reply_to_id)
+  );
+  return unansweredBotReviews(
+    snapshot,
+    r =>
+      r.state === 'CHANGES_REQUESTED' &&
+      !snapshot.reviewComments.some(c => c.pull_request_review_id === r.id && replied.has(c.id))
   );
 }
 
@@ -556,7 +568,7 @@ function changesRequested(reviews) {
  * @param {import('./pr-state.d.mts').Snapshot} snapshot
  * @param {number} [now] Milliseconds since the epoch.
  * @param {{ requests?: boolean }} [options] With `requests: false`, as after the third review
- *   round in AGENTS.md, a bot that hasn't reviewed isn't something to ask: the PR waits for it
+ *   round in AGENTS.md, a Codex that hasn't reviewed isn't something to ask: the PR waits for it
  *   until its 2 hours are up.
  * @returns {import('./pr-state.d.mts').PrStatus}
  */
@@ -589,7 +601,7 @@ export function classify(snapshot, now = Date.now(), { requests = true } = {}) {
         }
       : bot;
   const codex = closed || pull.draft ? skipped : unasked(codexState(snapshot, now));
-  const coderabbit = closed || pull.draft ? skipped : unasked(coderabbitState(snapshot, now));
+  const coderabbit = closed || pull.draft ? skipped : coderabbitState(snapshot);
   const result = (/** @type {import('./pr-state.d.mts').PrState} */ state) => ({
     pr: pull.number,
     title: pull.title,
@@ -629,19 +641,20 @@ export function classify(snapshot, now = Date.now(), { requests = true } = {}) {
   for (const review of unansweredReviewBodies(snapshot)) {
     reasons.push(`${who(review)} put comments outside the diff in ${review.html_url}`);
   }
-  for (const review of changesRequested(snapshot.reviews)) {
+  for (const review of [...botChangeRequests(snapshot), ...changesRequested(snapshot.reviews)]) {
     reasons.push(`${who(review)} requested changes: ${review.html_url}`);
   }
   if (pull.mergeable_state === 'dirty') reasons.push('The PR has a merge conflict with its base');
-  for (const bot of [codex, coderabbit]) {
-    if (bot.state === 'not-requested') reasons.push(bot.detail);
-    if (bot.action) actions.push(bot.action);
-    if (bot.state === 'gave-up' || bot.state === 'rate-limited') notes.push(bot.detail);
-    if (['pending', 'running', 'requested', 'refused'].includes(bot.state)) {
-      const until = bot.until ? ` (until ${bot.until})` : '';
-      waits.push(`${bot.detail}${until}`);
-    }
+  if (codex.state === 'not-requested') reasons.push(codex.detail);
+  if (codex.action) actions.push(codex.action);
+  if (codex.state === 'gave-up') notes.push(codex.detail);
+  if (['pending', 'running', 'requested'].includes(codex.state)) {
+    const until = codex.until ? ` (until ${codex.until})` : '';
+    waits.push(`${codex.detail}${until}`);
   }
+  // CodeRabbit adds no wait, reason or request (AFA-138). The note tells the agent to list the
+  // gap in its report.
+  if (!pull.draft && coderabbit.state !== 'done') notes.push(coderabbit.detail);
   if (ci.pending.length > 0) waits.push(`CI is running: ${ci.pending.join(', ')}`);
   if (!pull.mergeable_state || pull.mergeable_state === 'unknown') {
     waits.push('GitHub is still working out whether the PR can merge');
@@ -685,7 +698,9 @@ export function mostUrgent(states) {
  * @returns {string}
  */
 export function digest(status) {
-  const { state, head, reasons, actions, notes } = status;
+  const { state, head, reasons, actions } = status;
+  // CodeRabbit's progress needs no action (AFA-138), so its note doesn't count as news.
+  const notes = status.notes.filter(note => note !== status.coderabbit.detail);
   return JSON.stringify({ state, head, reasons, actions, notes });
 }
 

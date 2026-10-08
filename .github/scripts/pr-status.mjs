@@ -21,8 +21,9 @@
 // (default 100, under the 2-hour limit for a background command). 304 answers to its polls
 // don't count against GitHub's rate limit.
 //
-// --no-requests is for after the third review round, when AGENTS.md says not to ask the bots
-// again: a bot that hasn't reviewed is waited for until its 2 hours are up, not asked.
+// --no-requests is for after the third review round, when AGENTS.md says not to ask Codex
+// again: a Codex that hasn't reviewed is waited for until its 2 hours are up, not asked.
+// CodeRabbit is never waited for or asked (AFA-138).
 //
 // The token comes from GH_TOKEN, GITHUB_TOKEN or `gh auth token`. The repository comes from
 // --repo, GITHUB_REPOSITORY or the origin remote.
