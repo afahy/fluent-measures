@@ -63,8 +63,8 @@ const LIST_MARKER = /^(?:[-+*]|\d{1,9}[.)])(?: {1,4}|$)/;
 /**
  * Whether a line, without its quote marks, starts or ends one of the bots' collapsed sections:
  * `<details>` alone on its line with a `<summary>` on the next line, or a line that starts with
- * `</blockquote></details>`. The bots never write these lines in code. HTML code puts a
- * `<summary>` on the same line, as in `<details><summary>x</summary></details>`.
+ * `</blockquote></details>`. HTML code usually puts a `<summary>` on the same line, as in
+ * `<details><summary>x</summary></details>`, but it can hold such lines too (AFA-145).
  *
  * @param {string} line
  * @param {string} next The next line, without its quote marks.
@@ -128,10 +128,29 @@ function codeBlocks(text) {
   /** The line at `at`, without its `\r` and quote marks. */
   const bare = (/** @type {number} */ at) =>
     (lines[at] ?? '').replace(/\r$/, '').replace(/^(?: {0,3}> ?)*/, '');
+  /**
+   * Whether a fence that is open at the section line at `at` closes before the next section line,
+   * so that the section line is code in it. The start of a prompt for AI agents is never code: a
+   * fence that a finding leaves open would otherwise pair with the prompt's own fence (AFA-123).
+   *
+   * @param {{ mark: string, length: number }} open
+   * @param {number} at
+   */
+  const closesInSection = (open, at) => {
+    if (/^<details>[ \t]*$/.test(bare(at)) && /^<summary>[^<]*prompt/i.test(bare(at + 1))) {
+      return false;
+    }
+    for (let next = at + 1; next < lines.length; next++) {
+      if (sectionLine(bare(next), bare(next + 1))) return false;
+      const close = /^[ \t]*(`+|~+)[ \t]*$/.exec(bare(next));
+      if (close && close[1][0] === open.mark && close[1].length >= open.length) return true;
+    }
+    return false;
+  };
   for (const [at, raw] of lines.entries()) {
     const end = start + raw.length;
     const line = raw.endsWith('\r') ? raw.slice(0, -1) : raw;
-    if (fence && sectionLine(bare(at), bare(at + 1))) {
+    if (fence && sectionLine(bare(at), bare(at + 1)) && !closesInSection(fence, at)) {
       marks.push({ start: fence.start, end: fence.end });
       fence = null;
       blank = true;
@@ -444,13 +463,11 @@ function findingSections(body) {
     if (index < end) continue;
     end = collapsed ? body.length : (all[n + 1]?.title.index ?? body.length);
     let depth = collapsed ? 1 : 0;
-    const tags = /<(\/?)details\b[^>]*>(?:\s*<summary\b[^>]*>([^<]*)<\/summary>)?/gi;
+    // In a Markdown quote, a `>` starts each line between the tags.
+    const tags = /<(\/?)details\b[^>]*>(?:[\s>]*<summary\b[^>]*>([^<]*)<\/summary>)?/gi;
     for (const tag of masked.slice(index, end).matchAll(tags)) {
       const inner =
-        !collapsed &&
-        depth === 0 &&
-        !tag[1] &&
-        /prompt|^[^\s<]+ \(\d+\)$/i.test(tag[2]?.trim() ?? '');
+        !collapsed && depth === 0 && !tag[1] && /prompt|\S \(\d+\)$/i.test(tag[2]?.trim() ?? '');
       if (depth === 0 && !collapsed && !inner) {
         end = index + (tag.index ?? 0);
         break;

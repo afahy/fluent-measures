@@ -220,6 +220,45 @@ describe('lateFinding', () => {
     expect(finding?.excerpt).not.toContain('Configuration used');
   });
 
+  // AFA-145: a closed fence can hold the lines that start or end the bots' sections, as HTML
+  // code. They stay code, and the next file's section stays.
+  it.each([
+    ['an end line', '</blockquote></details>'],
+    [
+      'the lines of a collapsed section',
+      '<details>\n<summary>More</summary>\n<b>x</b>\n</details>',
+    ],
+  ])('keeps %s in a closed fence as code', (_name, html) => {
+    const body = `<details>\n<summary>🧹 Nitpick comments (2)</summary><blockquote>\n\n<details>\n<summary>docs/a.html (1)</summary><blockquote>\n\nFinding A\n\n\`\`\`html\n${html}\n\`\`\`\n\n</blockquote></details>\n<details>\n<summary>src/b.ts (1)</summary><blockquote>\n\nFinding B\n\n</blockquote></details>\n\n</blockquote></details>\n\n${SETTINGS}`;
+    const finding = lateFinding('pull_request_review', {
+      pull_request: merged43,
+      review: { ...bot.coderabbitReview, body },
+    });
+    expect(finding?.excerpt).toContain(html.split('\n').join('\n> '));
+    expect(finding?.excerpt).toContain('Finding B');
+    expect(finding?.excerpt).not.toContain('Configuration used');
+  });
+
+  // AFA-145: after a bold title, a file's section in a Markdown quote, or one whose path has a
+  // space, belongs to the title's section.
+  it.each([
+    [
+      'in a Markdown quote',
+      '> **🧹 Nitpick comments (1)**\n>\n> <details>\n> <summary>src/a.ts (1)</summary>\n>\n> Finding A\n>\n> </details>',
+    ],
+    [
+      'whose path has a space',
+      '**🧹 Nitpick comments (1)**\n\n<details>\n<summary>docs/API Guide.md (1)</summary><blockquote>\n\nFinding A\n\n</blockquote></details>',
+    ],
+  ])("keeps a file's section %s after a bold title", (_name, section) => {
+    const finding = lateFinding('pull_request_review', {
+      pull_request: merged43,
+      review: { ...bot.coderabbitReview, body: `${section}\n\n${SETTINGS}` },
+    });
+    expect(finding?.excerpt).toContain('Finding A');
+    expect(finding?.excerpt).not.toContain('Configuration used');
+  });
+
   // AFA-123: a prompt's tag in an HTML comment paired with a real </details> and took the
   // finding between them.
   it("removes HTML comments before a prompt's tag can pair with a real end tag", () => {
