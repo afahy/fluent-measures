@@ -158,8 +158,10 @@ export function tokenizeNormalized(input: string, fuzziness?: number): string[] 
     (
       input
         // Two apostrophes right after a number are an inch mark, as in "72''" (AFA-106).
-        // normalizeForms writes "´´" and "’’" as two apostrophes too.
-        .replace(/(?<=\d)''/g, '"')
+        // normalizeForms writes "´´" and "’’" as two apostrophes too. They don't close a number
+        // that two apostrophes open, as in "the ''5'' kg bag", and a third mark keeps them as
+        // they are, as in "72'''", so each form gives what main gives.
+        .replace(/(?<=\d)(?<!(?:^|[^\w'"’])['’]{2}[^'’\s]*)''(?!['’])/g, '"')
         // A capital G right after a number, as in "5G phone", is a network generation, not
         // grams, which are written "g". Rename it before case is lost.
         .replace(/(?<=\d)G(?![A-Za-z])/g, 'gen')

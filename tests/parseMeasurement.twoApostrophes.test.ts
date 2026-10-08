@@ -39,4 +39,23 @@ describe('two apostrophes as an inch mark', () => {
   it.each([`72''-74''`, `5'11''-6'1''`, `72 ''`, `five''`])('returns null for %s', raw => {
     expect(parseMeasurement(raw)).toBeNull();
   });
+
+  // The final review of #93: two apostrophes that close a number they opened are quotes, and
+  // three or four marks after a number aren't an inch mark. Each keeps main's null, in every
+  // form that normalizeForms writes as apostrophes.
+  it.each([
+    `weight ''180'' lbs`,
+    `the ''5'' kg bag`,
+    '´´5´´ kg',
+    '’’5’’ kg',
+    `''5''`,
+    `72'''`,
+    `72''''`,
+    '72’’’',
+    '72’’’’',
+    '72´´´',
+    '5’’’ tall',
+  ])('keeps returning null for %s', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
 });
