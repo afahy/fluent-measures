@@ -24,10 +24,11 @@ const MAX_DESCRIPTION = 140;
 /**
  * GitHub answers 422 ("Description doesn't accept 4-byte Unicode") for a character outside the
  * Basic Multilingual Plane, such as the 👀 in Codex's detail (AFA-108). This matches each one
- * with the joiners next to it, brackets that hold only such characters, and lone surrogates.
+ * with the joiners and the one space before it, brackets that hold only such characters, and
+ * lone surrogates.
  */
 const FOUR_BYTE =
-  /\s*\((?:[\u200D\uFE0F\s]*[\u{10000}-\u{10FFFF}])+[\u200D\uFE0F\s]*\)|\u200D?[\u{10000}-\u{10FFFF}][\u200D\uFE0F]*|[\uD800-\uDFFF]/gu;
+  /\s*\((?:[\u200D\uFE0F\s]*[\u{10000}-\u{10FFFF}])+[\u200D\uFE0F\s]*\)|[ \t]?\u200D?[\u{10000}-\u{10FFFF}][\u200D\uFE0F]*|[\uD800-\uDFFF]/gu;
 
 /**
  * The status's one-line description: the state and the first reason or wait, without links,
@@ -41,7 +42,6 @@ export function describeStatus(status) {
   const first = items[0]
     ?.replace(/(?::| in)? https:\/\/\S+/g, '')
     .replace(FOUR_BYTE, '')
-    .replace(/ {2,}/g, ' ')
     .trim();
   const more = items.length > 1 ? ` (+${items.length - 1} more)` : '';
   const text =

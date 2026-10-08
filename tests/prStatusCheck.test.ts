@@ -115,6 +115,9 @@ describe('describeStatus', () => {
     // (U+2764 and U+FE0F) stays without the joiner.
     expect(describe('👨\u200D💻 (❤\uFE0F\u200D🔥) done')).toBe('waiting-human: (❤\uFE0F) done');
     expect(describe('\uD83D x')).toBe('waiting-human: x');
+    expect(describe('one 👍, two')).toBe('waiting-human: one, two');
+    // Spaces that weren't next to a dropped character stay as they are.
+    expect(describe('a  b 👀')).toBe('waiting-human: a  b');
   });
 
   it("says only the state when there's nothing to name", () => {
