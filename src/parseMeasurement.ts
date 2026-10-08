@@ -245,9 +245,9 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
           let at = i - 1;
           while (remainingTokens[at] === ';') at--;
           const previous = remainingTokens[at];
-          const unsigned = previous?.startsWith('-') ? withoutSign(previous) : null;
-          const [before, beforeEnd] =
-            unsigned === null ? readNumberPhrase(remainingTokens, i - 1, -1) : [unsigned, at - 1];
+          const [before, beforeEnd] = isSigned(previous)
+            ? [withoutSign(previous), at - 1]
+            : readNumberPhrase(remainingTokens, i - 1, -1);
           // Reading backward already skips semicolons, so skip them reading forward too, as in
           // "8 oz; 7 lb" and "12 st 4;lb". Commas don't separate parts, so skip field marks too,
           // as in "Stone: 12, lb: 4".
