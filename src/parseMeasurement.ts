@@ -23,8 +23,11 @@ type Words = (at: number) => string;
 /** Read the tokens as if each one that a match has used were "", so no other match can use it. */
 const remainingWords =
   (tokens: Token[]): Words =>
-  at =>
-    tokens[at]?.used ? '' : tokens[at]?.text;
+  at => {
+    const token = tokens[at];
+    // Stryker disable next-line StringLiteral: "Stryker was here!" is no number or unit, as "" is.
+    return token?.used ? '' : token?.text;
+  };
 
 /**
  * Read the longest adjacent number phrase and return its first unconsumed token index. With
@@ -77,8 +80,7 @@ function readNumberPhrase(
   let end = start;
   let value: number | null = null;
   const phrase: string[] = [];
-  for (; words(end) !== undefined; end += step) {
-    const word = words(end);
+  for (let word = words(end); word !== undefined; word = words((end += step))) {
     if (word === 'and' || (step < 0 && word === ';')) continue;
     if (step > 0) phrase.push(word);
     else phrase.unshift(word);
@@ -174,12 +176,12 @@ function skipSemicolons(words: Words, start: number): number {
  */
 function readValueAfter(
   tokens: Token[],
+  words: Words,
   start: number,
   unit: Unit,
   label: boolean,
   fuzziness?: number
 ): [value: number | null, end: number] {
-  const words = remainingWords(tokens);
   // This read takes a signed value too, so the check for a label's value finds it, as in "kg: -5".
   const [value, end] = readSignedPhrase(words, skipSemicolons(words, start));
   // A label doesn't take a number that has its own unit, as in "weigh in: 180 lbs" and
@@ -356,7 +358,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   let field = 0;
   // Stryker disable next-line UpdateOperator: each field only needs a number that differs from the others'.
   const fieldOf = tokens.map(({ text }) => (text === ';' ? ++field : field));
-  const text: Words = at => tokens[at]?.text;
+  const allWords: Words = at => tokens[at]?.text;
   const remaining = remainingWords(tokens);
   /** Mark the tokens from `start` up to `end` as used. */
   const use = (start: number, end: number): void => {
@@ -376,7 +378,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     for (let i = 0; i < tokens.length; i++) {
       const unit = matchUnit(remaining(i), type, fuzziness);
       if (!unit) {
-        if (type === 'weight' && hasUnsupportedPart(text, remaining, i, fuzziness)) {
+        if (type === 'weight' && hasUnsupportedPart(allWords, remaining, i, fuzziness)) {
           return null;
         }
         continue;
@@ -400,7 +402,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       const valueFollows =
         kind === 'name' && !signedValue
           ? readNumberPhrase(remaining, valueAt)[0] !== null
-          : label && readValueAfter(tokens, i + 1, unit, label, fuzziness)[0] !== null;
+          : label && readValueAfter(tokens, remaining, i + 1, unit, label, fuzziness)[0] !== null;
       // A sign on the first word of a phrase signs the whole phrase, as in "-twenty five kg" and
       // "-a hundred kg". So those inputs return null, as "-5 feet" does.
       // When the value follows, or the label starts a field, the read before the unit takes nothing,
@@ -434,6 +436,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         // in an earlier field isn't the unit's, as in "record 0; kg 70 lb", which is 70 kg.
         const [value, valueEnd] = readValueAfter(
           tokens,
+          remaining,
           matchEnd,
           unit,
           label || (num === 0 && fieldOf[matchStart] === fieldOf[i]),
