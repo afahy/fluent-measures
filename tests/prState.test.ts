@@ -446,6 +446,35 @@ describe('classify', () => {
     expect(failed.reasons).toEqual([`CI failed: ${run.name}`]);
   });
 
+  // AFA-138, CodeRabbit on #104: a bot's request for changes counts too, until a person answers.
+  // A bot can't approve after the agent answers, so an answer clears it.
+  it('needs the agent after CodeRabbit requests changes, until a person answers', () => {
+    const snapshot = fixture('pr-67');
+    snapshot.reviews.push({
+      id: 2,
+      user: { login: 'coderabbitai[bot]', type: 'Bot' },
+      state: 'CHANGES_REQUESTED',
+      body: 'Actionable comments posted: 0',
+      commit_id: '318c1b7f27c418c6a53ecf1c3de26c32ea207cb0',
+      submitted_at: '2026-10-07T15:56:00Z',
+      html_url: 'https://github.com/afahy/fluent-measures/pull/67#pullrequestreview-2',
+    });
+    const status = classify(snapshot, at('2026-10-07T16:00:00Z'));
+    expect(status.state).toBe('needs-agent');
+    expect(status.reasons).toEqual([
+      'coderabbitai[bot] requested changes: https://github.com/afahy/fluent-measures/pull/67#pullrequestreview-2',
+    ]);
+    snapshot.issueComments.push({
+      id: 3,
+      user: { login: 'afahy', type: 'User' },
+      body: 'Agent: Not valid, because …',
+      created_at: '2026-10-07T15:58:00Z',
+      updated_at: '2026-10-07T15:58:00Z',
+      html_url: 'https://github.com/afahy/fluent-measures/pull/67#issuecomment-3',
+    });
+    expect(classify(snapshot, at('2026-10-07T16:00:00Z')).state).toBe('ready');
+  });
+
   it('needs the agent after a person requests changes, until that person approves', () => {
     const snapshot = fixture('pr-67');
     snapshot.statuses.push({

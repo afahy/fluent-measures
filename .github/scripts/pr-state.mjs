@@ -453,14 +453,14 @@ export function botFollowUps(comments) {
 }
 
 /**
- * Codex and CodeRabbit reviews since the push that put comments in the review body instead of
- * in a thread ("Outside diff range comments"), with no later comment or review from a person.
- * A comment that only asks a bot to review isn't an answer.
+ * Codex and CodeRabbit reviews since the push that `test` matches, with no later comment or
+ * review from a person. A comment that only asks a bot to review isn't an answer.
  *
  * @param {import('./pr-state.d.mts').Snapshot} snapshot
+ * @param {(review: import('./pr-state.d.mts').Review) => boolean} test
  * @returns {import('./pr-state.d.mts').Review[]}
  */
-export function unansweredReviewBodies(snapshot) {
+function unansweredBotReviews(snapshot, test) {
   const pushed = pushedAt(snapshot);
   const answers = [
     ...snapshot.issueComments
@@ -473,9 +473,34 @@ export function unansweredReviewBodies(snapshot) {
       byReviewBot(r) &&
       r.submitted_at &&
       byTime(r.submitted_at, pushed) >= 0 &&
-      /outside diff range comments \(\d+\)/i.test(r.body ?? '') &&
+      test(r) &&
       !answers.some(t => byTime(t, r.submitted_at ?? '') > 0)
   );
+}
+
+/**
+ * Codex and CodeRabbit reviews since the push that put comments in the review body instead of
+ * in a thread ("Outside diff range comments"), with no later comment or review from a person.
+ *
+ * @param {import('./pr-state.d.mts').Snapshot} snapshot
+ * @returns {import('./pr-state.d.mts').Review[]}
+ */
+export function unansweredReviewBodies(snapshot) {
+  return unansweredBotReviews(snapshot, r =>
+    /outside diff range comments \(\d+\)/i.test(r.body ?? '')
+  );
+}
+
+/**
+ * Codex and CodeRabbit reviews since the push that request changes, with no later comment or
+ * review from a person. A bot can't approve after the agent answers, so an answer from a person
+ * clears it, as for comments outside the diff (AFA-138).
+ *
+ * @param {import('./pr-state.d.mts').Snapshot} snapshot
+ * @returns {import('./pr-state.d.mts').Review[]}
+ */
+export function botChangeRequests(snapshot) {
+  return unansweredBotReviews(snapshot, r => r.state === 'CHANGES_REQUESTED');
 }
 
 /**
@@ -605,7 +630,7 @@ export function classify(snapshot, now = Date.now(), { requests = true } = {}) {
   for (const review of unansweredReviewBodies(snapshot)) {
     reasons.push(`${who(review)} put comments outside the diff in ${review.html_url}`);
   }
-  for (const review of changesRequested(snapshot.reviews)) {
+  for (const review of [...botChangeRequests(snapshot), ...changesRequested(snapshot.reviews)]) {
     reasons.push(`${who(review)} requested changes: ${review.html_url}`);
   }
   if (pull.mergeable_state === 'dirty') reasons.push('The PR has a merge conflict with its base');
