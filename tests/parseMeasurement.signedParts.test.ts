@@ -193,7 +193,7 @@ describe('signed parts', () => {
 
   // Each signed label value is read without its sign in place, not in a copy of the tokens. Here,
   // with 20,000 signed labels, a copy took 10.7 s, and the current code takes 70 ms, or 160 ms with
-  // coverage. CI's coverage run took about 5 times as long as one here, so the limit is 4 s
+  // coverage. In CI's coverage run it took up to 600 ms, so the 4 s limit leaves about 7 times that
   // (AFA-95). The test skips itself under Stryker.
   it.skipIf(underStryker)('reads many signed label values quickly', () => {
     const start = performance.now();
