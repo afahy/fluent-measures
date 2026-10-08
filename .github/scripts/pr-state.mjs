@@ -391,10 +391,10 @@ export function coderabbitState(snapshot) {
     status?.state === 'success' &&
     /disabled for this base branch/i.test(status.description ?? '')
   ) {
-    // A PR on another PR's branch. CodeRabbit reviews it only when asked.
+    // A PR on another PR's branch. CodeRabbit doesn't review it, and AGENTS.md says not to ask.
     return {
       state: 'skipped',
-      detail: "CodeRabbit doesn't review PRs on this base branch unless asked",
+      detail: "CodeRabbit doesn't review PRs on this base branch",
     };
   }
   if (status?.state === 'success') {
@@ -493,9 +493,11 @@ export function unansweredReviewBodies(snapshot) {
 
 /**
  * Codex and CodeRabbit reviews since the push that request changes, with no later comment or
- * review from a person. A bot can't approve after the agent answers, so an answer from a person
- * clears it, as for comments outside the diff (AFA-138). A reply in a thread that the review
- * started is an answer too. unansweredBotThreads lists each of its threads that has no reply.
+ * review from a person. An answer from a person clears it, as for comments outside the diff
+ * (AFA-138), because the bot may never review again. A reply in a thread that the review started
+ * is an answer too. GitHub also records such a reply as a review from that person, but AFA-144
+ * will count only answers tied to the review, so the thread check stays.
+ * unansweredBotThreads lists each of the review's threads that has no reply.
  *
  * @param {import('./pr-state.d.mts').Snapshot} snapshot
  * @returns {import('./pr-state.d.mts').Review[]}

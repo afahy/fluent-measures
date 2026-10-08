@@ -524,11 +524,11 @@ describe('coderabbitState edges', () => {
     ];
     expect(coderabbitState(snapshot)).toEqual({
       state: 'skipped',
-      detail: "CodeRabbit doesn't review PRs on this base branch unless asked",
+      detail: "CodeRabbit doesn't review PRs on this base branch",
     });
     // The note still says so, so the agent lists the gap.
     expect(classify(snapshot, at('2026-10-07T15:00:00Z')).notes).toEqual([
-      "CodeRabbit doesn't review PRs on this base branch unless asked",
+      "CodeRabbit doesn't review PRs on this base branch",
     ]);
     snapshot.issueComments.push(comment(90, human, '@coderabbitai review', '2026-10-07T15:01:00Z'));
     expect(coderabbitState(snapshot).state).toBe('requested');
