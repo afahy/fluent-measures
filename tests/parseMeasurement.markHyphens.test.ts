@@ -49,4 +49,11 @@ describe('a hyphen after a feet or inch mark', () => {
   ])('returns null for %s', raw => {
     expect(parseMeasurement(raw)).toBeNull();
   });
+
+  // The "11" comes after a hyphen, not at a token's start, so the second hyphen stays a minus
+  // sign, as in `5 ft-11 in-185 lbs` (null). On main this was 185 lb (decision rule 3, listed on
+  // #97 and AFA-112).
+  it('returns null for 5\'-11"-185 lbs with type weight', () => {
+    expect(parseMeasurement(`5'-11"-185 lbs`, { type: 'weight' })).toBeNull();
+  });
 });
