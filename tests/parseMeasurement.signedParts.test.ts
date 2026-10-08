@@ -266,3 +266,38 @@ describe('signed parts', () => {
     expect(parseMeasurement(raw)).toBeNull();
   });
 });
+
+// AFA-114: "a" and "an" start a phrase in words, as in "a hundred kg" (100 kg), so a sign on them
+// signs the phrase. A sign on the first word of a phrase also signs it before an ounce, gram or
+// stone unit.
+describe('a sign on the first word of a phrase', () => {
+  it.each([
+    // As "-one hundred kg" returns null.
+    '-a hundred kg',
+    '-an eighty kg',
+    // As "stone -12, 4 lb" returns null.
+    'stone -a hundred, 4 lb',
+    // As "age 28 kg: -5" returns null.
+    'age 28 kg: -a hundred',
+    // As "12 lb -25 oz" and "70 kg -500 g" return null (the AFA-114 comment).
+    '12 lb -twenty five oz',
+    '70 kg -5 hundred g',
+  ])('returns null for %s', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
+
+  it.each([
+    // The ticket's "must not change" results.
+    ['a hundred kg', 100, 'kg'],
+    // "-a" isn't before a number, so the unit before "five" takes it, as in "-x st 4 lb".
+    ['-a lbs five', 5, 'lb'],
+    // "a" doesn't start a number in digits, so its sign doesn't sign 12.
+    ['-a 12 lb', 12, 'lb'],
+    // A semicolon after "a" ends the phrase, so the sign doesn't reach "hundred".
+    ['-a; hundred kg', 100, 'kg'],
+    // "5 12" isn't one number, so the sign on 5 doesn't sign 12.
+    ['-5 12 kg', 12, 'kg'],
+  ] as const)('reads %s as %s %s', (raw, value, unit) => {
+    expect(parseMeasurement(raw)).toMatchObject({ value, unit });
+  });
+});
