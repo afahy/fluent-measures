@@ -48,65 +48,136 @@ const BLANK_LINES = /\n(?:[^\S\n]*\n){2,}/g;
 /** A collapsed section with no section inside it. */
 const INNERMOST_DETAILS = /<details\b[^>]*>(?:(?!<details\b)[\s\S])*?<\/details>/gi;
 
+/** The columns that a line's leading spaces and tabs take, with a tab stop every 4 columns. */
+function indentOf(line) {
+  let columns = 0;
+  for (const character of /^[ \t]*/.exec(line)?.[0] ?? '') {
+    columns += character === '\t' ? 4 - (columns % 4) : 1;
+  }
+  return columns;
+}
+
 /**
- * The code in Markdown text, as CommonMark reads it, so that the patterns don't read HTML in
- * code. Each range runs from `start` to `end`, with its backticks, and `inline` is true for a
- * code span.
+ * The code blocks in Markdown text, read line by line as CommonMark reads them. A line can start
+ * with `>` marks, which put it in a quote, and with a list marker, such as `-` or `1.`, which
+ * starts a list item. A line break can be `\n` or `\r\n`.
+ * - A fence is three or more backticks or tildes, indented at most three columns past the list
+ *   item's text. A backtick fence has no backtick after it. A line of at least as many of the
+ *   same marks and nothing else closes it. A fence that isn't closed ends with its quote or list
+ *   item. Otherwise it runs to the end of the text, but only when `unclosed` is true.
+ * - After a blank line, a line indented four columns past the list item's text starts an
+ *   indented block. The block ends before the next line that has text and a smaller indent.
  *
- * The first pass reads code blocks line by line, after any `>` that starts a quote:
- * - A fence is three or more backticks after at most three spaces, with no backtick after them.
- *   A line of at least as many backticks and nothing else closes it, and an unclosed fence runs
- *   to the end.
- * - A line indented four spaces or a tab after a blank line starts an indented block. The block
- *   ends before the next line that has text and a smaller indent.
- *
- * The second pass reads code spans outside those blocks. A span starts at a run of backticks
- * and ends at the next run of the same length. An odd number of backslashes before a backtick
- * makes it plain text. A span ends at a blank line, so a stray backtick can't hide a collapsed
- * section.
+ * A bot that doesn't close a fence more likely broke its Markdown than put a whole section in
+ * code. So `unclosed` is false where the code finds sections and prompts, and those stay found
+ * after such a fence. It's true where tags are removed, so the tags in the fence stay.
  *
  * @param {string} text
+ * @param {boolean} [unclosed]
  * @returns {{ start: number, end: number, inline: boolean }[]}
  */
-function codeRanges(text) {
+function codeBlocks(text, unclosed = true) {
   /** @type {{ start: number, end: number, inline: boolean }[]} */
   const ranges = [];
-  /** @type {{ start: number, length: number } | null} */
+  /** @type {{ start: number, mark: string, length: number, indent: number, depth: number, list: number } | null} */
   let fence = null;
   let block = -1;
   let blockEnd = 0;
+  // The column where the text of the current list item starts, or 0 outside a list.
+  let list = 0;
+  let depth = 0;
   let blank = true;
   let start = 0;
-  for (const line of text.split('\n')) {
-    const end = start + line.length;
-    const rest = line.replace(/^(?: {0,3}> ?)*/, '');
+  for (const raw of text.split('\n')) {
+    const end = start + raw.length;
+    const line = raw.endsWith('\r') ? raw.slice(0, -1) : raw;
+    const quote = /^(?: {0,3}> ?)*/.exec(line)?.[0] ?? '';
+    const lineDepth = quote.split('>').length - 1;
+    const rest = line.slice(quote.length);
     const empty = rest.trim() === '';
+    const indent = indentOf(rest);
+    const content = rest.trimStart();
     if (fence) {
-      const close = /^ {0,3}(`+) *$/.exec(rest);
-      if (close && close[1].length >= fence.length) {
+      const close = /^(`+|~+) *$/.exec(content);
+      if (
+        close &&
+        close[1][0] === fence.mark &&
+        close[1].length >= fence.length &&
+        indent <= fence.indent + 3
+      ) {
         ranges.push({ start: fence.start, end, inline: false });
         fence = null;
+        blank = false;
+        depth = lineDepth;
+        start = end + 1;
+        continue;
       }
-    } else {
-      const indented = !empty && /^(?: {4}|\t)/.test(rest);
-      if (block !== -1 && !empty && !indented) {
-        ranges.push({ start: block, end: blockEnd, inline: false });
-        block = -1;
+      if (lineDepth >= fence.depth && (empty || indent >= fence.list)) {
+        start = end + 1;
+        continue;
       }
-      const open = /^ {0,3}(`{3,})[^`]*$/.exec(rest);
-      if (indented && (block !== -1 || blank)) {
-        if (block === -1) block = start;
-        blockEnd = end;
-      } else if (open && !indented) {
-        fence = { start, length: open[1].length };
-      }
+      // The quote or list item ended, and the fence with it.
+      ranges.push({ start: fence.start, end: start - 1, inline: false });
+      fence = null;
     }
-    blank = empty;
+    if (lineDepth !== depth) {
+      // A quote started or ended, so a new container starts here.
+      list = 0;
+      blank = true;
+    }
+    depth = lineDepth;
+    if (block !== -1 && !empty && indent - list < 4) {
+      ranges.push({ start: block, end: blockEnd, inline: false });
+      block = -1;
+    }
+    if (empty) {
+      blank = true;
+      start = end + 1;
+      continue;
+    }
+    const opens = (/** @type {string} */ words) => {
+      const open = /^(`{3,}|~{3,})(.*)$/.exec(words);
+      return open && !(open[1][0] === '`' && open[2].includes('`')) ? open[1] : null;
+    };
+    const marker = /^(?:[-+*]|\d{1,9}[.)])(?: {1,4}|$)/;
+    // A line with a smaller indent ends the list item, unless it goes on with its paragraph.
+    if (indent < list && (blank || opens(content) || marker.test(content))) list = 0;
+    if (indent >= list && indent - list >= 4 && (blank || block !== -1)) {
+      if (block === -1) block = start;
+      blockEnd = end;
+    } else if (indent < list || indent - list <= 3) {
+      let words = content;
+      let column = indent;
+      const item = marker.exec(content);
+      if (item) {
+        list = indent + item[0].length;
+        words = content.slice(item[0].length);
+        column = list;
+      }
+      const run = opens(words);
+      if (run) fence = { start, mark: run[0], length: run.length, indent: column, depth, list };
+    }
+    blank = false;
     start = end + 1;
   }
-  if (fence) ranges.push({ start: fence.start, end: text.length, inline: false });
+  if (fence && unclosed) ranges.push({ start: fence.start, end: text.length, inline: false });
   if (block !== -1) ranges.push({ start: block, end: blockEnd, inline: false });
+  return ranges;
+}
 
+/**
+ * The code in Markdown text: the code blocks that `codeBlocks` finds, and the code spans outside
+ * them. Each range runs from `start` to `end`, with its marks, and `inline` is true for a code
+ * span. A span starts at a run of backticks and ends at the next run of the same length. An odd
+ * number of backslashes before a backtick makes it plain text. A span ends at a blank line, so a
+ * stray backtick can't hide a collapsed section.
+ *
+ * @param {string} text
+ * @param {boolean} [unclosed] As for `codeBlocks`.
+ * @returns {{ start: number, end: number, inline: boolean }[]}
+ */
+function codeRanges(text, unclosed = true) {
+  const ranges = codeBlocks(text, unclosed);
   const blocks = mask(text, ranges);
   let at = blocks.indexOf('`');
   while (at !== -1) {
@@ -155,10 +226,11 @@ function mask(text, ranges) {
  * The text with its code blanked out, as `mask` does.
  *
  * @param {string} text
+ * @param {boolean} [unclosed] As for `codeBlocks`.
  * @returns {string}
  */
-function maskCode(text) {
-  return mask(text, codeRanges(text));
+function maskCode(text, unclosed = true) {
+  return mask(text, codeRanges(text, unclosed));
 }
 
 /**
@@ -167,15 +239,16 @@ function maskCode(text) {
  *
  * @param {string} text
  * @param {RegExp[]} patterns Global patterns, removed in this order on each pass.
+ * @param {boolean} [unclosed] As for `codeBlocks`.
  * @returns {string}
  */
-function removeAll(text, patterns) {
+function removeAll(text, patterns, unclosed = true) {
   let previous;
   do {
     previous = text;
     for (const pattern of patterns) {
       // Matches don't overlap, so removing the last one first keeps each index right.
-      for (const match of [...maskCode(text).matchAll(pattern)].reverse()) {
+      for (const match of [...maskCode(text, unclosed).matchAll(pattern)].reverse()) {
         const start = match.index ?? 0;
         text = text.slice(0, start) + text.slice(start + match[0].length);
       }
@@ -247,7 +320,7 @@ export function lateFinding(name, event) {
     // instructions. In a Markdown quote, a `>` starts each line between the tags.
     const prompts =
       /<details\b[^>]*>[\s>]*<summary>[^<]*prompt[^<]*<\/summary>(?:(?!<details\b)[\s\S])*?<\/details>/gi;
-    text = plainText(removeAll(sections.text, [prompts]));
+    text = plainText(removeAll(sections.text, [prompts], false));
   } else {
     if (ROUTINE.test(body)) return null;
     if (author === 'chatgpt-codex-connector[bot]' && CODEX_TASK.test(body)) return null;
@@ -267,28 +340,43 @@ export function lateFinding(name, event) {
 }
 
 /**
- * The sections of findings in a review body, outside code and HTML comments. A title inside a
- * section that is already quoted adds nothing. A title in a `<summary>` is collapsed, and its
- * section runs to the `</details>` that closes it. Any other title's section runs to the next
- * title or collapsed section, or to a `</details>` that closes one around it. A section with no
- * such end runs to the end of the body.
+ * The sections of findings in a review body, outside code and HTML comments. A title in a
+ * `<summary>` is collapsed, and its section runs to the `</details>` that closes it. Any other
+ * title must start its line, after marks such as `**` and an emoji. Its section runs to the next
+ * title or collapsed section, or to a `</details>` that closes one around it. A title inside a
+ * section that is already quoted adds nothing, and a section with no end runs to the end of the
+ * body.
  *
  * @param {string} body
  * @returns {{ titles: RegExpMatchArray[], text: string }}
  */
 function findingSections(body) {
-  const masked = maskCode(body).replace(HTML_COMMENT, comment => comment.replace(/[^\n]/g, ' '));
-  const all = [...masked.matchAll(BODY_FINDINGS)];
+  const code = maskCode(body, false);
+  const comments = [...code.matchAll(HTML_COMMENT)].map(({ index = 0, 0: comment }) => ({
+    start: index,
+    end: index + comment.length,
+  }));
+  const masked = mask(code, comments);
+  /** Whether the text at `index` is inside a `<summary>` element. */
+  const inSummary = (/** @type {number} */ index) => {
+    let open = false;
+    for (const tag of masked.slice(0, index).matchAll(/<(\/?)summary\b[^>]*>/gi)) open = !tag[1];
+    return open;
+  };
+  const all = [...masked.matchAll(BODY_FINDINGS)]
+    .map(title => ({ title, collapsed: inSummary(title.index ?? 0) }))
+    .filter(
+      ({ title: { index = 0 }, collapsed }) =>
+        collapsed ||
+        /^[^\p{L}\p{N}]*$/u.test(masked.slice(masked.lastIndexOf('\n', index) + 1, index))
+    );
   const titles = [];
   const parts = [];
   let end = 0;
-  for (const [n, title] of all.entries()) {
+  for (const [n, { title, collapsed }] of all.entries()) {
     const index = title.index ?? 0;
     if (index < end) continue;
-    const collapsed = /^<summary\b[^>]*>[^<]*$/i.test(
-      masked.slice(masked.lastIndexOf('<', index), index)
-    );
-    end = collapsed ? body.length : (all[n + 1]?.index ?? body.length);
+    end = collapsed ? body.length : (all[n + 1]?.title.index ?? body.length);
     let depth = collapsed ? 1 : 0;
     for (const tag of masked.slice(index, end).matchAll(/<(\/?)details\b[^>]*>/gi)) {
       depth += tag[1] ? -1 : 1;
@@ -324,7 +412,7 @@ export function plainText(html) {
  */
 export function excerpt(body) {
   // Innermost sections go first, so a nested section goes with the one around it.
-  const text = removeAll(body, [HTML_COMMENT, INNERMOST_DETAILS])
+  const text = removeAll(body, [HTML_COMMENT, INNERMOST_DETAILS], false)
     .replace(BLANK_LINES, '\n\n')
     .trim();
   // Count characters, not UTF-16 units, so the cut doesn't split an emoji.
