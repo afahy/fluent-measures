@@ -78,7 +78,8 @@ pnpm dlx tailwindcss@3.4.17 -c docs/tailwind.config.cjs -o docs/tailwind.css
 pnpm exec prettier --write docs/tailwind.css
 ```
 
-`tests/docsPage.test.ts` fails if a class on the page has no rule in the file.
+`tests/docsPage.test.ts` fails if a class in a `class` attribute or a `classList` call on the page
+has no rule in the file.
 
 ## Development Setup
 

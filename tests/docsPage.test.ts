@@ -149,10 +149,11 @@ describe('the docs page', () => {
     const missing = [...new Set(used)].filter(name => {
       if (other.has(name) || name.startsWith('language-')) return false;
       // Tailwind escapes a "," in a class name as "\2c " and each other symbol with a "\". The
-      // name must end there, so "border-gray" doesn't match ".border-gray-200".
+      // name must end there, so "border-gray" doesn't match ".border-gray-200", and "left-1"
+      // doesn't match ".left-1\/2".
       const selector = `.${name.replace(/[^\w-]/g, symbol => (symbol === ',' ? '\\2c ' : `\\${symbol}`))}`;
       let at = css.indexOf(selector);
-      while (at !== -1 && /[\w-]/.test(css[at + selector.length] ?? '')) {
+      while (at !== -1 && /[\w\\-]/.test(css[at + selector.length] ?? '')) {
         at = css.indexOf(selector, at + 1);
       }
       return at === -1;
