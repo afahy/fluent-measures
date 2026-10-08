@@ -397,6 +397,7 @@ describe('lateFinding', () => {
   });
 
   it('reports a bot comment that only mentions the words of a routine note', () => {
+    expect.assertions(5);
     for (const body of [
       'The usage limit parser drops valid values.',
       "This check didn't find any major issues in tests, but `1 ft` is still lost.",
@@ -442,6 +443,7 @@ describe('lateFinding', () => {
   });
 
   it("skips a bot's reply in a thread, and reviews whose findings are all in threads", () => {
+    expect.assertions(3);
     expect(
       lateFinding('pull_request_review_comment', {
         pull_request: merged43,

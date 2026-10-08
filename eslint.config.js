@@ -58,11 +58,46 @@ export default [
     rules: {
       ...vitest.configs.recommended.rules,
       // The preset sets these too. They're repeated so rule 11's checks stay errors if the preset
-      // changes.
-      'vitest/expect-expect': 'error',
+      // changes. Only expect counts as an assertion, not assert (AFA-70).
+      'vitest/expect-expect': ['error', { assertFunctionNames: ['expect'] }],
       'vitest/no-conditional-expect': 'error',
       // An early return or other branch can skip a test's only expect.
       'vitest/no-conditional-in-test': 'error',
+      // An expect inside a loop or a callback can run fewer times than the test needs, or not at
+      // all, so such a test must say how many assertions it expects (AFA-70). The rule misses some
+      // loops, so vitest.config.ts also fails a test that runs no expect.
+      'vitest/prefer-expect-assertions': [
+        'error',
+        { onlyFunctionsWithExpectInLoop: true, onlyFunctionsWithExpectInCallback: true },
+      ],
+      // The preset only warns, and lint passes with warnings. AGENTS.md rule 3 forbids skipping a
+      // test to make CI pass (AFA-70).
+      'vitest/no-disabled-tests': 'error',
+      // Other ways to skip a test or to mark it as expected to fail, which rule 3 forbids too, and
+      // a count of 0 assertions (AFA-70). A skipIf with a real condition, such as the one for
+      // Stryker in AFA-95, stays allowed. no-disabled-tests finds .skip on an alias or a chain such
+      // as test.concurrent.skip, but not .fails or .todo. So a call to a .fails or .todo, or to its
+      // .each or .for, matches by name, and a field such as result.todo doesn't.
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            "CallExpression[callee.property.name=/^(skipIf|runIf)$/][arguments.0.type='Literal']",
+          message: 'A literal condition always skips the test or always runs it. Use a real one.',
+        },
+        {
+          selector: [
+            'CallExpression > MemberExpression.callee[property.name=/^(fails|todo)$/]',
+            'MemberExpression[property.name=/^(each|for)$/] > MemberExpression.object[property.name=/^(fails|todo)$/]',
+          ].join(', '),
+          message: "Don't mark a test as expected to fail or as a todo (AGENTS.md rule 3).",
+        },
+        {
+          selector:
+            "CallExpression[callee.object.name='expect'][callee.property.name='assertions'][arguments.0.value=0]",
+          message: 'A test must reach an expect (AGENTS.md rule 11).',
+        },
+      ],
       // Vitest's expect takes an optional message as its second argument.
       'vitest/valid-expect': ['error', { maxArgs: 2 }],
     },

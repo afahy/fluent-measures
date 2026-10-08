@@ -80,6 +80,7 @@ describe('matchUnit', () => {
     });
 
     it('matches exact aliases even when fuzziness is disabled or invalid', () => {
+      expect.assertions(6);
       for (const fuzziness of [-1, 0, NaN]) {
         expect(matchUnit('feet', 'height', fuzziness)).toBe('ft');
         expect(matchUnit('fett', 'height', fuzziness)).toBeNull();

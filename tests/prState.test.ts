@@ -196,6 +196,7 @@ describe('classify', () => {
   });
 
   it("doesn't wait for or ask a rate-limited CodeRabbit (#66 at 16:02, #67 at 15:48)", () => {
+    expect.assertions(13);
     const pr66Status = classify(fixture('pr-66'), at('2026-10-07T16:02:00Z'));
     expect(pr66Status.actions).toEqual(['Post `@codex review`']);
 

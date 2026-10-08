@@ -17,6 +17,7 @@ describe('commas separating labels from measurements', () => {
     'مرحلة٢',
     'version2.5',
   ])('keeps the separator after %s', label => {
+    expect.assertions(3);
     for (const value of [5, 72, 180]) {
       const raw = `${label},${value} kg`;
       expect(parseMeasurement(raw)).toEqual({

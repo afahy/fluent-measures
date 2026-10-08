@@ -142,6 +142,7 @@ describe('prsForEvent', () => {
   };
 
   it('reads the PR from PR events and from comments on PRs only', async () => {
+    expect.assertions(6);
     for (const name of ['pull_request', 'pull_request_review', 'pull_request_review_comment']) {
       await expect(prsForEvent(api, repo, name, { pull_request: { number: 3 } })).resolves.toEqual([
         3,

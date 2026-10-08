@@ -44,6 +44,8 @@ describe('Claude review workflow', () => {
   });
 
   it('pins each action to a commit', () => {
+    // One check of the list, and one for each of the workflow's two actions.
+    expect.assertions(3);
     const actions = [...workflow.matchAll(/^ +- uses: (\S+)/gm)].map(([, action]) => action);
     expect(actions).toContain(
       'anthropics/claude-code-action@6fed3ca145920b639991cb756090506e1bcaf515'
