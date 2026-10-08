@@ -99,20 +99,24 @@ export function isSourceFile(file) {
 }
 
 /**
- * Returns the files that the `mutate` patterns in the Stryker config cover. As in Stryker, a
- * pattern that starts with "!" leaves files out. The project's pattern leaves out test files under
- * `src/`: Vitest finds tests only under `tests/`, so their mutants would get no coverage.
+ * Returns the files that the `mutate` patterns in the Stryker config cover. As in Stryker, the
+ * patterns apply in order: a pattern that starts with "!" leaves files out, and a later pattern
+ * can put them back. A line range after a pattern, as in `src/a.ts:1-10`, doesn't change which
+ * files match. The project's pattern leaves out test files under `src/`: Vitest finds tests only
+ * under `tests/`, so their mutants would get no coverage.
  *
  * @param {string[]} files
  * @param {string[]} patterns
  * @returns {string[]}
  */
 export function mutatedFiles(files, patterns) {
-  const matches = (/** @type {string} */ file, /** @type {boolean} */ negated) =>
-    patterns.some(
-      pattern => pattern.startsWith('!') === negated && matchesGlob(file, pattern.replace(/^!/, ''))
-    );
-  return files.filter(file => matches(file, false) && !matches(file, true));
+  return files.filter(file =>
+    patterns.reduce((mutated, pattern) => {
+      const negated = pattern.startsWith('!');
+      const glob = pattern.replace(/^!/, '').replace(/:\d+(?::\d+)?-\d+(?::\d+)?$/, '');
+      return matchesGlob(file, glob) ? !negated : mutated;
+    }, false)
+  );
 }
 
 /**
@@ -264,8 +268,10 @@ const DIRECTIVE = /^\s?Stryker disable(?: next-line)? [a-zA-Z, ]+(?::(.+))?/;
 
 /**
  * Returns the text of each comment that a line can hold: each block comment, and the rest of the
- * line after each `//` outside them. A `//` inside a string, as in a URL, gives text that isn't a
- * comment, but that text doesn't start with a directive.
+ * line after each `//` outside them. A block comment that doesn't end on the line runs to its end,
+ * because Stryker reads a directive only at the start of a comment, and `.+` in its pattern stops
+ * at a line break. A `//` inside a string, as in a URL, gives text that isn't a comment, but that
+ * text doesn't start with a directive.
  *
  * @param {string} line
  * @returns {string[]}
@@ -273,7 +279,7 @@ const DIRECTIVE = /^\s?Stryker disable(?: next-line)? [a-zA-Z, ]+(?::(.+))?/;
 function commentTexts(line) {
   /** @type {string[]} */
   const texts = [];
-  const rest = line.replace(/\/\*(.*?)\*\//g, (_, text) => {
+  const rest = line.replace(/\/\*(.*?)(?:\*\/|$)/g, (_, text) => {
     texts.push(text);
     return ' ';
   });

@@ -106,6 +106,22 @@ describe('mutatedFiles', () => {
     ]);
   });
 
+  // Codex, round 1 of #81: Stryker applies the patterns in order, and ignores a line range.
+  it.each([
+    [['src/**/*.ts', '!src/a.ts'], ['src/b.ts']],
+    [
+      ['!src/a.ts', 'src/**/*.ts'],
+      ['src/a.ts', 'src/b.ts'],
+    ],
+    [['src/a.ts:1-10'], ['src/a.ts']],
+    [
+      ['src/a.ts:1:2-10:4', 'src/b.ts'],
+      ['src/a.ts', 'src/b.ts'],
+    ],
+  ])('applies %j in order', (patterns, expected) => {
+    expect(mutatedFiles(['src/a.ts', 'src/b.ts'], patterns)).toEqual(expected);
+  });
+
   it('leaves out the files that a pattern with "!" matches, as Stryker does', () => {
     expect(
       mutatedFiles(['src/a.ts', 'src/b.ts', 'lib/c.ts'], ['src/**/*.ts', '!src/b.ts'])
@@ -333,5 +349,16 @@ describe('reasonlessDirectives', () => {
     ['// Stryker restore all', []],
   ])('checks %s', (line, expected) => {
     expect(reasonlessDirectives(`${line}\nconst b = a ?? 2;`, [[1, 1]])).toEqual(expected);
+  });
+
+  // Codex, round 1 of #81: a block comment can end on a later line. Stryker reads its directive
+  // up to the line break, as on main, where any line with "Stryker disable" and no reason failed.
+  it.each([
+    ['/* Stryker disable next-line all\n*/', [1]],
+    ['/* Stryker disable next-line all:\n   a reason on the next line */', [1]],
+    ['/* Stryker disable next-line all: a reason\n*/', []],
+    ['/*\n Stryker disable next-line all */', []],
+  ])('checks the block comment over two lines %j', (comment, expected) => {
+    expect(reasonlessDirectives(`${comment}\nconst b = a ?? 2;`, [[1, 2]])).toEqual(expected);
   });
 });
