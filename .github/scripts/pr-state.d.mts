@@ -91,10 +91,6 @@ export interface Snapshot {
   reviews: Review[];
   reviewComments: ReviewComment[];
   reactions: Reaction[];
-  /** The paths that the PR changes. */
-  files: string[];
-  /** The base branch's CODEOWNERS file, or null if it has none. */
-  codeowners: string | null;
 }
 
 export interface CiSummary {
@@ -167,8 +163,6 @@ export function classify(
   now?: number,
   options?: { requests?: boolean }
 ): PrStatus;
-export function codeownersPattern(pattern: string): RegExp;
-export function ownedFiles(codeowners: string, files: string[]): string[];
 export function mostUrgent(states: PrState[]): PrState;
 export function digest(status: PrStatus): string;
 

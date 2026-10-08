@@ -105,5 +105,15 @@
       "login": "coderabbitai[bot]",
       "type": "Bot"
     }
+  },
+  "codexTaskReply": {
+    "body": "### Summary\n\n* Clarified that reaching the timed check-in limit is the explicit exception to the requirement that a PR watcher remain armed before ending a turn. This resolves the contradictory instructions without changing the configured waiting behavior. [.claude/skills/steward/SKILL.mdL43-L47](https://github.com/afahy/fluent-measures/blob/a279e35f693260c5fa270b4f870fcc0a0e041752/.claude/skills/steward/SKILL.md#L43-L47)\n* Committed the change on `codex/clarify-steward-check-in-limit` as `1267597` (`docs: clarify steward check-in limit`).\n* Prepared a follow-up PR titled **`docs: clarify the steward's timed check-in exception`**, using the repository PR template and referencing `Part of AFA-99`.\n\n**Testing**\n\n* ✅ `pnpm install`\n* ✅ `pnpm lint` — passed with the pre-existing `explicit-function-return-type` warning in `src/parseMeasurement.ts`.\n* ✅ `pnpm test` — 52 test files and 1,532 tests passed.\n* ✅ `pnpm test:mutation` — passed with a 96.97% mutation score, above the 70% threshold.\n* ✅ `pnpm build`\n* ✅ `pnpm check:size`\n* ✅ `git diff --check`\n* ✅ `git status --short --branch` — working tree clean after the commit.\n\n [View task →](https://chatgpt.com/s/cd_6ac676aaf87c81919d8d30a88ac9dab1)",
+    "created_at": "2026-10-07T17:10:12Z",
+    "html_url": "https://github.com/afahy/fluent-measures/pull/71#issuecomment-6042873692",
+    "id": 6042873692,
+    "user": {
+      "login": "chatgpt-codex-connector[bot]",
+      "type": "Bot"
+    }
   }
 }
