@@ -40,18 +40,28 @@ const HASHES: Record<string, string> = {
 };
 
 /**
- * The class names in a style sheet's selectors, unescaped. Tailwind escapes a symbol in a class
- * name with "\", as in ".sm\:flex", and a "," or a first digit as its hex code point and a space,
- * as in ".\32 xl\:text-lg" (AFA-121).
+ * The class names in a style sheet's selectors, unescaped (AFA-121). Tailwind writes a "\" before
+ * a symbol in a class name, as in ".sm\:flex". It writes a "," or a first digit as a hex code
+ * point that a space can end, as in ".\32 xl\:text-lg". Comments and at-rules hold no classes.
  */
 function cssClasses(css: string): Set<string> {
-  const selectors = [...css.matchAll(/([^{}]*)\{/g)].map(([, text]) => text);
+  const selectors = [...css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/(?<=^|[{}])([^{}]*)\{/g)]
+    .map(([, text]) => text.trim())
+    .filter(text => !text.startsWith('@'));
+  const escape = String.raw`\\[\da-f]{1,6}(?:\r\n|[ \t\n\r\f])?|\\[^\da-f\n\r\f]`;
+  const name = new RegExp(String.raw`\.((?:${escape}|[\w-]|[^\x00-\x7f])+)`, 'gi');
+  const unescape = (_: string, hex?: string, symbol?: string): string => {
+    if (!hex) return symbol ?? '';
+    // CSS reads code point 0, a surrogate or one past U+10FFFF as U+FFFD.
+    const code = parseInt(hex, 16);
+    return code === 0 || code > 0x10ffff || (code >= 0xd800 && code <= 0xdfff)
+      ? '�'
+      : String.fromCodePoint(code);
+  };
   return new Set(
     selectors.flatMap(text =>
-      [...text.matchAll(/\.((?:\\[\da-f]{1,6} ?|\\[^\da-f]|[\w-])+)/gi)].map(([, name]) =>
-        name.replace(/\\([\da-f]{1,6}) ?|\\(.)/gi, (_, hex?: string, symbol?: string) =>
-          hex ? String.fromCodePoint(parseInt(hex, 16)) : (symbol ?? '')
-        )
+      [...text.matchAll(name)].map(([, escaped]) =>
+        escaped.replace(/\\([\da-f]{1,6})(?:\r\n|[ \t\n\r\f])?|\\([\s\S])/gi, unescape)
       )
     )
   );
@@ -180,6 +190,13 @@ describe('the docs page', () => {
     ['.grid-cols-\\[1fr\\2c 2fr\\] { }', ['grid-cols-[1fr,2fr]']],
     ['@media (min-width: 640px) { .sm\\:flex { display: flex; } }', ['sm:flex']],
     ['.a, .b:hover > .c { margin: 0.5rem; }', ['a', 'b', 'c']],
+    // A comment or a media query isn't a selector, though "tailwindcss.com" and "40.5em" hold a dot.
+    ['/* tailwindcss v3.4.17 | https://tailwindcss.com */ .a { }', ['a']],
+    ['@media (min-width: 40.5em) { .b { } }', ['b']],
+    // CSS doesn't escape a character above U+007F, and a tab can end a code point.
+    [".content-\\[\\'→\\'\\] { }", ["content-['→']"]],
+    ['.\\32\txl { }', ['2xl']],
+    ['.\\110000 a { }', ['\uFFFDa']],
   ])('reads the classes in %s', (css, names) => {
     expect([...cssClasses(css)]).toEqual(names);
   });
