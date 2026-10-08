@@ -8,7 +8,8 @@ describe('"N in" in ordinary text next to another measurement', () => {
     // Separate Measurements: feet then inches, which are the next smaller unit, form one height.
     // 6 × 12 + 3 = 75.
     ['6 ft and ranked 3 in the state', 75, 6, 3],
-    // A comma doesn't separate parts (Weight): 6 × 12 + 10 = 82.
+    // The same join with a comma between the parts. The README's Weight section says that
+    // commas don't separate parts. 6 × 12 + 10 = 82.
     ['6 ft, top 10 in the class', 82, 6, 10],
   ] as const)('joins the feet and the inches in %s: %s in', (raw, value, feet, inches) => {
     expect(parseMeasurement(raw)).toMatchObject({
@@ -31,11 +32,13 @@ describe('"N in" in ordinary text next to another measurement', () => {
     expect(parseMeasurement('180 lbs, top 10 in the class', options)).toMatchObject({
       value,
       unit,
+      matches: [{ value, unit }],
     });
   });
 
-  // Weight: a capital G right after a number is a network generation, so "5G" isn't a number
-  // and "in" after it isn't inches. Only 6 ft is read, unlike "ranked 3 in the state and 6 ft".
+  // Weight: a capital G right after a number makes a network generation, as in "5G", so "in"
+  // comes after a word, not a number, and isn't inches. Only 6 ft is read, unlike
+  // "ranked 3 in the state and 6 ft".
   it('reads 5G in the house, 6 ft as 6 ft', () => {
     expect(parseMeasurement('5G in the house, 6 ft')).toMatchObject({
       value: 6,
@@ -48,8 +51,7 @@ describe('"N in" in ordinary text next to another measurement', () => {
     // Separate Measurements: inches before feet aren't parts of one height, so 3 in and 6 ft
     // (72 in) are two measurements that disagree.
     'ranked 3 in the state and 6 ft',
-    // "in.the" is one word, not "in" after a number, so 10 has no unit. The label "in." needs a
-    // space or the end of the text after it, as in `Top 10 in. the class` (10 in).
+    // "in.the" is one word, not "in" after a number, so 10 has no unit.
     'Top 10 in.the class',
   ])('returns null for %s', raw => {
     expect(parseMeasurement(raw)).toBeNull();
