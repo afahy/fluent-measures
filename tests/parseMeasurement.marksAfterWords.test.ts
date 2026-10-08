@@ -43,6 +43,8 @@ describe('a mark right after a word', () => {
     [`one's 180 lbs`, 180, 'lb'],
     // "and a half" with no number before it isn't a number, so the mark stays with 5.
     [`size and a half' 5"`, 5, 'in'],
+    // An apostrophe inside a quotation doesn't end it, so the closing quote isn't a mark.
+    [`"it's five" 5 ft`, 5, 'ft'],
   ] as const)('keeps reading %s as %s %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });
@@ -61,6 +63,9 @@ describe('a mark right after a word', () => {
     `'twenty five' 7`,
     `model "one hundred" 180`,
     `he said "about ten" 5`,
+    `"it's five"`,
+    // The hyphen after a closing quote stays a minus sign, so -5 kg isn't a measurement.
+    `"ten"-5 kg`,
     // A Unicode minus sign before a number word is a minus sign, as before digits ("−5'" is null).
     `−five'`,
     `﹣five"`,

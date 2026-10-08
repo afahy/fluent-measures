@@ -91,18 +91,19 @@ const MINUS_SIGN = new RegExp(
 // opening quote. A word hyphen is a third, so "six-foot-two" becomes "six foot two". A number word
 // is a number too, as in "five' ten\"" (AFA-93), but not inside a word, as in "tone'". "half"
 // counts only after a number and "and a", as in "10 and a half\"" and "six-and-a-half'". No letter
-// may follow the mark, as in "one's". A quote that starts a quotation, after a space or at the
-// start, makes each mark up to the next quote its closing quote, as in "\"twenty five\" 5". The
-// lookahead comes first, so each lookbehind runs only before a quote mark.
+// may follow the mark, as in "one's". A mark that closes a quotation isn't split, as in
+// "\"twenty five\" 5" and "\"it's five\"": OPEN starts a quotation, and no quote of the same kind
+// comes between. The lookahead comes first, so each lookbehind runs only before a quote mark.
+const OPEN = String.raw`(?:^|[^\w'"])`;
 const SPLIT = new RegExp(
-  String.raw`(?<=\d)(?=[a-z'"])|(?=['"](?![a-z]))(?<!(?:^|[^\w'"])['"][^'"]*)(?<=\b(?:${NUMBER_WORD})|(?:\d|\b(?:${NUMBER_WORD}))[\s-]+and[\s-]+a[\s-]+half)|(?<=['"])(?=-?\.?\d)|(?<!-)\b-(?=\b|\.\d)`,
+  String.raw`(?<=\d)(?=[a-z'"])|(?=['"](?![a-z]))(?:(?=")(?<!${OPEN}"[^"]*)|(?=')(?<!${OPEN}'[^']*))(?<=\b(?:${NUMBER_WORD})|(?:\d|\b(?:${NUMBER_WORD}))[\s-]+and[\s-]+a[\s-]+half)|(?<=['"])(?=-?\.?\d)|(?<!-)\b-(?=\b|\.\d)`,
   'g'
 );
 
 // Punctuation, a hyphen after a feet or inch mark after a number, and an underscore before a minus
-// sign.
+// sign. After a number word, the mark mustn't close a quotation, as in "\"ten\"-5 kg".
 const PUNCTUATION = new RegExp(
-  String.raw`(?<=(?:\d|\b(?:${NUMBER_WORD}))\s*['"])-(?=\.?\d)|_(?=-)|[^\w\s'".;-]`,
+  String.raw`(?<=\d\s*['"])-(?=\.?\d)|(?<=\b(?:${NUMBER_WORD})\s*['"])(?<!${OPEN}(?:"[^"]*"|'[^']*')\s*)-(?=\.?\d)|_(?=-)|[^\w\s'".;-]`,
   'g'
 );
 
