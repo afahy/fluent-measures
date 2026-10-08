@@ -101,9 +101,12 @@ const SPLIT = new RegExp(
 );
 
 // Punctuation, a hyphen after a feet or inch mark after a number, and an underscore before a minus
-// sign. After a number word, the mark mustn't close a quotation, as in "\"ten\"-5 kg".
+// sign. After a mark, a hyphen joins two values as it does after a unit word (AFA-112). The digits
+// before the mark must start a token, with no letter, digit, period or hyphen before them, so
+// "x11\"-5 in" and the second hyphen of "5\"-5\"-5\"" stay minus signs. A number word may follow, as in "5'-eleven". After a
+// number word, the mark mustn't close a quotation, as in "\"ten\"-5 kg".
 const PUNCTUATION = new RegExp(
-  String.raw`(?<=\d\s*['"])-(?=\.?\d)|(?<=\b(?:${NUMBER_WORD})\s*['"])(?<!${OPEN}(?:"[^"]*"|'[^']*')\s*)-(?=\.?\d)|_(?=-)|[^\w\s'".;-]`,
+  String.raw`(?<=(?:^|[^\w.-])[\d.]*\d[\s;]*['"])-(?=\.?\d|[a-z])|(?<=\b(?:${NUMBER_WORD})\s*['"])(?<!${OPEN}(?:"[^"]*"|'[^']*')\s*)-(?=\.?\d)|_(?=-)|[^\w\s'".;-]`,
   'g'
 );
 

@@ -1,0 +1,34 @@
+import { describe, expect, it } from 'vitest';
+import { parseMeasurement } from '../src';
+
+// AFA-112: a hyphen after a feet or inch mark joins two values as it does after a unit word. The
+// digits before the mark must start a token, and a number word may come after the hyphen. Each
+// expected result is the ticket's, from the same input with a unit word in place of the mark.
+describe('a hyphen after a feet or inch mark', () => {
+  it.each([
+    // 5 × 12 + 11 = 71, as `5 ft-eleven`.
+    [`5'-eleven`, {}, 71, 'in'],
+    // The weight after the height, as `6 ft 1 in-seventy kg`.
+    [`6'1"-seventy kg`, { type: 'weight' }, 70, 'kg'],
+    // A semicolon before the mark, as `5;in-5 in` and `5;" 5 in`.
+    ['5;"-5 in', {}, 5, 'in'],
+    // "Must not change" in AFA-112.
+    [`5'-11"`, {}, 71, 'in'],
+    ['5"-5 in', {}, 5, 'in'],
+    [`6'1"-185 lbs`, { type: 'weight' }, 185, 'lb'],
+  ] as const)('reads %s with %j as %s %s', (raw, options, value, unit) => {
+    expect(parseMeasurement(raw, options)).toMatchObject({ value, unit });
+  });
+
+  it.each([
+    // "x11" isn't a number, so the hyphen is a minus sign, as in `x11 in-5 in`.
+    'x11"-5 in',
+    // The second "5" comes after a hyphen, not at a token's start, as in `5 in-5 in-5 in`.
+    '5"-5"-5"',
+    // "Must not change" in AFA-112: two heights.
+    '72"-74"',
+    `5'11"-6'1"`,
+  ])('returns null for %s', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
+});
