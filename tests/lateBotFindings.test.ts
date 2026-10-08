@@ -199,6 +199,27 @@ describe('lateFinding', () => {
     expect(finding?.excerpt).not.toContain('</blockquote>');
   });
 
+  // AFA-123: CodeRabbit's prompt holds a fence. A fence that a finding leaves open paired with
+  // it, so the prompt's <details> read as code, and its </details> ended the file's section.
+  it.each([
+    ['an unclosed fence', '```js\nx();'],
+    [
+      'a suggested diff whose fence a line of backticks closes early',
+      '```diff\n ```js\n-a\n+b\n ```\n```',
+    ],
+  ])("keeps the prompt's structure after %s", (_name, code) => {
+    const prompt =
+      '<details>\n<summary>🤖 Prompt for AI Agents</summary>\n\n```\nagent instructions\n```\n\n</details>';
+    const body = `<details>\n<summary>🧹 Nitpick comments (2)</summary><blockquote>\n\n<details>\n<summary>src/a.ts (1)</summary><blockquote>\n\nKeep this\n\n${code}\n\n${prompt}\n\n</blockquote></details>\n<details>\n<summary>src/b.ts (1)</summary><blockquote>\n\nFinding B\n\n</blockquote></details>\n\n</blockquote></details>\n\n${SETTINGS}`;
+    const finding = lateFinding('pull_request_review', {
+      pull_request: merged43,
+      review: { ...bot.coderabbitReview, body },
+    });
+    expect(finding?.excerpt).toContain('Finding B');
+    expect(finding?.excerpt).not.toContain('agent instructions');
+    expect(finding?.excerpt).not.toContain('Configuration used');
+  });
+
   // AFA-123: a prompt's tag in an HTML comment paired with a real </details> and took the
   // finding between them.
   it("removes HTML comments before a prompt's tag can pair with a real end tag", () => {
@@ -534,6 +555,16 @@ describe('plainText', () => {
       '- a\n  - b\n\n  para\n\n    x y',
     ],
     ["a line that goes on with a quote's paragraph", '> note\n    <b>x</b>', '> note\n    x'],
+    [
+      'a fence after a list item whose fence a line at column 0 ends',
+      '1. ```js\n   <b>a</b>\n```\n<i>b</i>\n```',
+      '1. ```js\n   <b>a</b>\n```\n<i>b</i>\n```',
+    ],
+    [
+      'a closing line with a tab after its marks',
+      '```\n<b>a</b>\n```\t\n<i>b</i>',
+      '```\n<b>a</b>\n```\t\nb',
+    ],
   ])('reads %s', (_name, html, expected) => {
     expect(plainText(html)).toBe(expected);
   });

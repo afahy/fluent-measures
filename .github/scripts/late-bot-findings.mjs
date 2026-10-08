@@ -61,6 +61,23 @@ function indentOf(line) {
 const LIST_MARKER = /^(?:[-+*]|\d{1,9}[.)])(?: {1,4}|$)/;
 
 /**
+ * Whether a line, without its quote marks, starts or ends one of the bots' collapsed sections:
+ * `<details>` alone on its line with a `<summary>` on the next line, or a line that starts with
+ * `</blockquote></details>`. The bots never write these lines in code. HTML code puts a
+ * `<summary>` on the same line, as in `<details><summary>x</summary></details>`.
+ *
+ * @param {string} line
+ * @param {string} next The next line, without its quote marks.
+ * @returns {boolean}
+ */
+function sectionLine(line, next) {
+  return (
+    /^<\/blockquote><\/details>/.test(line) ||
+    (/^<details>[ \t]*$/.test(line) && /^<summary>/.test(next))
+  );
+}
+
+/**
  * The run of marks that opens a fence at the start of a line's text, or null. A backtick fence
  * has no backtick after its run.
  *
@@ -77,10 +94,13 @@ function fenceRun(words) {
  * be `\n` or `\r\n`. A line can start with `>` marks, which put it in a quote, and with a list
  * marker, which starts a list item. Indents count from the text of the list item.
  * - A fence is three or more backticks or tildes, indented at most three columns. A line of at
- *   least as many of the same marks and nothing else closes it. A fence also ends with its quote
- *   or list item. A fence that is still open at the end of the text isn't code: a bot that
- *   doesn't close a fence more likely broke its Markdown than put the rest of its comment in code.
- *   Its opening line is in `marks`, so its backticks open no code span.
+ *   least as many of the same marks and spaces or tabs closes it. A fence also ends with its quote
+ *   or list item. A fence that is still open at the end of the text, or at a line that starts or
+ *   ends one of the bots' collapsed sections, isn't code. A bot that doesn't close a fence more
+ *   likely broke its Markdown than put the rest of its comment in code. One case: a suggested
+ *   diff for a Markdown file can hold a line of three backticks, which closes its fence early,
+ *   and the fence after it then pairs with the fence of the next prompt for AI agents. The
+ *   unclosed fence's opening line is in `marks`, so its backticks open no code span.
  * - A line indented four columns starts an indented block, but not right after a paragraph line.
  *   The block ends before the next line that has text and a smaller indent.
  *
@@ -91,6 +111,8 @@ function fenceRun(words) {
 function codeBlocks(text) {
   /** @type {{ start: number, end: number, inline: boolean, marks: number }[]} */
   const ranges = [];
+  /** @type {{ start: number, end: number }[]} */
+  const marks = [];
   /** @type {{ start: number, end: number, mark: string, length: number, quote: RegExp, list: number } | null} */
   let fence = null;
   let block = -1;
@@ -102,20 +124,31 @@ function codeBlocks(text) {
   // or the end of a fence.
   let blank = true;
   let start = 0;
-  for (const raw of text.split('\n')) {
+  const lines = text.split('\n');
+  /** The line at `at`, without its `\r` and quote marks. */
+  const bare = (/** @type {number} */ at) =>
+    (lines[at] ?? '').replace(/\r$/, '').replace(/^(?: {0,3}> ?)*/, '');
+  for (const [at, raw] of lines.entries()) {
     const end = start + raw.length;
     const line = raw.endsWith('\r') ? raw.slice(0, -1) : raw;
+    if (fence && sectionLine(bare(at), bare(at + 1))) {
+      marks.push({ start: fence.start, end: fence.end });
+      fence = null;
+      blank = true;
+    }
     if (fence) {
       // In a fence, only the fence's own quote marks are marks. A line without them ends the quote.
       const quote = fence.quote.exec(line);
       if (quote) {
         const rest = line.slice(quote[0].length);
         const indent = indentOf(rest);
-        const close = /^(`+|~+) *$/.exec(rest.trimStart());
+        const close = /^(`+|~+)[ \t]*$/.exec(rest.trimStart());
+        // A closing line must be in the fence's list item, at most three columns past its text.
         if (
           close &&
           close[1][0] === fence.mark &&
           close[1].length >= fence.length &&
+          indent >= fence.list &&
           indent <= fence.list + 3
         ) {
           ranges.push({ start: fence.start, end, inline: false, marks: 0 });
@@ -191,7 +224,8 @@ function codeBlocks(text) {
     start = end + 1;
   }
   if (block !== -1) ranges.push({ start: block, end: blockEnd, inline: false, marks: 0 });
-  return { ranges, marks: fence ? [{ start: fence.start, end: fence.end }] : [] };
+  if (fence) marks.push({ start: fence.start, end: fence.end });
+  return { ranges, marks };
 }
 
 /**
