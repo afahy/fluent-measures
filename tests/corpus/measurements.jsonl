@@ -387,7 +387,7 @@
 {"id": "prose-born", "input": "born in 1990", "expected": null, "category": "prose", "source": "handwritten"}
 {"id": "prose-check-in", "input": "check-in: 5", "expected": null, "category": "prose", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
 {"id": "prose-m-28", "input": "M 28", "expected": null, "category": "prose", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "prose-top-10-in", "input": "Top 10 in the class", "expected": null, "category": "prose", "source": "handwritten", "note": "\"in\" is a preposition here."}
+{"id": "prose-top-10-in", "input": "Top 10 in the class", "expected": {"value": 10, "unit": "in", "type": "height"}, "category": "prose", "source": "handwritten", "note": "\"in\" after a number always means inches (README, AFA-67)."}
 {"id": "prose-kids-cats", "input": "I have 2 kids and 3 cats", "expected": null, "category": "prose", "source": "handwritten"}
 {"id": "prose-5g", "input": "5G", "expected": null, "category": "prose", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
 {"id": "prose-age", "input": "I'm 30 years old", "expected": null, "category": "prose", "source": "handwritten"}

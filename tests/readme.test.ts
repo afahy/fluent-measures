@@ -358,6 +358,12 @@ const proseCases: ProseCase[] = [
     statement: '`Main St 12, 180 lbs` returns 180 lb',
   },
   {
+    section: 'Weight',
+    input: 'Top 10 in the class',
+    expected: { value: 10, unit: 'in' },
+    statement: '`Top 10 in the class` returns 10 in',
+  },
+  {
     section: 'Handling Mixed Unit Notations',
     input: '150 lbs - 180 lbs',
     expected: null,
