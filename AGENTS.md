@@ -11,6 +11,8 @@ Run these commands from the repository root:
 - `pnpm test:mutation` runs mutation testing with Stryker. CI fails if the mutation score is
   below the `break` threshold in `stryker.config.json`.
 - `pnpm build` builds the package.
+- `pnpm pr:status <pr>...` reports what a PR is waiting on, and `--wait` waits for a change.
+  `.claude/skills/steward/SKILL.md` says how to watch PRs with it.
 
 ## Pull request rules
 
@@ -130,18 +132,19 @@ standing approval for each action it tells you to take, in any section.
     and ask", label it `needs-decision` instead.
 - Start each comment that you post with `Agent:`. Reply to each bot thread, and resolve
   each thread that a pushed commit fixes.
-- After each push, watch CI and the bot reviews of that commit. Codex is done when it reacts
-  with a thumbs-up or its summary comment shows Completed. CodeRabbit is done when it posts
-  a review or a rate-limit note. If a watch expires, start it again. Don't ask whether to
-  watch.
-- If CodeRabbit's rate limit has reset, comment `@coderabbitai review`. If Codex hasn't
-  started after 30 minutes, comment `@codex review`. Ask each bot once for each commit.
-  Wait at most two hours for a bot, then note the gap in your report.
+- After each push, watch CI and the bot reviews of that commit as
+  `.claude/skills/steward/SKILL.md` says. `pnpm pr:status` decides when they're done, and
+  `pnpm pr:status --wait` waits for them. Don't ask whether to watch.
+- Post the bot review requests that `pnpm pr:status` lists. It lists one for a bot that hasn't
+  started 30 minutes after it could, for CodeRabbit once its rate limit resets, and for a
+  CodeRabbit review that ended without success. It lists each request once for each commit,
+  and stops waiting for a bot after two hours. Note each gap in your report.
 - If a CI job fails because no runner picked it up, re-run the failed jobs. If GitHub
   reports an Actions incident, re-run them when it ends. Fix all other CI failures on the
   branch.
 - A review round is one push and the bot reviews of that push. Codex reviews every push, so
-  the rounds don't stop by themselves. After three rounds, don't ask for more bot reviews.
+  the rounds don't stop by themselves. After three rounds, don't ask for more bot reviews, and
+  run `pnpm pr:status` with `--no-requests`.
   After the third round, fix only showstoppers. File the other findings that are valid and
   worth fixing together as one ticket, reply on each thread with its ID, and list them in
   your report.
@@ -161,8 +164,9 @@ standing approval for each action it tells you to take, in any section.
   must also pass: `ci-ok`, `Validate commits and PR title` and `Regression test fails
 without the fix`. A skipped check counts as passed.
 - Right before you merge or close a PR, check its comments one last time. A bot can post a
-  finding after you report a PR as ready, such as Codex's review of the last commit. Read
-  all review threads, reviews and PR comments with `gh api --paginate`. Judge each finding
+  finding after you report a PR as ready, such as Codex's review of the last commit. Run
+  `pnpm pr:status`, which lists bot threads with no reply, then read all review threads,
+  reviews and PR comments with `gh api --paginate`. Judge each finding
   that you haven't answered as "Handle findings and CI" says. Then:
   - If it is a showstopper, don't merge or close the PR. Fix it, even after the third
     round, and do this check again after the fix.
@@ -171,9 +175,10 @@ without the fix`. A skipped check counts as passed.
     ID.
   - If not, reply on its thread with the reason.
   - Then merge or close the PR.
-- If "Merge your own PR" allows it, merge the PR. If not, watch the PR until it merges or
-  closes. Check it at most once an hour, for up to 24 hours. Don't ask the maintainer to
-  tell you.
+- If "Merge your own PR" allows it, merge the PR. If not, wait for the maintainer as the
+  steward skill says: with `pnpm pr:status --wait` or the PR's GitHub events, else with a
+  check-in every 4 hours for up to 24 hours. Don't ask the maintainer to tell you when it
+  merges.
 - When the maintainer merges or closes the PR, do the same comment check at once. File
   each new finding that is valid and worth fixing. If one is a showstopper, give its ticket
   Urgent priority, and tell the maintainer in your report.
@@ -182,8 +187,8 @@ without the fix`. A skipped check counts as passed.
 - Then merge `main` into each other open agent PR in its worktree, and run lint and the
   tests. Push the merge only if it has a conflict or a check fails, and fix the branch
   first.
-- Watch CI on `main`. If it fails for a reason other than a missing runner, report the
-  failure and stop. If not, pick the next ticket.
+- Watch CI on `main` by the merge commit's full SHA, as the steward skill says. If it fails
+  for a reason other than a missing runner, report the failure and stop. If not, pick the next ticket.
 
 ### Merge your own PR
 
@@ -193,8 +198,8 @@ when all of these are true:
 
 - It is ready to merge, as "Finish the PR" says, and the last comment check found no
   showstopper.
-- Codex has completed a review of its last commit. CodeRabbit has reviewed the PR, or you
-  waited two hours for it, as "Handle findings and CI" says.
+- `pnpm pr:status` reports it as `ready`: CI passed, Codex has completed a review of its last
+  commit, and CodeRabbit has reviewed it or had two hours to.
 - Its last review round found nothing new, or it has had three rounds.
 - It changes no file that matches `.github/CODEOWNERS`, and it needs no "Stop and ask"
   decision.
