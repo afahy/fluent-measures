@@ -62,10 +62,24 @@ fluent-measures/
 ├── tests/                # Test files
 │
 ├── docs/                 # Documentation
-│   └── index.html        # Main documentation page
+│   ├── index.html        # Main documentation page
+│   ├── tailwind.config.cjs  # Tailwind settings for the page
+│   └── tailwind.css      # Tailwind CSS built for the page
 │
 └── [configuration files]
 ```
+
+`docs/tailwind.css` holds the Tailwind CSS that the documentation page uses. Build it again when
+you change a class in `docs/index.html` or a setting in `docs/tailwind.config.cjs`. Run these
+commands from the repository root, then commit the new file:
+
+```bash
+pnpm dlx tailwindcss@3.4.17 -c docs/tailwind.config.cjs -o docs/tailwind.css
+pnpm exec prettier --write docs/tailwind.css
+```
+
+`tests/docsPage.test.ts` fails if a class in a `class` attribute or a `classList` call on the page
+has no rule in the file.
 
 ## Development Setup
 
