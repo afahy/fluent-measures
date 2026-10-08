@@ -1,5 +1,6 @@
 import { Buffer } from 'node:buffer';
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   backslashPaths,
@@ -120,8 +121,26 @@ describe('mutatedFiles', () => {
     ],
     // Codex, round 2 of #81: Stryker reads a pattern from the project folder.
     [['./src/**/*.ts', '!./src/b.ts'], ['src/a.ts']],
+    // AFA-113: an absolute pattern too, as Stryker resolves each pattern.
+    [[resolve('src/**/*.ts'), `!${resolve('src/b.ts')}`], ['src/a.ts']],
   ])('applies %j in order', (patterns, expected) => {
     expect(mutatedFiles(['src/a.ts', 'src/b.ts'], patterns)).toEqual(expected);
+  });
+
+  // Stryker resolves each pattern from the project folder, so "../repo/" names the same files.
+  // The project folder's own path isn't a glob, even with "[" and "]" in it.
+  it('reads patterns in a project folder whose path has glob characters', () => {
+    expect(mutatedFiles(['src/a.ts'], ['src/**/*.ts'], '/tmp/a[1]/repo')).toEqual(['src/a.ts']);
+  });
+
+  it('reads a pattern that leaves the project folder and comes back', () => {
+    expect(
+      mutatedFiles(
+        ['src/a.ts', 'src/b.ts'],
+        ['../repo/src/**/*.ts', '!../repo/src/b.ts'],
+        '/x/repo'
+      )
+    ).toEqual(['src/a.ts']);
   });
 
   it('leaves out the files that a pattern with "!" matches, as Stryker does', () => {
@@ -371,5 +390,57 @@ describe('reasonlessDirectives', () => {
     ['/*\nStryker disable next-line all: a reason\n*/', []],
   ])('checks a directive on the line after "/*" in %j', (comment, expected) => {
     expect(reasonlessDirectives(`${comment}\nconst b = a ?? 2;`, [[2, 2]])).toEqual(expected);
+  });
+
+  // AFA-113: the TypeScript parser finds the comments, so a "/*" or "//" in a string, a template
+  // literal, a regex literal or another comment doesn't hide a later directive or make one. Only
+  // line 2 changed in each.
+  it.each([
+    ['// files under src/*\n// Stryker disable next-line all', [2]],
+    ["const glob = 'src/**';\n// Stryker disable next-line all", [2]],
+    ['const re = /^\\/*/;\n// Stryker disable next-line all', [2]],
+    ['const t = `${a}/*`;\n// Stryker disable next-line all', [2]],
+    ["const a = 1;\nconst s = '// Stryker disable all';", []],
+    // A JSDoc tag starts a node inside the comment. The "//" after it is still part of the JSDoc.
+    ['/**\n * @param a // Stryker disable next-line all\n */', []],
+  ])('reads only real comments in %j', (code, expected) => {
+    expect(reasonlessDirectives(`${code}\nconst b = a ?? 2;`, [[2, 2]])).toEqual(expected);
+  });
+
+  // A list with more children than a call can take as arguments.
+  it('reads a directive after a list with 70,000 elements', () => {
+    const code = `const x = [${Array.from({ length: 70_000 }, () => '1').join(', ')}];`;
+    expect(reasonlessDirectives(`${code}\n// Stryker disable next-line all\nx;`, [[2, 2]])).toEqual(
+      [2]
+    );
+  });
+
+  // The parser itself overflows on code nested thousands of levels deep. The check then fails safe
+  // and flags each changed line with "Stryker disable" and no reason, as main did.
+  it.each([
+    ['// Stryker disable next-line all', [2]],
+    ['/* Stryker disable all: */', [2]],
+    // The comments can't be read, so even a directive with a reason is flagged.
+    ['// Stryker disable next-line all: a reason', [2]],
+    ['// a comment', []],
+  ])('fails safe for %j after code nested 5,000 levels deep', (comment, expected) => {
+    const code = `const x = ${'('.repeat(5000)}1${')'.repeat(5000)};`;
+    expect(reasonlessDirectives(`${code}\n${comment}\nx;`, [[2, 2]])).toEqual(expected);
+  });
+
+  // TypeScript builds JSDoc-type nodes for some code too, as for "?" here. Only JSDoc comments are
+  // skipped.
+  it('reads a directive inside a JSDoc-type node', () => {
+    expect(
+      reasonlessDirectives('let a: ?\n// Stryker disable next-line all\nstring;', [[2, 2]])
+    ).toEqual([2]);
+  });
+
+  // AFA-113: the walk keeps its own stack, so a long expression doesn't overflow the call stack.
+  it('reads a directive after an expression with 20,000 terms', () => {
+    const code = `const x = ${Array.from({ length: 20_000 }, () => 'a').join(' + ')};`;
+    expect(reasonlessDirectives(`${code}\n// Stryker disable next-line all\nx;`, [[2, 2]])).toEqual(
+      [2]
+    );
   });
 });

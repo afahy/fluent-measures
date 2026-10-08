@@ -298,6 +298,60 @@ describe('mutation-check.mjs', () => {
     expect(check.status).toBe(0);
   });
 
+  // AFA-113: a changed test file under src/ isn't one that Stryker mutates, so the check says so,
+  // not that no lines changed.
+  it('says that no changed file is one that Stryker mutates', () => {
+    const repository = createRepository();
+    const base = commitFiles(repository, {
+      'stryker.config.json': '{ "mutate": ["src/**/!(*.spec|*.test).ts"] }\n',
+    });
+    commitFiles(repository, { 'src/units.test.ts': 'export const x = 1;\n' });
+
+    const check = runCheck(repository, base);
+
+    expect(check.stdout).toContain(
+      'No added or changed line under src/ is in a file that Stryker mutates'
+    );
+    expect(check.status).toBe(0);
+  });
+
+  // A changed declaration or data file under src/ isn't one either.
+  it.each(['src/types.d.ts', 'src/data.json'])(
+    'says that %s is not a file that Stryker mutates',
+    file => {
+      const repository = createRepository();
+      const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
+      commitFiles(repository, { [file]: 'export type Unit = string;\n' });
+
+      const check = runCheck(repository, base);
+
+      expect(check.stdout).toContain(
+        'No added or changed line under src/ is in a file that Stryker mutates'
+      );
+      expect(check.status).toBe(0);
+    }
+  );
+
+  // A changed file that only loses lines has no added or changed line to check either.
+  it('says that no added or changed line is in a file that Stryker mutates', () => {
+    const repository = createRepository();
+    const base = commitFiles(repository, {
+      'stryker.config.json': '{ "mutate": ["src/**/!(*.spec|*.test).ts"] }\n',
+      'src/b.ts': 'export const a = 1;\nexport const b = 2;\n',
+    });
+    commitFiles(repository, {
+      'src/b.ts': 'export const a = 1;\n',
+      'src/units.test.ts': 'export const x = 1;\n',
+    });
+
+    const check = runCheck(repository, base);
+
+    expect(check.stdout).toContain(
+      'No added or changed line under src/ is in a file that Stryker mutates'
+    );
+    expect(check.status).toBe(0);
+  });
+
   // AFA-83: no test imports a file with only types at runtime, so Stryker stops with "No tests
   // were executed". When the changed files have no mutants, there is nothing to check.
   it('passes when no test imports the changed files and they have no mutants', () => {
