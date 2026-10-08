@@ -19,6 +19,7 @@ import {
   hunkRanges,
   isSourceFile,
   literalGlob,
+  mutatedFiles,
   reasonlessDirectives,
   revisions,
   unexplainedIgnores,
@@ -69,7 +70,11 @@ for (const name of unreadable) {
   );
 }
 if (unreadable.length > 0) process.exit(1);
-const files = names.filter(isSourceFile);
+// Stryker's config says which files it mutates, so a changed test file under src/ isn't checked.
+// A config without `mutate` leaves every changed source file in.
+const { $schema: _schema, ...config } = JSON.parse(readFileSync('stryker.config.json', 'utf8'));
+const sourceFiles = names.filter(isSourceFile);
+const files = config.mutate ? mutatedFiles(sourceFiles, config.mutate) : sourceFiles;
 /** @type {Map<string, Array<[number, number]>>} */
 const changed = new Map();
 for (const file of files) {
@@ -117,7 +122,6 @@ if (backslashed.length > 0) process.exit(1);
 // the result from the report.
 const directory = mkdtempSync(join(tmpdir(), 'fluent-measures-mutation-'));
 const report = join(directory, 'mutation.json');
-const { $schema: _schema, ...config } = JSON.parse(readFileSync('stryker.config.json', 'utf8'));
 const configFile = join(directory, 'stryker.config.json');
 writeFileSync(
   configFile,

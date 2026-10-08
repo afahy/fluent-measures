@@ -1,4 +1,5 @@
 import { Buffer } from 'node:buffer';
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   backslashPaths,
@@ -8,6 +9,7 @@ import {
   hunkRanges,
   isSourceFile,
   literalGlob,
+  mutatedFiles,
   reasonlessDirectives,
   revisions,
   unexplainedIgnores,
@@ -79,6 +81,53 @@ describe('isSourceFile', () => {
     ['src/data.json', false],
   ])('returns %s → %s', (file, expected) => {
     expect(isSourceFile(file)).toBe(expected);
+  });
+});
+
+// AFA-72: the check mutates only the changed files that stryker.config.json mutates.
+describe('mutatedFiles', () => {
+  const { mutate } = JSON.parse(
+    readFileSync(new URL('../stryker.config.json', import.meta.url), 'utf8')
+  ) as { mutate: string[] };
+
+  it('leaves out the test files that the project config leaves out', () => {
+    const files = [
+      'src/units.ts',
+      'src/parse/units.ts',
+      'src/units.test.ts',
+      'src/units.spec.ts',
+      'src/parse/units.test.ts',
+      'src/test.ts',
+    ];
+    expect(mutatedFiles(files, mutate)).toEqual([
+      'src/units.ts',
+      'src/parse/units.ts',
+      'src/test.ts',
+    ]);
+  });
+
+  // Codex, round 1 of #81: Stryker applies the patterns in order, and ignores a line range.
+  it.each([
+    [['src/**/*.ts', '!src/a.ts'], ['src/b.ts']],
+    [
+      ['!src/a.ts', 'src/**/*.ts'],
+      ['src/a.ts', 'src/b.ts'],
+    ],
+    [['src/a.ts:1-10'], ['src/a.ts']],
+    [
+      ['src/a.ts:1:2-10:4', 'src/b.ts'],
+      ['src/a.ts', 'src/b.ts'],
+    ],
+    // Codex, round 2 of #81: Stryker reads a pattern from the project folder.
+    [['./src/**/*.ts', '!./src/b.ts'], ['src/a.ts']],
+  ])('applies %j in order', (patterns, expected) => {
+    expect(mutatedFiles(['src/a.ts', 'src/b.ts'], patterns)).toEqual(expected);
+  });
+
+  it('leaves out the files that a pattern with "!" matches, as Stryker does', () => {
+    expect(
+      mutatedFiles(['src/a.ts', 'src/b.ts', 'lib/c.ts'], ['src/**/*.ts', '!src/b.ts'])
+    ).toEqual(['src/a.ts']);
   });
 });
 
@@ -280,5 +329,47 @@ describe('reasonlessDirectives', () => {
 
   it('ignores directives on unchanged lines', () => {
     expect(reasonlessDirectives(source, [[3, 4]])).toEqual([]);
+  });
+
+  // AFA-72: Stryker reads each comment's text, without "//", "/*" and "*/", and a directive must
+  // start that text. So the "*/" that ends a block comment isn't a reason.
+  it.each([
+    ['/* Stryker disable next-line all: */', [1]],
+    ['/* Stryker disable next-line all:*/', [1]],
+    ['/* Stryker disable next-line all */', [1]],
+    ['/* Stryker disable next-line all: the fallback is never read */', []],
+    ['x; /* Stryker disable all: generated table */ y;', []],
+    // Each directive on a line needs its own reason.
+    ['/* Stryker disable all */ x; /* Stryker disable next-line Regex: a reason */', [1]],
+    // A "//" in a string before the comment, as in a URL.
+    ["const url = 'https://a.example'; // Stryker disable next-line all", [1]],
+    // A reason can start with any text, "*/" too.
+    ['// Stryker disable next-line all: */ is part of the reason', []],
+    // Stryker doesn't read these as directives, so they ignore no mutants.
+    ['/** Stryker disable next-line all */', []],
+    ['/* see the Stryker disable docs */', []],
+    ['// Stryker restore all', []],
+  ])('checks %s', (line, expected) => {
+    expect(reasonlessDirectives(`${line}\nconst b = a ?? 2;`, [[1, 1]])).toEqual(expected);
+  });
+
+  // Codex, round 1 of #81: a block comment can end on a later line. Stryker reads its directive
+  // up to the line break, as on main, where any line with "Stryker disable" and no reason failed.
+  it.each([
+    ['/* Stryker disable next-line all\n*/', [1]],
+    ['/* Stryker disable next-line all:\n   a reason on the next line */', [1]],
+    ['/* Stryker disable next-line all: a reason\n*/', []],
+    ['/*\n Stryker disable next-line all */', []],
+  ])('checks the block comment over two lines %j', (comment, expected) => {
+    expect(reasonlessDirectives(`${comment}\nconst b = a ?? 2;`, [[1, 2]])).toEqual(expected);
+  });
+
+  // Codex, round 2 of #81: Stryker allows one line break before the directive, so it reads this
+  // comment's second line. Only that line changed here.
+  it.each([
+    ['/*\nStryker disable next-line all\n*/', [2]],
+    ['/*\nStryker disable next-line all: a reason\n*/', []],
+  ])('checks a directive on the line after "/*" in %j', (comment, expected) => {
+    expect(reasonlessDirectives(`${comment}\nconst b = a ?? 2;`, [[2, 2]])).toEqual(expected);
   });
 });

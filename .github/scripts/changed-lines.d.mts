@@ -9,6 +9,7 @@ export function decodeNames(output: Uint8Array): { names: string[]; invalid: str
 export function unmatchedFiles(log: string, files: string[]): string[];
 
 export function isSourceFile(file: string): boolean;
+export function mutatedFiles(files: string[], patterns: string[]): string[];
 
 export function controlPaths(files: string[]): string[];
 

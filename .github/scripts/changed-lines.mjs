@@ -1,6 +1,8 @@
 // Helpers for .github/scripts/mutation-check.mjs: the lines that a pull request adds or changes,
 // and the mutants on them in a Stryker JSON report that no test kills.
 
+import { matchesGlob } from 'node:path';
+
 /**
  * Returns the revisions to compare: the base and HEAD in CI, where HEAD is a merge commit whose
  * first parent is the base, or `<base>...HEAD` for a `--base` from the command line. The second
@@ -94,6 +96,31 @@ export function unmatchedFiles(log, files) {
  */
 export function isSourceFile(file) {
   return file.endsWith('.ts') && !file.endsWith('.d.ts');
+}
+
+/**
+ * Returns the files that the `mutate` patterns in the Stryker config cover. As in Stryker, the
+ * patterns apply in order: a pattern that starts with "!" leaves files out, and a later pattern
+ * can put them back. Stryker reads a pattern from the project folder, so `./src/a.ts` is
+ * `src/a.ts`, and a line range after a pattern, as in `src/a.ts:1-10`, doesn't change which files
+ * match. The project's pattern leaves out test files under `src/`: Vitest finds tests only
+ * under `tests/`, so their mutants would get no coverage.
+ *
+ * @param {string[]} files
+ * @param {string[]} patterns
+ * @returns {string[]}
+ */
+export function mutatedFiles(files, patterns) {
+  return files.filter(file =>
+    patterns.reduce((mutated, pattern) => {
+      const negated = pattern.startsWith('!');
+      const glob = pattern
+        .replace(/^!/, '')
+        .replace(/^\.\//, '')
+        .replace(/:\d+(?::\d+)?-\d+(?::\d+)?$/, '');
+      return matchesGlob(file, glob) ? !negated : mutated;
+    }, false)
+  );
 }
 
 /**
@@ -238,24 +265,34 @@ export function unexplainedIgnores(report, changed) {
     }));
 }
 
+// Stryker's own pattern for a directive, from `@stryker-mutator/instrumenter`
+// (`directive-bookkeeper.js`). Stryker matches it to the text of each comment, without `//`, `/*`
+// and `*/`. A directive with no text after the colon gets Stryker's default reason.
+const DIRECTIVE = /^\s?Stryker disable(?: next-line)? [a-zA-Z, ]+(?::(.+))?/;
+
 /**
- * Returns the changed lines of `source` that hold a `// Stryker disable` directive without a
- * reason. A directive can ignore mutants on lines that didn't change, such as the line after a
- * `disable next-line`, so the directive itself is checked.
+ * Returns the changed lines of `source` that hold a Stryker disable directive without a reason.
+ * A directive can ignore mutants on lines that didn't change, such as the line after a
+ * `disable next-line`, so the directive itself is checked. Each comment is read as Stryker reads
+ * it: a block comment can span lines, and a directive must start its text, after at most one
+ * space or line break. So a block comment's closing `*\/` isn't a reason, and another directive
+ * on the same line doesn't give it one. The line of a directive is the line of its "Stryker".
  *
  * @param {string} source
  * @param {Array<[number, number]>} ranges
  * @returns {number[]}
  */
 export function reasonlessDirectives(source, ranges) {
-  return source
-    .split('\n')
-    .map((text, index) => ({ text, line: index + 1 }))
-    .filter(
-      ({ text, line }) =>
-        ranges.some(([from, to]) => line >= from && line <= to) &&
-        /\bStryker\s+disable\b/.test(text) &&
-        !/\bStryker\s+disable(?:\s+next-line)?\s+[\w\s,]+?:\s*\S/.test(text)
-    )
-    .map(({ line }) => line);
+  /** @type {Set<number>} */
+  const lines = new Set();
+  // After a `//`, the scan goes on from the next character, so a `//` inside a string, as in a
+  // URL, doesn't hide a comment later on the line.
+  for (const match of source.matchAll(/\/\*([\s\S]*?)(?:\*\/|$)|\/\/(?=(.*))/g)) {
+    const text = match[1] ?? match[2];
+    const directive = DIRECTIVE.exec(text);
+    if (directive === null || directive[1]?.trim()) continue;
+    const line = source.slice(0, match.index + 2 + text.indexOf('Stryker')).split('\n').length;
+    if (ranges.some(([from, to]) => line >= from && line <= to)) lines.add(line);
+  }
+  return [...lines].sort((a, b) => a - b);
 }
