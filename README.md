@@ -214,8 +214,10 @@ parseMeasurement('M 28'); // null: "M" before an age isn't meters
 parseMeasurement('Weigh in: 180 lbs'); // { value: 180, unit: 'lb', ... }: 180 has its own unit
 ```
 
-After a number, `in` always means inches, also in ordinary text, so `Top 10 in the class` returns
-10 in. Only `in` before `:` or `=` can be a field name, as the next paragraph says.
+After a number, `in` means inches, also in ordinary text, so `Top 10 in the class` returns 10
+inches. Then a second height in the same text conflicts with it, so
+`ranked 3 in the state and 6 ft` returns `null`. A label is the exception: `in.`, as above, and
+`in` before `:` or `=`, as the next paragraph says, can take another number.
 
 Any unit can be a label. A label reads the number after it, so it doesn't take the number of the
 field before it. When the number after a label has its own unit, the label takes the number before
