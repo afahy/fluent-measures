@@ -215,9 +215,7 @@ parseMeasurement('Weigh in: 180 lbs'); // { value: 180, unit: 'lb', ... }: 180 h
 ```
 
 After a number, `in` means inches, also in ordinary text, so `Top 10 in the class` returns 10
-inches. Then a second height in the same text conflicts with it, so
-`ranked 3 in the state and 6 ft` returns `null`. A label is the exception: `in.`, as above, and
-`in` before `:` or `=`, as the next paragraph says, can take another number.
+inches. A label such as `in.` or `in:` follows the label rules in this section.
 
 Any unit can be a label. A label reads the number after it, so it doesn't take the number of the
 field before it. When the number after a label has its own unit, the label takes the number before

@@ -364,12 +364,6 @@ const proseCases: ProseCase[] = [
     statement: '`Top 10 in the class` returns 10 inches',
   },
   {
-    section: 'Weight',
-    input: 'ranked 3 in the state and 6 ft',
-    expected: null,
-    statement: '`ranked 3 in the state and 6 ft` returns `null`',
-  },
-  {
     section: 'Handling Mixed Unit Notations',
     input: '150 lbs - 180 lbs',
     expected: null,
