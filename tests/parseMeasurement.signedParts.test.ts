@@ -206,4 +206,63 @@ describe('signed parts', () => {
   it('keeps 5 ft from 5 ft -11', () => {
     expect(parseMeasurement('5 ft -11')?.matches).toEqual([{ value: 5, unit: 'ft' }]);
   });
+
+  // AFA-90 item 1: a signed part drops only parts of its own type, as "-5 ft, 150 lbs" (150 lb)
+  // shows. So a signed value with its own unit of the other type keeps the label's field.
+  it.each([
+    ['Height (in): -82 kg, 72 in', {}, 72, 'in'],
+    ['Height (in): -82 kg, 72 in', { type: 'height' }, 72, 'in'],
+    ['in: -180 lbs, 72 in', {}, 72, 'in'],
+    ['Weigh in: -180 lbs, 72 in', {}, 72, 'in'],
+    ['cm: -5 lbs, 180 cm', {}, 180, 'cm'],
+    ['kg: -6 ft, 70 kg', {}, 70, 'kg'],
+    ['kg: -6 ft, 70 kg', { type: 'weight' }, 70, 'kg'],
+  ] as const)('reads %s with %o as %s %s', (raw, options: ParseOptions, value, unit) => {
+    expect(parseMeasurement(raw, options)).toMatchObject({ value, unit });
+  });
+
+  // AFA-90 item 2: a semicolon before the number doesn't stop the join, so each gives the result
+  // of the same input with a space for the hyphen, as "1 m-80 cm" (180 cm) does.
+  it.each([
+    ['70 kg;5 ft-11 in', {}, 71, 'in'],
+    ['70 kg;5 ft-11 in', { type: 'height' }, 71, 'in'],
+    ['1 ; m-80 cm', {}, 180, 'cm'],
+    [';1 m-80 cm', {}, 180, 'cm'],
+    ['180 ; lbs-180 lbs', {}, 180, 'lb'],
+  ] as const)('reads %s with %o as %s %s', (raw, options: ParseOptions, value, unit) => {
+    expect(parseMeasurement(raw, options)).toMatchObject({ value, unit });
+  });
+
+  // 70 kg and 180 lb disagree, so the input has no single weight.
+  it('returns null for 70 kg;180 lbs-180 lbs', () => {
+    expect(parseMeasurement('70 kg;180 lbs-180 lbs')).toBeNull();
+  });
+
+  // AFA-90 item 3: a label's value keeps its words without the sign, so it reads as the same value
+  // in digits does: "180 cm = -82 kg" is 180 cm, and "age 28 kg: -5" is null.
+  it.each([
+    ['180 cm = -twenty five kg', {}, 180, 'cm'],
+    ['180 cm = -twenty five kg', { type: 'height' }, 180, 'cm'],
+    ['72 in: -one eighty lbs', {}, 72, 'in'],
+  ] as const)('reads %s with %o as %s %s', (raw, options: ParseOptions, value, unit) => {
+    expect(parseMeasurement(raw, options)).toMatchObject({ value, unit });
+  });
+
+  // AFA-90 items 3 and 5: a sign on the first word of a phrase in words signs the whole phrase,
+  // as "-5 feet" returns null (README). A number too large for digits reads as "age 28 kg: -5"
+  // does.
+  it.each([
+    'age 28 kg: -1000000000000000000000',
+    '-twenty five kg',
+    '-forty-five kg',
+    '-one hundred eighty lbs',
+    // As "stone 25, 4 lb" returns null.
+    'stone -twenty five, 4 lb',
+    // Two signs are a sign too, as "--12 st 4 lb" is.
+    'age 28 kg: --5',
+    // A quote before a unit doesn't make a number, so the sign stays, as in "kg-70.5" (README).
+    '"kg-70"',
+  ])('returns null for %s', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
 });
