@@ -19,16 +19,34 @@ function fixture(name: string): Snapshot {
   return JSON.parse(readFileSync(`tests/fixtures/pr-status/${name}.json`, 'utf8'));
 }
 
+/** An error answer for one request, with its status and headers. */
+type Failure = { status: number; headers?: Record<string, string> };
+
 /**
  * Serves a PR's responses the way GitHub's REST API does. `snapshots` gives the answer to each
- * poll in turn; the last one repeats.
+ * poll in turn; the last one repeats. `failures` answers the first requests for the PR instead.
  */
-async function serve(snapshots: Snapshot[]): Promise<{ url: string; polls: () => number }> {
+async function serve(
+  snapshots: Snapshot[],
+  failures: Failure[] = []
+): Promise<{ url: string; polls: () => number }> {
   let polls = 0;
+  let requests = 0;
   const server = createServer((request, response) => {
     const path = new URL(request.url ?? '', 'http://localhost').pathname;
     const base = `/repos/${repo}`;
-    if (path.endsWith('/pulls/43')) polls++;
+    if (path.endsWith('/pulls/43')) {
+      const failure = failures[requests++];
+      if (failure) {
+        response.writeHead(failure.status, {
+          'Content-Type': 'application/json',
+          ...failure.headers,
+        });
+        response.end(JSON.stringify({ message: 'Failed' }));
+        return;
+      }
+      polls++;
+    }
     const s = snapshots[Math.min(polls, snapshots.length) - 1];
     const sha = s?.pull.head.sha;
     const routes: Record<string, unknown> = {
@@ -141,6 +159,39 @@ describe('pr-status.mjs', () => {
     expect(result.code).toBe(10);
     expect(api.polls()).toBe(1);
   });
+
+  // AFA-147: with --wait, the first request rides out a passing error as later polls do.
+  it.each([
+    ['a server error', { status: 503 }],
+    ['a secondary rate limit', { status: 403, headers: { 'retry-after': '1' } }],
+  ])('with --wait, rides out %s on its first request', async (_name, failure) => {
+    const api = await serve([fixture('pr-43-at-1810')], [failure]);
+    const result = await run(api.url, ['43', '--wait', '--interval', '1']);
+    expect(result.code).toBe(10);
+    expect(api.polls()).toBe(1);
+    expect(result.stdout).toContain('#43 needs-agent');
+  });
+
+  it('without --wait, exits with 1 at once for a server error', async () => {
+    const api = await serve([fixture('pr-43-at-1810')], [{ status: 503 }]);
+    const result = await run(api.url, ['43']);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain('GitHub answered 503');
+    expect(api.polls()).toBe(0);
+  });
+
+  // AFA-147: another try won't help a refused token, so it gets its own exit code at once.
+  it.each([401, 403])(
+    'exits with 3 for a %s that refuses the token, even with --wait',
+    async status => {
+      const api = await serve([fixture('pr-43-at-1810')], [{ status }]);
+      const result = await run(api.url, ['43', '--wait', '--interval', '1']);
+      expect(result.code).toBe(3);
+      expect(result.stderr).toContain(`GitHub answered ${status}`);
+      expect(result.stderr).toContain('GitHub refused the token');
+      expect(api.polls()).toBe(0);
+    }
+  );
 
   it('exits with 2 and the usage for a bad argument, and 1 for an API error', async () => {
     const api = await serve([fixture('pr-43-at-1810')]);

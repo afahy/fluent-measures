@@ -755,6 +755,8 @@ export function createClient({
       const remaining = response.headers.get('x-ratelimit-remaining');
       const reset = response.headers.get('x-ratelimit-reset');
       const limited = remaining === '0' && reset;
+      // A secondary rate limit says how many seconds to wait instead (AFA-147).
+      const after = Number(response.headers.get('retry-after'));
       const error = new Error(
         limited
           ? `GitHub's rate limit is used up until ${new Date(Number(reset) * 1000).toISOString()}`
@@ -762,7 +764,7 @@ export function createClient({
       );
       Object.assign(error, {
         status: response.status,
-        retryAt: limited ? Number(reset) * 1000 : null,
+        retryAt: limited ? Number(reset) * 1000 : after > 0 ? Date.now() + after * 1000 : null,
       });
       throw error;
     }

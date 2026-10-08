@@ -13,10 +13,11 @@
 //   waiting-human  30  Only a person can move it, such as a draft or a merge GitHub blocks.
 //   waiting        20  CI or a bot review is still running.
 // With several PRs, the exit code is that of the most urgent state. A bad argument exits with
-// 2, and an API error with 1.
+// 2, a token that GitHub refuses with 3, and another API error with 1.
 //
-// --wait prints nothing while it polls. It returns at once if a PR needs the agent, is ready,
-// or has closed. Otherwise it returns when a PR's state changes to anything but `waiting`, or
+// --wait prints nothing while it polls. It rides out up to five network or server errors in a
+// row, its first request too, and waits out a rate limit that ends before --timeout (AFA-147). It
+// returns at once if a PR needs the agent, is ready, or has closed. Otherwise it returns when a PR's state changes to anything but `waiting`, or
 // when a waiting-human PR gets news, such as a bot reply. It stops after --timeout minutes
 // (default 100, under the 2-hour limit for a background command). 304 answers to its polls
 // don't count against GitHub's rate limit.
@@ -155,27 +156,56 @@ const check = async () =>
     prs.map(async pr => classify(await collect(api, repo, pr), Date.now(), { requests }))
   );
 
-try {
-  const first = await check();
-  if (!wait || first.some(s => ACTIONABLE.has(s.state))) finish(first, json);
+/**
+ * Whether GitHub refused the token: a 401, or a 403 that isn't a rate limit. Another try won't
+ * help, so the call ends with its own exit code.
+ *
+ * @param {unknown} error
+ */
+const refused = error => {
+  const { status, retryAt } = /** @type {{ status?: number, retryAt?: number | null }} */ (error);
+  return status === 401 || (status === 403 && !retryAt);
+};
 
+try {
   const started = Date.now();
   const deadline = started + timeout * 60 * 1000;
-  const before = new Map(first.map(s => [s.pr, digest(s)]));
-  let latest = first;
   let failures = 0;
-  while (Date.now() < deadline) {
-    await sleep(Math.min(interval * 1000, Math.max(deadline - Date.now(), 0)));
+  /**
+   * One poll's statuses, or null after an error that a later poll can ride out. Without --wait,
+   * any error ends the call. With it, a refused token or a fifth error in a row ends it, and a
+   * rate limit that ends in time is waited out.
+   */
+  const poll = async () => {
     try {
-      latest = await check();
+      const statuses = await check();
       failures = 0;
+      return statuses;
     } catch (error) {
-      // Ride out a few network or server errors. Wait out a rate limit if it ends in time.
+      if (!wait || refused(error)) throw error;
       const retryAt = /** @type {{ retryAt?: number | null }} */ (error).retryAt;
       if (retryAt && retryAt < deadline) await sleep(retryAt - Date.now());
       else if (++failures >= 5) throw error;
-      continue;
+      return null;
     }
+  };
+  const pause = () => sleep(Math.min(interval * 1000, Math.max(deadline - Date.now(), 0)));
+
+  let first = await poll();
+  while (!first && Date.now() < deadline) {
+    await pause();
+    first = await poll();
+  }
+  if (!first) throw new Error(`GitHub didn't answer in ${timeout} min.`);
+  if (!wait || first.some(s => ACTIONABLE.has(s.state))) finish(first, json);
+
+  const before = new Map(first.map(s => [s.pr, digest(s)]));
+  let latest = first;
+  while (Date.now() < deadline) {
+    await pause();
+    const statuses = await poll();
+    if (!statuses) continue;
+    latest = statuses;
     const changed = latest.filter(s => s.state !== 'waiting' && digest(s) !== before.get(s.pr));
     if (changed.length > 0) {
       const minutes = Math.round((Date.now() - started) / 60000);
@@ -185,6 +215,11 @@ try {
   }
   finish(latest, json, `Nothing changed in ${timeout} min.`);
 } catch (error) {
-  console.error(/** @type {Error} */ (error).message);
+  const { message } = /** @type {Error} */ (error);
+  if (refused(error)) {
+    console.error(`${message}\nGitHub refused the token. Set GH_TOKEN, or run \`gh auth login\`.`);
+    process.exit(3);
+  }
+  console.error(message);
   process.exit(1);
 }

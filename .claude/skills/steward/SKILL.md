@@ -66,10 +66,12 @@ that's `waiting` or `waiting-human`. There are two exceptions:
    timeout, up to 2 hours. When a call returns with a state, or with "Nothing changed in …
    min.", act on what it printed. Then run that call again, and leave the other call running.
    A call can also end with an error, or Claude Code can stop it at its timeout. Then read what
-   it printed. If the token or an argument is wrong, fix it before you run the call again. After
-   other errors, such as GitHub or network errors, run the call again after 10 minutes, or after
-   the rate limit resets. Arm a timed check-in for that time, such as a scheduled wake-up. When
-   you run a call again, leave out each PR that merged or closed. Also leave out each `ready` PR
+   it printed. Exit code 3 means that GitHub refused the token, and 2 that an argument is wrong.
+   Fix that before you run the call again. Other errors, such as GitHub or network errors, end
+   the call only after five tries in a row, or when a rate limit lasts past `--timeout`. Then run
+   it again after 10 minutes, or after the rate limit resets. Arm a timed check-in for that time,
+   such as a scheduled wake-up. When you run a call again, leave out each PR that merged or
+   closed. Also leave out each `ready` PR
    that only the maintainer may merge, because `--wait` returns at once for it. Once every PR in
    both calls is `waiting-human`, don't run them again, and stop the call that is still
    running. Each return wakes you past the prompt cache, so wait as step 3 says instead.
