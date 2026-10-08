@@ -122,8 +122,9 @@ describe('unsupported weight units', () => {
     ['5 ft 8 g', 5, 'ft'],
     ['5 ft 8 st', 5, 'ft'],
     ['5 ft eight oz', 5, 'ft'],
-    // "1st" is an ordinal, as above, so 1 stays inches: 5 × 12 + 1 = 61.
+    // "1st" is an ordinal, as above, so 1 stays inches: 5 × 12 + 1 = 61. "11st" is stone.
     ['5 ft 1st place', 61, 'in'],
+    ['5 ft 11st', 5, 'ft'],
     // "Must not change" in AFA-103: 5 × 12 + 8 = 68.
     ['5 ft 8', 68, 'in'],
     ['5 ft 8 in', 68, 'in'],
