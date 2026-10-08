@@ -3,8 +3,10 @@
 // .github/workflows/pr-status.yml, which runs on the events that can change a PR's state.
 //
 // The status is `success` when the PR is ready, `failure` when it needs the agent, and
-// `pending` while it waits on CI, a bot or a person. It isn't a required check. The script
-// sets it only when it changes, so a run that finds no news writes nothing.
+// `pending` while it waits on CI or a bot. A PR that waits only for the maintainer is
+// `success` too, with a description that starts "waiting-human:", so it doesn't look like a
+// run that is still going (AFA-125). It isn't a required check, so `success` merges nothing.
+// The script sets it only when it changes, so a run that finds no news writes nothing.
 
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
@@ -15,7 +17,7 @@ export const COMMIT_STATES = {
   ready: 'success',
   'needs-agent': 'failure',
   waiting: 'pending',
-  'waiting-human': 'pending',
+  'waiting-human': 'success',
 };
 
 /** GitHub keeps a commit status's description to 140 characters. */

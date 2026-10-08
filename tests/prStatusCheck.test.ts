@@ -339,10 +339,12 @@ describe('setStatus', () => {
       'pending',
       "waiting: Codex hasn't started on c7ad2f4; its last review was of 91a5d29 (until 2026-10-07T15:30:44.000Z)",
     ],
+    // AFA-125: a PR that waits only for the maintainer shows a green check, and the description
+    // says what the maintainer needs to do.
     [
       'pr-66',
       '2026-10-07T17:01:00Z',
-      'pending',
+      'success',
       'waiting-human: Codex never reviewed the head commit, so only the maintainer can merge it',
     ],
   ])('sets %s at %s to %s', async (name, time, state, description) => {
