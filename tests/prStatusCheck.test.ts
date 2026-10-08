@@ -67,16 +67,38 @@ describe('describeStatus', () => {
     expect(describeStatus(bare)).toBe('needs-agent: See');
   });
 
-  it('keeps the description to 140 characters, without splitting an emoji', () => {
+  it('keeps the description to 140 characters', () => {
     const status = classify(ready67(), at('2026-10-07T16:00:00Z'));
     const long: PrStatus = { ...status, state: 'waiting-human', reasons: ['x'.repeat(200)] };
     expect(describeStatus(long)).toBe(`waiting-human: ${'x'.repeat(124)}…`);
     // 15 + 125 is exactly 140, so nothing is cut.
     const full: PrStatus = { ...long, reasons: ['x'.repeat(125)] };
     expect(describeStatus(full)).toBe(`waiting-human: ${'x'.repeat(125)}`);
-    // "waiting-human: " is 15 characters, so the 124th character after it is the 👍.
+  });
+
+  // GitHub answered 422, "Description doesn't accept 4-byte Unicode", to a status with the 👀
+  // (AFA-108).
+  it('drops each character outside the Basic Multilingual Plane, and the brackets around it', () => {
+    const snapshot = fixture('pr-66');
+    snapshot.reactions.push({
+      user: { login: 'chatgpt-codex-connector[bot]', type: 'Bot' },
+      content: 'eyes',
+      created_at: '2026-10-07T15:10:00Z',
+    });
+    // At 15:20 the first wait was "Codex hasn't started" (above). After the 👀, it is
+    // "Codex is reviewing (👀)", and the other wait stays.
+    expect(describeStatus(classify(snapshot, at('2026-10-07T15:20:00Z')))).toBe(
+      'waiting: Codex is reviewing (+1 more)'
+    );
+    const status = classify(ready67(), at('2026-10-07T16:00:00Z'));
     const emoji: PrStatus = { ...status, state: 'waiting-human', reasons: ['👍'.repeat(200)] };
-    expect(describeStatus(emoji)).toBe(`waiting-human: ${'👍'.repeat(124)}…`);
+    expect(describeStatus(emoji)).toBe('waiting-human');
+    // The 👍s are dropped before the length check, so 15 + 125 characters fit with no cut.
+    const mixed: PrStatus = { ...emoji, reasons: [`${'👍'.repeat(5)}${'x'.repeat(125)}`] };
+    expect(describeStatus(mixed)).toBe(`waiting-human: ${'x'.repeat(125)}`);
+    // A character in the plane, such as ✅ (U+2705), stays.
+    const check: PrStatus = { ...emoji, reasons: ['✅ (ok)'] };
+    expect(describeStatus(check)).toBe('waiting-human: ✅ (ok)');
   });
 
   it("says only the state when there's nothing to name", () => {

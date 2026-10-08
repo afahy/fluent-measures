@@ -30,17 +30,20 @@ const MAX_DESCRIPTION = 140;
  */
 export function describeStatus(status) {
   const items = status.state === 'waiting' ? status.waits : status.reasons;
-  const first = items[0]?.replace(/(?::| in)? https:\/\/\S+/g, '');
+  // GitHub answers 422 ("Description doesn't accept 4-byte Unicode") for a character outside
+  // the Basic Multilingual Plane, such as the 👀 in Codex's detail. So drop each one, and the
+  // brackets that it leaves empty.
+  const first = items[0]
+    ?.replace(/(?::| in)? https:\/\/\S+/g, '')
+    .replace(/[\u{10000}-\u{10FFFF}]/gu, '')
+    .replace(/ ?\(\)/g, '');
   const more = items.length > 1 ? ` (+${items.length - 1} more)` : '';
   const text =
     status.state === 'ready'
       ? 'ready: Nothing is left for the agent'
       : `${status.state}${first ? `: ${first}` : ''}${more}`;
-  // GitHub counts characters, not UTF-16 units, and a cut mustn't split an emoji.
-  const characters = Array.from(text);
-  return characters.length > MAX_DESCRIPTION
-    ? `${characters.slice(0, MAX_DESCRIPTION - 1).join('')}…`
-    : text;
+  // Each character that is left is one UTF-16 unit, as GitHub counts it.
+  return text.length > MAX_DESCRIPTION ? `${text.slice(0, MAX_DESCRIPTION - 1)}…` : text;
 }
 
 /**
