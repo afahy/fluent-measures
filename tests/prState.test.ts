@@ -475,6 +475,39 @@ describe('classify', () => {
     expect(classify(snapshot, at('2026-10-07T16:00:00Z')).state).toBe('ready');
   });
 
+  // Codex on #104: a reply in a thread that the review started answers it too.
+  it('takes a reply in one of its threads as an answer to a bot that requests changes', () => {
+    const snapshot = fixture('pr-67');
+    snapshot.reviews.push({
+      id: 2,
+      user: { login: 'coderabbitai[bot]', type: 'Bot' },
+      state: 'CHANGES_REQUESTED',
+      body: 'Actionable comments posted: 1',
+      commit_id: '318c1b7f27c418c6a53ecf1c3de26c32ea207cb0',
+      submitted_at: '2026-10-07T15:56:00Z',
+      html_url: 'https://github.com/afahy/fluent-measures/pull/67#pullrequestreview-2',
+    });
+    snapshot.reviewComments.push({
+      id: 10,
+      user: { login: 'coderabbitai[bot]', type: 'Bot' },
+      pull_request_review_id: 2,
+      created_at: '2026-10-07T15:56:00Z',
+      html_url: 'https://github.com/afahy/fluent-measures/pull/67#discussion_r10',
+    });
+    expect(classify(snapshot, at('2026-10-07T16:00:00Z')).reasons).toEqual([
+      'coderabbitai[bot] left a thread with no reply: https://github.com/afahy/fluent-measures/pull/67#discussion_r10',
+      'coderabbitai[bot] requested changes: https://github.com/afahy/fluent-measures/pull/67#pullrequestreview-2',
+    ]);
+    snapshot.reviewComments.push({
+      id: 11,
+      user: { login: 'afahy', type: 'User' },
+      in_reply_to_id: 10,
+      created_at: '2026-10-07T15:58:00Z',
+      html_url: 'https://github.com/afahy/fluent-measures/pull/67#discussion_r11',
+    });
+    expect(classify(snapshot, at('2026-10-07T16:00:00Z')).state).toBe('ready');
+  });
+
   it('needs the agent after a person requests changes, until that person approves', () => {
     const snapshot = fixture('pr-67');
     snapshot.statuses.push({

@@ -494,13 +494,22 @@ export function unansweredReviewBodies(snapshot) {
 /**
  * Codex and CodeRabbit reviews since the push that request changes, with no later comment or
  * review from a person. A bot can't approve after the agent answers, so an answer from a person
- * clears it, as for comments outside the diff (AFA-138).
+ * clears it, as for comments outside the diff (AFA-138). A reply in a thread that the review
+ * started is an answer too. unansweredBotThreads lists each of its threads that has no reply.
  *
  * @param {import('./pr-state.d.mts').Snapshot} snapshot
  * @returns {import('./pr-state.d.mts').Review[]}
  */
 export function botChangeRequests(snapshot) {
-  return unansweredBotReviews(snapshot, r => r.state === 'CHANGES_REQUESTED');
+  const replied = new Set(
+    snapshot.reviewComments.filter(c => !byBot(c) && c.in_reply_to_id).map(c => c.in_reply_to_id)
+  );
+  return unansweredBotReviews(
+    snapshot,
+    r =>
+      r.state === 'CHANGES_REQUESTED' &&
+      !snapshot.reviewComments.some(c => c.pull_request_review_id === r.id && replied.has(c.id))
+  );
 }
 
 /**

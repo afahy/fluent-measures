@@ -57,6 +57,7 @@ export interface ReviewComment {
   id: number;
   user: User | null;
   in_reply_to_id?: number | null;
+  pull_request_review_id?: number | null;
   created_at: string;
   html_url: string;
 }
