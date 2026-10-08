@@ -22,6 +22,14 @@ export const COMMIT_STATES = {
 const MAX_DESCRIPTION = 140;
 
 /**
+ * GitHub answers 422 ("Description doesn't accept 4-byte Unicode") for a character outside the
+ * Basic Multilingual Plane, such as the 👀 in Codex's detail (AFA-108). This matches each one
+ * with the joiners next to it, brackets that hold only such characters, and lone surrogates.
+ */
+const FOUR_BYTE =
+  /\s*\((?:[\u200D\uFE0F\s]*[\u{10000}-\u{10FFFF}])+[\u200D\uFE0F\s]*\)|\u200D?[\u{10000}-\u{10FFFF}][\u200D\uFE0F]*|[\uD800-\uDFFF]/gu;
+
+/**
  * The status's one-line description: the state and the first reason or wait, without links,
  * and how many more there are. `pnpm pr:status` gives the whole list.
  *
@@ -30,19 +38,17 @@ const MAX_DESCRIPTION = 140;
  */
 export function describeStatus(status) {
   const items = status.state === 'waiting' ? status.waits : status.reasons;
-  // GitHub answers 422 ("Description doesn't accept 4-byte Unicode") for a character outside
-  // the Basic Multilingual Plane, such as the 👀 in Codex's detail. So drop each one, and the
-  // brackets that it leaves empty.
   const first = items[0]
     ?.replace(/(?::| in)? https:\/\/\S+/g, '')
-    .replace(/[\u{10000}-\u{10FFFF}]/gu, '')
-    .replace(/ ?\(\)/g, '');
+    .replace(FOUR_BYTE, '')
+    .replace(/ {2,}/g, ' ')
+    .trim();
   const more = items.length > 1 ? ` (+${items.length - 1} more)` : '';
   const text =
     status.state === 'ready'
       ? 'ready: Nothing is left for the agent'
       : `${status.state}${first ? `: ${first}` : ''}${more}`;
-  // Each character that is left is one UTF-16 unit, as GitHub counts it.
+  // Each character that is left is one UTF-16 unit, so the cut can't split one.
   return text.length > MAX_DESCRIPTION ? `${text.slice(0, MAX_DESCRIPTION - 1)}…` : text;
 }
 

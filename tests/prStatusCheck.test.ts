@@ -101,6 +101,22 @@ describe('describeStatus', () => {
     expect(describeStatus(check)).toBe('waiting-human: ✅ (ok)');
   });
 
+  it('leaves no extra spaces, joiners, other brackets or lone surrogates', () => {
+    const status = classify(ready67(), at('2026-10-07T16:00:00Z'));
+    const describe = (reason: string): string =>
+      describeStatus({ ...status, state: 'waiting-human', reasons: [reason] });
+    expect(describe("Codex's review of abc is 🔄 Running")).toBe(
+      "waiting-human: Codex's review of abc is Running"
+    );
+    expect(describe('call parseMeasurement() first (👀)')).toBe(
+      'waiting-human: call parseMeasurement() first'
+    );
+    // 👨‍💻 is 👨, a zero-width joiner and 💻. In ❤️‍🔥, only 🔥 is outside the plane, so ❤️
+    // (U+2764 and U+FE0F) stays without the joiner.
+    expect(describe('👨\u200D💻 (❤\uFE0F\u200D🔥) done')).toBe('waiting-human: (❤\uFE0F) done');
+    expect(describe('\uD83D x')).toBe('waiting-human: x');
+  });
+
   it("says only the state when there's nothing to name", () => {
     const status = classify(ready67(), at('2026-10-07T16:00:00Z'));
     expect(describeStatus({ ...status, state: 'needs-agent', reasons: [] })).toBe('needs-agent');
