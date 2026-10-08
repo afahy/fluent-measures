@@ -64,9 +64,9 @@ that's `waiting` or `waiting-human`. There are two exceptions:
    `waiting-human`, don't run it again: each return wakes you past the prompt cache, so wait as
    step 3 says instead.
 2. In a cloud session, also subscribe to the PR's GitHub events. The container can stop and take
-   the background command with it. On each event or check-in, run `pnpm pr:status` first, and
-   start `--wait` again if it isn't running, unless every PR is `waiting-human`. If the output
-   is the same as last time, end the turn in one short line.
+   the background command with it. On each event or check-in, run `pnpm pr:status <pr>...`
+   first, and start `--wait` again if it isn't running, unless every PR is `waiting-human`. If
+   the output is the same as last time, end the turn in one short line.
 3. Use a timed check-in (`send_later`, a scheduled wake-up or cron) only when neither of those
    can wake you. Each check-in that misses the 1-hour prompt cache rewrites the whole
    conversation, which cost $1 to $3 a wake in earlier sessions. Hourly check-ins fire just past
@@ -82,7 +82,6 @@ that's `waiting` or `waiting-human`. There are two exceptions:
 `pnpm pr:status` doesn't cover `main`. After a merge, watch CI on `main` by the merge commit's
 full SHA, for example with `gh api repos/afahy/fluent-measures/commits/<sha>/check-runs`. An
 empty or short list right after the merge means the runs haven't started yet, so wait until the
-CI workflow's checks are there and finished. Ignore the `Set the PR status` and
-`Report a late bot finding` check runs: they come from `pr-status.yml` and `late-bot-findings.yml`,
-not CI, and GitHub cancels some of them while they're queued. Don't use
-`gh run list --branch main`, which hid queued runs during an Actions incident.
+CI workflow's checks are there and finished. Ignore `Set the PR status` check runs: they come
+from `pr-status.yml`, not CI. Don't use `gh run list --branch main`, which hid queued runs during
+an Actions incident.
