@@ -58,6 +58,12 @@ Run these commands from the repository root:
     test. Each test must reach at least one `expect`. After you add tests, run mutation
     testing. If a mutant survives in code that a new test covers, make the test catch it.
     If the mutant can't change behavior, say so in the PR.
+12. A timing test checks a limit of CPU time with `parseWithin` from `tests/timing.ts`. It
+    skips itself under Stryker with `it.skipIf(underStryker)`. Size each limit from CI's
+    slowest run of that test, not from a local run. CI's `test` job runs with coverage, and
+    in AFA-95 it took 3 to 8 times as long as a local run. Read its times in that job's log.
+    Leave at least 3 times headroom over CI's slowest run. The code that the test guards
+    against must take at least twice the limit.
 
 ## Work without asking
 
@@ -76,6 +82,27 @@ Judge each action by how easy it is to undo:
 the decision. The maintainer reviews each PR that you can't merge yourself before it merges,
 and the others after they merge. This file is the maintainer's standing approval for each
 action it tells you to take, in any section.
+
+### Standing approvals
+
+The maintainer approves each of these actions in advance, in writing. Take them without
+asking, and don't wait for an answer:
+
+- Pick, claim and work `agent-ready` tickets as this file says. File, label, comment on and
+  move Linear tickets.
+- Create a branch and a worktree for each ticket, commit, push to the ticket's branch, and
+  merge `main` into it.
+- Open PRs, post `Agent:` comments and Codex review requests, and reply to and resolve
+  threads.
+- Re-run CI jobs that no runner picked up.
+- Merge a PR with `gh pr merge <number> --squash` when "Merge your own PR" allows it. This
+  includes a PR that changes a file in `.github/CODEOWNERS`.
+- Raise a limit in `.size-limit.cjs` by 0.5 kB, as "Build the PR" says.
+- Start subagents that build a ticket, review a branch or watch PRs, each in its own
+  worktree.
+
+If a tool's permission check stops one of these actions, say so in one line in your report,
+and continue with other work. Don't look for another way around the check.
 
 ### Pick a ticket
 
@@ -119,6 +146,11 @@ action it tells you to take, in any section.
   - Is it worth fixing? Compare how likely a user is to hit the problem with what the fix
     costs in code, bundle size and risk to other results. A showstopper is always worth
     fixing. So is a result that this PR changes from `main` (decision rule 3).
+  - Agent tooling has a higher bar. A finding in `.github/scripts/` or `.claude/` is worth
+    fixing only when it happened in a real run, when it changes what `main` does, or when it
+    would make a merge or a required check fail. Otherwise reply on the thread with that
+    reason, and don't file a ticket. On 8 October, each tooling PR's findings became the next
+    tooling ticket (AFA-143 to AFA-150).
 - Then act on it:
   - If you can't reproduce it, or it isn't valid, reply on the thread with the inputs you
     ran and the reason.
@@ -137,9 +169,11 @@ action it tells you to take, in any section.
 - Post the Codex review requests that `pnpm pr:status <pr>...` lists. It lists one when Codex
   hasn't started 30 minutes after it could, once for each commit. It stops waiting for Codex
   after two hours. Note each gap in your report.
-- Don't wait for CodeRabbit, and don't ask it to review: it reviews in time or it doesn't.
-  Handle its findings when they arrive before the merge. The late-bot-findings workflow
-  records a finding that arrives after the merge. Note each gap in your report.
+- CodeRabbit's review is a bonus. Its plan allows one review an hour, so it misses most
+  commits. Don't wait for it, don't ask it to review, and don't list its missing reviews in
+  your report. When it gives a finding before the merge, check that the finding is valid, and
+  handle it as this section says. The late-bot-findings workflow records a finding that
+  arrives after the merge.
 - If a CI job fails because no runner picked it up, re-run the failed jobs. If GitHub
   reports an Actions incident, re-run them when it ends. Fix all other CI failures on the
   branch.
