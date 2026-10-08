@@ -36,7 +36,7 @@ const NUMBERS: Groups = [
 // Each unit alias, the unsupported weight units, some typos and the marks for feet and inches.
 const UNITS: Groups = [
   [8, ['ft', 'feet', 'foot', 'in', 'inch', 'inches', 'cm', 'centimeter', 'centimeters']],
-  [8, ['m', 'meter', 'meters', 'metre', 'lb', 'lbs', 'pound', 'pounds']],
+  [8, ['m', 'meter', 'meters', 'lb', 'lbs', 'pound', 'pounds']],
   [6, ['kg', 'kilo', 'kilos', 'kilogram', 'kilograms']],
   [3, ['st', 'stone', 'oz', 'ounces', 'g', 'grams']],
   [2, ['kilogams', 'fet', 'inchs', 'poundz', 'metres', 'centimetre', 'centimetres', '#']],
@@ -66,6 +66,19 @@ const OPTION_SETS: readonly (readonly [name: string, options: ParseOptions])[] =
 ];
 
 const INPUT_COUNT = 1800;
+
+// The alias "metre" has its own path in matchUnit. It isn't in UNITS, because a new word there
+// would change the generated inputs that AFA-86 recorded, so these inputs use it (AFA-87).
+const METRE_INPUTS = [
+  'metre',
+  '1.8 metre',
+  '1.8metre',
+  '1 metre 80 cm',
+  'metre: 1.8',
+  '(metre) 1.8',
+  '180 cm (1.8 metre)',
+  '6 ft = 1.83 metre',
+];
 
 // Mulberry32: a small seeded generator, so each run makes the same inputs.
 function random(seed: number): () => number {
@@ -98,7 +111,7 @@ function makeInputs(): string[] {
     for (let count = Math.floor(next() * 3); count > 0; count--) input += pick(JOINERS) + chunk();
     inputs.add(input);
   }
-  return [...inputs];
+  return [...inputs, ...METRE_INPUTS];
 }
 
 function describeResult(raw: string, options: ParseOptions): string {
