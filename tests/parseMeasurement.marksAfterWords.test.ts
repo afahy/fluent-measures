@@ -21,6 +21,12 @@ describe('a mark right after a word', () => {
     [`six'`, 6, 'ft'],
     [`ten"`, 10, 'in'],
     [`twenty-five"`, 25, 'in'],
+    // A hyphen joins words as a space does: 6.5 ft, 6.5 in and 25.5 ft.
+    [`six-and-a-half'`, 6.5, 'ft'],
+    [`6-and-a-half"`, 6.5, 'in'],
+    [`twenty-five-and-a-half'`, 25.5, 'ft'],
+    // A hyphen after the mark separates two parts, as in "5'-10"" (README): 5 × 12 + 10 = 70.
+    [`five'-10"`, 70, 'in'],
   ] as const)('reads %s as %s %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });
@@ -43,10 +49,23 @@ describe('a mark right after a word', () => {
 
   // A quoted number word isn't a measurement, and its closing quote isn't the unit of the next
   // number. "half" alone isn't a number.
-  it.each([`model "one" 180`, `"ten" 5`, `'one' 5`, `half' 5`, `the other half' 5`, `half" 5`])(
-    'returns null for %s',
-    raw => {
-      expect(parseMeasurement(raw)).toBeNull();
-    }
-  );
+  it.each([
+    `model "one" 180`,
+    `"ten" 5`,
+    `'one' 5`,
+    `half' 5`,
+    `the other half' 5`,
+    `half" 5`,
+    // A quote that opens a quotation makes the next quote its closing quote, whatever is between.
+    `"twenty five"`,
+    `'twenty five' 7`,
+    `model "one hundred" 180`,
+    `he said "about ten" 5`,
+    // A Unicode minus sign before a number word is a minus sign, as before digits ("−5'" is null).
+    `−five'`,
+    `﹣five"`,
+    `−five feet`,
+  ])('returns null for %s', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
 });
