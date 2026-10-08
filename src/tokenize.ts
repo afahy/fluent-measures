@@ -74,13 +74,26 @@ const CURLY_DOUBLE = new RegExp(
   'g'
 );
 
+// The number words, as alternatives in a pattern.
+const NUMBER_WORD = [...NUMBER_WORDS.keys(), ...MULTIPLIERS.keys()].join('|');
+
 // A minus sign before a number, when no number comes earlier: no digit, Unicode fraction or number
 // word. After a number, a minus sign joins two parts or values, as in "1 m−80 cm" and "½ lb−180
 // lbs". The parser would read a hyphen-minus there as a sign. The lookbehind runs only after a
 // minus sign, and its lazy part stops at the nearest earlier number.
 const MINUS_SIGN = new RegExp(
-  String.raw`[−﹣](?=[.,]?\d|[¼-¾⅐-⅞↉])(?<!(?:[\d¼-¾⅐-⅞↉]|\b(?:${[...NUMBER_WORDS.keys(), ...MULTIPLIERS.keys()].join('|')})\b)[\s\S]*?.)`,
+  String.raw`[−﹣](?=[.,]?\d|[¼-¾⅐-⅞↉])(?<!(?:[\d¼-¾⅐-⅞↉]|\b(?:${NUMBER_WORD})\b)[\s\S]*?.)`,
   'gi'
+);
+
+// Where a space separates two tokens: between a number and an attached unit or quote mark, between
+// a quote mark and the number after it, which keeps a sign after an opening quote, and at a word
+// hyphen, so "six-foot-two" becomes "six foot two". A number word or "half" before a quote mark is
+// a number too, as in "five' ten\"" and "10 and a half\"" (AFA-93). The lookahead comes first, so
+// that lookbehind runs only before a quote mark.
+const SPLIT = new RegExp(
+  String.raw`(?<=\d)(?=[a-z'"])|(?=['"])(?<=\b(?:${NUMBER_WORD}|half))|(?<=['"])(?=-?\.?\d)|(?<!-)\b-(?=\b|\.\d)`,
+  'g'
 );
 
 /**
@@ -179,9 +192,7 @@ export function tokenizeNormalized(input: string, fuzziness?: number): string[] 
               : match;
           }
         )
-        // Separate numbers from attached units or quotes, retaining signs after opening quotes.
-        // Word hyphens also separate tokens: "six-foot-two" -> "six foot two".
-        .replace(/(?<=\d)(?=[a-z'"])|(?<=['"])(?=-?\.?\d)|(?<!-)\b-(?=\b|\.\d)/g, ' ')
+        .replace(SPLIT, ' ')
         // Keep semicolons as separate tokens without adding surrounding whitespace.
         .match(/;|[^\s;]+/g) || []
     ).map(token => trimTrailing(token, '.'))
