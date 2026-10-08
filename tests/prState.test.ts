@@ -724,7 +724,9 @@ describe('createClient', () => {
 
   // AFA-147, Codex on #114: a connection that drops while the body is read is a network error
   // too, for an answer that failed and for one that didn't.
-  it.each([200, 503])(
+  // AFA-148: only a 403's text can tell a rate limit from a refused token, so a 403 and a 429
+  // whose body stops stay network errors too.
+  it.each([200, 403, 429, 503])(
     'marks a %s whose body stops as one that another try can help',
     async status => {
       const fetch = (async () =>
@@ -814,12 +816,16 @@ describe('createClient', () => {
     });
   });
 
-  // AFA-148 item 3: a bad URL can't pass, so the client rejects it before any request.
-  it("rejects an API URL that isn't a URL", () => {
-    expect(() => createClient({ apiUrl: 'not-a-url' })).toThrow(
-      "The GitHub API URL isn't a URL: not-a-url"
-    );
-  });
+  // AFA-148 item 3: a bad URL can't pass, so the client rejects it before any request. Without
+  // its scheme, "localhost:3000" would read as a URL with the scheme "localhost:".
+  it.each(['not-a-url', 'localhost:3000', 'api.github.com:443', 'ftp://api.github.com'])(
+    'rejects the API URL %s',
+    apiUrl => {
+      expect(() => createClient({ apiUrl })).toThrow(
+        `The GitHub API URL isn't an http or https URL: ${apiUrl}`
+      );
+    }
+  );
 
   it('reports any other error with its status', async () => {
     const url = 'https://api.test/pull';

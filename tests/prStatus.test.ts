@@ -276,7 +276,10 @@ describe('pr-status.mjs', () => {
     const api = await serve([blocked], [undefined, limit]);
     const result = await run(api.url, ['43', '--wait', '--interval', '1', '--timeout', '0.05']);
     expect(result.code).toBe(30);
-    expect(result.stdout.split('\n')[0]).toBe('Nothing changed in 0.05 min.');
+    expect(result.stdout.split('\n')[0]).toBe(
+      'Nothing changed in 0 min. The next try would come after --timeout: GitHub answered 429 for ' +
+        `${api.url}/repos/${repo}/pulls/43: {"message":"Failed"}`
+    );
     expect(api.hits('/pulls/43')).toBe(2);
   });
 
@@ -306,7 +309,7 @@ describe('pr-status.mjs', () => {
   it("with --wait, exits with 1 at once for an API URL that isn't a URL", async () => {
     const result = await run('not-a-url', ['43', '--wait', '--interval', '1']);
     expect(result.code).toBe(1);
-    expect(result.stderr).toContain("The GitHub API URL isn't a URL: not-a-url");
+    expect(result.stderr).toContain("The GitHub API URL isn't an http or https URL: not-a-url");
   });
 
   it('exits with 2 and the usage for a bad argument, and 1 for an API error', async () => {

@@ -167,16 +167,19 @@ export function classify(
 export function mostUrgent(states: PrState[]): PrState;
 export function digest(status: PrStatus): string;
 
-/** The error that a Client throws. */
+/**
+ * An error from a Client. An error from a request sets each field except, without an answer,
+ * `status`. Other errors, such as a bad API URL, set none.
+ */
 export interface ClientError extends Error {
   /** The HTTP status, when GitHub answered. */
   status?: number;
   /** When a rate limit ends, in milliseconds since 1970, or null when it isn't a rate limit. */
-  retryAt: number | null;
+  retryAt?: number | null;
   /** Whether another try can help: a network or server error, an answer that isn't JSON, or a rate limit. */
-  retryable: boolean;
+  retryable?: boolean;
   /** Whether GitHub refused the token: a 401, or a 403 that isn't a rate limit. */
-  refused: boolean;
+  refused?: boolean;
 }
 
 export interface Client {

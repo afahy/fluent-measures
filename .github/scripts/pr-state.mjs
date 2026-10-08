@@ -738,7 +738,7 @@ function passingError(message, cause) {
 /**
  * A small GitHub REST client. It follows every page of a list, and it sends each URL's last
  * ETag, so a poll that finds nothing new gets a 304, which doesn't count against the rate limit.
- * Each error that it throws is a ClientError.
+ * Each error from a request is a ClientError.
  *
  * @param {{ token?: string | null, apiUrl?: string, fetch?: typeof fetch }} [options]
  * @returns {import('./pr-state.d.mts').Client}
@@ -748,8 +748,11 @@ export function createClient({
   apiUrl = 'https://api.github.com',
   fetch: get = fetch,
 } = {}) {
-  // Another try can't fix a bad URL, so it ends the call before the first request (AFA-148).
-  if (!URL.canParse(apiUrl)) throw new Error(`The GitHub API URL isn't a URL: ${apiUrl}`);
+  // Another try can't fix a bad URL, so it ends the call before the first request (AFA-148). A
+  // URL without its scheme, such as "localhost:3000", reads as one with the scheme "localhost:".
+  if (!/^https?:$/.test(URL.canParse(apiUrl) ? new URL(apiUrl).protocol : '')) {
+    throw new Error(`The GitHub API URL isn't an http or https URL: ${apiUrl}`);
+  }
   /** @type {Map<string, { etag: string, data: unknown, next: string | null }>} */
   const cache = new Map();
 
@@ -792,11 +795,14 @@ export function createClient({
     if (response.status === 304 && cached) return cached;
     if (!response.ok) {
       const { status } = response;
-      // A body that stops after a server error is a network error, which another try can help.
-      // After another status, the status still says what is wrong, so a 401 still exits 3 and a
-      // 404 still ends the call (AFA-148). Without its body, a 403 that only its text marks as a
-      // rate limit reads as a refused token.
-      const read = status >= 500 ? answer(() => response.text()) : response.text().catch(() => '');
+      // A body that stops is a network error, which another try can help (AFA-147). But a 401, a
+      // 404 or another 4xx still says what is wrong without it, so a 401 still exits 3 and a 404
+      // still ends the call (AFA-148). Only a 403's text can tell a rate limit from a refused
+      // token, so a 403, a 429 and a 5xx stay network errors.
+      const read =
+        [403, 429].includes(status) || status >= 500
+          ? answer(() => response.text())
+          : response.text().catch(() => '');
       const text = (await read).slice(0, 200);
       // GitHub sends these headers with every answer, but only a 403 or a 429 is a rate limit.
       const remaining = response.headers.get('x-ratelimit-remaining');

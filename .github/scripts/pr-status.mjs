@@ -16,14 +16,14 @@
 // 2, a token that GitHub refuses with 3, and another API error with 1.
 //
 // --wait prints nothing while it polls. After a network or server error or a rate limit, it tries
-// again after --interval, or when the rate limit ends if that is later, for its first request too
-// (AFA-147). Five such errors in a row end the call, and another error ends it at once. If
-// --timeout ends before the next try, it prints the last result, or the error if it has none
-// (AFA-148). It returns at once if a PR needs the agent, is ready, or has closed. Otherwise it
-// returns when a PR's state changes to anything but `waiting`, or when a waiting-human PR gets
-// news, such as a bot reply. It stops after --timeout minutes (default 100, under the 2-hour
-// limit for a background command). 304 answers to its polls don't count against GitHub's rate
-// limit.
+// again for its first request too (AFA-147). The next try comes after --interval, or when the
+// rate limit ends if that is later. Five such errors in a row end the call, and another error
+// ends it at once. If --timeout ends before the next try, it prints the last result, or the error
+// if it has none (AFA-148). It returns at once if a PR needs the agent, is ready, or has closed.
+// Otherwise it returns when a PR's state changes to anything but `waiting`, or when a
+// waiting-human PR gets news, such as a bot reply. It stops after --timeout minutes (default 100,
+// under the 2-hour limit for a background command). 304 answers to its polls don't count against
+// GitHub's rate limit.
 //
 // --no-requests is for after the third review round, when AGENTS.md says not to ask Codex
 // again: a Codex that hasn't reviewed is waited for until its 2 hours are up, not asked.
@@ -168,7 +168,7 @@ try {
    * One poll's statuses. Without --wait, any error ends the call. With it, an error that can pass
    * is tried again after --interval, or when a rate limit ends if that is later. Five such errors
    * in a row end the call, so a rate limit that keeps coming back can't keep the call polling
-   * (AFA-148). If --timeout ends before the next try, ending() ends the call.
+   * (AFA-148). If --timeout ends before the next try, ending(error) ends the call.
    *
    * @param {(error: unknown) => never} ending
    * @returns {Promise<import('./pr-state.d.mts').PrStatus[]>}
@@ -195,9 +195,17 @@ try {
   });
   if (!wait || latest.some(s => ACTIONABLE.has(s.state))) finish(latest, json);
   const before = new Map(latest.map(s => [s.pr, digest(s)]));
-  // After a result, a timeout or an error that a later poll could try again ends the call with
-  // that result, as before AFA-147 (AFA-148).
-  const unchanged = () => finish(latest, json, `Nothing changed in ${timeout} min.`);
+  // After a result, the end of --timeout ends the call with that result, as before AFA-147, also
+  // when it comes before the next try after an error (AFA-148). Five errors in a row still end it
+  // with the error.
+  /** @param {unknown} [error] */
+  const unchanged = error => {
+    const minutes = Math.round((Date.now() - started) / 60000);
+    const why = error
+      ? ` The next try would come after --timeout: ${/** @type {Error} */ (error).message}`
+      : '';
+    finish(latest, json, `Nothing changed in ${minutes} min.${why}`);
+  };
   while (Date.now() < deadline) {
     await sleep(Math.min(interval * 1000, deadline - Date.now()));
     latest = await poll(unchanged);

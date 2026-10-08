@@ -68,10 +68,10 @@ that's `waiting` or `waiting-human`. There are two exceptions:
    A call can also end with an error, or Claude Code can stop it at its timeout. Then read what
    it printed. Exit code 3 means that GitHub refused the token, and 2 that an argument is wrong.
    With code 1 after a 404 or 422, a PR number or the repository is wrong. Fix these before you
-   run the call again. Network errors, server errors and rate limits end the call only after five
-   tries in a row. If a rate limit lasts past `--timeout`, the call prints its last result, or
-   ends with the error when it has none. After an error, run the call again after 10 minutes, or
-   after the rate limit resets. Arm a timed check-in for that time, such as a
+   run the call again. Network errors, server errors and rate limits end the call after five
+   tries in a row. If the next try would come after `--timeout`, the call prints its last result
+   and the error, or ends with the error when it has no result. After an error, run the call
+   again after 10 minutes, or after the rate limit resets. Arm a timed check-in for that time, such as a
    scheduled wake-up. When you run a call again, leave out each PR that merged or closed. Also
    leave out each `ready` PR that only the maintainer may merge, because `--wait` returns at once
    for it. Once every PR in both calls is `waiting-human`, don't run them again, and stop the
