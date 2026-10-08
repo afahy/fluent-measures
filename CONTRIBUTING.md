@@ -191,7 +191,7 @@ pull request's last run, or from `main`'s, when the mutant's code and the tests 
 haven't changed. It doesn't check other code that the mutant depends on, so a pull request's
 score can differ from a full run. A change to a file that tests read, such as `README.md` or the
 corpus, or to the packages, starts a full run. Pushes to `main` always run every mutant, and so
-does a re-run of the job.
+does a re-run of the job, so re-run it for a full run.
 
 A second job, "Mutants on changed lines are killed", runs Stryker on the files that a pull
 request changes under `src/`. It fails when a mutant whose code overlaps a line that the pull

@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join, matchesGlob, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 // AFA-111: CI's mutation job reuses Stryker's results from the last run. GitHub runs the job only
@@ -10,15 +10,15 @@ const hashed = (/hashFiles\(([^)]*)\)/.exec(job)?.[1] ?? '')
   .split(',')
   .map(pattern => pattern.trim().replace(/^'|'$/g, ''));
 
-/** Whether the hash covers a file, with the patterns that the test below requires. */
+/** Whether `hashFiles` covers a file: a pattern matches it, and no "!" pattern leaves it out. */
 const isHashed = (file: string): boolean =>
-  hashed.includes(file) || (file.startsWith('tests/') && !file.endsWith('.test.ts'));
+  hashed.some(pattern => !pattern.startsWith('!') && matchesGlob(file, pattern)) &&
+  !hashed.some(pattern => pattern.startsWith('!') && matchesGlob(file, pattern.slice(1)));
 
 describe('the mutation job in CI', () => {
-  it('runs Stryker in incremental mode, and every mutant on main or a re-run', () => {
-    const run = /^ +run: (pnpm test:mutation .*)$/m.exec(job)?.[1] ?? '';
-    expect(run).toContain('--incremental');
-    expect(run).toContain("(github.event_name == 'push' || github.run_attempt > 1) && '--force'");
+  it('runs Stryker in incremental mode, from no results on main or a re-run', () => {
+    expect(job).toMatch(/^ +run: pnpm test:mutation --incremental$/m);
+    expect(job).toContain("if: github.event_name != 'push' && github.run_attempt == 1");
   });
 
   it('restores and saves the incremental file under a key that changes with the inputs', () => {
@@ -28,6 +28,8 @@ describe('the mutation job in CI', () => {
     expect(
       job.match(/key: stryker-incremental-\$\{\{ steps\.inputs\.outputs\.hash \}\}-/g)
     ).toHaveLength(2);
+    // A key can't be saved twice, so each attempt saves under its own.
+    expect(job).toMatch(/key: .*\$\{\{ github\.sha \}\}-\$\{\{ github\.run_attempt \}\}$/m);
     // Only the source files and the test files stay out of the hash, because Stryker compares
     // them itself.
     expect(hashed).toEqual(
@@ -58,6 +60,17 @@ describe('the mutation job in CI', () => {
         'tests/__snapshots__/corpus.test.ts.snap',
       ])
     );
+  });
+
+  // The hash covers the corpus and the README, not a test file, which Stryker compares itself.
+  it.each([
+    ['README.md', true],
+    ['tests/corpus/measurements.jsonl', true],
+    ['tests/__snapshots__/corpus.test.ts.snap', true],
+    ['tests/corpus.test.ts', false],
+    ['src/tokenize.ts', false],
+  ])('hashes %s: %s', (file, expected) => {
+    expect(isHashed(file)).toBe(expected);
   });
 
   it.each(read)('hashes %s, which a parser test reads', file => {

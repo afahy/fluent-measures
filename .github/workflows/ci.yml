@@ -136,28 +136,30 @@ jobs:
         id: inputs
         run: echo "hash=${{ hashFiles('package.json', 'pnpm-lock.yaml', 'tsconfig.json', 'stryker.config.json', 'vitest.config.ts', '.github/workflows/ci.yml', '.github/actions/setup/action.yml', 'README.md', 'tests/**', '!tests/**/*.test.ts') }}" >> "$GITHUB_OUTPUT"
 
-      # A push to main runs every mutant, so it needs no earlier results.
+      # A change to one source file can change how the tests treat a mutant in another, which
+      # incremental mode doesn't check. So a push to main starts from no results and runs every
+      # mutant, and main's score and the results that pull requests reuse are exact. A re-run of
+      # the job does the same, so a pull request can get a full run.
       - uses: actions/cache/restore@v4
-        if: github.event_name != 'push'
+        if: github.event_name != 'push' && github.run_attempt == 1
         with:
           path: reports/stryker-incremental.json
-          key: stryker-incremental-${{ steps.inputs.outputs.hash }}-${{ github.sha }}
+          key: stryker-incremental-${{ steps.inputs.outputs.hash }}-${{ github.sha }}-1
           restore-keys: stryker-incremental-${{ steps.inputs.outputs.hash }}-
 
-      # A change to one source file can change how the tests treat a mutant in another, which
-      # incremental mode doesn't check. So a push to main runs every mutant (--force), and main's
-      # score and the results that pull requests reuse are exact. A re-run of the job runs every
-      # mutant too, so a pull request can get a full run.
+      # The step's own limit is below the job's, so a slow run fails the step, and the job still
+      # saves what Stryker wrote. Stryker writes its results before it checks the score, so a run
+      # below the threshold saves them too.
       - name: Mutation tests
-        run: pnpm test:mutation --incremental ${{ (github.event_name == 'push' || github.run_attempt > 1) && '--force' || '' }}
+        timeout-minutes: 27
+        run: pnpm test:mutation --incremental
 
-      # Stryker writes its results before it checks the score, so a run below the threshold still
-      # saves them, and the next push doesn't start from nothing.
+      # Each attempt saves under its own key, because a key can't be saved twice.
       - uses: actions/cache/save@v4
         if: ${{ !cancelled() }}
         with:
           path: reports/stryker-incremental.json
-          key: stryker-incremental-${{ steps.inputs.outputs.hash }}-${{ github.sha }}
+          key: stryker-incremental-${{ steps.inputs.outputs.hash }}-${{ github.sha }}-${{ github.run_attempt }}
 
   # Every mutant on a line that the pull request adds or changes under src/ must be killed. When
   # there is no pull request or it doesn't change src/, the steps are skipped and the job passes.
