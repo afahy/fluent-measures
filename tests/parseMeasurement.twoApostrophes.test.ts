@@ -18,7 +18,7 @@ describe('two apostrophes as an inch mark', () => {
   });
 
   // Two heights that disagree give null, as `180 cm, 72"` does.
-  it('returns null for 180 cm, 72′′ written with apostrophes', () => {
+  it(`returns null for 180 cm, 72''`, () => {
     expect(parseMeasurement(`180 cm, 72''`)).toBeNull();
   });
 
@@ -34,8 +34,9 @@ describe('two apostrophes as an inch mark', () => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });
 
-  // Ranges that repeat their unit stay null.
-  it.each([`72''-74''`, `5'11''-6'1''`])('returns null for %s', raw => {
+  // Ranges that repeat their unit stay null. Two apostrophes that don't come right after a digit
+  // keep main's result too ("must not change"), after a space or a number word.
+  it.each([`72''-74''`, `5'11''-6'1''`, `72 ''`, `five''`])('returns null for %s', raw => {
     expect(parseMeasurement(raw)).toBeNull();
   });
 });
