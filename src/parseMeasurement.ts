@@ -190,14 +190,16 @@ function readValueAfter(
   // measurement, as in "m: 1 cm: 80", or when it's another label, as in "kg: 72 cm: 180". The
   // short aliases are labels even when spelled out.
   const unitAt = skipSemicolons(words, end);
-  const nextToken: Token | undefined = tokens[unitAt];
+  const nextToken = tokens[unitAt];
+  // Stryker disable next-line StringLiteral: no unit is named "Stryker was here!", so it's no unit, as "" is.
   const next = (nextToken?.label !== 'name' && !nextToken?.startsField && words(unitAt)) || '';
   const nextUnit = matchUnit(next, 'height', fuzziness) || matchUnit(next, 'weight', fuzziness);
   const ownUnit =
     (label || LABEL_ALIASES.has(unit)) &&
     (nextUnit || UNSUPPORTED_WEIGHT_UNITS.test(next)) &&
     !(
-      (nextUnit === NEXT_PART[unit] || nextToken?.label === 'unit') &&
+      (nextUnit === NEXT_PART[unit] || nextToken.label === 'unit') &&
+      // Stryker disable next-line StringLiteral: "Stryker was here!" isn't a number, as "" isn't.
       wordsToNumber(words(skipSemicolons(words, unitAt + 1)) ?? '') !== null
     );
   return [ownUnit ? null : value, end];
@@ -401,9 +403,10 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
           : label && readValueAfter(tokens, i + 1, unit, label, fuzziness)[0] !== null;
       // A sign on the first word of a phrase signs the whole phrase, as in "-twenty five kg" and
       // "-a hundred kg". So those inputs return null, as "-5 feet" does.
-      // When the value follows, or the label starts a field, the read before the unit takes nothing.
+      // When the value follows, or the label starts a field, the read before the unit takes nothing,
+      // and the match starts at the unit.
       let [num, end, signed]: [number | null, number, boolean] =
-        valueFollows || startsField ? [null, i - 1, false] : readSignedPhrase(remaining, i - 1, -1);
+        valueFollows || startsField ? [null, i, false] : readSignedPhrase(remaining, i - 1, -1);
       let matchStart = num === null ? end : end + 1;
       let matchEnd = i + 1;
 
@@ -455,6 +458,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       if (unit === 'ft') {
         const [inches, inchesEnd] = readNumberPhrase(remaining, matchEnd);
         // A label's value comes after it, so a label isn't the unit of the inches before it.
+        // Stryker disable next-line StringLiteral: "Stryker was here!" is no unit, as "" is.
         const nextWord = (!tokens[inchesEnd]?.label && remaining(inchesEnd)) || '';
         const nextUnit = matchUnit(nextWord, 'height', fuzziness);
         // A following unit owns the number, even when it belongs to another measurement type or
