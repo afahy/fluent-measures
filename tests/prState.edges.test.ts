@@ -1090,8 +1090,8 @@ describe('pr-state.mjs details', () => {
 
 describe('files that CODEOWNERS covers', () => {
   it('lets an agent merge a PR that changes them when nothing else holds it', () => {
-    // AFA-133 removed the CODEOWNERS check. Before it, these fields held this PR for the
-    // maintainer. collect() no longer reads them, and classify() ignores them.
+    // A PR's changed files and the CODEOWNERS text don't affect its state, even when they
+    // show that the PR changes AGENTS.md, .github/ and .size-limit.cjs.
     const snapshot = Object.assign(reviewed67(), {
       files: ['AGENTS.md', '.github/workflows/ci.yml', '.size-limit.cjs'],
       codeowners: '.github/** @afahy\nAGENTS.md @afahy\n.size-limit.cjs @afahy\n',

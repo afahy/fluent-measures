@@ -41,7 +41,7 @@ Run these commands from the repository root:
    ticket.
 8. Files that match a pattern in `.github/CODEOWNERS` follow the same rules as every other
    file. You may change them, and you may merge a PR that changes them when "Merge your own
-   PR" allows it. GitHub doesn't require a code-owner review on `main`.
+   PR" allows it.
 9. Never use a branch-protection bypass, and don't enable auto-merge until AFA-29 is
    complete. Merge a PR only when "Merge your own PR" allows it. Agents open PRs from the
    maintainer's GitHub account, so each merge is recorded as the maintainer's.
