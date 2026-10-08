@@ -14,7 +14,6 @@ import {
   digest,
   mostUrgent,
   pushedAt,
-  rateLimitResetAt,
   unansweredBotThreads,
   unansweredReviewBodies,
   type CheckRun,
@@ -200,14 +199,6 @@ describe('codexSummaryRows edges', () => {
     expect(codexSummaryRows(body)).toEqual([
       { review: 'Security Review', status: 'Queued', commit: null },
     ]);
-  });
-});
-
-describe('rateLimitResetAt edges', () => {
-  it('reads plural hours', () => {
-    expect(rateLimitResetAt('available in 2 hours.', '2026-10-07T10:00:00Z')).toBe(
-      '2026-10-07T12:00:00.000Z'
-    );
   });
 });
 
@@ -501,40 +492,6 @@ describe('coderabbitState edges', () => {
     expect(coderabbitState(snapshot, at('2026-10-07T15:52:00Z')).state).toBe('requested');
   });
 
-  it('uses the newest rate-limit note from CodeRabbit since the push, else assumes an hour', () => {
-    const snapshot = fixture('pr-67');
-    snapshot.issueComments.push(
-      // Newer than the 57-minute note at 14:51:45, so this one counts.
-      comment(
-        5,
-        rabbit,
-        'rate limited by coderabbit.ai. Next included review available in 30 minutes.',
-        '2026-10-07T14:51:50Z'
-      ),
-      // Not from CodeRabbit.
-      comment(
-        6,
-        human,
-        'rate limited by coderabbit.ai. Next included review available in 1 minute.',
-        '2026-10-07T14:52:00Z'
-      )
-    );
-    expect(coderabbitState(snapshot, at('2026-10-07T15:00:00Z')).detail).toBe(
-      "CodeRabbit was rate limited on 318c1b7 until 2026-10-07T15:21:50.000Z, so the PR doesn't wait for it"
-    );
-    // Notes last edited before the 14:43:10 push are about earlier commits. Without one, the
-    // limit ends an hour after the 14:51:46 status.
-    snapshot.issueComments = snapshot.issueComments.map(c => ({
-      ...c,
-      updated_at: '2026-10-07T14:43:09Z',
-    }));
-    expect(coderabbitState(snapshot, at('2026-10-07T15:00:00Z'))).toEqual({
-      state: 'rate-limited',
-      detail:
-        "CodeRabbit was rate limited on 318c1b7 until 2026-10-07T15:51:46.000Z (assumed), so the PR doesn't wait for it",
-    });
-  });
-
   it('accepts a skipped review, and asks again after a failed one', () => {
     const snapshot = fixture('pr-67');
     snapshot.statuses = [
@@ -718,12 +675,12 @@ describe('classify edges', () => {
     expect(status.waits).toEqual(['CI is running: package (22), package (24)']);
   });
 
-  it('lists the bots it gave up on in the notes', () => {
+  it('lists the bots it gave up on, and a rate-limited CodeRabbit, in the notes', () => {
     const status = classify(fixture('pr-66'), at('2026-10-07T17:01:00Z'));
     expect(status.notes).toEqual([
       'coderabbitai[bot] replied after your reply: https://github.com/afahy/fluent-measures/pull/66#discussion_r4208534586',
       "Codex hasn't reviewed c7ad2f4 in the 2 hours it has had; its last review was of 91a5d29",
-      "CodeRabbit hasn't reviewed c7ad2f4 in the 2 hours it has had",
+      "CodeRabbit was rate limited on c7ad2f4, so the PR doesn't wait for it",
     ]);
   });
 
@@ -785,7 +742,7 @@ describe('mostUrgent and digest', () => {
       actions: [],
       notes: [
         'coderabbitai[bot] replied after your reply: https://github.com/afahy/fluent-measures/pull/66#discussion_r4208534586',
-        "CodeRabbit was rate limited on c7ad2f4 until 2026-10-07T16:01:19.000Z (assumed), so the PR doesn't wait for it",
+        "CodeRabbit was rate limited on c7ad2f4, so the PR doesn't wait for it",
       ],
     });
   });
@@ -998,25 +955,54 @@ describe('pr-state.mjs details', () => {
       comment(
         2,
         rabbit,
-        '<summary>⚠️ Action not completed</summary>\n\nReview rate limited.',
+        '<summary>⚠️ Action not completed</summary>\n\nReviews are paused.',
         '2026-10-07T15:50:00Z'
       )
     );
     expect(coderabbitState(snapshot, at('2026-10-07T15:51:00Z'))).toEqual({
       state: 'refused',
-      detail: 'CodeRabbit refused the review request: Review rate limited.',
+      detail: 'CodeRabbit refused the review request: Reviews are paused.',
       until: '2026-10-07T16:51:34.000Z',
     });
   });
 
-  it('counts a rate-limit note edited at the second of the push', () => {
+  it("doesn't wait when CodeRabbit refuses a request because of its rate limit", () => {
     const snapshot = fixture('pr-67');
-    const note = snapshot.issueComments.find(c => c.user?.login === rabbit.login)!;
-    // The push was at 14:43:10. 14:43:10 plus 57 minutes is 15:40:10.
-    note.updated_at = '2026-10-07T14:43:10Z';
-    expect(coderabbitState(snapshot, at('2026-10-07T15:00:00Z')).detail).toBe(
-      "CodeRabbit was rate limited on 318c1b7 until 2026-10-07T15:40:10.000Z, so the PR doesn't wait for it"
+    snapshot.issueComments.push(
+      comment(1, human, '@coderabbitai review', '2026-10-07T15:50:00Z'),
+      comment(
+        2,
+        rabbit,
+        '<summary>⚠️ Action not completed</summary>\n\nReview rate limited.',
+        '2026-10-07T15:50:05Z'
+      )
     );
+    expect(coderabbitState(snapshot, at('2026-10-07T15:51:00Z'))).toEqual({
+      state: 'rate-limited',
+      detail: "CodeRabbit was rate limited on 318c1b7, so the PR doesn't wait for it",
+    });
+  });
+
+  it('waits for a request made after the rate limit, but not for a limit set after it', () => {
+    const snapshot = fixture('pr-67');
+    // #67's rate-limit status is from 14:51:46, before this request.
+    snapshot.issueComments.push(comment(1, human, '@coderabbitai review', '2026-10-07T15:50:00Z'));
+    expect(coderabbitState(snapshot, at('2026-10-07T15:51:00Z')).state).toBe('requested');
+    snapshot.statuses.push({
+      context: 'CodeRabbit',
+      state: 'success',
+      description: 'Review rate limited',
+      created_at: '2026-10-07T15:50:30Z',
+    });
+    expect(coderabbitState(snapshot, at('2026-10-07T15:51:00Z')).state).toBe('rate-limited');
+  });
+
+  it('names the rate limit, not the 2 hours, when CodeRabbit was rate limited', () => {
+    // #67's clock starts at 14:51:34, so its 2 hours end at 16:51:34.
+    expect(coderabbitState(fixture('pr-67'), at('2026-10-07T17:00:00Z'))).toEqual({
+      state: 'rate-limited',
+      detail: "CodeRabbit was rate limited on 318c1b7, so the PR doesn't wait for it",
+    });
   });
 
   it('says CodeRabbit reviewed the head when its status says so', () => {
@@ -1057,7 +1043,7 @@ describe('pr-state.mjs details', () => {
     expect(status.notes).toEqual([
       `coderabbitai[bot] left 12 nitpick comments in ${pull67}#pullrequestreview-1`,
       `chatgpt-codex-connector[bot] commented: ${pull67}#issuecomment-2`,
-      "CodeRabbit was rate limited on 318c1b7 until 2026-10-07T15:48:45.000Z, so the PR doesn't wait for it",
+      "CodeRabbit was rate limited on 318c1b7, so the PR doesn't wait for it",
     ]);
   });
 

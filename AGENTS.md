@@ -198,8 +198,9 @@ when all of these are true:
 
 - It is ready to merge, as "Finish the PR" says, and the last comment check found no
   showstopper.
-- `pnpm pr:status` reports it as `ready`: CI passed, Codex has completed a review of its last
-  commit, and CodeRabbit has reviewed it, had two hours to, or was rate limited on it.
+- `pnpm pr:status` reports it as `ready`: CI passed, and Codex has completed a review of its
+  last commit. CodeRabbit has reviewed that commit, had two hours to, or was rate limited on
+  it.
 - Its last review round found nothing new, or it has had three rounds.
 - It needs no "Stop and ask" decision.
 - The PR body and a ticket comment list each result that it changes from `main` beyond the

@@ -34,8 +34,6 @@ const MINUTE = 60 * 1000;
 export const BOT_START_WAIT = 30 * MINUTE;
 /** How long to wait for a bot in all (AGENTS.md: "Wait at most two hours for a bot"). */
 export const BOT_MAX_WAIT = 120 * MINUTE;
-/** CodeRabbit's wait when its rate-limit note gives no time. Its notes so far said 14–57 min. */
-export const RATE_LIMIT_DEFAULT_WAIT = 60 * MINUTE;
 /** How long CI gets to start before a missing run is reported. */
 export const CI_START_WAIT = 30 * MINUTE;
 
@@ -212,26 +210,6 @@ export function codexSummaryRows(body) {
   return rows;
 }
 
-/**
- * Reads when CodeRabbit's rate limit ends from a note such as "Next included review available
- * in 57 minutes." The wait counts from when the note was last edited.
- *
- * @param {string} body
- * @param {string} editedAt
- * @returns {string | null} An ISO time, or null if the note gives no wait.
- */
-export function rateLimitResetAt(body, editedAt) {
-  const sentence = /available in ([^.]*)\./i.exec(body)?.[1];
-  if (!sentence) return null;
-  const units = { hour: 60 * MINUTE, minute: MINUTE, second: 1000 };
-  let wait = 0;
-  for (const [, amount, unit] of sentence.matchAll(/(\d+)\s*(hour|minute|second)s?/gi)) {
-    wait += Number(amount) * units[/** @type {keyof typeof units} */ (unit.toLowerCase())];
-  }
-  if (wait === 0) return null;
-  return new Date(Date.parse(editedAt) + wait).toISOString();
-}
-
 /** A comment that only asks a bot to do something, such as "Agent: @codex review". */
 const BOT_COMMAND = /^\s*(?:agent:\s*)?@(?:codex|coderabbitai)\s+\S+[\s.]*$/i;
 
@@ -374,6 +352,21 @@ export function coderabbitState(snapshot, now) {
   if (reviewedHead || finished || /review completed/i.test(status?.description ?? '')) {
     return { state: 'done', detail: `CodeRabbit reviewed ${short}` };
   }
+  // Don't wait for a rate-limited CodeRabbit, and don't ask it again for this commit. It's rate
+  // limited when its status since the last request says so, or when it refused the last request
+  // for that reason. CodeRabbit reviews the next push if its limit allows.
+  const lastAsked = asked[asked.length - 1]?.created_at;
+  const limitedStatus =
+    /rate limit/i.test(status?.description ?? '') &&
+    (!lastAsked || byTime(status?.created_at ?? '', lastAsked) >= 0);
+  const limitedReply =
+    /action not completed/i.test(reply?.body ?? '') && /rate limit/i.test(reply?.body ?? '');
+  if (limitedStatus || limitedReply) {
+    return {
+      state: 'rate-limited',
+      detail: `CodeRabbit was rate limited on ${short}, so the PR doesn't wait for it`,
+    };
+  }
   if (now - start >= BOT_MAX_WAIT) {
     return {
       state: 'gave-up',
@@ -397,26 +390,6 @@ export function coderabbitState(snapshot, now) {
       state: 'requested',
       detail: `Asked at ${asked[0].created_at} for a review of ${short}`,
       until: after(start, BOT_MAX_WAIT),
-    };
-  }
-  if (/rate limit/i.test(status?.description ?? '')) {
-    // Only a note edited after the push is about this commit.
-    const note = snapshot.issueComments
-      .filter(
-        c =>
-          c.user?.login === CODERABBIT &&
-          /rate limited by coderabbit/i.test(c.body ?? '') &&
-          byTime(c.updated_at, pushed) >= 0
-      )
-      .sort((a, b) => byTime(b.updated_at, a.updated_at))[0];
-    const resetAt =
-      (note && rateLimitResetAt(note.body ?? '', note.updated_at)) ??
-      after(Date.parse(status?.created_at ?? pushed), RATE_LIMIT_DEFAULT_WAIT);
-    // Don't wait for a rate-limited CodeRabbit, and don't ask it again for this commit after
-    // the limit ends. CodeRabbit reviews the next push if its limit allows.
-    return {
-      state: 'rate-limited',
-      detail: `CodeRabbit was rate limited on ${short} until ${resetAt}${note ? '' : ' (assumed)'}, so the PR doesn't wait for it`,
     };
   }
   if (
@@ -659,7 +632,7 @@ export function classify(snapshot, now = Date.now(), { requests = true } = {}) {
     if (bot.action) actions.push(bot.action);
     if (bot.state === 'gave-up' || bot.state === 'rate-limited') notes.push(bot.detail);
     if (['pending', 'running', 'requested', 'refused'].includes(bot.state)) {
-      const until = bot.until && !bot.detail.includes(bot.until) ? ` (until ${bot.until})` : '';
+      const until = bot.until ? ` (until ${bot.until})` : '';
       waits.push(`${bot.detail}${until}`);
     }
   }

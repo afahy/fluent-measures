@@ -7,7 +7,6 @@ import {
   codexSummaryRows,
   createClient,
   mostUrgent,
-  rateLimitResetAt,
   shaMatches,
   unansweredBotThreads,
   type CheckRun,
@@ -73,28 +72,6 @@ describe('codexSummaryRows', () => {
     expect(codexSummaryRows(body)).toEqual([
       { review: 'Code Review', status: 'Running', commit: 'b92e3aa' },
     ]);
-  });
-});
-
-describe('rateLimitResetAt', () => {
-  it("adds the wait in CodeRabbit's note to the time the note was edited", () => {
-    const note = fixture('pr-67').issueComments.find(c =>
-      c.body?.includes('rate limited by coderabbit')
-    );
-    // 14:51:45 plus 57 minutes.
-    expect(rateLimitResetAt(note?.body ?? '', note?.updated_at ?? '')).toBe(
-      '2026-10-07T15:48:45.000Z'
-    );
-  });
-
-  it('adds up hours, minutes and seconds', () => {
-    const body = '**Next included review available in 1 hour, 2 minutes and 30 seconds.**';
-    expect(rateLimitResetAt(body, '2026-10-07T10:00:00Z')).toBe('2026-10-07T11:02:30.000Z');
-  });
-
-  it('returns null when the note gives no wait', () => {
-    expect(rateLimitResetAt('Review limit reached.', '2026-10-07T10:00:00Z')).toBeNull();
-    expect(rateLimitResetAt('Available in a moment.', '2026-10-07T10:00:00Z')).toBeNull();
   });
 });
 
@@ -196,14 +173,13 @@ describe('classify', () => {
     expect(status.pushedAt).toBe('2026-10-07T15:00:44Z');
     expect(status.ci.passed).toHaveLength(12);
     expect(status.codex.state).toBe('pending');
-    // The note gives no wait, so the limit is taken to end 60 minutes after the 15:01:19 status.
     expect(status.coderabbit.state).toBe('rate-limited');
     expect(status.waits).toEqual([
       "Codex hasn't started on c7ad2f4; its last review was of 91a5d29 (until 2026-10-07T15:30:44.000Z)",
     ]);
     expect(status.notes).toEqual([
       `coderabbitai[bot] replied after your reply: ${pr66}#discussion_r4208534586`,
-      "CodeRabbit was rate limited on c7ad2f4 until 2026-10-07T16:01:19.000Z (assumed), so the PR doesn't wait for it",
+      "CodeRabbit was rate limited on c7ad2f4, so the PR doesn't wait for it",
     ]);
   });
 
@@ -232,7 +208,7 @@ describe('classify', () => {
       expect(status.actions).toEqual([]);
       expect(status.codex.state).toBe('done');
       expect(status.notes).toEqual([
-        "CodeRabbit was rate limited on 318c1b7 until 2026-10-07T15:48:45.000Z, so the PR doesn't wait for it",
+        "CodeRabbit was rate limited on 318c1b7, so the PR doesn't wait for it",
       ]);
     }
   });
@@ -244,7 +220,8 @@ describe('classify', () => {
     const status = classify(fixture('pr-66'), at('2026-10-07T17:00:44Z'));
     expect(status.state).toBe('waiting-human');
     expect(status.codex.state).toBe('gave-up');
-    expect(status.coderabbit.state).toBe('gave-up');
+    // CodeRabbit was rate limited on c7ad2f4, so the PR never waited for it.
+    expect(status.coderabbit.state).toBe('rate-limited');
     expect(status.reasons).toEqual([
       'Codex never reviewed the head commit, so only the maintainer can merge it',
     ]);

@@ -140,7 +140,6 @@ export const OWN_STATUS: string;
 export const OWN_CHECK: string;
 export const BOT_START_WAIT: number;
 export const BOT_MAX_WAIT: number;
-export const RATE_LIMIT_DEFAULT_WAIT: number;
 export const CI_START_WAIT: number;
 export const STATES: Record<PrState, number>;
 
@@ -151,7 +150,6 @@ export function ciSummary(checkRuns: CheckRun[], statuses: CommitStatus[]): CiSu
 export function codexSummaryRows(
   body: string
 ): { review: string; status: string; commit: string | null }[];
-export function rateLimitResetAt(body: string, editedAt: string): string | null;
 export function codexState(snapshot: Snapshot, now: number): BotState;
 export function coderabbitState(snapshot: Snapshot, now: number): BotState;
 export function unansweredBotThreads(comments: ReviewComment[]): ReviewComment[];
