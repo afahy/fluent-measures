@@ -1,7 +1,6 @@
-import { performance } from 'node:perf_hooks';
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement, type ParseOptions } from '../src';
-import { underStryker } from './underStryker';
+import { parseWithin, underStryker } from './timing';
 
 // Each input with the Unicode minus sign (U+2212) in place of each hyphen-minus before a digit.
 const unicode = (raw: string): string => raw.replace(/-(?=[\d.])/g, '−');
@@ -193,12 +192,10 @@ describe('signed parts', () => {
 
   // Each signed label value is read without its sign in place, not in a copy of the tokens. Here,
   // with 20,000 signed labels, a copy took 10.7 s, and the current code takes 70 ms, or 160 ms with
-  // coverage. In CI's coverage run it took up to 600 ms, so the 4 s limit leaves about 7 times that
-  // (AFA-95). The test skips itself under Stryker.
+  // coverage. In CI's coverage run it took up to 630 ms, so the 4 s limit of CPU time leaves about 6
+  // times that (AFA-95). The test skips itself under Stryker.
   it.skipIf(underStryker)('reads many signed label values quickly', () => {
-    const start = performance.now();
-    expect(parseMeasurement('kg: -5 '.repeat(20_000))).toBeNull();
-    expect(performance.now() - start).toBeLessThan(4000);
+    expect(parseWithin('kg: -5 '.repeat(20_000), 4000)).toBeNull();
   });
 
   // "5 ft -11" has no inch unit, so -11 isn't a part (existing test).

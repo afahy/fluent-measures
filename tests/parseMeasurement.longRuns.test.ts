@@ -1,28 +1,19 @@
-import { performance } from 'node:perf_hooks';
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
-import { underStryker } from './underStryker';
+import { parseWithin, underStryker } from './timing';
 
-// The semicolon and hyphen-joiner tests below have fixed limits (AFA-95). The limits hold for a
-// plain run and for CI's coverage run. In CI, a coverage run of these tests took up to 8 times as
-// long as one here, and one test's time changed by up to 2 times between jobs. Each input takes
-// the quadratic code before the fix at least twice the limit. These tests skip themselves under
-// Stryker, so a mutant that makes this code quadratic isn't caught there. A change in the code
-// itself that does so fails them in a plain or coverage run.
+// The semicolon and hyphen-joiner tests below have fixed limits of CPU time (AFA-95). The limits
+// hold for a plain run and for CI's coverage run. In CI, a coverage run of these tests took up to
+// 8 times as long as one here, and one test's time changed by up to 4 times between runs. Each
+// input takes the quadratic code before the fix at least twice the limit. These tests skip
+// themselves under Stryker, so a mutant that makes this code quadratic isn't caught there. A
+// change in the code itself that does so fails them in a plain or coverage run.
 
 // AFA-36: a regex such as /\.+$/ starts again at each character of a long run of periods or
 // semicolons. So 100,000 of them before another character took about 2.6 s. A scan back from the
 // end of the token takes a few milliseconds.
 describe('long runs of periods and semicolons', () => {
   const run = (mark: string): string => mark.repeat(100_000);
-
-  // Parses raw, and checks that it takes less than limit milliseconds.
-  const parseWithin = (raw: string, limit: number): ReturnType<typeof parseMeasurement> => {
-    const start = performance.now();
-    const result = parseMeasurement(raw);
-    expect(performance.now() - start).toBeLessThan(limit);
-    return result;
-  };
 
   // The input from AFA-36. It has no number, so it has no measurement.
   it('returns null for a long run of periods before a letter', () => {
@@ -63,8 +54,8 @@ describe('long runs of periods and semicolons', () => {
 
   // Here the code before #65 took 25 to 28 s for 150,000 copies of ";a-1", ".x-1" and "x-1;". It
   // took 33 to 41 s for 120,000 copies of ";kg-1" and "kg-1;". The current code takes at most
-  // 0.7 s. In CI's coverage run, the slowest of them took 2.5 s for two thirds of these copies.
-  // So the limit is 12 s, and these tests get a 30 s timeout, not Vitest's 5 s.
+  // 0.7 s. In CI's coverage run, they took 0.9 to 5.8 s of clock time. So the limit is 12 s, and
+  // these tests get a 30 s timeout, not Vitest's 5 s.
   it.skipIf(underStryker).each(tokens)(
     'returns null for a long token of %s repeated %i times',
     { timeout: 30_000 },
