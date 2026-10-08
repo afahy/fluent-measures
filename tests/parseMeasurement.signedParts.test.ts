@@ -25,7 +25,21 @@ describe('signed parts', () => {
   // "5 in-5 in" (5 in). The double prime, the right double quote and the full-width quote read as
   // an inch mark too (AFA-61). A space can come between the number and the mark, as in '5 "'.
   it.each(['5"-5 in', '5″-5 in', '5”-5 in', '5＂-5 in', '5 "-5 in'])('reads %s as 5 in', raw => {
-    expect(parseMeasurement(raw)).toMatchObject({ value: 5, unit: 'in' });
+    expect(parseMeasurement(raw)).toMatchObject({
+      value: 5,
+      unit: 'in',
+      type: 'height',
+      matches: [{ value: 5, unit: 'in' }],
+    });
+  });
+
+  // A weight after a height with marks reads as it does after the same height in words, as in
+  // "6 ft 1 in-185 lbs" (185 lb). The hyphen after the inch mark no longer signs the weight.
+  it('reads the weight in 6\'1"-185 lbs', () => {
+    expect(parseMeasurement('6\'1"-185 lbs', { type: 'weight' })).toMatchObject({
+      value: 185,
+      unit: 'lb',
+    });
   });
 
   // The README's "1 m 80 cm" is one height: 100 + 80 = 180 cm.
