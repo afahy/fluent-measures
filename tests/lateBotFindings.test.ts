@@ -239,6 +239,68 @@ describe('lateFinding', () => {
     expect(finding?.excerpt).not.toContain('Configuration used');
   });
 
+  // AFA-145 review: a fence that a finding leaves open ends at the start of each of the bots' own
+  // subsections, not only a prompt. Before the fix, it paired with the subsection's fence, so the
+  // subsection's </details> ended the file's section and Finding B was lost. Without the stop at
+  // the next section line, a stray fence also paired with the fence in the next file's section.
+  it.each([
+    [
+      'a suggested fix after a diff whose fence closes early',
+      '```diff\n ```js\n-a\n+b\n ```\n```\n\n<details>\n<summary>🔧 Suggested fix</summary>\n\n```diff\n-a\n+b\n```\n\n</details>',
+      '',
+    ],
+    [
+      'a committable suggestion after an unclosed fence',
+      'Stray:\n\n```js\n\n<details>\n<summary>📝 Committable suggestion</summary>\n\n```suggestion\nconst x = 1;\n```\n\n</details>',
+      '',
+    ],
+    [
+      'the next file, whose finding has a fence, after an unclosed fence',
+      'Stray:\n\n```js',
+      '\n\n```\ncode\n```',
+    ],
+  ])('keeps the next file after %s', (_name, inside, inB) => {
+    const body = `<details>\n<summary>🧹 Nitpick comments (2)</summary><blockquote>\n\n<details>\n<summary>README.md (1)</summary><blockquote>\n\nFinding A\n\n${inside}\n\n</blockquote></details>\n<details>\n<summary>src/b.ts (1)</summary><blockquote>\n\nFinding B${inB}\n\n</blockquote></details>\n\n</blockquote></details>\n\n${SETTINGS}`;
+    const finding = lateFinding('pull_request_review', {
+      pull_request: merged43,
+      review: { ...bot.coderabbitReview, body },
+    });
+    expect(finding?.excerpt).toContain('Finding B');
+    expect(finding?.excerpt).not.toContain('<summary>');
+    expect(finding?.excerpt).not.toContain('Configuration used');
+  });
+
+  // AFA-145 review: the look-ahead for a closing line reads lines as the fence does. A backtick
+  // line indented four columns is code in the fence, not its closing line, and a line outside the
+  // fence's quote ends it.
+  it('reads the closing line of a fence with its indent and its quote', () => {
+    const indented = `<details>\n<summary>🧹 Nitpick comments (3)</summary><blockquote>\n\n<details>\n<summary>README.md (2)</summary><blockquote>\n\nFinding A1\n\n\`\`\`js\n\n<details>\n<summary>More</summary>\n\n    \`\`\`\n    x\n    \`\`\`\n\n</details>\n\n---\n\nFinding A2\n\n<details>\n<summary>🔧 Suggested fix</summary>\n\n\`\`\`diff\n-c\n+d\n\`\`\`\n\n</details>\n\n</blockquote></details>\n<details>\n<summary>src/b.ts (1)</summary><blockquote>\n\nFinding B\n\n</blockquote></details>\n\n</blockquote></details>\n\n${SETTINGS}`;
+    const review = (body: string): Finding | null =>
+      lateFinding('pull_request_review', {
+        pull_request: merged43,
+        review: { ...bot.coderabbitReview, body },
+      });
+    expect(review(indented)?.excerpt).toContain('Finding B');
+    const quoted = `> <details>\n> <summary>⚠️ Outside diff range comments (1)</summary><blockquote>\n>\n> Finding O\n>\n> \`\`\`js\n>\n> </blockquote></details>\n\n**🧹 Nitpick comments (1)**\n\nFinding N\n\n\`\`\`\ncode\n\`\`\`\n\n${SETTINGS}`;
+    const finding = review(quoted);
+    expect(finding?.summary).toBe(
+      'a review with 1 outside diff range comment and 1 nitpick comment'
+    );
+    expect(finding?.excerpt).not.toContain('Configuration used');
+  });
+
+  // AFA-145 review: only a file's section belongs to a bold title's section. The bots' other
+  // sections with a count, such as "🔇 Additional comments (3)", end it.
+  it("ends a bold title's section at another section with a count", () => {
+    const body = `**🧹 Nitpick comments (1)**\n\n<details>\n<summary>src/a.ts (1)</summary><blockquote>\n\nKeep this\n\n</blockquote></details>\n\n<details>\n<summary>🔇 Additional comments (3)</summary><blockquote>\n\nLGTM stuff\n\n</blockquote></details>\n\n${SETTINGS}`;
+    const finding = lateFinding('pull_request_review', {
+      pull_request: merged43,
+      review: { ...bot.coderabbitReview, body },
+    });
+    expect(finding?.excerpt).toContain('Keep this');
+    expect(finding?.excerpt).not.toContain('LGTM stuff');
+  });
+
   // AFA-145: after a bold title, a file's section in a Markdown quote, or one whose path has a
   // space, belongs to the title's section.
   it.each([
@@ -571,6 +633,9 @@ describe('plainText', () => {
       'Code:\n\n  ```\n     ```\n<b>x</b>\n  ```',
     ],
     ['an indented block right after a fence', '```\na\n```\n    <b>x</b>'],
+    // AFA-145: a shorter run, or a run of the other mark, doesn't close a fence.
+    ['a fence of four backticks with a line of three in it', '````md\n```\n<b>x</b>\n````'],
+    ['a tilde fence with a line of backticks in it', '~~~md\n```\n<b>x</b>\n~~~'],
   ])('keeps the tags in %s', (_name, code) => {
     expect(plainText(code)).toBe(code);
   });
@@ -603,6 +668,12 @@ describe('plainText', () => {
       'a closing line with a tab after its marks',
       '```\n<b>a</b>\n```\t\n<i>b</i>',
       '```\n<b>a</b>\n```\t\nb',
+    ],
+    // AFA-145: a line without the fence's quote marks ends the quote and the fence.
+    [
+      'a line without the quote marks of a quoted fence',
+      '> ```\n> <b>a</b>\n```\n<i>b</i>',
+      '> ```\n> <b>a</b>\n```\nb',
     ],
   ])('reads %s', (_name, html, expected) => {
     expect(plainText(html)).toBe(expected);
