@@ -132,8 +132,18 @@ describe('unsupported weight units', () => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });
 
-  // The only height left is a zero, which doesn't count.
-  it('returns null for 0 ft 8 oz', () => {
-    expect(parseMeasurement('0 ft 8 oz')).toBeNull();
+  // The amount with its own unit now acts as a supported weight does after feet: `5 ft 8 lbs 3 in`
+  // gives 5 × 12 + 3 = 63 in, and `5 ft 8 kg 11 in` gives 71 in.
+  it.each([
+    ['5 ft 8 oz 3 in', 63],
+    ['5 ft 8 g 11 in', 71],
+  ] as const)('joins the feet and inches around the amount in %s: %s in', (raw, value) => {
+    expect(parseMeasurement(raw)).toMatchObject({ value, unit: 'in' });
+  });
+
+  // The only height left is a zero, which doesn't count. And 5 ft and 68 in are two heights that
+  // disagree, as in `5 ft 8 lbs; 68 in`.
+  it.each(['0 ft 8 oz', '5 ft 8 oz; 68 in', '5 ft 8 grams, 68 in'])('returns null for %s', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
   });
 });
