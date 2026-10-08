@@ -87,7 +87,11 @@ for (const file of files) {
   if (ranges.length > 0) changed.set(file, ranges);
 }
 if (changed.size === 0) {
-  console.log(`No lines under src/ change between ${base} and HEAD, so there is nothing to check.`);
+  console.log(
+    files.length === 0 && sourceFiles.length > 0
+      ? 'None of the changed files under src/ is one that Stryker mutates ("mutate" in stryker.config.json), so there is nothing to check.'
+      : `No lines under src/ change between ${base} and HEAD, so there is nothing to check.`
+  );
   process.exit(0);
 }
 

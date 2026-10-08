@@ -1,7 +1,8 @@
 // Helpers for .github/scripts/mutation-check.mjs: the lines that a pull request adds or changes,
 // and the mutants on them in a Stryker JSON report that no test kills.
 
-import { matchesGlob } from 'node:path';
+import { isAbsolute, matchesGlob, normalize, relative } from 'node:path';
+import ts from 'typescript';
 
 /**
  * Returns the revisions to compare: the base and HEAD in CI, where HEAD is a merge commit whose
@@ -101,9 +102,9 @@ export function isSourceFile(file) {
 /**
  * Returns the files that the `mutate` patterns in the Stryker config cover. As in Stryker, the
  * patterns apply in order: a pattern that starts with "!" leaves files out, and a later pattern
- * can put them back. Stryker reads a pattern from the project folder, so `./src/a.ts` is
- * `src/a.ts`, and a line range after a pattern, as in `src/a.ts:1-10`, doesn't change which files
- * match. The project's pattern leaves out test files under `src/`: Vitest finds tests only
+ * can put them back. Stryker reads a pattern from the project folder, so `./src/a.ts` and an
+ * absolute path to it are `src/a.ts`, and a line range after a pattern, as in `src/a.ts:1-10`,
+ * doesn't change which files match. The project's pattern leaves out test files under `src/`: Vitest finds tests only
  * under `tests/`, so their mutants would get no coverage.
  *
  * @param {string[]} files
@@ -114,11 +115,9 @@ export function mutatedFiles(files, patterns) {
   return files.filter(file =>
     patterns.reduce((mutated, pattern) => {
       const negated = pattern.startsWith('!');
-      const glob = pattern
-        .replace(/^!/, '')
-        .replace(/^\.\//, '')
-        .replace(/:\d+(?::\d+)?-\d+(?::\d+)?$/, '');
-      return matchesGlob(file, glob) ? !negated : mutated;
+      const glob = pattern.replace(/^!/, '').replace(/:\d+(?::\d+)?-\d+(?::\d+)?$/, '');
+      const fromProject = isAbsolute(glob) ? relative(process.cwd(), glob) : normalize(glob);
+      return matchesGlob(file, fromProject) ? !negated : mutated;
     }, false)
   );
 }
@@ -271,12 +270,49 @@ export function unexplainedIgnores(report, changed) {
 const DIRECTIVE = /^\s?Stryker disable(?: next-line)? [a-zA-Z, ]+(?::(.+))?/;
 
 /**
+ * Returns each comment in `source`: where its text starts, and its text without `//`, or `/*` and
+ * `*\/`, as Babel gives it to Stryker. The TypeScript parser finds the comments, so a `/*` or `//`
+ * inside a string, a template literal or a regex literal isn't one. A comment on its own line
+ * leads the next token, and a comment after code on the same line trails the token before it. A
+ * JSDoc node's children start inside its comment, so the walk skips them.
+ *
+ * @param {string} source
+ * @returns {Array<{ start: number, text: string }>}
+ */
+function comments(source) {
+  const file = ts.createSourceFile('source.ts', source, ts.ScriptTarget.Latest, true);
+  /** @type {Map<number, ts.CommentRange>} */
+  const ranges = new Map();
+  const visit = (/** @type {ts.Node} */ node) => {
+    for (const range of [
+      ...(ts.getLeadingCommentRanges(source, node.pos) ?? []),
+      ...(ts.getTrailingCommentRanges(source, node.end) ?? []),
+    ]) {
+      ranges.set(range.pos, range);
+    }
+    if (node.kind >= ts.SyntaxKind.FirstJSDocNode && node.kind <= ts.SyntaxKind.LastJSDocNode) {
+      return;
+    }
+    for (const child of node.getChildren(file)) visit(child);
+  };
+  visit(file);
+  return [...ranges.values()].map(({ pos, end, kind }) => ({
+    start: pos + 2,
+    text: source.slice(
+      pos + 2,
+      kind === ts.SyntaxKind.MultiLineCommentTrivia && source.endsWith('*/', end) ? end - 2 : end
+    ),
+  }));
+}
+
+/**
  * Returns the changed lines of `source` that hold a Stryker disable directive without a reason.
  * A directive can ignore mutants on lines that didn't change, such as the line after a
- * `disable next-line`, so the directive itself is checked. Each comment is read as Stryker reads
- * it: a block comment can span lines, and a directive must start its text, after at most one
- * space or line break. So a block comment's closing `*\/` isn't a reason, and another directive
- * on the same line doesn't give it one. The line of a directive is the line of its "Stryker".
+ * `disable next-line`, so the directive itself is checked. Stryker reads each comment's text with
+ * its pattern: a block comment can span lines, and a directive must start the text, after at most
+ * one space or line break. So a block comment's closing `*\/` isn't a reason, and another
+ * directive on the same line doesn't give it one. The line of a directive is the line of its
+ * "Stryker".
  *
  * @param {string} source
  * @param {Array<[number, number]>} ranges
@@ -285,13 +321,10 @@ const DIRECTIVE = /^\s?Stryker disable(?: next-line)? [a-zA-Z, ]+(?::(.+))?/;
 export function reasonlessDirectives(source, ranges) {
   /** @type {Set<number>} */
   const lines = new Set();
-  // After a `//`, the scan goes on from the next character, so a `//` inside a string, as in a
-  // URL, doesn't hide a comment later on the line.
-  for (const match of source.matchAll(/\/\*([\s\S]*?)(?:\*\/|$)|\/\/(?=(.*))/g)) {
-    const text = match[1] ?? match[2];
+  for (const { start, text } of comments(source)) {
     const directive = DIRECTIVE.exec(text);
     if (directive === null || directive[1]?.trim()) continue;
-    const line = source.slice(0, match.index + 2 + text.indexOf('Stryker')).split('\n').length;
+    const line = source.slice(0, start + text.indexOf('Stryker')).split('\n').length;
     if (ranges.some(([from, to]) => line >= from && line <= to)) lines.add(line);
   }
   return [...lines].sort((a, b) => a - b);

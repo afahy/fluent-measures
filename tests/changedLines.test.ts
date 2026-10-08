@@ -1,5 +1,6 @@
 import { Buffer } from 'node:buffer';
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   backslashPaths,
@@ -120,6 +121,8 @@ describe('mutatedFiles', () => {
     ],
     // Codex, round 2 of #81: Stryker reads a pattern from the project folder.
     [['./src/**/*.ts', '!./src/b.ts'], ['src/a.ts']],
+    // AFA-113: an absolute pattern too, as Stryker resolves each pattern.
+    [[resolve('src/**/*.ts'), `!${resolve('src/b.ts')}`], ['src/a.ts']],
   ])('applies %j in order', (patterns, expected) => {
     expect(mutatedFiles(['src/a.ts', 'src/b.ts'], patterns)).toEqual(expected);
   });
@@ -371,5 +374,19 @@ describe('reasonlessDirectives', () => {
     ['/*\nStryker disable next-line all: a reason\n*/', []],
   ])('checks a directive on the line after "/*" in %j', (comment, expected) => {
     expect(reasonlessDirectives(`${comment}\nconst b = a ?? 2;`, [[2, 2]])).toEqual(expected);
+  });
+
+  // AFA-113: the TypeScript parser finds the comments, so a "/*" or "//" in a string, a template
+  // literal, a regex literal or another comment doesn't hide a later directive or make one. Only
+  // line 2 changed in each.
+  it.each([
+    ['// files under src/*\n// Stryker disable next-line all', [2]],
+    ["const glob = 'src/**';\n// Stryker disable next-line all", [2]],
+    ['const re = /^\\/*/;\n// Stryker disable next-line all', [2]],
+    ['const t = `${a}/*`;\n// Stryker disable next-line all', [2]],
+    ["const a = 1;\nconst s = '// Stryker disable all';", []],
+    ['/**\n * Write // Stryker disable next-line all: a reason\n */', []],
+  ])('reads only real comments in %j', (code, expected) => {
+    expect(reasonlessDirectives(`${code}\nconst b = a ?? 2;`, [[2, 2]])).toEqual(expected);
   });
 });
