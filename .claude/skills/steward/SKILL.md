@@ -63,10 +63,11 @@ that's `waiting` or `waiting-human`. There are two exceptions:
    a PR needs you, is ready or closes, or when a PR that waits on the maintainer gets news. It
    gives up after `--timeout` minutes, 100 by default. Give the background command a longer
    timeout than that: Claude Code stops a background command after 30 minutes unless you set a
-   timeout, up to 2 hours. When a call returns, act on what it printed. Run both calls again
-   while a PR in either of them is `waiting`, even a call whose own PRs are all
-   `waiting-human`. Once every PR in both calls is `waiting-human`, don't run them again. Each
-   return wakes you past the prompt cache, so wait as step 3 says instead.
+   timeout, up to 2 hours. When a call returns, act on what it printed. Then run that call
+   again, and leave the other call running. Leave out each PR that merged or closed, and each
+   `ready` PR that only the maintainer may merge, because `--wait` returns at once for it. Once
+   every PR in both calls is `waiting-human`, don't run them again. Each return wakes you past
+   the prompt cache, so wait as step 3 says instead.
 2. In a cloud session, also subscribe to the PR's GitHub events. The container can stop and take
    the background command with it. On each event or check-in, run `pnpm pr:status <pr>...`
    first, as "Each time you look at a PR" says. Then start the `--wait` calls again if they
