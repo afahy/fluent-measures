@@ -189,15 +189,19 @@ describe('pr-status.mjs', () => {
   });
 
   // AFA-147: a Retry-After on a server error doesn't make it a rate limit, so five in a row end
-  // the call.
-  it('with --wait, exits with 1 after five server errors in a row', async () => {
-    const failure = { status: 503, headers: { 'retry-after': '1' } };
-    const api = await serve([fixture('pr-43-at-1810')], Array(10).fill(failure));
-    const result = await run(api.url, ['43', '--wait', '--interval', '1']);
-    expect(result.code).toBe(1);
-    expect(result.stderr).toContain('GitHub answered 503');
-    expect(api.hits('/pulls/43')).toBe(5);
-  });
+  // the call. The four waits of --interval take 4 s, so the test gets more than Vitest's 5 s.
+  it(
+    'with --wait, exits with 1 after five server errors in a row',
+    { timeout: 20_000 },
+    async () => {
+      const failure = { status: 503, headers: { 'retry-after': '1' } };
+      const api = await serve([fixture('pr-43-at-1810')], Array(10).fill(failure));
+      const result = await run(api.url, ['43', '--wait', '--interval', '1']);
+      expect(result.code).toBe(1);
+      expect(result.stderr).toContain('GitHub answered 503');
+      expect(api.hits('/pulls/43')).toBe(5);
+    }
+  );
 
   // AFA-147: when --timeout ends before a poll gets through, the call says what GitHub answered.
   it('with --wait, gives the last error when no poll gets through in time', async () => {
@@ -223,19 +227,23 @@ describe('pr-status.mjs', () => {
   });
 
   // AFA-147, CodeRabbit on #114: a reset time that has passed counts as an error, so five in a row
-  // end the call.
-  it('with --wait, exits with 1 after five rate limits whose reset time has passed', async () => {
-    const reset = String(Math.floor(Date.now() / 1000) - 60);
-    const failure = {
-      status: 403,
-      headers: { 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': reset },
-    };
-    const api = await serve([fixture('pr-43-at-1810')], Array(10).fill(failure));
-    const result = await run(api.url, ['43', '--wait', '--interval', '1']);
-    expect(result.code).toBe(1);
-    expect(result.stderr).toContain("GitHub's rate limit is used up until");
-    expect(api.hits('/pulls/43')).toBe(5);
-  });
+  // end the call. Its four waits of --interval take 4 s too.
+  it(
+    'with --wait, exits with 1 after five rate limits whose reset time has passed',
+    { timeout: 20_000 },
+    async () => {
+      const reset = String(Math.floor(Date.now() / 1000) - 60);
+      const failure = {
+        status: 403,
+        headers: { 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': reset },
+      };
+      const api = await serve([fixture('pr-43-at-1810')], Array(10).fill(failure));
+      const result = await run(api.url, ['43', '--wait', '--interval', '1']);
+      expect(result.code).toBe(1);
+      expect(result.stderr).toContain("GitHub's rate limit is used up until");
+      expect(api.hits('/pulls/43')).toBe(5);
+    }
+  );
 
   it('without --wait, exits with 1 at once for a server error', async () => {
     const api = await serve([fixture('pr-43-at-1810')], [{ status: 503 }]);
