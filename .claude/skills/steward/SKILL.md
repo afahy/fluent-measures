@@ -64,11 +64,13 @@ that's `waiting` or `waiting-human`. There are two exceptions:
    gives up after `--timeout` minutes, 100 by default. Give the background command a longer
    timeout than that: Claude Code stops a background command after 30 minutes unless you set a
    timeout, up to 2 hours. When a call returns with a state, or with "Nothing changed in …
-   min.", act on what it printed. Then run that call again, and leave the other call running. A
-   call that exits with code 1 prints the error that stopped it, such as a bad token or five
-   GitHub errors in a row. Report that error, and don't run the call again until its cause is
-   fixed. When you run a call again, leave out each PR that merged or closed, and each `ready`
-   PR that only the maintainer may merge, because `--wait` returns at once for it. Once
+   min.", act on what it printed. Then run that call again, and leave the other call running.
+   A call can also end with an error, or Claude Code can stop it at its timeout. Then read what
+   it printed. If the token or an argument is wrong, fix it before you run the call again. After
+   other errors, such as GitHub or network errors, run the call again after 10 minutes, or after
+   the rate limit resets. Until then, arm a timed check-in as step 3 says. When you run a call
+   again, leave out each PR that merged or closed. Also leave out each `ready` PR that only the
+   maintainer may merge, because `--wait` returns at once for it. Once
    every PR in both calls is `waiting-human`, don't run them again, and stop the call that is
    still running. Each return wakes you past the prompt cache, so wait as step 3 says instead.
 2. In a cloud session, also subscribe to the PR's GitHub events. The container can stop and take
@@ -95,10 +97,10 @@ that's `waiting` or `waiting-human`. There are two exceptions:
 full SHA. Its result is the CI workflow's `ci-ok` check, for example from
 `gh api 'repos/afahy/fluent-measures/commits/<sha>/check-runs?check_name=ci-ok'`. `ci-ok` starts
 after the other CI jobs end, and it fails when one of them fails. Wait until it is there and its
-status is `completed`, then read its conclusion. If `ci-ok` fails, or hasn't completed 45 minutes
-after the merge, read the commit's other check runs. A `ci-ok` that hasn't completed can be
-missing, or stay `queued` or `in_progress`. Find the CI job that failed, or the one that no
-runner picked up. Workflows other than CI, such as `pr-status.yml`,
-`late-bot-findings.yml` and `deploy-docs.yml`, add check runs to the merge commit too. Their
-results aren't CI results. Don't use `gh run list --branch main`, which hid queued runs during
-an Actions incident.
+status is `completed`, then read its conclusion. If the conclusion isn't `success`, or `ci-ok`
+hasn't completed 45 minutes after the merge, read the commit's other check runs. A `ci-ok` that
+hasn't completed can be missing, or have a status such as `queued` or `in_progress`. Find the CI
+job that failed or was cancelled, or the one that no runner picked up. Workflows other than CI,
+such as `pr-status.yml`, `late-bot-findings.yml` and `deploy-docs.yml`, add check runs to the
+merge commit too. Their results aren't CI results. Don't use `gh run list --branch main`, which
+hid queued runs during an Actions incident.
