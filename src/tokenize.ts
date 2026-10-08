@@ -160,12 +160,12 @@ export function tokenizeNormalized(input: string, fuzziness?: number): string[] 
         // After a number, a unit and a hyphen join two parts or values, as in "5 ft-11",
         // "1 m-80 cm" and "150 lbs-180 lbs". A unit prefix without a number before it keeps the
         // minus sign, as in "kg-70.5". Check the prefix first so the lookbehind only runs when
-        // needed. The lookbehind skips spaces and semicolons before the unit, as in "1;m-80 cm"
-        // and "1 ; m-80 cm". It then captures the token before them only when that token has only
+        // needed. The lookbehind skips spaces and semicolons before the unit, as in "1;m-80 cm" and
+        // "1 ; m-80 cm". It then captures the token before them only when that token has only
         // letters, digits and periods. That token must start after a space, a semicolon or the
-        // start of the input, as in "kg;5 ft-11". Any other character matches the "\S" and captures nothing. So the
-        // lookbehind reads back only over spaces, semicolons and those characters, and a long
-        // token with many words before hyphens takes linear time.
+        // start of the input, as in "kg;5 ft-11". Any other character matches the "\S" and captures
+        // nothing. So the lookbehind reads back only over spaces, semicolons and those characters,
+        // and a long token with many words before hyphens takes linear time.
         .replace(
           /(?<![\w-])(?=[a-z]+-)(?<=(?:(?<![^\s;])([a-z\d.]*)|\S)[\s;]*)([a-z]+)-(?=\.?\d)/g,
           (match, previous: string | undefined, word: string) => {

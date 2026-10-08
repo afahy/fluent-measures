@@ -317,8 +317,8 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         : readNumberPhrase(remainingTokens, readFrom, -1);
       let matchStart = num === null ? end : end + 1;
       let matchEnd = i + 1;
-      // A sign on the first word of a phrase in words signs the whole phrase, as in "-twenty five
-      // kg", which returns null as "-5 feet" does. Without its sign, that word joins the phrase.
+      // A sign on the first word of a phrase signs the whole phrase, as in "-twenty five kg". So
+      // that input returns null, as "-5 feet" does. Without its sign, that word joins the phrase.
       // When no number came before the unit, matchStart is already end.
       if (
         isSigned(remainingTokens[end]) &&
@@ -344,7 +344,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       ) {
         // A label's signed value with its own unit isn't the label's value, as in
         // "in: -180 lbs, 72 in", so it doesn't drop the label's field. Its own unit drops its field.
-        if (isSigned(remainingTokens[valueAt]) && !(signedValue && !valueFollows)) {
+        if (isSigned(remainingTokens[valueAt]) && (!signedValue || valueFollows)) {
           signedFields.add(fieldOf[i]).add(fieldOf[valueAt]);
           continue;
         }
