@@ -384,6 +384,9 @@ describe('reasonlessDirectives', () => {
     // A line break that Babel and TypeScript count inside a block comment, before "Stryker".
     ['x;\n/*\u2028Stryker disable all */\ny;', [[2, 2]], [2]],
     ['x;\n/*\rStryker disable all */\ny;', [[2, 2]], [2]],
+    // A blank line before a directive, and two directives with lines between them.
+    ['x;\n\n// Stryker disable all\ny;', [[3, 3]], [3]],
+    ['// Stryker disable all\nx;\n\ny;\n// Stryker disable all\nz;', [[1, 5]], [1, 5]],
   ])('counts lines as git does in %j', (source, ranges, expected) => {
     expect(reasonlessDirectives(source, ranges)).toEqual(expected);
   });
