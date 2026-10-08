@@ -42,6 +42,10 @@ function trimTrailing(text: string, mark: string): string {
   return text.slice(0, end);
 }
 
+// The Unicode fractions ¼ to ¾, ⅐ to ⅞ and ↉, as the inside of a character class.
+const FRACTIONS = '¼-¾⅐-⅞↉';
+const UNICODE_FRACTION = new RegExp(String.raw`(?<![\d/.])(?:(\d+)\s*)?([${FRACTIONS}])`, 'gu');
+
 /**
  * Write each proper fraction as a decimal, so "150 1/2" and "150½" are 150.5. A whole number
  * before the fraction is part of it. Other numbers with a slash between them become "x", with
@@ -51,26 +55,23 @@ function trimTrailing(text: string, mark: string): string {
  */
 export function normalizeFractions(input: string): string {
   return input
-    .replace(
-      /(?<![\d/.])(?:(\d+)\s*)?([¼-¾⅐-⅞↉])/gu,
-      (text: string, whole: string | undefined, fraction: string) => {
-        const [numerator, denominator] = fraction.normalize('NFKD').split('⁄');
-        return writeFraction(text, whole, numerator, denominator);
-      }
-    )
+    .replace(UNICODE_FRACTION, (text: string, whole: string | undefined, fraction: string) => {
+      const [numerator, denominator] = fraction.normalize('NFKD').split('⁄');
+      return writeFraction(text, whole, numerator, denominator);
+    })
     .replace(SLASH_FRACTION, writeFraction);
 }
 
 // A number as it can stand in quotes: digits, separators, spaces, slashes and fractions.
-const QUOTED_NUMBER = String.raw`[\d.,\s/⁄¼-¾⅐-⅞↉]*[\d¼-¾⅐-⅞↉]`;
+const QUOTED_NUMBER = String.raw`[\d.,\s/⁄${FRACTIONS}]*[\d${FRACTIONS}]`;
 // A single or double curly mark right after a number. It closes a quoted number only when its
 // opening quote comes right before that number and no digit follows, as in "“5 1/2” ft".
 const CURLY_SINGLE = new RegExp(
-  String.raw`(?<=[\d¼-¾⅐-⅞↉]['’]?)(?:(?<!‘${QUOTED_NUMBER})’|’(?=\d))`,
+  String.raw`(?<=[\d${FRACTIONS}]['’]?)(?:(?<!‘${QUOTED_NUMBER})’|’(?=\d))`,
   'g'
 );
 const CURLY_DOUBLE = new RegExp(
-  String.raw`(?<=[\d¼-¾⅐-⅞↉])(?:(?<!“${QUOTED_NUMBER})”|”(?=\d))`,
+  String.raw`(?<=[\d${FRACTIONS}])(?:(?<!“${QUOTED_NUMBER})”|”(?=\d))`,
   'g'
 );
 
@@ -80,10 +81,10 @@ const NUMBER_WORD = [...NUMBER_WORDS.keys(), ...MULTIPLIERS.keys()].join('|');
 // A minus sign before a number, when no number comes earlier: no digit, Unicode fraction or number
 // word. The number can be a word too, as in "−five'", also after "a" or "an", as in "−a hundred"
 // and "−a-hundred". After a number, a minus sign joins two parts or values, as in "1 m−80 cm" and
-// "½ lb−180 lbs". The parser would read a hyphen-minus there as a sign. The lookbehind runs only after a
-// minus sign, and its lazy part stops at the nearest earlier number.
+// "½ lb−180 lbs". The parser would read a hyphen-minus there as a sign. The lookbehind runs only
+// after a minus sign, and its lazy part stops at the nearest earlier number.
 const MINUS_SIGN = new RegExp(
-  String.raw`[−﹣](?=[.,]?\d|[¼-¾⅐-⅞↉]|(?:an?[\s-]+)?(?:${NUMBER_WORD})\b)(?<!(?:[\d¼-¾⅐-⅞↉]|\b(?:${NUMBER_WORD})\b)[\s\S]*?.)`,
+  String.raw`[−﹣](?=[.,]?\d|[${FRACTIONS}]|(?:an?[\s-]+)?(?:${NUMBER_WORD})\b)(?<!(?:[\d${FRACTIONS}]|\b(?:${NUMBER_WORD})\b)[\s\S]*?.)`,
   'gi'
 );
 
@@ -150,12 +151,20 @@ export function normalizeNumericCommas(input: string): string {
   return valid ? normalized : '';
 }
 
-/** Normalize fractions and comma numbers before splitting standalone measurement text. */
+/**
+ * Normalize the text in the order that the parser needs: the forms of marks and characters, then
+ * comma numbers, then fractions. So "1,000 1/2" is 1000.5.
+ */
+export function normalize(input: string): string {
+  return normalizeFractions(normalizeNumericCommas(normalizeForms(input)));
+}
+
+/**
+ * Normalize text and split it into tokens. The parser does the same, but it also replaces each
+ * range with a boundary first, so `tokenize('5-11')` is ['5', '11'].
+ */
 export function tokenize(input: string, fuzziness?: number): string[] {
-  return tokenizeNormalized(
-    normalizeFractions(normalizeNumericCommas(normalizeForms(input))),
-    fuzziness
-  );
+  return tokenizeNormalized(normalize(input), fuzziness);
 }
 
 /** Split normalized text while retaining negative signs and compound boundaries. */

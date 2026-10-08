@@ -1,10 +1,5 @@
 import { matchUnit } from './matchUnit';
-import {
-  normalizeForms,
-  normalizeFractions,
-  normalizeNumericCommas,
-  tokenizeNormalized,
-} from './tokenize';
+import { normalize, tokenizeNormalized } from './tokenize';
 import { MULTIPLIERS, NUMBER_WORDS, wordsToNumber } from './wordsToNumber';
 
 import {
@@ -12,13 +7,13 @@ import {
   LABEL_ALIASES,
   NAME_MARK,
   NEXT_PART,
-  UNIT_ALIASES,
   UNIT_MARK,
+  UNIT_TYPES,
   UNSUPPORTED_WEIGHT_UNITS,
   unitConversions,
 } from './units';
 
-import { ParseOptions, ParsedValue, Match, Unit } from './types';
+import { ParseOptions, ParsedValue, Match, MeasurementType, Unit } from './types';
 
 type QualifiedMatch = Match & { unit: NonNullable<Match['unit']> };
 
@@ -203,10 +198,120 @@ function readValueAfter(
   return [ownUnit ? null : value, end];
 }
 
+/**
+ * Whether the token at `i` is a stone, ounce or gram unit whose number stands next to a supported
+ * weight part, as in "12st 4lb" or "7 lb 8 oz". That part would leave the weight incomplete. An
+ * unrelated amount elsewhere, as in "8 oz of water", doesn't count. Earlier matches blank their
+ * tokens in `remainingTokens`, so the check reads units in the original `tokens`.
+ */
+function hasUnsupportedPart(
+  tokens: string[],
+  remainingTokens: string[],
+  i: number,
+  fuzziness?: number
+): boolean {
+  const word = remainingTokens[i];
+  if (!UNSUPPORTED_WEIGHT_UNITS.test(word)) return false;
+  // Stryker disable next-line StringLiteral: a missing token and "Stryker was here!" are both no weight unit.
+  const isWeightUnit = (token = ''): boolean => matchUnit(token, 'weight', fuzziness) !== null;
+  // A signed number here reads as its value without the sign. A minus sign doesn't make
+  // the part unrelated, as in "-12st 4lb", "-12;st 4lb", "stone -12, 4 lb" and
+  // "12 lb -twenty five oz".
+  const [before, beforeEnd] = readSignedPhrase(remainingTokens, i - 1, -1);
+  // Reading backward already skips semicolons, so skip them reading forward too, as in
+  // "8 oz; 7 lb" and "12 st 4;lb". Commas don't separate parts, so skip field marks too,
+  // as in "Stone: 12, lb: 4".
+  const skip = (start: number): number => skipMarks(tokens, start, true);
+  const next = skip(i + 1);
+  const [after, afterEnd] = readSignedPhrase(tokens, next);
+  const unitAt = skip(afterEnd);
+  // A supported part before it can have its unit first, as in "kg 3, 400 g". Earlier
+  // matches blank their tokens, so check the original tokens for a unit.
+  const partEndsAt = (end: number): boolean =>
+    isWeightUnit(tokens[readNumberPhrase(tokens, end, -1)[1]]);
+  // With no number before it, the unit can come before its number, as in "stone 12, 4 lb",
+  // unless a weight unit after that number takes it, as in "stone, 50 lb bag". A unit with
+  // its own number after it doesn't, as in "Stone: 12, lb: 4". Like "in" and "m", "st"
+  // and "g" before a number are usually other words, as in "Main St 12".
+  return before === null
+    ? after !== null &&
+        word !== 'st' &&
+        word !== 'g' &&
+        !(isWeightUnit(tokens[unitAt]) && readNumberPhrase(tokens, skip(unitAt + 1))[0] === null) &&
+        (partEndsAt(i - 1) || isWeightUnit(tokens[skip(readNumberPhrase(tokens, unitAt)[1])]))
+    : isUnsupportedUnit(word, remainingTokens[i - 1]) &&
+        (partEndsAt(beforeEnd) || isWeightUnit(tokens[unitAt]));
+}
+
+/**
+ * Group the parts into measurements, and give the first one's total if the others agree with it.
+ * Return null when they don't, or when the total is too large to represent: the parse fails.
+ * Return undefined when the first measurement adds up to zero, so the parser goes on to the
+ * next type.
+ */
+function combineParts(
+  matches: QualifiedMatch[],
+  type: MeasurementType,
+  input: string,
+  normalizedUnit: Unit | undefined,
+  inferred: boolean
+): ParsedValue | null | undefined {
+  // Parts form one measurement only while each unit is the next smaller one, the larger part
+  // is a whole number and the smaller part is less than one of the larger unit, as in
+  // "5 ft 11 in". Any other part starts a separate measurement, as in "70 kg (154 lbs)",
+  // "6 ft (72 in)" or "0.5 m (50 cm)".
+  const measurements: QualifiedMatch[][] = [];
+  for (const match of matches) {
+    const last = measurements[measurements.length - 1];
+    const previous = last?.[last.length - 1];
+    if (
+      previous &&
+      Number.isInteger(previous.value) &&
+      NEXT_PART[previous.unit] === match.unit &&
+      match.value < unitConversions[previous.unit][match.unit]!(1)
+    ) {
+      last.push(match);
+    } else {
+      measurements.push([match]);
+    }
+  }
+  // A measurement that adds up to zero doesn't count, as in "0 feet; actual 1.8 meters".
+  const counted = measurements.filter(parts => parts.some(({ value }) => value));
+  const first = counted[0] ?? measurements[0];
+
+  // Use normalizedUnit, or else the unit of the last part. A measurement with several parts
+  // is a height, so its last part is the smallest: inches in "5 ft 11 in" and centimeters in
+  // "1 m 80 cm".
+  const targetUnit = normalizedUnit || first[first.length - 1].unit;
+  const totalValue = total(first, targetUnit);
+
+  // A zero-height fragment must not hide a valid measurement of another type. An inferred
+  // value is the only measurement, so it stays even when its conversion underflows to zero.
+  if (!totalValue && !inferred) return undefined;
+  // A number too large to represent, such as 400 digits, has no usable value.
+  if (!Number.isFinite(totalValue)) return null;
+
+  // Another measurement is fine only as the same value written another way, within 1%. The
+  // tiny margin keeps an exact 1% after floating-point rounding, which makes 1.01 - 1 a little
+  // more than 0.01.
+  const limit = (totalValue / 100) * (1 + 1e-9);
+  if (counted.some(parts => Math.abs(total(parts, targetUnit) - totalValue) > limit)) {
+    return null;
+  }
+
+  return {
+    value: totalValue,
+    unit: targetUnit,
+    type,
+    raw: input,
+    matches: first,
+  };
+}
+
 /** Parse a height or weight, optionally inferring its unit or normalizing the result. */
 export function parseMeasurement(input: string, options: ParseOptions = {}): ParsedValue | null {
   // Stryker disable next-line StringLiteral: the replacement "Stryker was here!" also returns null.
-  const trimmed = normalizeFractions(normalizeNumericCommas(normalizeForms(input?.trim() || '')));
+  const trimmed = normalize(input?.trim() || '');
   if (!trimmed) {
     return null;
   }
@@ -214,7 +319,6 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   // Replace whole ranges with a boundary so neither endpoint becomes a measurement.
   // Preserve semicolon boundaries so independent fields cannot form a compound height.
   const fuzziness = options.fuzziness;
-  const isWeightUnit = (token = '') => matchUnit(token, 'weight', fuzziness) !== null;
   let tokens = tokenizeNormalized(
     trimmed.replace(/(?<![\d.])[\d.]+(?:\s*\p{Dash}\s*[\d.]+)+/gu, ' - '),
     fuzziness
@@ -223,9 +327,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     throw new Error('allowUnqualified requires type');
   }
   // normalizedUnit selects the measurement type, so { normalizedUnit: 'kg' } reads only a weight.
-  const unitType = (['height', 'weight'] as const).find(type =>
-    UNIT_ALIASES[type].some(([unit]) => unit === options.normalizedUnit)
-  );
+  const unitType = options.normalizedUnit && UNIT_TYPES[options.normalizedUnit];
   if (tokens.length && options.type && unitType && unitType !== options.type) {
     throw new Error(`normalizedUnit ${options.normalizedUnit} is not a ${options.type} unit`);
   }
@@ -265,46 +367,8 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     for (let i = 0; i < remainingTokens.length; i++) {
       const unit = matchUnit(remainingTokens[i], type, fuzziness);
       if (!unit) {
-        // A number in an unsupported weight unit next to a supported part, as in "12st 4lb" or
-        // "7 lb 8 oz", would leave the weight incomplete. An unrelated amount elsewhere, as in
-        // "8 oz of water", doesn't count.
-        const word = remainingTokens[i];
-        if (type === 'weight' && UNSUPPORTED_WEIGHT_UNITS.test(word)) {
-          // A signed number here reads as its value without the sign. A minus sign doesn't make
-          // the part unrelated, as in "-12st 4lb", "-12;st 4lb", "stone -12, 4 lb" and
-          // "12 lb -twenty five oz".
-          const [before, beforeEnd] = readSignedPhrase(remainingTokens, i - 1, -1);
-          // Reading backward already skips semicolons, so skip them reading forward too, as in
-          // "8 oz; 7 lb" and "12 st 4;lb". Commas don't separate parts, so skip field marks too,
-          // as in "Stone: 12, lb: 4".
-          const skip = (start: number): number => skipMarks(tokens, start, true);
-          const next = skip(i + 1);
-          const [after, afterEnd] = readSignedPhrase(tokens, next);
-          const unitAt = skip(afterEnd);
-          // A supported part before it can have its unit first, as in "kg 3, 400 g". Earlier
-          // matches blank their tokens, so check the original tokens for a unit.
-          const partEndsAt = (end: number): boolean =>
-            isWeightUnit(tokens[readNumberPhrase(tokens, end, -1)[1]]);
-          // With no number before it, the unit can come before its number, as in "stone 12, 4 lb",
-          // unless a weight unit after that number takes it, as in "stone, 50 lb bag". A unit with
-          // its own number after it doesn't, as in "Stone: 12, lb: 4". Like "in" and "m", "st"
-          // and "g" before a number are usually other words, as in "Main St 12".
-          if (
-            before === null
-              ? after !== null &&
-                word !== 'st' &&
-                word !== 'g' &&
-                !(
-                  isWeightUnit(tokens[unitAt]) &&
-                  readNumberPhrase(tokens, skip(unitAt + 1))[0] === null
-                ) &&
-                (partEndsAt(i - 1) ||
-                  isWeightUnit(tokens[skip(readNumberPhrase(tokens, unitAt)[1])]))
-              : isUnsupportedUnit(word, remainingTokens[i - 1]) &&
-                (partEndsAt(beforeEnd) || isWeightUnit(tokens[unitAt]))
-          ) {
-            return null;
-          }
+        if (type === 'weight' && hasUnsupportedPart(tokens, remainingTokens, i, fuzziness)) {
+          return null;
         }
         continue;
       }
@@ -430,58 +494,9 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       }
     }
 
-    // If we found any matches for this type
     if (matches.length) {
-      // Parts form one measurement only while each unit is the next smaller one, the larger part
-      // is a whole number and the smaller part is less than one of the larger unit, as in
-      // "5 ft 11 in". Any other part starts a separate measurement, as in "70 kg (154 lbs)",
-      // "6 ft (72 in)" or "0.5 m (50 cm)".
-      const measurements: QualifiedMatch[][] = [];
-      for (const match of matches) {
-        const last = measurements[measurements.length - 1];
-        const previous = last?.[last.length - 1];
-        if (
-          previous &&
-          Number.isInteger(previous.value) &&
-          NEXT_PART[previous.unit] === match.unit &&
-          match.value < unitConversions[previous.unit][match.unit]!(1)
-        ) {
-          last.push(match);
-        } else {
-          measurements.push([match]);
-        }
-      }
-      // A measurement that adds up to zero doesn't count, as in "0 feet; actual 1.8 meters".
-      const counted = measurements.filter(parts => parts.some(({ value }) => value));
-      const first = counted[0] ?? measurements[0];
-
-      // Use normalizedUnit, or else the unit of the last part. A measurement with several parts
-      // is a height, so its last part is the smallest: inches in "5 ft 11 in" and centimeters in
-      // "1 m 80 cm".
-      const targetUnit = options.normalizedUnit || first[first.length - 1].unit;
-      const totalValue = total(first, targetUnit);
-
-      // A zero-height fragment must not hide a valid measurement of another type. An inferred
-      // value is the only measurement, so it stays even when its conversion underflows to zero.
-      if (!totalValue && !inferred) continue;
-      // A number too large to represent, such as 400 digits, has no usable value.
-      if (!Number.isFinite(totalValue)) return null;
-
-      // Another measurement is fine only as the same value written another way, within 1%. The
-      // tiny margin keeps an exact 1% after floating-point rounding, which makes 1.01 - 1 a little
-      // more than 0.01.
-      const limit = (totalValue / 100) * (1 + 1e-9);
-      if (counted.some(parts => Math.abs(total(parts, targetUnit) - totalValue) > limit)) {
-        return null;
-      }
-
-      return {
-        value: totalValue,
-        unit: targetUnit,
-        type,
-        raw: input,
-        matches: first,
-      };
+      const result = combineParts(matches, type, input, options.normalizedUnit, Boolean(inferred));
+      if (result !== undefined) return result;
     }
   }
 

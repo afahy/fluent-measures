@@ -44,6 +44,8 @@ describe('normalizeFractions', () => {
 
   it('reads the whole number only when spaces separate it from the fraction', () => {
     expect(normalizeFractions('ward 7 1/2')).toBe('ward 7.5');
+    // Each Unicode fraction is replaced, not only the first.
+    expect(normalizeFractions('½ and ¼')).toBe('0.5 and 0.25');
     expect(normalizeFractions('7,1/2')).toBe('7,0.5');
   });
 });
