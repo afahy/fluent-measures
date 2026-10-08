@@ -193,7 +193,8 @@ score can differ from a full run. A change to a file that tests read, such as `R
 corpus, or to the packages, starts a full run. Pushes to `main` always run every mutant, and so
 does a re-run of the job. For a full run on a pull request, re-run this job or all jobs. "Re-run
 failed jobs" doesn't run this job again when it passed. A run that takes more than 27 minutes
-stops and fails, but it saves its results so far, so the next run goes on from them.
+stops and fails, but it saves its results so far. On a pull request, the next push goes on from
+them. A push to `main` and a re-run always run every mutant.
 
 A second job, "Mutants on changed lines are killed", runs Stryker on the files that a pull
 request changes under `src/`. It fails when a mutant whose code overlaps a line that the pull

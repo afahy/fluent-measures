@@ -151,8 +151,9 @@ jobs:
       # Stryker writes its results at the end of a run, before it checks the score, so a run below
       # the threshold saves them too. On SIGINT, it writes the results so far. The job's own time
       # limit doesn't reach Stryker through the step's shell, so `timeout` sends SIGINT to the
-      # whole run 3 minutes before that limit. The step then fails, the save step keeps the
-      # results, and the next run goes on from them.
+      # whole run 3 minutes before that limit. The step then fails, and the save step keeps the
+      # results. A pull request's next push goes on from them. A push to main and a re-run skip
+      # the restore, so they run every mutant again.
       - name: Mutation tests
         run: timeout --signal=INT 27m pnpm test:mutation --incremental
 
