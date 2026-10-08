@@ -151,12 +151,17 @@ export function normalizeNumericCommas(input: string): string {
   return valid ? normalized : '';
 }
 
-/** Normalize fractions and comma numbers before splitting standalone measurement text. */
+/**
+ * Normalize the text in the order that the parser needs: the forms of marks and characters, then
+ * comma numbers, then fractions. So "1,000 1/2" is 1000.5.
+ */
+export function normalize(input: string): string {
+  return normalizeFractions(normalizeNumericCommas(normalizeForms(input)));
+}
+
+/** Normalize text and split it into tokens, as parseMeasurement does. */
 export function tokenize(input: string, fuzziness?: number): string[] {
-  return tokenizeNormalized(
-    normalizeFractions(normalizeNumericCommas(normalizeForms(input))),
-    fuzziness
-  );
+  return tokenizeNormalized(normalize(input), fuzziness);
 }
 
 /** Split normalized text while retaining negative signs and compound boundaries. */
