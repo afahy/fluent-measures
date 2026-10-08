@@ -150,9 +150,12 @@ describe('the docs page', () => {
       if (other.has(name) || name.startsWith('language-')) return false;
       // Tailwind escapes a "," in a class name as "\2c " and each other symbol with a "\". The
       // name must end there, so "border-gray" doesn't match ".border-gray-200".
-      const escaped = name.replace(/,/g, '\\2c ').replace(/[^\w\\ -]/g, '\\$&');
-      const selector = `\\.${escaped.replace(/[\\[\](){}.*+?^$|]/g, '\\$&')}(?![\\w-])`;
-      return !new RegExp(selector).test(css);
+      const selector = `.${name.replace(/[^\w-]/g, symbol => (symbol === ',' ? '\\2c ' : `\\${symbol}`))}`;
+      let at = css.indexOf(selector);
+      while (at !== -1 && /[\w-]/.test(css[at + selector.length] ?? '')) {
+        at = css.indexOf(selector, at + 1);
+      }
+      return at === -1;
     });
     expect(missing).toEqual([]);
   });
