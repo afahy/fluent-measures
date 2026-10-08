@@ -49,9 +49,12 @@ const BLANK_LINES = /\n(?:[^\S\n]*\n){2,}/g;
 const INNERMOST_DETAILS = /<details\b[^>]*>(?:(?!<details\b)[\s\S])*?<\/details>/gi;
 
 /**
- * The text with each code span and fenced block blanked out, so that HTML in code isn't read
- * as HTML. A code span starts at a run of backticks and ends at the next run of the same
- * length. Line breaks stay, and the length doesn't change, so an index is the same in both.
+ * The text with each code span and fenced block blanked out, so that the patterns don't read
+ * HTML in code. A code span starts at a run of backticks and ends at the next run of the same
+ * length, as in CommonMark. A backslash before a backtick makes it plain text, and an inline
+ * span ends at a blank line, so a stray backtick can't hide a collapsed section. Only a fence,
+ * three or more backticks that start a line, can hold blank lines. Line breaks stay, and the
+ * length doesn't change, so an index is the same in both.
  *
  * @param {string} text
  * @returns {string}
@@ -61,15 +64,20 @@ function maskCode(text) {
   let done = 0;
   let at = text.indexOf('`');
   while (at !== -1) {
+    if (text[at - 1] === '\\') {
+      at = text.indexOf('`', at + 1);
+      continue;
+    }
     let end = at;
     while (text[end] === '`') end += 1;
     const run = text.slice(at, end);
+    const fence = run.length >= 3 && (at === 0 || text[at - 1] === '\n');
     let close = text.indexOf(run, end);
     // A run of a different length doesn't close the span.
     while (close !== -1 && (text[close - 1] === '`' || text[close + run.length] === '`')) {
       close = text.indexOf(run, close + 1);
     }
-    if (close === -1) {
+    if (close === -1 || (!fence && /\n[^\S\n]*\n/.test(text.slice(end, close)))) {
       at = text.indexOf('`', end);
       continue;
     }

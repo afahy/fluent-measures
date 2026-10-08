@@ -126,6 +126,19 @@ describe('lateFinding', () => {
     );
   });
 
+  it('lets no stray backtick hide the end of a section of findings', () => {
+    // The stray backtick would pair with the one in the settings, across blank lines.
+    const body =
+      '<details>\n<summary>🧹 Nitpick comments (1)</summary><blockquote>\n\nThe foot mark ` is read as an apostrophe.\n\n<details>\n<summary>🤖 Prompt for AI Agents</summary>\n\nagent text\n\n</details>\n\n</blockquote></details>\n\n<details>\n<summary>📜 Review details</summary>\n\n- **Run ID**: `26b2`\n\n</details>';
+    const finding = lateFinding('pull_request_review', {
+      pull_request: merged43,
+      review: { ...bot.coderabbitReview, body },
+    });
+    expect(finding?.excerpt).toBe(
+      '> Nitpick comments (1)\n>\n> The foot mark ` is read as an apostrophe.'
+    );
+  });
+
   it('reports a bot comment on a merged PR that is not one of its routine notes', () => {
     const finding = lateFinding('issue_comment', {
       issue: mergedIssue43,
@@ -243,6 +256,13 @@ describe('excerpt', () => {
     expect(excerpt(`${'a'.repeat(599)}🧹 tail`)).toBe(`> ${'a'.repeat(599)}🧹…`);
   });
 
+  // A code span ends at a blank line, as in CommonMark, so this backtick masks nothing.
+  it('removes a collapsed section after a stray backtick', () => {
+    const body =
+      'it`s broken\n\n<details><summary>Prompt</summary>agent instructions</details>\n\nsee `x`';
+    expect(excerpt(body)).toBe('> it`s broken\n>\n> see `x`');
+  });
+
   // AFA-109: the old pattern also took the spaces that start the next line.
   it('keeps the indent of the line after removed blank lines', () => {
     expect(excerpt('x\n\n\n    indented code')).toBe('> x\n>\n>     indented code');
@@ -285,6 +305,12 @@ describe('plainText', () => {
     // A run of backticks with no closing run of the same length starts no code span.
     expect(plainText('it`s <b>bold</b>')).toBe('it`s bold');
     expect(plainText('`` x ` <i>y</i>')).toBe('`` x ` y');
+  });
+
+  it('reads an escaped backtick as text, and keeps a fence across a blank line', () => {
+    expect(plainText('Use \\`<b>x</b>\\` here')).toBe('Use \\`x\\` here');
+    const fence = '```html\n<b>a</b>\n\n<i>b</i>\n```';
+    expect(plainText(`${fence}\n<b>c</b>`)).toBe(`${fence}\nc`);
   });
 
   it('drops the tags that the bots write, with their attributes', () => {
