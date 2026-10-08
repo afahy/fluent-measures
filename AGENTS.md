@@ -133,9 +133,7 @@ action it tells you to take, in any section.
   each thread that a pushed commit fixes.
 - After each push, watch CI and Codex's review of that commit as
   `.claude/skills/steward/SKILL.md` says. `pnpm pr:status <pr>...` decides when they're
-  done, and `pnpm pr:status <pr>... --wait` waits for them. After a PR's third review round,
-  add `--no-requests` to both commands, and run them for that PR in a separate call. Don't
-  ask whether to watch.
+  done, and `pnpm pr:status <pr>... --wait` waits for them. Don't ask whether to watch.
 - Post the Codex review requests that `pnpm pr:status <pr>...` lists. It lists one when Codex
   hasn't started 30 minutes after it could, once for each commit. It stops waiting for Codex
   after two hours. Note each gap in your report.
@@ -148,6 +146,7 @@ action it tells you to take, in any section.
 - A review round is one push and the bot reviews of that push. Codex reviews every push, so
   the rounds don't stop by themselves. After three rounds, don't ask Codex for more reviews.
   Add `--no-requests` to each `pnpm pr:status` command for that PR, including `--wait`.
+  Check that PR in a separate call from the other PRs.
   After the third round, fix only showstoppers. File the other findings that are valid and
   worth fixing together as one ticket, reply on each thread with its ID, and list them in
   your report.
@@ -178,10 +177,10 @@ without the fix`. A skipped check counts as passed.
     ID.
   - If not, reply on its thread with the reason.
   - Then merge or close the PR.
-- If "Merge your own PR" allows it, merge the PR. If not, wait for the maintainer with a
-  check-in every 4 hours for up to 24 hours, as the steward skill says. In a cloud session,
-  also subscribe to the PR's GitHub events. Don't use `--wait` for that PR, because it
-  returns at once for a `ready` PR. Don't ask the maintainer to tell you when it merges.
+- If "Merge your own PR" allows it, merge the PR. If not, wait for the maintainer as the
+  steward skill says. Check in every 4 hours for up to 24 hours. In a cloud session, also
+  subscribe to the PR's GitHub events. Don't use `--wait` for that PR, because it returns at
+  once for a `ready` PR. Don't ask the maintainer to tell you when it merges.
 - When the maintainer merges or closes the PR, do the same comment check at once. File
   each new finding that is valid and worth fixing. If one is a showstopper, give its ticket
   Urgent priority, and tell the maintainer in your report.
