@@ -39,6 +39,24 @@ const HASHES: Record<string, string> = {
     'sha512-7O5pXpc0oCRrxk8RUfDYFgn0nO1t+jLuIOQdOMRp4APB7uZ4vSjspzp5y6YDtDs4VzUSTbWzBFZ/LKJhnyFOKw==',
 };
 
+/**
+ * The class names in a style sheet's selectors, unescaped. Tailwind escapes a symbol in a class
+ * name with "\", as in ".sm\:flex", and a "," or a first digit as its hex code point and a space,
+ * as in ".\32 xl\:text-lg" (AFA-121).
+ */
+function cssClasses(css: string): Set<string> {
+  const selectors = [...css.matchAll(/([^{}]*)\{/g)].map(([, text]) => text);
+  return new Set(
+    selectors.flatMap(text =>
+      [...text.matchAll(/\.((?:\\[\da-f]{1,6} ?|\\[^\da-f]|[\w-])+)/gi)].map(([, name]) =>
+        name.replace(/\\([\da-f]{1,6}) ?|\\(.)/gi, (_, hex?: string, symbol?: string) =>
+          hex ? String.fromCodePoint(parseInt(hex, 16)) : (symbol ?? '')
+        )
+      )
+    )
+  );
+}
+
 type Listener = (event?: unknown) => void;
 type Toast = {
   dataset: Record<string, string>;
@@ -143,22 +161,27 @@ describe('the docs page', () => {
         [...list.matchAll(/'([^']+)'/g)].map(([, name]) => name)
       ),
     ];
-    // The page's script, Prism and the page's own <style> use these. "prose" needs Tailwind's
-    // typography plugin, which the Play CDN didn't load either.
-    const other = new Set(['', 'copied', 'copy-button', 'text-link', 'prose', 'prose-slate']);
-    const missing = [...new Set(used)].filter(name => {
-      if (other.has(name) || name.startsWith('language-')) return false;
-      // Tailwind escapes a "," in a class name as "\2c " and each other symbol with a "\". The
-      // name must end there, so "border-gray" doesn't match ".border-gray-200", and "left-1"
-      // doesn't match ".left-1\/2".
-      const selector = `.${name.replace(/[^\w-]/g, symbol => (symbol === ',' ? '\\2c ' : `\\${symbol}`))}`;
-      let at = css.indexOf(selector);
-      while (at !== -1 && /[\w\\-]/.test(css[at + selector.length] ?? '')) {
-        at = css.indexOf(selector, at + 1);
-      }
-      return at === -1;
-    });
+    // The page's script, Prism and the page's own <style> use these.
+    const other = new Set(['', 'copied', 'copy-button', 'text-link']);
+    const defined = cssClasses(css);
+    const missing = [...new Set(used)].filter(
+      name => !other.has(name) && !name.startsWith('language-') && !defined.has(name)
+    );
     expect(missing).toEqual([]);
+  });
+
+  // AFA-121: each class name comes from the CSS escape rules by hand. A prefix of a longer name
+  // isn't a class of its own, so "left-1" doesn't come from ".left-1\/2".
+  it.each([
+    ['.\\32 xl\\:text-lg { }', ['2xl:text-lg']],
+    ['.\\32xl\\:text-lg { }', ['2xl:text-lg']],
+    ['.left-1\\/2 { }', ['left-1/2']],
+    ['.gap-\\[1\\.5rem\\] { }', ['gap-[1.5rem]']],
+    ['.grid-cols-\\[1fr\\2c 2fr\\] { }', ['grid-cols-[1fr,2fr]']],
+    ['@media (min-width: 640px) { .sm\\:flex { display: flex; } }', ['sm:flex']],
+    ['.a, .b:hover > .c { margin: 0.5rem; }', ['a', 'b', 'c']],
+  ])('reads the classes in %s', (css, names) => {
+    expect([...cssClasses(css)]).toEqual(names);
   });
 
   // If the browser blocks clipboard.js, or cdnjs is down, "new ClipboardJS" would throw, and the
