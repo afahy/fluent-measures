@@ -107,7 +107,8 @@ const NUM_RUNS = env.STRYKER_MUTATOR_WORKER === undefined ? 2000 : 100;
 
 describe('invariants', () => {
   it('never throws, and gives null or a finite value above 0 in a unit of its type', () => {
-    // The count depends on how many generated inputs give a result.
+    // The lint asks for a count because some expects are in a callback. Their number depends on
+    // how many generated inputs give a result, so this gives no exact count.
     expect.hasAssertions();
     const types: MeasurementType[] = [];
     fc.assert(
