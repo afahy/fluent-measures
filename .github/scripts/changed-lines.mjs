@@ -1,7 +1,7 @@
 // Helpers for .github/scripts/mutation-check.mjs: the lines that a pull request adds or changes,
 // and the mutants on them in a Stryker JSON report that no test kills.
 
-import { matchesGlob, resolve } from 'node:path';
+import { matchesGlob, relative, resolve } from 'node:path';
 import ts from 'typescript';
 
 /**
@@ -118,7 +118,9 @@ export function mutatedFiles(files, patterns, root = process.cwd()) {
     patterns.reduce((mutated, pattern) => {
       const negated = pattern.startsWith('!');
       const glob = pattern.replace(/^!/, '').replace(/:\d+(?::\d+)?-\d+(?::\d+)?$/, '');
-      return matchesGlob(resolve(root, file), resolve(root, glob)) ? !negated : mutated;
+      // Resolve the pattern, then take it back to the project folder, so the folder's own path
+      // never becomes part of a glob, as "[1]" in "/tmp/a[1]/repo" would.
+      return matchesGlob(file, relative(root, resolve(root, glob))) ? !negated : mutated;
     }, false)
   );
 }
@@ -271,13 +273,13 @@ export function unexplainedIgnores(report, changed) {
 const DIRECTIVE = /^\s?Stryker disable(?: next-line)? [a-zA-Z, ]+(?::(.+))?/;
 
 /**
- * Returns each comment in `source`: the line where its text starts, and its text without `//`, or
- * `/*` and `*\/`, as Babel gives it to Stryker. The TypeScript parser finds the comments, so a
- * `/*` or `//` inside a string, a template literal or a regex literal isn't one. Each comment sits
- * between two tokens: on its own line it leads the next token, and after code on its line it
- * trails the token before it. So the walk reads the comments around each token. It keeps its own
- * stack, so a long expression or a long list doesn't overflow the call stack. A JSDoc comment's
- * nodes start inside the comment, so the walk skips them.
+ * Returns each comment in `source`: the line where its text starts, and its text. The text has no
+ * `//`, or `/*` and `*\/`, as Babel gives it to Stryker. The TypeScript parser finds the comments,
+ * so a `/*` or `//` inside a string, a template literal or a regex literal isn't one. TypeScript
+ * puts a comment on its own line before the next token, and a comment after code after the token
+ * before it. So the walk reads the comments before and after each token. It keeps its own stack,
+ * so a long expression or a long list doesn't overflow the call stack. The nodes of a JSDoc
+ * comment start inside the comment, so the walk skips them.
  *
  * @param {string} source
  * @returns {Array<{ line: number, text: string }>}
@@ -312,13 +314,13 @@ function comments(source) {
 
 /**
  * Returns the changed lines of `source` that hold a Stryker disable directive without a reason. A
- * directive can ignore mutants on lines that didn't change, such as the line after a `disable
- * next-line`, so the directive itself is checked. Each comment's text is matched with Stryker's
- * pattern: a block comment can span lines, and a directive must start the text, after at most one
- * space or line break. So a block comment's closing `*\/` isn't a reason, and another directive on
- * the same line doesn't give it one. The line of a directive is the line of its "Stryker". Stryker
- * reads only the comments before code, so this check also flags a directive with no code after
- * it, which fails safe.
+ * directive can ignore mutants on lines that didn't change, such as the line after a
+ * `disable next-line`, so the check reads the directive itself. It matches each comment's text with
+ * Stryker's pattern: a block comment can span lines, and a directive must start the text, after at
+ * most one space or line break. So a block comment's closing `*\/` isn't a reason, and another
+ * directive on the same line doesn't give it one. The line of a directive is the line of its
+ * "Stryker". Stryker reads only the comments before code, so this check also flags a directive with
+ * no code after it, which fails safe.
  *
  * @param {string} source
  * @param {Array<[number, number]>} ranges
@@ -331,19 +333,16 @@ export function reasonlessDirectives(source, ranges) {
   let found;
   try {
     found = comments(source);
-  } catch {
-    // The parser recurses, so code nested thousands of levels deep overflows its stack. Then fail
-    // safe: flag each changed line with "Stryker disable" and no reason after a colon.
+  } catch (error) {
+    // The parser recurses, so code nested thousands of levels deep overflows its stack. The check
+    // can't then read the comments, so it fails safe: it flags each changed line that holds
+    // "Stryker disable", even one with a reason.
+    if (!(error instanceof RangeError)) throw error;
     return source
       .split('\n')
-      .map((text, index) => ({ text, line: index + 1 }))
-      .filter(
-        ({ text, line }) =>
-          changed(line) &&
-          /\bStryker\s+disable\b/.test(text) &&
-          !/\bStryker\s+disable(?:\s+next-line)?\s+[\w\s,]+?:\s*\S/.test(text)
-      )
-      .map(({ line }) => line);
+      .flatMap((text, index) =>
+        changed(index + 1) && text.includes('Stryker disable') ? [index + 1] : []
+      );
   }
   /** @type {Set<number>} */
   const lines = new Set();

@@ -88,7 +88,7 @@ for (const file of files) {
 }
 if (changed.size === 0) {
   console.log(
-    names.length > 0
+    names.length + invalid.length > 0
       ? 'No added or changed line under src/ is in a file that Stryker mutates, so there is nothing to check.'
       : `No lines under src/ change between ${base} and HEAD, so there is nothing to check.`
   );

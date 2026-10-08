@@ -128,6 +128,11 @@ describe('mutatedFiles', () => {
   });
 
   // Stryker resolves each pattern from the project folder, so "../repo/" names the same files.
+  // The project folder's own path isn't a glob, even with "[" and "]" in it.
+  it('reads patterns in a project folder whose path has glob characters', () => {
+    expect(mutatedFiles(['src/a.ts'], ['src/**/*.ts'], '/tmp/a[1]/repo')).toEqual(['src/a.ts']);
+  });
+
   it('reads a pattern that leaves the project folder and comes back', () => {
     expect(
       mutatedFiles(
@@ -412,11 +417,15 @@ describe('reasonlessDirectives', () => {
 
   // The parser itself overflows on code nested thousands of levels deep. The check then fails safe
   // and flags each changed line with "Stryker disable" and no reason, as main did.
-  it('fails safe for code nested 5,000 levels deep', () => {
+  it.each([
+    ['// Stryker disable next-line all', [2]],
+    ['/* Stryker disable all: */', [2]],
+    // The comments can't be read, so even a directive with a reason is flagged.
+    ['// Stryker disable next-line all: a reason', [2]],
+    ['// a comment', []],
+  ])('fails safe for %j after code nested 5,000 levels deep', (comment, expected) => {
     const code = `const x = ${'('.repeat(5000)}1${')'.repeat(5000)};`;
-    expect(reasonlessDirectives(`${code}\n// Stryker disable next-line all\nx;`, [[2, 2]])).toEqual(
-      [2]
-    );
+    expect(reasonlessDirectives(`${code}\n${comment}\nx;`, [[2, 2]])).toEqual(expected);
   });
 
   // TypeScript builds JSDoc-type nodes for some code too, as for "?" here. Only JSDoc comments are
