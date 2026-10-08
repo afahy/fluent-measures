@@ -245,8 +245,9 @@ function hasUnsupportedPart(
 
 /**
  * Group the parts into measurements, and give the first one's total if the others agree with it.
- * Return null when they don't, and undefined when the first measurement adds up to zero, so the
- * parser goes on to the next type.
+ * Return null when they don't, or when the total is too large to represent: the parse fails.
+ * Return undefined when the first measurement adds up to zero, so the parser goes on to the
+ * next type.
  */
 function combineParts(
   matches: QualifiedMatch[],

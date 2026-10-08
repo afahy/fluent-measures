@@ -159,7 +159,10 @@ export function normalize(input: string): string {
   return normalizeFractions(normalizeNumericCommas(normalizeForms(input)));
 }
 
-/** Normalize text and split it into tokens, as parseMeasurement does. */
+/**
+ * Normalize text and split it into tokens. The parser does the same, but it also replaces each
+ * range with a boundary first, so `tokenize('5-11')` is ['5', '11'].
+ */
 export function tokenize(input: string, fuzziness?: number): string[] {
   return tokenizeNormalized(normalize(input), fuzziness);
 }

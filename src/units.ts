@@ -14,16 +14,20 @@ export const UNIT_ALIASES: Record<MeasurementType, [Unit, ...string[]][]> = {
   ],
 };
 
-// The measurement type of each unit. With no prototype, a name such as "constructor" isn't a unit.
-export const UNIT_TYPES = {
-  __proto__: null,
+// The measurement type of each unit. The type checks that each unit has one.
+const TYPES: Record<Unit, MeasurementType> = {
   ft: 'height',
   in: 'height',
   cm: 'height',
   m: 'height',
   lb: 'weight',
   kg: 'weight',
-} as unknown as Readonly<Record<Unit, MeasurementType>>;
+};
+// With no prototype, a name such as "constructor" isn't a unit.
+export const UNIT_TYPES: Readonly<Record<Unit, MeasurementType>> = Object.assign(
+  Object.create(null),
+  TYPES
+);
 
 // Short aliases that are usually ordinary words before a number, as in "in 2020" and "M 28".
 // They can come before their number only as a label, such as "(in)" or "m:", which the
