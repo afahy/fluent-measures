@@ -40,7 +40,7 @@ describe('describeStatus', () => {
       "needs-agent: Codex hasn't reviewed c7ad2f4 30 minutes after it could start; its last review was of 91a5d29"
     );
     expect(describeStatus(classify(fixture('pr-66'), at('2026-10-07T15:20:00Z')))).toBe(
-      "waiting: Codex hasn't started on c7ad2f4; its last review was of 91a5d29 (until 2026-10-07T15:30:44.000Z) (+1 more)"
+      "waiting: Codex hasn't started on c7ad2f4; its last review was of 91a5d29 (until 2026-10-07T15:30:44.000Z)"
     );
     expect(describeStatus(classify(fixture('pr-66'), at('2026-10-07T17:01:00Z')))).toBe(
       'waiting-human: Codex never reviewed the head commit, so only the maintainer can merge it'
@@ -85,9 +85,9 @@ describe('describeStatus', () => {
       created_at: '2026-10-07T15:10:00Z',
     });
     // At 15:20 the first wait was "Codex hasn't started" (above). After the 👀, it is
-    // "Codex is reviewing (👀)", and the other wait stays.
+    // "Codex is reviewing (👀)". CodeRabbit is rate limited, so it adds no other wait.
     expect(describeStatus(classify(snapshot, at('2026-10-07T15:20:00Z')))).toBe(
-      'waiting: Codex is reviewing (+1 more)'
+      'waiting: Codex is reviewing'
     );
     const status = classify(ready67(), at('2026-10-07T16:00:00Z'));
     const emoji: PrStatus = { ...status, state: 'waiting-human', reasons: ['👍'.repeat(200)] };
@@ -337,7 +337,7 @@ describe('setStatus', () => {
       'pr-66',
       '2026-10-07T15:20:00Z',
       'pending',
-      "waiting: Codex hasn't started on c7ad2f4; its last review was of 91a5d29 (until 2026-10-07T15:30:44.000Z) (+1 more)",
+      "waiting: Codex hasn't started on c7ad2f4; its last review was of 91a5d29 (until 2026-10-07T15:30:44.000Z)",
     ],
     [
       'pr-66',

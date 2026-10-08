@@ -135,9 +135,10 @@ action it tells you to take, in any section.
   `.claude/skills/steward/SKILL.md` says. `pnpm pr:status <pr>...` decides when they're
   done, and `pnpm pr:status <pr>... --wait` waits for them. Don't ask whether to watch.
 - Post the bot review requests that `pnpm pr:status <pr>...` lists. It lists one for a bot
-  that hasn't started 30 minutes after it could, for CodeRabbit once its rate limit resets,
-  and for a CodeRabbit review that ended without success. It lists each request once for each
-  commit, and stops waiting for a bot after two hours. Note each gap in your report.
+  that hasn't started 30 minutes after it could, and for a CodeRabbit review that ended
+  without success. It lists each request once for each commit, and stops waiting for a bot
+  after two hours. It doesn't wait for CodeRabbit when CodeRabbit is rate limited on the
+  commit, and doesn't ask it again for that commit. Note each gap in your report.
 - If a CI job fails because no runner picked it up, re-run the failed jobs. If GitHub
   reports an Actions incident, re-run them when it ends. Fix all other CI failures on the
   branch.
@@ -197,8 +198,9 @@ when all of these are true:
 
 - It is ready to merge, as "Finish the PR" says, and the last comment check found no
   showstopper.
-- `pnpm pr:status <pr>...` reports it as `ready`: CI passed, Codex has completed a review of
-  its last commit, and CodeRabbit has reviewed it or had two hours to.
+- `pnpm pr:status <pr>...` reports it as `ready`: CI passed, and Codex has completed a review
+  of its last commit. CodeRabbit has reviewed that commit, had two hours to, or was rate
+  limited on it.
 - Its last review round found nothing new, or it has had three rounds.
 - It needs no "Stop and ask" decision.
 - The PR body and a ticket comment list each result that it changes from `main` beyond the
