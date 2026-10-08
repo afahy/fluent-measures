@@ -229,20 +229,24 @@ describe('mutation-check.mjs', () => {
 
   // AFA-82 review: a line break or an escape in a name would break the check's output and its
   // reading of Stryker's log.
-  it.each(['src/a\nb.ts', 'src/a\u001b[31mb.ts'])('fails for the changed path %j', file => {
-    const repository = createRepository();
-    const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
-    commitFiles(repository, { [file]: 'export const a = 1;\n' });
+  it.each(['src/a\nb.ts', 'src/a\u001b[31mb.ts', 'src/a,b\n%0Ac.ts'])(
+    'fails for the changed path %j',
+    file => {
+      const repository = createRepository();
+      const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
+      commitFiles(repository, { [file]: 'export const a = 1;\n' });
 
-    const check = runCheck(repository, base);
+      const check = runCheck(repository, base);
 
-    expect(check.status).toBe(1);
-    expect(check.stderr).toContain(
-      `::error::Rename ${JSON.stringify(file)}. Its path has a control`
-    );
-    expect(check.stdout).not.toContain('Changed lines');
-    expect(check.stderr).not.toContain('Stryker exited');
-  });
+      expect(check.status).toBe(1);
+      // AFA-79: the message escapes "%", so GitHub can't read "%0A" in a name as a line break.
+      expect(check.stderr).toContain(
+        `::error::Rename ${JSON.stringify(file).replace(/%/g, '%25')}. Its path has a control`
+      );
+      expect(check.stdout).not.toContain('Changed lines');
+      expect(check.stderr).not.toContain('Stryker exited');
+    }
+  );
 
   // AFA-79: a comma ended the `file=` property early, so the annotation pointed to `src/a`. A colon
   // and a "%" need escapes in a property too.
