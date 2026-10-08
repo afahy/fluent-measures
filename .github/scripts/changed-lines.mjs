@@ -308,7 +308,9 @@ function comments(source) {
       kind === ts.SyntaxKind.MultiLineCommentTrivia && source.endsWith('*/', end) ? end - 2 : end
     );
     const at = pos + 2 + Math.max(text.indexOf('Stryker'), 0);
-    return { line: file.getLineAndCharacterOfPosition(at).line + 1, text };
+    // Git, which gives the changed lines, breaks lines only at "\n". TypeScript's line numbers also
+    // break at a lone "\r", U+2028 and U+2029 (AFA-115).
+    return { line: source.slice(0, at).split('\n').length, text };
   });
 }
 
