@@ -453,8 +453,11 @@ export function botFollowUps(comments) {
 }
 
 /**
- * Codex and CodeRabbit reviews since the push that `test` matches, with no later comment or
- * review from a person. A comment that only asks a bot to review isn't an answer.
+ * Codex and CodeRabbit reviews since the push that `test` matches, with no answer from a person.
+ * An answer is a reply in one of the review's threads, or a later PR comment or review that
+ * links to the review (`#pullrequestreview-<id>`) or quotes a line of it (AFA-144). Any other
+ * comment can be about something else, so it doesn't answer the review. A comment that only asks
+ * a bot to review isn't an answer.
  *
  * @param {import('./pr-state.d.mts').Snapshot} snapshot
  * @param {(review: import('./pr-state.d.mts').Review) => boolean} test
@@ -462,25 +465,43 @@ export function botFollowUps(comments) {
  */
 function unansweredBotReviews(snapshot, test) {
   const pushed = pushedAt(snapshot);
+  const replied = new Set(
+    snapshot.reviewComments.filter(c => !byBot(c) && c.in_reply_to_id).map(c => c.in_reply_to_id)
+  );
   const answers = [
     ...snapshot.issueComments
       .filter(c => !byBot(c) && !BOT_COMMAND.test(c.body ?? ''))
-      .map(c => c.created_at),
-    ...snapshot.reviews.filter(r => !byBot(r) && r.submitted_at).map(r => r.submitted_at ?? ''),
+      .map(c => ({ time: c.created_at, body: c.body ?? '' })),
+    ...snapshot.reviews
+      .filter(r => !byBot(r) && r.submitted_at)
+      .map(r => ({ time: r.submitted_at ?? '', body: r.body ?? '' })),
   ];
+  /**
+   * Whether `body` links to the review, or quotes a line of at least 20 characters from it.
+   *
+   * @param {import('./pr-state.d.mts').Review} review
+   * @param {string} body
+   */
+  const tied = (review, body) =>
+    new RegExp(`#pullrequestreview-${review.id}(?!\\d)`).test(body) ||
+    body.split('\n').some(line => {
+      const quote = /^\s*>\s?(.*)$/.exec(line)?.[1].trim() ?? '';
+      return quote.length >= 20 && (review.body ?? '').includes(quote);
+    });
   return snapshot.reviews.filter(
     r =>
       byReviewBot(r) &&
       r.submitted_at &&
       byTime(r.submitted_at, pushed) >= 0 &&
       test(r) &&
-      !answers.some(t => byTime(t, r.submitted_at ?? '') > 0)
+      !snapshot.reviewComments.some(c => c.pull_request_review_id === r.id && replied.has(c.id)) &&
+      !answers.some(a => byTime(a.time, r.submitted_at ?? '') > 0 && tied(r, a.body))
   );
 }
 
 /**
  * Codex and CodeRabbit reviews since the push that put comments in the review body instead of
- * in a thread ("Outside diff range comments"), with no later comment or review from a person.
+ * in a thread ("Outside diff range comments"), with no answer from a person.
  *
  * @param {import('./pr-state.d.mts').Snapshot} snapshot
  * @returns {import('./pr-state.d.mts').Review[]}
@@ -492,26 +513,15 @@ export function unansweredReviewBodies(snapshot) {
 }
 
 /**
- * Codex and CodeRabbit reviews since the push that request changes, with no later comment or
- * review from a person. An answer from a person clears it, as for comments outside the diff
- * (AFA-138), because the bot may never review again. A reply in a thread that the review started
- * is an answer too. GitHub also records such a reply as a review from that person, but AFA-144
- * will count only answers tied to the review, so the thread check stays.
- * unansweredBotThreads lists each of the review's threads that has no reply.
+ * Codex and CodeRabbit reviews since the push that request changes, with no answer from a
+ * person. An answer clears it, as for comments outside the diff (AFA-138), because the bot may
+ * never review again. unansweredBotThreads lists each of the review's threads that has no reply.
  *
  * @param {import('./pr-state.d.mts').Snapshot} snapshot
  * @returns {import('./pr-state.d.mts').Review[]}
  */
 export function botChangeRequests(snapshot) {
-  const replied = new Set(
-    snapshot.reviewComments.filter(c => !byBot(c) && c.in_reply_to_id).map(c => c.in_reply_to_id)
-  );
-  return unansweredBotReviews(
-    snapshot,
-    r =>
-      r.state === 'CHANGES_REQUESTED' &&
-      !snapshot.reviewComments.some(c => c.pull_request_review_id === r.id && replied.has(c.id))
-  );
+  return unansweredBotReviews(snapshot, r => r.state === 'CHANGES_REQUESTED');
 }
 
 /**
