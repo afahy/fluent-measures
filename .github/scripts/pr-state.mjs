@@ -367,7 +367,7 @@ export function coderabbitState(snapshot) {
     reply !== undefined &&
     refused &&
     /rate limit/i.test(reply.body ?? '') &&
-    (!status || byTime(reply.updated_at ?? reply.created_at, status.created_at) >= 0);
+    (!status || byTime(reply.updated_at, status.created_at) >= 0);
   if (limitedStatus || limitedReply) {
     return { state: 'rate-limited', detail: `CodeRabbit was rate limited on ${short}` };
   }
@@ -393,7 +393,7 @@ export function coderabbitState(snapshot) {
   ) {
     // A PR on another PR's branch. CodeRabbit reviews it only when asked.
     return {
-      state: 'pending',
+      state: 'skipped',
       detail: "CodeRabbit doesn't review PRs on this base branch unless asked",
     };
   }
@@ -403,7 +403,7 @@ export function coderabbitState(snapshot) {
   }
   if (status) {
     return {
-      state: 'pending',
+      state: 'failed',
       detail: `CodeRabbit's review of ${short} ended with "${status.description ?? status.state}"`,
     };
   }
@@ -618,7 +618,7 @@ export function classify(snapshot, now = Date.now(), { requests = true } = {}) {
   }
   // CodeRabbit adds no wait, reason or request (AFA-138). The note tells the agent to list the
   // gap in its report.
-  if (!['done', 'skipped'].includes(coderabbit.state)) notes.push(coderabbit.detail);
+  if (!pull.draft && coderabbit.state !== 'done') notes.push(coderabbit.detail);
   if (ci.pending.length > 0) waits.push(`CI is running: ${ci.pending.join(', ')}`);
   if (!pull.mergeable_state || pull.mergeable_state === 'unknown') {
     waits.push('GitHub is still working out whether the PR can merge');
@@ -662,7 +662,9 @@ export function mostUrgent(states) {
  * @returns {string}
  */
 export function digest(status) {
-  const { state, head, reasons, actions, notes } = status;
+  const { state, head, reasons, actions } = status;
+  // CodeRabbit's progress needs no action (AFA-138), so its note doesn't count as news.
+  const notes = status.notes.filter(note => note !== status.coderabbit.detail);
   return JSON.stringify({ state, head, reasons, actions, notes });
 }
 

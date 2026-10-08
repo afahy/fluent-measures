@@ -485,7 +485,7 @@ describe('coderabbitState edges', () => {
     expect(coderabbitState(snapshot).state).toBe('requested');
   });
 
-  it('accepts a skipped review, and notes a failed one', () => {
+  it('accepts a skipped review, and names a failed one as failed', () => {
     const snapshot = fixture('pr-67');
     snapshot.statuses = [
       {
@@ -505,7 +505,7 @@ describe('coderabbitState edges', () => {
       description: 'Review failed',
     };
     expect(coderabbitState(snapshot)).toEqual({
-      state: 'pending',
+      state: 'failed',
       detail: 'CodeRabbit\'s review of 318c1b7 ended with "Review failed"',
     });
   });
@@ -523,9 +523,13 @@ describe('coderabbitState edges', () => {
       },
     ];
     expect(coderabbitState(snapshot)).toEqual({
-      state: 'pending',
+      state: 'skipped',
       detail: "CodeRabbit doesn't review PRs on this base branch unless asked",
     });
+    // The note still says so, so the agent lists the gap.
+    expect(classify(snapshot, at('2026-10-07T15:00:00Z')).notes).toEqual([
+      "CodeRabbit doesn't review PRs on this base branch unless asked",
+    ]);
     snapshot.issueComments.push(comment(90, human, '@coderabbitai review', '2026-10-07T15:01:00Z'));
     expect(coderabbitState(snapshot).state).toBe('requested');
   });
@@ -733,9 +737,27 @@ describe('mostUrgent and digest', () => {
       actions: [],
       notes: [
         'coderabbitai[bot] replied after your reply: https://github.com/afahy/fluent-measures/pull/66#discussion_r4208534586',
-        'CodeRabbit was rate limited on c7ad2f4',
       ],
     });
+  });
+
+  // AFA-138 review: CodeRabbit's progress needs no action, so --wait doesn't wake for it, even on
+  // a PR that waits for the maintainer.
+  it("leaves CodeRabbit's state note out, so its progress isn't news", () => {
+    const snapshot = fixture('pr-67');
+    snapshot.pull.mergeable_state = 'blocked';
+    const before = classify(snapshot, at('2026-10-07T15:51:00Z'));
+    snapshot.statuses.push({
+      context: 'CodeRabbit',
+      state: 'pending',
+      description: 'Review in progress',
+      created_at: '2026-10-07T15:50:30Z',
+    });
+    const after = classify(snapshot, at('2026-10-07T15:51:00Z'));
+    expect(before.state).toBe('waiting-human');
+    expect(after.state).toBe('waiting-human');
+    expect(after.notes).toEqual(['CodeRabbit is reviewing 318c1b7']);
+    expect(digest(after)).toBe(digest(before));
   });
 });
 
@@ -1053,7 +1075,7 @@ describe('pr-state.mjs details', () => {
       created_at: '2026-10-07T14:55:00Z',
     });
     expect(coderabbitState(snapshot)).toEqual({
-      state: 'pending',
+      state: 'failed',
       detail: 'CodeRabbit\'s review of 318c1b7 ended with "Review failed: rate limit exceeded"',
     });
   });

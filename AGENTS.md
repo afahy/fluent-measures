@@ -136,7 +136,7 @@ action it tells you to take, in any section.
   done, and `pnpm pr:status <pr>... --wait` waits for them. Don't ask whether to watch.
 - Post the Codex review requests that `pnpm pr:status <pr>...` lists. It lists one when Codex
   hasn't started 30 minutes after it could, once for each commit. It stops waiting for Codex
-  after two hours.
+  after two hours. Note each gap in your report.
 - Don't wait for CodeRabbit, and don't ask it to review: it reviews in time or it doesn't.
   Handle its findings when they arrive before the merge. The late-bot-findings workflow
   records a finding that arrives after the merge. Note each gap in your report.

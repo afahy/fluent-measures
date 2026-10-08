@@ -107,6 +107,7 @@ export interface BotState {
     | 'requested'
     | 'rate-limited'
     | 'refused'
+    | 'failed'
     | 'not-requested'
     | 'gave-up'
     | 'skipped';

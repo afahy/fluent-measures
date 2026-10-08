@@ -16,9 +16,9 @@ and most of them misjudged the head commit, Codex's 👀 or CodeRabbit's rate li
 
 Run `pnpm pr:status <pr>` (or `pnpm pr:status 61 62 63` for several) and act on the state it
 prints. Add `--json` if you need to parse the output. After a PR's third review round (AGENTS.md
-"Handle findings and CI"), add `--no-requests`, so it waits for the bots instead of telling you
-to ask them again. The flag applies to every PR in the call, so check PRs past their third round
-in a separate call.
+"Handle findings and CI"), add `--no-requests`, so it waits for Codex instead of telling you to
+ask it again. The flag applies to every PR in the call, so check PRs past their third round in a
+separate call.
 
 | State           | Exit code | What to do                                                                                                                                 |
 | --------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
