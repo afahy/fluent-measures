@@ -192,7 +192,8 @@ haven't changed. It doesn't check other code that the mutant depends on, so a pu
 score can differ from a full run. A change to a file that tests read, such as `README.md` or the
 corpus, or to the packages, starts a full run. Pushes to `main` always run every mutant, and so
 does a re-run of the job. For a full run on a pull request, re-run this job or all jobs. "Re-run
-failed jobs" doesn't run this job again when it passed.
+failed jobs" doesn't run this job again when it passed. A run that takes more than 27 minutes
+stops and fails, but it saves its results so far, so the next run goes on from them.
 
 A second job, "Mutants on changed lines are killed", runs Stryker on the files that a pull
 request changes under `src/`. It fails when a mutant whose code overlaps a line that the pull

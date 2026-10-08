@@ -138,8 +138,9 @@ jobs:
 
       # A change to one source file can change how the tests treat a mutant in another, which
       # incremental mode doesn't check. So a push to main starts from no results and runs every
-      # mutant, and main's score and the results that pull requests reuse are exact. A re-run of
-      # the job does the same, so a pull request can get a full run.
+      # mutant, and main's score and saved results are exact. A pull request's own later runs can
+      # reuse its earlier results. A re-run of the job runs every mutant, so a pull request can get
+      # a full run.
       - uses: actions/cache/restore@v4
         if: github.event_name != 'push' && github.run_attempt == 1
         with:
@@ -148,9 +149,12 @@ jobs:
           restore-keys: stryker-incremental-${{ steps.inputs.outputs.hash }}-
 
       # Stryker writes its results at the end of a run, before it checks the score, so a run below
-      # the threshold saves them too. A run that the job's time limit stops writes nothing.
+      # the threshold saves them too. On SIGINT, it writes the results so far. The job's own time
+      # limit doesn't reach Stryker through the step's shell, so `timeout` sends SIGINT to the
+      # whole run 3 minutes before that limit. The step then fails, the save step keeps the
+      # results, and the next run goes on from them.
       - name: Mutation tests
-        run: pnpm test:mutation --incremental
+        run: timeout --signal=INT 27m pnpm test:mutation --incremental
 
       # Each attempt saves under its own key, because a key can't be saved twice.
       - uses: actions/cache/save@v4

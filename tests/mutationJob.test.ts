@@ -17,7 +17,7 @@ const isHashed = (file: string): boolean =>
 
 describe('the mutation job in CI', () => {
   it('runs Stryker in incremental mode, from no results on main or a re-run', () => {
-    expect(job).toMatch(/^ +run: pnpm test:mutation --incremental$/m);
+    expect(job).toMatch(/^ +run: timeout --signal=INT 27m pnpm test:mutation --incremental$/m);
     expect(job).toContain("if: github.event_name != 'push' && github.run_attempt == 1");
   });
 
