@@ -17,6 +17,7 @@ describe('a hyphen after a feet or inch mark', () => {
     ['five;"-5 in', {}, 5, 'in'],
     // Digits after a number and a unit count as a number, as `5ft11in-185 lbs` and `1m80in-5 in`.
     ['5ft11"-185 lbs', {}, 185, 'lb'],
+    ['5 ft11"-185 lbs', {}, 185, 'lb'],
     ['1m80"-5 in', {}, 5, 'in'],
     // "Must not change" in AFA-112.
     [`5'-11"`, {}, 71, 'in'],
@@ -33,6 +34,8 @@ describe('a hyphen after a feet or inch mark', () => {
     '5"-5"-5"',
     // Letters, or letters and a period, before the digits, as in `abc5 in-5 in`.
     'abc5"-5 in',
+    // CodeRabbit on #97: the number before the unit must start the token too.
+    'abc5ft11"-5 in',
     'x.5"-5 in',
     // A mark that closes a quotation, as on main (AFA-93).
     '"ten"-5 kg',
