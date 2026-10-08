@@ -49,9 +49,10 @@ function cssClasses(css: string): Set<string> {
   const escape = String.raw`\\[\da-f]{1,6}(?:\r\n|[ \t\n\r\f])?|\\[^\da-f\n\r\f]`;
   // Read the style sheet in tokens: an escape, a quoted string, a comment, a brace, a semicolon
   // or other text. So a brace, a semicolon or a comment marker in a string or an escape ends
-  // nothing. The text before a "{" is a selector, or an at-rule, which starts with "@".
+  // nothing. A comment that isn't closed runs to the end, and it separates the text on each side,
+  // as a space does. The text before a "{" is a selector, or an at-rule, which starts with "@".
   const tokens =
-    /\\[\s\S]|"(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*'|\/\*[\s\S]*?\*\/|[{};]|[^\\"'/{};]+|\//g;
+    /\\[\s\S]|"(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*'|\/\*[\s\S]*?(?:\*\/|$)|[{};]|[^\\"'/{};]+|\//g;
   const selectors: string[] = [];
   let text = '';
   for (const [token] of css.matchAll(tokens)) {
@@ -60,30 +61,51 @@ function cssClasses(css: string): Set<string> {
       text = '';
     } else if (token === '}' || token === ';') {
       text = '';
-    } else if (!/^(?:["']|\/\*)/.test(token)) {
+    } else if (token.startsWith('/*')) {
+      text += ' ';
+    } else if (!/^["']/.test(token)) {
       text += token;
     }
   }
+  // An escape outside a class name matches on its own, so an escaped "." in an ID, as in
+  // "#a\.b", doesn't start a class.
   const name = new RegExp(
-    String.raw`\.((?:${escape}|[a-z_-]|[^\x00-\x7f])(?:${escape}|[\w-]|[^\x00-\x7f])*)`,
+    String.raw`${escape}|\.((?:${escape}|[a-z_-]|[^\x00-\x7f])(?:${escape}|[\w-]|[^\x00-\x7f])*)`,
     'gi'
   );
-  const unescape = (_: string, hex?: string, symbol?: string): string => {
-    if (!hex) return symbol ?? '';
+  const unescape = (match: string): string => {
+    const hex = /^\\([\da-f]+)/i.exec(match)?.[1];
+    if (!hex) return match.slice(1);
     // CSS reads code point 0, a surrogate or any code point above U+10FFFF as U+FFFD.
     const code = parseInt(hex, 16);
     return code === 0 || code > 0x10ffff || (code >= 0xd800 && code <= 0xdfff)
       ? '\uFFFD'
       : String.fromCodePoint(code);
   };
-  const unescapes = new RegExp(
-    String.raw`\\([\da-f]{1,6})(?:\r\n|[ \t\n\r\f])?|\\([^\da-f\n\r\f])`,
-    'gi'
-  );
   return new Set(
     selectors.flatMap(text =>
-      [...text.matchAll(name)].map(([, escaped]) => escaped.replace(unescapes, unescape))
+      [...text.matchAll(name)].flatMap(([, escaped]) =>
+        escaped === undefined ? [] : [escaped.replace(new RegExp(escape, 'gi'), unescape)]
+      )
     )
+  );
+}
+
+/**
+ * The Tailwind classes in an HTML page that have no rule in a style sheet. The page's own script,
+ * Prism and the page's own <style> use the other classes.
+ */
+function missingClasses(html: string, css: string): string[] {
+  const used = [
+    ...[...html.matchAll(/\sclass="([^"]*)"/g)].flatMap(([, list]) => list.split(/\s+/)),
+    ...[...html.matchAll(/classList\.\w+\(([^)]*)\)/g)].flatMap(([, list]) =>
+      [...list.matchAll(/'([^']+)'/g)].map(([, name]) => name)
+    ),
+  ];
+  const other = new Set(['', 'copy-button', 'text-link']);
+  const defined = cssClasses(css);
+  return [...new Set(used)].filter(
+    name => !other.has(name) && !name.startsWith('language-') && !defined.has(name)
   );
 }
 
@@ -185,19 +207,16 @@ describe('the docs page', () => {
   it('loads tailwind.css, which has a rule for each Tailwind class on the page', () => {
     expect(page).toContain('<link href="tailwind.css" rel="stylesheet" />');
     const css = readFileSync(new URL('../docs/tailwind.css', import.meta.url), 'utf8');
-    const used = [
-      ...[...page.matchAll(/\sclass="([^"]*)"/g)].flatMap(([, list]) => list.split(/\s+/)),
-      ...[...page.matchAll(/classList\.\w+\(([^)]*)\)/g)].flatMap(([, list]) =>
-        [...list.matchAll(/'([^']+)'/g)].map(([, name]) => name)
-      ),
-    ];
-    // The page's script, Prism and the page's own <style> use these.
-    const other = new Set(['', 'copied', 'copy-button', 'text-link']);
-    const defined = cssClasses(css);
-    const missing = [...new Set(used)].filter(
-      name => !other.has(name) && !name.startsWith('language-') && !defined.has(name)
-    );
-    expect(missing).toEqual([]);
+    expect(missingClasses(page, css)).toEqual([]);
+  });
+
+  // AFA-121 item 1: Tailwind writes "2xl:text-lg" as ".\32 xl\:text-lg", so the class has a rule.
+  // Without the rule, the check still finds the class.
+  it.each([
+    ['.\\32 xl\\:text-lg { font-size: 1.125rem; }', []],
+    ['.text-lg { font-size: 1.125rem; }', ['2xl:text-lg']],
+  ])('checks a class that starts with a digit against %s', (css, missing) => {
+    expect(missingClasses('<div class="2xl:text-lg"></div>', css)).toEqual(missing);
   });
 
   // AFA-121: each class name comes from the CSS escape rules by hand. A prefix of a longer name
@@ -231,6 +250,11 @@ describe('the docs page', () => {
       '.open { content: "/*"; } .needed { display: block; } .close { content: "*/"; }',
       ['open', 'needed', 'close'],
     ],
+    // An escaped "." in an ID or an attribute value, a comment between two names, and a comment
+    // that isn't closed.
+    ['#a\\.b { } [data-x=a\\.c] { } .d { }', ['d']],
+    ['.a/**/b { }', ['a']],
+    ['.a { } /* not closed .z { }', ['a']],
   ])('reads the classes in %s', (css, names) => {
     expect([...cssClasses(css)]).toEqual(names);
   });
