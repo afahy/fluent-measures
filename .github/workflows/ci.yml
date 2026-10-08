@@ -127,8 +127,42 @@ jobs:
         with:
           node-version: 22
 
+      # Stryker's incremental mode reuses the result of each mutant whose code and killing tests
+      # haven't changed (AFA-111). It compares the source files and the test files, but not the
+      # files that tests read, the packages or this job. So their hash is part of the cache key,
+      # and a change to one of them starts a full run. A pull request starts from its own last
+      # run, or from main's.
+      - name: Hash the inputs that Stryker doesn't compare
+        id: inputs
+        run: echo "hash=${{ hashFiles('package.json', 'pnpm-lock.yaml', 'tsconfig.json', 'stryker.config.json', 'vitest.config.ts', '.github/workflows/ci.yml', '.github/actions/setup/action.yml', 'README.md', 'tests/**', '!tests/**/*.test.ts') }}" >> "$GITHUB_OUTPUT"
+
+      # A change to one source file can change how the tests treat a mutant in another, which
+      # incremental mode doesn't check. So a push to main starts from no results and runs every
+      # mutant, and main's score and saved results are exact. A pull request's own later runs can
+      # reuse its earlier results. A re-run of the job runs every mutant, so a pull request can get
+      # a full run.
+      - uses: actions/cache/restore@v4
+        if: github.event_name != 'push' && github.run_attempt == 1
+        with:
+          path: reports/stryker-incremental.json
+          key: stryker-incremental-${{ steps.inputs.outputs.hash }}-${{ github.sha }}-1
+          restore-keys: stryker-incremental-${{ steps.inputs.outputs.hash }}-
+
+      # Stryker writes its results at the end of a run, before it checks the score, so a run below
+      # the threshold saves them too. On SIGINT, it writes the results so far. The job's own time
+      # limit doesn't reach Stryker through the step's shell, so `timeout` sends SIGINT to the
+      # whole run 3 minutes before that limit. The step then fails, and the save step keeps the
+      # results. A pull request's next push goes on from them. A push to main and a re-run skip
+      # the restore, so they run every mutant again.
       - name: Mutation tests
-        run: pnpm test:mutation
+        run: timeout --signal=INT 27m pnpm test:mutation --incremental
+
+      # Each attempt saves under its own key, because a key can't be saved twice.
+      - uses: actions/cache/save@v4
+        if: ${{ !cancelled() }}
+        with:
+          path: reports/stryker-incremental.json
+          key: stryker-incremental-${{ steps.inputs.outputs.hash }}-${{ github.sha }}-${{ github.run_attempt }}
 
   # Every mutant on a line that the pull request adds or changes under src/ must be killed. When
   # there is no pull request or it doesn't change src/, the steps are skipped and the job passes.
