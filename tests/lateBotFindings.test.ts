@@ -15,6 +15,13 @@ import {
 // Real Codex and CodeRabbit comments and reviews from PRs in this repo (#22, #43, #57, #67, #71).
 const bot = JSON.parse(readFileSync('tests/fixtures/late-bot-findings/comments.json', 'utf8'));
 
+// CodeRabbit's collapsed section with a prompt for AI agents, which a record leaves out.
+const PROMPT =
+  '<details>\n<summary>🤖 Prompt for AI Agents</summary>\n\nagent instructions\n\n</details>';
+// CodeRabbit's collapsed section with the review's settings, which a record leaves out.
+const SETTINGS =
+  '<details>\n<summary>📜 Review details</summary>\n\n**Configuration used**: CodeRabbit UI\n\n</details>';
+
 const merged43 = {
   number: 43,
   title: 'fix: read the number after any unit label, not only in and m',
@@ -137,6 +144,138 @@ describe('lateFinding', () => {
     expect(finding?.excerpt).toBe(
       '> Nitpick comments (1)\n>\n> The foot mark ` is read as an apostrophe.'
     );
+  });
+
+  // AFA-123: a <details> inside an HTML comment counted toward the depth, so the quote ran on
+  // into the review's settings.
+  it('reads no section tags inside HTML comments', () => {
+    const body = `<details>\n<summary>🧹 Nitpick comments (1)</summary><blockquote>\n\nKeep this\n\n<!-- <details> -->\n\n</blockquote></details>\n\n${SETTINGS}`;
+    const finding = lateFinding('pull_request_review', {
+      pull_request: merged43,
+      review: { ...bot.coderabbitReview, body },
+    });
+    expect(finding?.excerpt).toBe('> Nitpick comments (1)\n>\n> Keep this');
+  });
+
+  // AFA-123: a title in plain bold never closed its section, so the quote ran to the end.
+  it('ends a section whose title is not collapsed at the next collapsed section', () => {
+    const body = `**🧹 Nitpick comments (1)**\n\nKeep this\n\n${SETTINGS}`;
+    const finding = lateFinding('pull_request_review', {
+      pull_request: merged43,
+      review: { ...bot.coderabbitReview, body },
+    });
+    expect(finding?.excerpt).toContain('Keep this');
+    expect(finding?.excerpt).not.toContain('Configuration used');
+  });
+
+  // AFA-123: the sections of files and the prompts after a bold title belong to its section.
+  it.each([
+    [
+      'a section of a file',
+      `<details>\n<summary>src/a.ts (1)</summary><blockquote>\n\nKeep this\n\n</blockquote></details>`,
+    ],
+    ['a prompt', `${PROMPT}\n\nKeep this`],
+  ])('keeps %s in the section of a title that is not collapsed', (_name, inside) => {
+    const body = `**🧹 Nitpick comments (1)**\n\n${inside}\n\n${SETTINGS}`;
+    const finding = lateFinding('pull_request_review', {
+      pull_request: merged43,
+      review: { ...bot.coderabbitReview, body },
+    });
+    expect(finding?.excerpt).toContain('Keep this');
+    expect(finding?.excerpt).not.toContain('agent instructions');
+    expect(finding?.excerpt).not.toContain('Configuration used');
+  });
+
+  // AFA-123: a line of three backticks in a suggested diff closes its fence, as on GitHub. The
+  // fence after it isn't closed, so it isn't code, and the next file's section stays.
+  it('keeps the sections after a suggestion whose fence closes early', () => {
+    const body =
+      "<details>\n<summary>🧹 Nitpick comments (2)</summary><blockquote>\n\n<details>\n<summary>README.md (1)</summary><blockquote>\n\n`10-12`: **Fix the example.**\n\n```diff\n ```js\n-parse('1 m')\n+parseMeasurement('1 m')\n ```\n```\n\n</blockquote></details>\n<details>\n<summary>src/b.ts (1)</summary><blockquote>\n\n`5`: **Finding B**\n\n</blockquote></details>\n\n</blockquote></details>";
+    const finding = lateFinding('pull_request_review', {
+      pull_request: merged43,
+      review: { ...bot.coderabbitReview, body },
+    });
+    expect(finding?.excerpt).toContain('Finding B');
+    expect(finding?.excerpt).not.toContain('</blockquote>');
+  });
+
+  // AFA-123: CodeRabbit's prompt holds a fence. A fence that a finding leaves open paired with
+  // it, so the prompt's <details> read as code, and its </details> ended the file's section.
+  it.each([
+    ['an unclosed fence', '```js\nx();'],
+    [
+      'a suggested diff whose fence a line of backticks closes early',
+      '```diff\n ```js\n-a\n+b\n ```\n```',
+    ],
+  ])("keeps the prompt's structure after %s", (_name, code) => {
+    const prompt =
+      '<details>\n<summary>🤖 Prompt for AI Agents</summary>\n\n```\nagent instructions\n```\n\n</details>';
+    const body = `<details>\n<summary>🧹 Nitpick comments (2)</summary><blockquote>\n\n<details>\n<summary>src/a.ts (1)</summary><blockquote>\n\nKeep this\n\n${code}\n\n${prompt}\n\n</blockquote></details>\n<details>\n<summary>src/b.ts (1)</summary><blockquote>\n\nFinding B\n\n</blockquote></details>\n\n</blockquote></details>\n\n${SETTINGS}`;
+    const finding = lateFinding('pull_request_review', {
+      pull_request: merged43,
+      review: { ...bot.coderabbitReview, body },
+    });
+    expect(finding?.excerpt).toContain('Finding B');
+    expect(finding?.excerpt).not.toContain('agent instructions');
+    expect(finding?.excerpt).not.toContain('Configuration used');
+  });
+
+  // AFA-123: a prompt's tag in an HTML comment paired with a real </details> and took the
+  // finding between them.
+  it("removes HTML comments before a prompt's tag can pair with a real end tag", () => {
+    const body =
+      '<details>\n<summary>🧹 Nitpick comments (1)</summary>\n<details>\n<summary>src/a.ts (1)</summary>\n<!-- <details><summary>Prompt for AI Agents</summary> -->\nKeep this\n</details>\n</details>';
+    const finding = lateFinding('pull_request_review', {
+      pull_request: merged43,
+      review: { ...bot.coderabbitReview, body },
+    });
+    expect(finding?.excerpt).toContain('Keep this');
+  });
+
+  // AFA-123: a title that doesn't start its line is text that a finding quotes, not a section.
+  it('counts a title that is not collapsed only at the start of its line', () => {
+    const body = `**🧹 Nitpick comments (1)**\n\nThe title Nitpick comments (1) here\n\n${SETTINGS}`;
+    const finding = lateFinding('pull_request_review', {
+      pull_request: merged43,
+      review: { ...bot.coderabbitReview, body },
+    });
+    expect(finding?.summary).toBe('a review with 1 nitpick comment');
+    expect(finding?.excerpt).toContain('The title Nitpick comments (1) here');
+  });
+
+  // AFA-123: a title in a tag inside its <summary> is still collapsed, so its section keeps the
+  // collapsed sections of files inside it.
+  it('reads a title in a tag inside its summary as collapsed', () => {
+    const body = `<details>\n<summary><b>🧹 Nitpick comments (1)</b></summary><blockquote>\n\n<details>\n<summary>src/a.ts (1)</summary><blockquote>\n\nKeep this\n\n</blockquote></details>\n\n</blockquote></details>\n\n${SETTINGS}`;
+    const finding = lateFinding('pull_request_review', {
+      pull_request: merged43,
+      review: { ...bot.coderabbitReview, body },
+    });
+    expect(finding?.excerpt).toBe('> Nitpick comments (1)\n>\n> src/a.ts (1)\n>\n> Keep this');
+  });
+
+  // AFA-123: the summary counted a title that a nitpick quotes.
+  it('counts only the titles of the sections that it quotes', () => {
+    const body =
+      '<details>\n<summary>🧹 Nitpick comments (2)</summary><blockquote>\n\nThe title Nitpick comments (2) is counted twice.\n\n</blockquote></details>';
+    const finding = lateFinding('pull_request_review', {
+      pull_request: merged43,
+      review: { ...bot.coderabbitReview, body },
+    });
+    expect(finding?.summary).toBe('a review with 2 nitpick comments');
+  });
+
+  // AFA-123: CodeRabbit can write a section in a Markdown quote, with `> ` before each line.
+  it('drops a prompt section inside a Markdown quote', () => {
+    const body =
+      '> <details>\n> <summary>⚠️ Outside diff range comments (1)</summary>\n> \n> Keep this\n> \n> <details>\n> <summary>🤖 Prompt for AI Agents</summary>\n> \n> agent instructions\n> \n> </details>\n> \n> </details>';
+    const finding = lateFinding('pull_request_review', {
+      pull_request: merged43,
+      review: { ...bot.coderabbitReview, body },
+    });
+    expect(finding?.summary).toBe('a review with 1 outside diff range comment');
+    expect(finding?.excerpt).toContain('Keep this');
+    expect(finding?.excerpt).not.toContain('agent instructions');
   });
 
   it('reports a bot comment on a merged PR that is not one of its routine notes', () => {
@@ -272,6 +411,66 @@ describe('excerpt', () => {
     expect(excerpt('a\n\nb\n\n\nc\n \n\nd\n\n \ne')).toBe('> a\n>\n> b\n>\n> c\n>\n> d\n>\n> e');
   });
 
+  // AFA-123: the backticks inside the string closed the fence, so the real closing fence paired
+  // with the next fence and hid the prompt between them.
+  it('closes a fence only at a line of backticks', () => {
+    const body =
+      'Fix it.\n\n```js\nconst f = "```";\n```\n\n<details>\n<summary>🤖 Prompt for AI Agents</summary>\n\nagent instructions\n\n</details>\n\n```js\nok();\n```';
+    expect(excerpt(body)).toBe(
+      '> Fix it.\n>\n> ```js\n> const f = "```";\n> ```\n>\n> ```js\n> ok();\n> ```'
+    );
+  });
+
+  // AFA-123: the review of the first fix found these inputs, where reading code by lines
+  // removed less than main did.
+  it.each([
+    [
+      'with \\r\\n line breaks',
+      `Fix it.\r\n\r\n\`\`\`js\r\nx();\r\n\`\`\`\r\n\r\n${PROMPT.replace(/\n/g, '\r\n')}\r\n\r\nAfter`,
+      '> Fix it.\n>\n> ```js\n> x();\n> ```\n>\n> After',
+    ],
+    [
+      'after a fence on a list item',
+      `1. \`\`\`js\n   foo()\n   \`\`\`\n\n${PROMPT}\n\nAfter`,
+      '> 1. ```js\n>    foo()\n>    ```\n>\n> After',
+    ],
+    [
+      'after a quote that ends an unclosed fence',
+      `> \`\`\`js\n> x()\n\n${PROMPT}\n\nAfter`,
+      '> > ```js\n> > x()\n>\n> After',
+    ],
+    [
+      'after an unclosed fence',
+      `\`\`\`js\nx();\n\n${PROMPT}\n\nAfter`,
+      '> ```js\n> x();\n>\n> After',
+    ],
+    [
+      "in a list item's indented paragraph",
+      '1. Item\n\n    See <details><summary>Prompt</summary>agent</details> here\n\nAfter',
+      '> 1. Item\n>\n>     See  here\n>\n> After',
+    ],
+  ])('removes a prompt %s', (_name, body, expected) => {
+    expect(excerpt(body)).toBe(expected);
+  });
+
+  // AFA-123: a cut inside a code span left the HTML in it live. The span gets its closing
+  // backticks, so the HTML stays code.
+  it.each([
+    [
+      'closes a code span that the cut splits',
+      `${'a'.repeat(590)} \`<details><summary>a</summary>b</details>\``,
+      `> ${'a'.repeat(590)} \`<details\`…`,
+    ],
+    ['keeps most of a long code span', `a \`${'b'.repeat(700)}\``, `> a \`${'b'.repeat(597)}\`…`],
+    [
+      "cuts before a code span when the cut splits the span's opening backticks",
+      `${'a'.repeat(598)} \`\`x <b>y</b>\`\` z`,
+      `> ${'a'.repeat(598)}…`,
+    ],
+  ])('%s', (_name, body, expected) => {
+    expect(excerpt(body)).toBe(expected);
+  });
+
   it('removes an HTML comment that is left behind when an inner one is removed', () => {
     // Removing `<!---->` from `<!<!---->--` leaves `<!--` (CodeQL alert 9).
     expect(excerpt('<!<!---->-- hidden -->Shown')).toBe('> Shown');
@@ -316,6 +515,58 @@ describe('plainText', () => {
     expect(plainText(`x\n${indented}\n<b>c</b>`)).toBe(`x\n${indented}\nc`);
     // Two backslashes are one plain backslash, so the backtick after them opens a span.
     expect(plainText('a \\\\`<b>x</b>` b')).toBe('a \\\\`<b>x</b>` b');
+  });
+
+  // AFA-123: the tags in these code blocks were stripped.
+  it.each([
+    ['an indented code block', 'Example:\n\n    <b>x</b>'],
+    [
+      'a fence indented 4 spaces in a list item',
+      '- item\n\n    ```html\n    <b>a</b>\n\n    <i>b</i>\n    ```',
+    ],
+    ['a closing run longer than the opening run', '```\n<b>a</b>\n\nx\n````'],
+    ['a tilde fence', '~~~html\n<b>a</b>\n~~~'],
+    ['a fence whose code has a line that starts with >', '```md\n> ```\n<b>x</b>\n```'],
+    [
+      'a fence whose closing line is indented 4 columns more',
+      'Code:\n\n  ```\n     ```\n<b>x</b>\n  ```',
+    ],
+    ['an indented block right after a fence', '```\na\n```\n    <b>x</b>'],
+  ])('keeps the tags in %s', (_name, code) => {
+    expect(plainText(code)).toBe(code);
+  });
+
+  // AFA-123: a bot that doesn't close a fence more likely broke its Markdown than put the rest of
+  // its comment in code, so the fence is text, as on main.
+  it('reads an unclosed fence as text', () => {
+    expect(plainText('```html\n<b>a</b>\n\n<i>b</i>')).toBe('```html\na\n\nb');
+  });
+
+  // AFA-123: the second review of the fix found these inputs.
+  it.each([
+    [
+      "a fence in a list item, with a code line that starts with '>'",
+      '1. ```sh\n   > x\n   <b>y</b>\n   ```\n\nafter <i>z</i>',
+      '1. ```sh\n   > x\n   <b>y</b>\n   ```\n\nafter z',
+    ],
+    [
+      "a paragraph of an outer list item after a nested item's end",
+      '- a\n  - b\n\n  para\n\n    x <b>y</b>',
+      '- a\n  - b\n\n  para\n\n    x y',
+    ],
+    ["a line that goes on with a quote's paragraph", '> note\n    <b>x</b>', '> note\n    x'],
+    [
+      'a fence after a list item whose fence a line at column 0 ends',
+      '1. ```js\n   <b>a</b>\n```\n<i>b</i>\n```',
+      '1. ```js\n   <b>a</b>\n```\n<i>b</i>\n```',
+    ],
+    [
+      'a closing line with a tab after its marks',
+      '```\n<b>a</b>\n```\t\n<i>b</i>',
+      '```\n<b>a</b>\n```\t\nb',
+    ],
+  ])('reads %s', (_name, html, expected) => {
+    expect(plainText(html)).toBe(expected);
   });
 
   it('drops the tags that the bots write, with their attributes', () => {
