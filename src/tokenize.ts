@@ -103,12 +103,12 @@ const SPLIT = new RegExp(
 // Punctuation, a hyphen after a feet or inch mark after a number, and an underscore before a minus
 // sign. After a mark, a hyphen joins two values as it does after a unit word (AFA-112). So a
 // semicolon may come before the mark, and a word may follow the hyphen, as in "5'-eleven". The
-// number before the mark must start a token. Digits can also follow that number and a unit when
-// the mark touches them, as in "5ft11\"" and "5 ft11\"". So "x11\"-5 in", "abc5ft11\"-5 in" and the
-// second hyphen of "5\"-5\"-5\"" stay minus signs. After a number word, the mark mustn't close a
-// quotation, as in "\"ten\"-5 kg".
+// number before the mark must start a token. Digits can also follow that number, or a number
+// word, and a word when the mark touches them, as in "5ft11\"", "5 ft11\"" and "five;ft11\"". So
+// "x11\"-5 in", "abc5ft11\"-5 in" and the second hyphen of "5\"-5\"-5\"" stay minus signs. After a
+// number word, the mark mustn't close a quotation, as in "\"ten\"-5 kg".
 const PUNCTUATION = new RegExp(
-  String.raw`(?<=(?:^|[^\w.-])[\d.]*\d(?:[\s;]*|\s*[a-z]+[\d.]*\d)['"])-(?=\.?\d|[a-z])|(?<=\b(?:${NUMBER_WORD})[\s;]*['"])(?<!${OPEN}(?:"[^"]*"|'[^']*')[\s;]*)-(?=\.?\d|[a-z])|_(?=-)|[^\w\s'".;-]`,
+  String.raw`(?<=(?:^|[^\w.-])[\d.]*\d[\s;]*(?:[a-z]+[\d.]*\d)?['"])-(?=\.?\d|[a-z])|(?<=\b(?:${NUMBER_WORD})[\s;]*(?:[a-z]+[\d.]*\d)?['"])(?<!${OPEN}(?:"[^"]*"|'[^']*')[\s;]*)-(?=\.?\d|[a-z])|_(?=-)|[^\w\s'".;-]`,
   'g'
 );
 

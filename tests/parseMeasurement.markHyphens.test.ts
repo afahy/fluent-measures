@@ -18,6 +18,10 @@ describe('a hyphen after a feet or inch mark', () => {
     // Digits after a number and a unit count as a number, as `5ft11in-185 lbs` and `1m80in-5 in`.
     ['5ft11"-185 lbs', {}, 185, 'lb'],
     ['5 ft11"-185 lbs', {}, 185, 'lb'],
+    // A number word or a semicolon before the unit, as `five ft11in-185 lbs` and
+    // `5;ft11in-185 lbs`.
+    ['five ft11"-185 lbs', {}, 185, 'lb'],
+    ['5;ft11"-185 lbs', {}, 185, 'lb'],
     ['1m80"-5 in', {}, 5, 'in'],
     // "Must not change" in AFA-112.
     [`5'-11"`, {}, 71, 'in'],
