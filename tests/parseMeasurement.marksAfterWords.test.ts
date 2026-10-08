@@ -18,6 +18,8 @@ describe('a mark right after a word', () => {
     [`5 foot ten"`, 70, 'in'],
     [`six foot two"`, 74, 'in'],
     [`5' ten and a half"`, 70.5, 'in'],
+    // An apostrophe in a word doesn't open a quotation, so the marks after it still count.
+    [`I'm five' ten"`, 70, 'in'],
     [`six'`, 6, 'ft'],
     [`ten"`, 10, 'in'],
     [`twenty-five"`, 25, 'in'],
