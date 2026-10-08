@@ -339,10 +339,12 @@ describe('setStatus', () => {
       'pending',
       "waiting: Codex hasn't started on c7ad2f4; its last review was of 91a5d29 (until 2026-10-07T15:30:44.000Z)",
     ],
+    // AFA-125: a PR that waits only for the maintainer shows a green check, and the description
+    // says what the maintainer needs to do.
     [
       'pr-66',
       '2026-10-07T17:01:00Z',
-      'pending',
+      'success',
       'waiting-human: Codex never reviewed the head commit, so only the maintainer can merge it',
     ],
   ])('sets %s at %s to %s', async (name, time, state, description) => {
@@ -355,6 +357,33 @@ describe('setStatus', () => {
         { state, context: 'pr-status', description, target_url: snapshot.pull.html_url },
       ],
     ]);
+  });
+
+  // AFA-125 review: a draft waits for the maintainer, but it stays pending while its CI runs.
+  it('keeps a draft pending while its CI runs, and sets success when CI is done', async () => {
+    const snapshot = fixture('pr-67');
+    snapshot.pull.draft = true;
+    snapshot.checkRuns.push({
+      id: 99,
+      name: 'a check that still runs',
+      status: 'in_progress',
+      conclusion: null,
+      started_at: '2026-10-07T15:59:00Z',
+      app: { slug: 'github-actions' },
+    });
+    const running = recorder();
+    await setStatus(fakeApi(snapshot), running.post, repo, 67, at('2026-10-07T16:00:00Z'));
+    expect(running.posts[0][1]).toMatchObject({
+      state: 'pending',
+      description: 'waiting-human: The PR is a draft',
+    });
+    snapshot.checkRuns.pop();
+    const done = recorder();
+    await setStatus(fakeApi(snapshot), done.post, repo, 67, at('2026-10-07T16:00:00Z'));
+    expect(done.posts[0][1]).toMatchObject({
+      state: 'success',
+      description: 'waiting-human: The PR is a draft',
+    });
   });
 
   it('leaves a merged PR alone', async () => {
