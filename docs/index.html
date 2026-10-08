@@ -732,7 +732,6 @@ const inferredHeight = parseMeasurement('72', {
       const TIMER_DURATION = 2000;
 
       document.addEventListener('DOMContentLoaded', () => {
-        const clipboard = new ClipboardJS('.copy-button');
         const successToast = document.getElementById('success-toast');
         const errorToast = document.getElementById('error-toast');
         const TOASTS = [successToast, errorToast];
@@ -757,6 +756,15 @@ const inferredHeight = parseMeasurement('72', {
           currentTimeout = setTimeout(hideAllToasts, TIMER_DURATION);
         }
 
+        // If the browser blocked clipboard.js, or cdnjs is down, a copy button shows the error.
+        if (typeof ClipboardJS === 'undefined') {
+          document.querySelectorAll('.copy-button').forEach(button => {
+            button.addEventListener('click', () => showToast(errorToast));
+          });
+          return;
+        }
+
+        const clipboard = new ClipboardJS('.copy-button');
         clipboard.on('success', e => {
           const button = e.trigger;
           button.classList.add('copied', 'group', 'text-green-400');
