@@ -96,7 +96,7 @@ const isUnsupportedUnit = (word: string, number: string): boolean =>
 /**
  * Read a number phrase as readNumberPhrase does, but let minus signs start its first word, as in
  * "-5" and "--12". They sign the whole phrase, as in "-twenty five" and "-a hundred", so `signed`
- * is true and the value is read without them. A sign before another word doesn't count. Reading
+ * is true, and the value doesn't include them. A sign before another word doesn't count. Reading
  * forward, the first word is at `start`. Reading backward, it's the word where readNumberPhrase
  * stops, and `end` is the token before it.
  */
@@ -181,7 +181,7 @@ function readValueAfter(
   label: boolean,
   fuzziness?: number
 ): [value: number | null, end: number] {
-  // A signed value is read too, so the check for a label's value finds it, as in "kg: -5".
+  // This read takes a signed value too, so the check for a label's value finds it, as in "kg: -5".
   const [value, end] = readSignedPhrase(tokens, skipMarks(tokens, start));
   // A label doesn't take a number that has its own unit, as in "weigh in: 180 lbs" and
   // "180 lbs = 82 kg", even an unsupported one, as in "kg=400 g", so the check for stone, ounces
@@ -332,7 +332,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       const readFrom = label ? i - 2 : i - 1;
       // A sign on the first word of a phrase signs the whole phrase, as in "-twenty five kg" and
       // "-a hundred kg". So those inputs return null, as "-5 feet" does.
-      // When the value follows, nothing before the unit is read.
+      // When the value follows, the read before the unit takes nothing.
       let [num, end, signed]: [number | null, number, boolean] = valueFollows
         ? [null, readFrom, false]
         : readSignedPhrase(remainingTokens, readFrom, -1);
