@@ -1,6 +1,8 @@
+import tsParser from '@typescript-eslint/parser';
+import { ESLint } from 'eslint';
 import { readFileSync } from 'node:fs';
 import { matchesGlob } from 'node:path';
-import { expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import vitestConfig from '../vitest.config';
 
 type ConfigObject = { files?: string[]; plugins?: Record<string, unknown> };
@@ -27,4 +29,33 @@ it('lints every test format that Vitest runs with the rule-11 checks', async () 
     string
   >;
   expect(scripts['lint:eslint'].split(' ')).toContain('tests');
+  expect(scripts['lint:eslint:fix'].split(' ')).toContain('tests');
+});
+
+// The final review of #91: a JavaScript test gets the rule-11 checks but not `no-undef`, because
+// Vitest's globals and Node's are defined at run time. The TypeScript formats get its parser.
+describe('the lint config for each test format', () => {
+  const eslint = new ESLint();
+
+  it.each(['js', 'mjs', 'cjs', 'jsx'])('lints a .%s test that uses globals', async format => {
+    const [result] = await eslint.lintText(
+      "it('reads X', () => {\n  expect(process.env.X ?? 'x').toBe('x');\n});\n",
+      { filePath: `tests/a/x.test.${format}` }
+    );
+    expect(result.messages).toEqual([]);
+  });
+
+  it.each(['js', 'mjs', 'cjs', 'jsx'])('finds a .%s test with no expect', async format => {
+    const [result] = await eslint.lintText("it('does nothing', () => {});\n", {
+      filePath: `tests/a/x.test.${format}`,
+    });
+    expect(result.messages.map(message => message.ruleId)).toEqual(['vitest/expect-expect']);
+  });
+
+  it.each(['ts', 'mts', 'cts', 'tsx'])('parses a .%s test as TypeScript', async format => {
+    const config = (await eslint.calculateConfigForFile(`tests/a/x.test.${format}`)) as {
+      languageOptions: { parser: unknown };
+    };
+    expect(config.languageOptions.parser).toBe(tsParser);
+  });
 });

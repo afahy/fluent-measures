@@ -42,6 +42,9 @@ export default [
     rules: {
       'no-unused-vars': ['error', UNUSED],
       'no-console': CONSOLE,
+      // Vitest gives the tests its globals, and Node gives its own, as in the TypeScript tests. A
+      // name that no one defines throws when the test runs.
+      'no-undef': 'off',
     },
   },
   // Every test must be able to fail (AGENTS.md rule 11): it must reach an expect, and no expect
