@@ -91,6 +91,13 @@ const withoutSign = (token: string): number | null =>
   // Stryker disable next-line Regex: callers pass only tokens that start with a minus sign, so "/-+/" removes the same signs.
   wordsToNumber(token.replace(/^-+/, ''));
 
+/**
+ * Whether a word is a stone, ounce or gram unit after the number token before it. "st" after a
+ * whole number that ends in 1, except 11, is an ordinal, as in "Oct 1st", but "10.1st" is stone.
+ */
+const isUnsupportedUnit = (word: string, number: string): boolean =>
+  UNSUPPORTED_WEIGHT_UNITS.test(word) && !(word === 'st' && /^-*(?:\d*[02-9])?1$/.test(number));
+
 /** Whether a token is a number with a minus sign, as in "-5". A sign before a word doesn't count. */
 const isSigned = (token: string | undefined): boolean =>
   token?.startsWith('-') === true && withoutSign(token) !== null;
@@ -236,8 +243,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       if (!unit) {
         // A number in an unsupported weight unit next to a supported part, as in "12st 4lb" or
         // "7 lb 8 oz", would leave the weight incomplete. An unrelated amount elsewhere, as in
-        // "8 oz of water", doesn't count. "st" after a whole number that ends in 1, except 11, is
-        // an ordinal, as in "Oct 1st", but "10.1st" is stone.
+        // "8 oz of water", doesn't count.
         const word = remainingTokens[i];
         if (type === 'weight' && UNSUPPORTED_WEIGHT_UNITS.test(word)) {
           // A signed number here reads as its value without the sign. A minus sign doesn't make
@@ -278,7 +284,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
                 ) &&
                 (partEndsAt(i - 1) ||
                   isWeightUnit(tokens[skip(readNumberPhrase(tokens, unitAt)[1])]))
-              : !(word === 'st' && /^-*(?:\d*[02-9])?1$/.test(remainingTokens[i - 1])) &&
+              : isUnsupportedUnit(word, remainingTokens[i - 1]) &&
                 (partEndsAt(beforeEnd) || isWeightUnit(tokens[unitAt]))
           ) {
             return null;
@@ -379,11 +385,16 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         const [inches, inchesEnd] = readNumberPhrase(remainingTokens, matchEnd);
         const nextWord = remainingTokens[inchesEnd] ?? '';
         const nextUnit = matchUnit(nextWord, 'height', fuzziness);
-        // A following unit owns the number, even when it belongs to another measurement type.
+        // A following unit owns the number, even when it belongs to another measurement type or
+        // isn't supported, as in "5 ft 8 oz".
         if (
           inches !== null &&
           (nextUnit === 'in' ||
-            (inches > 0 && inches < 12 && !nextUnit && !matchUnit(nextWord, 'weight', fuzziness)))
+            (inches > 0 &&
+              inches < 12 &&
+              !nextUnit &&
+              !matchUnit(nextWord, 'weight', fuzziness) &&
+              !isUnsupportedUnit(nextWord, remainingTokens[inchesEnd - 1])))
         ) {
           const inchesMatch: QualifiedMatch = { value: inches, unit: 'in' };
           // The inches' number starts at matchEnd, and reading forward stops at a semicolon.
