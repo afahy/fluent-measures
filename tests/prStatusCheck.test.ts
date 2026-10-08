@@ -359,6 +359,33 @@ describe('setStatus', () => {
     ]);
   });
 
+  // AFA-125 review: a draft waits for the maintainer, but it stays pending while its CI runs.
+  it('keeps a draft pending while its CI runs, and sets success when CI is done', async () => {
+    const snapshot = fixture('pr-67');
+    snapshot.pull.draft = true;
+    snapshot.checkRuns.push({
+      id: 99,
+      name: 'a check that still runs',
+      status: 'in_progress',
+      conclusion: null,
+      started_at: '2026-10-07T15:59:00Z',
+      app: { slug: 'github-actions' },
+    });
+    const running = recorder();
+    await setStatus(fakeApi(snapshot), running.post, repo, 67, at('2026-10-07T16:00:00Z'));
+    expect(running.posts[0][1]).toMatchObject({
+      state: 'pending',
+      description: 'waiting-human: The PR is a draft',
+    });
+    snapshot.checkRuns.pop();
+    const done = recorder();
+    await setStatus(fakeApi(snapshot), done.post, repo, 67, at('2026-10-07T16:00:00Z'));
+    expect(done.posts[0][1]).toMatchObject({
+      state: 'success',
+      description: 'waiting-human: The PR is a draft',
+    });
+  });
+
   it('leaves a merged PR alone', async () => {
     const { posts, post } = recorder();
     await expect(

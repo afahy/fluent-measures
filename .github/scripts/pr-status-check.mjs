@@ -3,10 +3,11 @@
 // .github/workflows/pr-status.yml, which runs on the events that can change a PR's state.
 //
 // The status is `success` when the PR is ready, `failure` when it needs the agent, and
-// `pending` while it waits on CI or a bot. A PR that waits only for the maintainer is
-// `success` too, with a description that starts "waiting-human:", so it doesn't look like a
-// run that is still going (AFA-125). It isn't a required check, so `success` merges nothing.
-// The script sets it only when it changes, so a run that finds no news writes nothing.
+// `pending` while it waits on CI or a bot. When nothing else is open and the PR waits only for
+// the maintainer, it's `success` too, with a description that starts "waiting-human:". So it
+// doesn't look like a run that is still going (AFA-125). It isn't a required check, so `success`
+// merges nothing. The script sets it only when it changes, so a run that finds no news writes
+// nothing.
 
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
@@ -118,7 +119,11 @@ export async function prsForEvent(api, repo, name, event) {
 export async function setStatus(api, post, repo, number, now = Date.now()) {
   const snapshot = await collect(api, repo, number);
   const status = classify(snapshot, now);
-  const state = COMMIT_STATES[status.state];
+  // A draft can wait for the maintainer while its CI still runs. It stays pending until then.
+  const state =
+    status.state === 'waiting-human' && status.waits.length > 0
+      ? 'pending'
+      : COMMIT_STATES[status.state];
   // A merged or closed PR keeps its last status.
   if (!state) return null;
   const description = describeStatus(status);
