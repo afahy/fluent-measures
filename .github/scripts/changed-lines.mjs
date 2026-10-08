@@ -273,8 +273,9 @@ export function unexplainedIgnores(report, changed) {
 const DIRECTIVE = /^\s?Stryker disable(?: next-line)? [a-zA-Z, ]+(?::(.+))?/;
 
 /**
- * Returns each comment in `source`: the line where its text starts, and its text. The text has no
- * `//`, or `/*` and `*\/`, as Babel gives it to Stryker. The TypeScript parser finds the comments,
+ * Returns each comment in `source`: the line where its text starts, and its text. The line counts
+ * only "\n", as git does, so it matches the changed ranges (AFA-115). The text has no `//`, or `/*`
+ * and `*\/`, as Babel gives it to Stryker. The TypeScript parser finds the comments,
  * so a `/*` or `//` inside a string, a template literal or a regex literal isn't one. TypeScript
  * puts a comment on its own line before the next token, and a comment after code after the token
  * before it. So the walk reads the comments before and after each token. It keeps its own stack,
