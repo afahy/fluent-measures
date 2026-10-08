@@ -144,7 +144,7 @@ Responsible for identifying and matching unit strings in the input (e.g., "ft", 
 
 ### tokenize.ts
 
-Splits input strings into tokens for processing, handling various formats and special character cases.
+Splits input strings into tokens for processing, handling various formats and special character cases. Each token is an object with its text. A label, such as "(kg)" or "in:", is one token that also gives the kind of label and whether it starts a field. The parser sets a flag on each token that a measurement uses.
 
 ### units.ts
 

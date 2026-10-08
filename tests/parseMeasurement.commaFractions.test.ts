@@ -18,7 +18,7 @@ describe('decimal commas without a leading zero', () => {
 
   it('keeps both decimal digits', () => {
     expect(parseMeasurement(',05kg')?.value).toBe(0.05);
-    expect(tokenize(',05kg')).toEqual(['.05', 'kg']);
+    expect(tokenize(',05kg').map(({ text }) => text)).toEqual(['.05', 'kg']);
   });
 
   it.each(['5 ft ,5 in', '5-foot-,5-inches', "5',5"])('preserves fractional inches in %s', raw => {

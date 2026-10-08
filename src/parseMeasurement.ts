@@ -1,13 +1,10 @@
 import { matchUnit } from './matchUnit';
-import { normalize, tokenizeNormalized } from './tokenize';
+import { normalize, Token, tokenizeNormalized } from './tokenize';
 import { MULTIPLIERS, NUMBER_WORDS, wordsToNumber } from './wordsToNumber';
 
 import {
-  FIELD_MARK,
   LABEL_ALIASES,
-  NAME_MARK,
   NEXT_PART,
-  UNIT_MARK,
   UNIT_TYPES,
   UNSUPPORTED_WEIGHT_UNITS,
   unitConversions,
@@ -18,11 +15,23 @@ import { ParseOptions, ParsedValue, Match, MeasurementType, Unit } from './types
 type QualifiedMatch = Match & { unit: NonNullable<Match['unit']> };
 
 /**
+ * Reads the text of the token at an index, or undefined past either end, as an array does. Each
+ * reader takes one, so it can read the tokens with or without the ones that a match has used.
+ */
+type Words = (at: number) => string;
+
+/** Read the tokens as if each one that a match has used were "", so no other match can use it. */
+const remainingWords =
+  (tokens: Token[]): Words =>
+  at =>
+    tokens[at]?.used ? '' : tokens[at]?.text;
+
+/**
  * Read the longest adjacent number phrase and return its first unconsumed token index. With
  * `readHalf` false, a phrase that ends in "and a half" isn't read.
  */
 function readNumberPhrase(
-  tokens: string[],
+  words: Words,
   start: number,
   step = 1,
   readHalf = true
@@ -30,7 +39,7 @@ function readNumberPhrase(
   // "and a half" after a whole number adds 0.5, as in "six and a half feet" and
   // "5 foot 10 and a half". Number.isInteger is false for null.
   const half = (at: number): boolean =>
-    tokens[at] === 'and' && tokens[at + 1] === 'a' && tokens[at + 2] === 'half';
+    words(at) === 'and' && words(at + 1) === 'a' && words(at + 2) === 'half';
   // Reading backward, the phrase can start at "half", or at the multiplier words after it. They
   // multiply the half, as in "two and a half thousand" (2500) and "two and a half hundred
   // thousand" (250,000). As in "two hundred thousand", each multiplier must be smaller than the one
@@ -50,14 +59,14 @@ function readNumberPhrase(
     let multiplier = 1;
     let nearest = Infinity;
     let ordered = true;
-    for (; tokens[at] === ';' || MULTIPLIERS.has(tokens[at]); at--) {
-      const next = MULTIPLIERS.get(tokens[at]);
+    for (; words(at) === ';' || MULTIPLIERS.has(words(at)); at--) {
+      const next = MULTIPLIERS.get(words(at));
       if (!next) continue;
       ordered &&= next < nearest;
       multiplier *= nearest = next;
     }
     if (half(at - 2)) {
-      const [whole, end, signed] = readSignedPhrase(tokens, at - 3, -1, false);
+      const [whole, end, signed] = readSignedPhrase(words, at - 3, -1, false);
       if (signed) return [null, end + 1];
       if (ordered && Number.isInteger(whole) && whole! < nearest) {
         return [(whole! + 0.5) * multiplier, end];
@@ -67,12 +76,13 @@ function readNumberPhrase(
   }
   let end = start;
   let value: number | null = null;
-  const words: string[] = [];
-  for (; tokens[end] !== undefined; end += step) {
-    if (tokens[end] === 'and' || (step < 0 && tokens[end] === ';')) continue;
-    if (step > 0) words.push(tokens[end]);
-    else words.unshift(tokens[end]);
-    const candidate = wordsToNumber(words.join(' '));
+  const phrase: string[] = [];
+  for (; words(end) !== undefined; end += step) {
+    const word = words(end);
+    if (word === 'and' || (step < 0 && word === ';')) continue;
+    if (step > 0) phrase.push(word);
+    else phrase.unshift(word);
+    const candidate = wordsToNumber(phrase.join(' '));
     if (candidate === null) break;
     value = candidate;
   }
@@ -96,16 +106,16 @@ const isUnsupportedUnit = (word: string, number: string): boolean =>
  * stops, and `end` is the token before it.
  */
 function readSignedPhrase(
-  tokens: string[],
+  words: Words,
   start: number,
   step = 1,
   readHalf = true
 ): [value: number | null, end: number, signed: boolean] {
-  const [value, end] = readNumberPhrase(tokens, start, step, readHalf);
+  const [value, end] = readNumberPhrase(words, start, step, readHalf);
   // Stryker disable next-line EqualityOperator: step is 1 or -1, so "step >= 0" is the same.
   const forward = step > 0;
   const at = forward ? start : end;
-  const token = tokens[at];
+  const token = words(at);
   if (!token?.startsWith('-')) return [value, end, false];
   // Stryker disable next-line Regex: the token starts with a minus sign, so "/-+/" removes the same signs.
   const word = token.replace(/^-+/, '');
@@ -113,16 +123,18 @@ function readSignedPhrase(
     // "a" and "an" add nothing to the value, but a sign on them signs the number words right
     // after them. Digits don't take them, as in "-a 12 lb" (12 lb), and a semicolon after them
     // ends the phrase, as in "-a; hundred kg" (100 kg).
-    const next = tokens[at + 1];
+    const next = words(at + 1);
     if (NUMBER_WORDS.has(next) || MULTIPLIERS.has(next)) {
-      return forward ? [...readNumberPhrase(tokens, at + 1), true] : [value, at - 1, true];
+      return forward ? [...readNumberPhrase(words, at + 1), true] : [value, at - 1, true];
     }
   } else if (wordsToNumber(word) !== null) {
-    // Read again with the word in place of the token, and then put the token back. A copy of the
-    // tokens would make long inputs with many signs slow.
-    tokens[at] = word;
-    const [signedValue, signedEnd] = readNumberPhrase(tokens, start, step, readHalf);
-    tokens[at] = token;
+    // Read again with the word in place of the token.
+    const [signedValue, signedEnd] = readNumberPhrase(
+      index => (index === at ? word : words(index)),
+      start,
+      step,
+      readHalf
+    );
     // Reading backward, the word must join the phrase, so "-5 12 kg" is 12 kg. The phrase then
     // starts at the signed word, as after "a" and "an".
     if (signedEnd !== at) return [signedValue, forward ? signedEnd : at - 1, true];
@@ -149,18 +161,9 @@ function total(parts: QualifiedMatch[], targetUnit: Unit): number {
   return sum;
 }
 
-/**
- * Return the index of the first token at or after `start` that isn't a semicolon or a unit label's
- * mark. A field mark ends the search, because a new field starts there, unless `field` is true.
- */
-function skipMarks(tokens: string[], start: number, field?: boolean): number {
-  while (
-    tokens[start] === ';' ||
-    tokens[start] === UNIT_MARK ||
-    (field && tokens[start] === FIELD_MARK)
-  ) {
-    start++;
-  }
+/** Return the index of the first token at or after `start` that isn't a semicolon. */
+function skipSemicolons(words: Words, start: number): number {
+  while (words(start) === ';') start++;
   return start;
 }
 
@@ -170,30 +173,32 @@ function skipMarks(tokens: string[], start: number, field?: boolean): number {
  * `label` is also true for a unit right after a zero, which can't take a number either.
  */
 function readValueAfter(
-  tokens: string[],
+  tokens: Token[],
   start: number,
   unit: Unit,
   label: boolean,
   fuzziness?: number
 ): [value: number | null, end: number] {
+  const words = remainingWords(tokens);
   // This read takes a signed value too, so the check for a label's value finds it, as in "kg: -5".
-  const [value, end] = readSignedPhrase(tokens, skipMarks(tokens, start));
+  const [value, end] = readSignedPhrase(words, skipSemicolons(words, start));
   // A label doesn't take a number that has its own unit, as in "weigh in: 180 lbs" and
   // "180 lbs = 82 kg", even an unsupported one, as in "kg=400 g", so the check for stone, ounces
-  // and grams still sees that part. A semicolon or a unit label's mark can come between a number
-  // and its unit, as in "180; lbs" and "180 (lbs), 82 (kg)". But a unit with its own number after
-  // it doesn't own the number when it starts the next part of the measurement, as in
-  // "m: 1 cm: 80", or when it's another label, as in "kg: 72 cm: 180". The short aliases are
-  // labels even when spelled out.
-  const unitAt = skipMarks(tokens, end);
-  const next = tokens[unitAt] ?? '';
+  // and grams still sees that part. A semicolon or a unit label can be that unit, as in
+  // "180; lbs" and "180 (lbs), 82 (kg)", but a field name or a label that starts a field can't. A
+  // unit with its own number after it doesn't own the number when it starts the next part of the
+  // measurement, as in "m: 1 cm: 80", or when it's another label, as in "kg: 72 cm: 180". The
+  // short aliases are labels even when spelled out.
+  const unitAt = skipSemicolons(words, end);
+  const nextToken: Token | undefined = tokens[unitAt];
+  const next = (nextToken?.label !== 'name' && !nextToken?.startsField && words(unitAt)) || '';
   const nextUnit = matchUnit(next, 'height', fuzziness) || matchUnit(next, 'weight', fuzziness);
   const ownUnit =
     (label || LABEL_ALIASES.has(unit)) &&
     (nextUnit || UNSUPPORTED_WEIGHT_UNITS.test(next)) &&
     !(
-      (nextUnit === NEXT_PART[unit] || tokens[unitAt - 1] === UNIT_MARK) &&
-      wordsToNumber(tokens[skipMarks(tokens, unitAt + 1)] ?? '') !== null
+      (nextUnit === NEXT_PART[unit] || nextToken?.label === 'unit') &&
+      wordsToNumber(words(skipSemicolons(words, unitAt + 1)) ?? '') !== null
     );
   return [ownUnit ? null : value, end];
 }
@@ -201,34 +206,29 @@ function readValueAfter(
 /**
  * Whether the token at `i` is a stone, ounce or gram unit whose number stands next to a supported
  * weight part, as in "12st 4lb" or "7 lb 8 oz". That part would leave the weight incomplete. An
- * unrelated amount elsewhere, as in "8 oz of water", doesn't count. Earlier matches blank their
- * tokens in `remainingTokens`, so the check reads units in the original `tokens`.
+ * unrelated amount elsewhere, as in "8 oz of water", doesn't count. Earlier matches use their
+ * tokens, which `remaining` reads as "", so the check reads units in `text`, which reads them all.
  */
-function hasUnsupportedPart(
-  tokens: string[],
-  remainingTokens: string[],
-  i: number,
-  fuzziness?: number
-): boolean {
-  const word = remainingTokens[i];
+function hasUnsupportedPart(text: Words, remaining: Words, i: number, fuzziness?: number): boolean {
+  const word = remaining(i);
   if (!UNSUPPORTED_WEIGHT_UNITS.test(word)) return false;
   // Stryker disable next-line StringLiteral: a missing token and "Stryker was here!" are both no weight unit.
   const isWeightUnit = (token = ''): boolean => matchUnit(token, 'weight', fuzziness) !== null;
   // A signed number here reads as its value without the sign. A minus sign doesn't make
   // the part unrelated, as in "-12st 4lb", "-12;st 4lb", "stone -12, 4 lb" and
   // "12 lb -twenty five oz".
-  const [before, beforeEnd] = readSignedPhrase(remainingTokens, i - 1, -1);
+  const [before, beforeEnd] = readSignedPhrase(remaining, i - 1, -1);
   // Reading backward already skips semicolons, so skip them reading forward too, as in
-  // "8 oz; 7 lb" and "12 st 4;lb". Commas don't separate parts, so skip field marks too,
-  // as in "Stone: 12, lb: 4".
-  const skip = (start: number): number => skipMarks(tokens, start, true);
+  // "8 oz; 7 lb" and "12 st 4;lb". Commas don't separate parts, so a label that starts a field
+  // can be a part's unit, as in "Stone: 12, lb: 4".
+  const skip = (start: number): number => skipSemicolons(text, start);
   const next = skip(i + 1);
-  const [after, afterEnd] = readSignedPhrase(tokens, next);
+  const [after, afterEnd] = readSignedPhrase(text, next);
   const unitAt = skip(afterEnd);
   // A supported part before it can have its unit first, as in "kg 3, 400 g". Earlier
-  // matches blank their tokens, so check the original tokens for a unit.
+  // matches use their tokens, so check all the tokens for a unit.
   const partEndsAt = (end: number): boolean =>
-    isWeightUnit(tokens[readNumberPhrase(tokens, end, -1)[1]]);
+    isWeightUnit(text(readNumberPhrase(text, end, -1)[1]));
   // With no number before it, the unit can come before its number, as in "stone 12, 4 lb",
   // unless a weight unit after that number takes it, as in "stone, 50 lb bag". A unit with
   // its own number after it doesn't, as in "Stone: 12, lb: 4". Like "in" and "m", "st"
@@ -237,10 +237,10 @@ function hasUnsupportedPart(
     ? after !== null &&
         word !== 'st' &&
         word !== 'g' &&
-        !(isWeightUnit(tokens[unitAt]) && readNumberPhrase(tokens, skip(unitAt + 1))[0] === null) &&
-        (partEndsAt(i - 1) || isWeightUnit(tokens[skip(readNumberPhrase(tokens, unitAt)[1])]))
-    : isUnsupportedUnit(word, remainingTokens[i - 1]) &&
-        (partEndsAt(beforeEnd) || isWeightUnit(tokens[unitAt]));
+        !(isWeightUnit(text(unitAt)) && readNumberPhrase(text, skip(unitAt + 1))[0] === null) &&
+        (partEndsAt(i - 1) || isWeightUnit(text(skip(readNumberPhrase(text, unitAt)[1]))))
+    : isUnsupportedUnit(word, remaining(i - 1)) &&
+        (partEndsAt(beforeEnd) || isWeightUnit(text(unitAt)));
 }
 
 /**
@@ -347,27 +347,34 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     // represent return null when the measurement is read.
     if (options.type !== 'height' || +shorthand[2] >= 12) return null;
     // Feed the components through the same parser as explicit feet and inches.
-    tokens = [shorthand[1], 'ft', shorthand[2], 'in'];
+    tokens = [shorthand[1], 'ft', shorthand[2], 'in'].map(text => ({ text }));
   }
 
   // Each token's field: a semicolon starts a new one, as in "invalid -5 ft; actual 180 cm".
   let field = 0;
   // Stryker disable next-line UpdateOperator: each field only needs a number that differs from the others'.
-  const fieldOf = tokens.map(token => (token === ';' ? ++field : field));
+  const fieldOf = tokens.map(({ text }) => (text === ';' ? ++field : field));
+  const text: Words = at => tokens[at]?.text;
+  const remaining = remainingWords(tokens);
+  /** Mark the tokens from `start` up to `end` as used. */
+  const use = (start: number, end: number): void => {
+    for (let at = start; at < end; at++) tokens[at].used = true;
+  };
 
   for (const type of onlyType ? [onlyType] : (['height', 'weight'] as const)) {
     let matches: QualifiedMatch[] = [];
-    const remainingTokens = [...tokens];
+    // Each type reads all the tokens again.
+    for (const token of tokens) token.used = false;
     // A measurement can't be negative. A signed part, as in "-5 ft" or "kg -5", drops each part of
     // its type in its field. So the rest of that field can't decide the result, as in "-5 ft 6 ft".
     const signedFields = new Set<number>();
     const matchFields = new Map<QualifiedMatch, number[]>();
 
     // Process tokens looking for units and numbers
-    for (let i = 0; i < remainingTokens.length; i++) {
-      const unit = matchUnit(remainingTokens[i], type, fuzziness);
+    for (let i = 0; i < tokens.length; i++) {
+      const unit = matchUnit(remaining(i), type, fuzziness);
       if (!unit) {
-        if (type === 'weight' && hasUnsupportedPart(tokens, remainingTokens, i, fuzziness)) {
+        if (type === 'weight' && hasUnsupportedPart(text, remaining, i, fuzziness)) {
           return null;
         }
         continue;
@@ -377,29 +384,26 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       // value comes after it, as in "age=28, in=72", so a label skips this when its value follows.
       // For a field name, a short alias before ":" or "=", that's any number. Any other label can
       // also be the unit of the number before it, as in "(in)", "in." and "kg:", so its value must
-      // be a number it can take, including a zero. Otherwise a label reads the number before its
-      // mark, as in "72 in: height", "72 (in), 180 lbs" and "180 lbs = 82 kg", unless a field
-      // separator comes between them.
-      const mark = remainingTokens[i - 1];
-      const label = mark === NAME_MARK || mark === UNIT_MARK;
+      // be a number it can take, including a zero. Otherwise a label reads the number before it,
+      // as in "72 in: height", "72 (in), 180 lbs" and "180 lbs = 82 kg", unless it starts a field.
+      const { label: kind, startsField } = tokens[i];
+      const label = kind !== undefined;
       // A signed value after a label is its value too, so the check for a sign below finds it.
       // As for a value without a sign, one with its own unit isn't, as in "180 cm = -82 kg".
-      const valueAt = skipMarks(remainingTokens, i + 1);
-      const valueSigned = readSignedPhrase(remainingTokens, valueAt)[2];
+      const valueAt = skipSemicolons(remaining, i + 1);
+      const valueSigned = readSignedPhrase(remaining, valueAt)[2];
       const signedValue = label && valueSigned;
       // A field name takes any number after it, but not a signed one with its own unit, as in
       // "72 in: -180 lbs".
       const valueFollows =
-        mark === NAME_MARK && !signedValue
-          ? readNumberPhrase(remainingTokens, valueAt)[0] !== null
-          : label && readValueAfter(remainingTokens, i + 1, unit, label, fuzziness)[0] !== null;
-      const readFrom = label ? i - 2 : i - 1;
+        kind === 'name' && !signedValue
+          ? readNumberPhrase(remaining, valueAt)[0] !== null
+          : label && readValueAfter(tokens, i + 1, unit, label, fuzziness)[0] !== null;
       // A sign on the first word of a phrase signs the whole phrase, as in "-twenty five kg" and
       // "-a hundred kg". So those inputs return null, as "-5 feet" does.
-      // When the value follows, the read before the unit takes nothing.
-      let [num, end, signed]: [number | null, number, boolean] = valueFollows
-        ? [null, readFrom, false]
-        : readSignedPhrase(remainingTokens, readFrom, -1);
+      // When the value follows, or the label starts a field, the read before the unit takes nothing.
+      let [num, end, signed]: [number | null, number, boolean] =
+        valueFollows || startsField ? [null, i - 1, false] : readSignedPhrase(remaining, i - 1, -1);
       let matchStart = num === null ? end : end + 1;
       let matchEnd = i + 1;
 
@@ -413,8 +417,8 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       // are words before a number ("in 2020"), so only their spelled-out labels are prefixes.
       if (
         !num &&
-        (num === null || unit !== 'ft' || remainingTokens[i - 1] === ';') &&
-        !LABEL_ALIASES.has(remainingTokens[i])
+        (num === null || unit !== 'ft' || (!label && remaining(i - 1) === ';')) &&
+        !LABEL_ALIASES.has(remaining(i))
       ) {
         // A label's signed value with its own unit isn't the label's value, as in
         // "in: -180 lbs, 72 in", so it doesn't drop the label's field. Its own unit drops its field.
@@ -426,7 +430,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         // label doesn't, so "0 cm, 1.8 m" is 1.8 m. The zero is then the unit's own number. A zero
         // in an earlier field isn't the unit's, as in "record 0; kg 70 lb", which is 70 kg.
         const [value, valueEnd] = readValueAfter(
-          remainingTokens,
+          tokens,
           matchEnd,
           unit,
           label || (num === 0 && fieldOf[matchStart] === fieldOf[i]),
@@ -446,12 +450,12 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       // A number and its unit can stand in two fields, as in "180;lbs".
       matchFields.set(match, [fieldOf[matchStart], fieldOf[matchEnd - 1]]);
 
-      // Mark tokens as used by replacing them with empty string
-      remainingTokens.fill('', matchStart, matchEnd);
+      use(matchStart, matchEnd);
 
       if (unit === 'ft') {
-        const [inches, inchesEnd] = readNumberPhrase(remainingTokens, matchEnd);
-        const nextWord = remainingTokens[inchesEnd] ?? '';
+        const [inches, inchesEnd] = readNumberPhrase(remaining, matchEnd);
+        // A label's value comes after it, so a label isn't the unit of the inches before it.
+        const nextWord = (!tokens[inchesEnd]?.label && remaining(inchesEnd)) || '';
         const nextUnit = matchUnit(nextWord, 'height', fuzziness);
         // A following unit owns the number, even when it belongs to another measurement type or
         // isn't supported, as in "5 ft 8 oz".
@@ -462,7 +466,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
               inches < 12 &&
               !nextUnit &&
               !matchUnit(nextWord, 'weight', fuzziness) &&
-              !isUnsupportedUnit(nextWord, remainingTokens[inchesEnd - 1])))
+              !isUnsupportedUnit(nextWord, remaining(inchesEnd - 1))))
         ) {
           const inchesMatch: QualifiedMatch = { value: inches, unit: 'in' };
           // The inches' number starts at matchEnd, and reading forward stops at a semicolon.
@@ -470,7 +474,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
           // Stryker disable next-line ConditionalExpression: "true" keeps zero parts, which add up to zero and don't count. The tests kill "false".
           if (num || inches) matches.push(inchesMatch);
           else matches.pop();
-          remainingTokens.fill('', matchEnd, inchesEnd + (nextUnit === 'in' ? 1 : 0));
+          use(matchEnd, inchesEnd + (nextUnit === 'in' ? 1 : 0));
         } else if (!num) {
           // An isolated zero must not change the unit of an independent measurement.
           matches.pop();
@@ -483,7 +487,12 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     // Inferred units use the same normalization and result handling as explicit units.
     const inferred = !matches.length && options.allowUnqualified && options.type;
     if (inferred) {
-      const num = wordsToNumber(tokens.filter(token => token !== ';').join(' '));
+      const num = wordsToNumber(
+        tokens
+          .map(({ text }) => text)
+          .filter(text => text !== ';')
+          .join(' ')
+      );
       // Stryker disable next-line ConditionalExpression: num > 0 is false for null too.
       if (num !== null && num > 0) {
         const metric = options.inferUnit === 'metric';

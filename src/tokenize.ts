@@ -1,6 +1,33 @@
 import { matchUnit } from './matchUnit';
-import { FIELD_MARK, LABEL_ALIASES, NAME_MARK, UNIT_ALIASES, UNIT_MARK } from './units';
+import { LABEL_ALIASES, UNIT_ALIASES } from './units';
 import { MULTIPLIERS, NUMBER_WORDS, wordsToNumber } from './wordsToNumber';
+
+/** A word, number, mark or semicolon of the input. */
+export interface Token {
+  text: string;
+  /**
+   * The kind of label that the token is, if it's one. A short alias before ":" or "=" names a field,
+   * as in "in: 72" and "age 28 (in): 180 lbs". Any other label is a unit label, as in "(kg)",
+   * "in." and "kg: 72". A label's value can come after it, as in "age=28, in=72". A unit label can
+   * also be the unit of the number before it, as in "72 (in), 180 lbs" and "180 lbs = 82 kg".
+   */
+  label?: 'name' | 'unit';
+  /**
+   * Whether the label starts a new field, after a comma, semicolon, colon, equals sign or "&", as in
+   * "age=28, in=180 lbs". The label can't take the number before it, because that number belongs
+   * to the field before it.
+   */
+  startsField?: boolean;
+  /** Whether a measurement has used the token. The parser sets it. */
+  used?: boolean;
+}
+
+// Until its last step, the tokenizer works on text. So it writes one of these words before each
+// label, to record what kind of label it is. The text is lowercase by then, so no input word can be
+// one of them. The last step moves them into the fields of the label's token.
+const NAME_WORD = 'NAME';
+const UNIT_WORD = 'UNIT';
+const FIELD_WORD = 'FIELD';
 
 // A unit alias in brackets or before a colon or equals sign, as in "(kg)", "m:", "in = 72" and
 // "("):", is a label. So is "in." followed by a space, the usual abbreviation for inches. The alias must
@@ -161,72 +188,83 @@ export function normalize(input: string): string {
 
 /**
  * Normalize text and split it into tokens. The parser does the same, but it also replaces each
- * range with a boundary first, so `tokenize('5-11')` is ['5', '11'].
+ * range with a boundary first, so the tokens of `tokenize('5-11')` are "5" and "11".
  */
-export function tokenize(input: string, fuzziness?: number): string[] {
+export function tokenize(input: string, fuzziness?: number): Token[] {
   return tokenizeNormalized(normalize(input), fuzziness);
 }
 
 /** Split normalized text while retaining negative signs and compound boundaries. */
-export function tokenizeNormalized(input: string, fuzziness?: number): string[] {
-  return (
-    (
-      input
-        // Two apostrophes right after a number are an inch mark, as in "72''" (AFA-106).
-        // normalizeForms writes "´´" and "’’" as two apostrophes too. They don't close a number
-        // that two apostrophes open, as in "the ''5'' kg bag", and a third mark keeps them as
-        // they are, as in "72'''", so each form gives what main gives. The lookahead runs first, so
-        // the lookbehind doesn't scan back from every digit of a long number.
-        .replace(/(?<=\d)(?='')(?<!(?:^|[^\w'"’])['’]{2}[^'’\s]*)''(?!['’])/g, '"')
-        // A capital G right after a number, as in "5G phone", is a network generation, not
-        // grams, which are written "g". Rename it before case is lost.
-        .replace(/(?<=\d)G(?![A-Za-z])/g, 'gen')
-        // Convert to lowercase for case-insensitive matching
-        .toLowerCase()
-        // Mark labels before the punctuation that marks them is removed, so the parser knows what
-        // kind of label each one is, and spell out the short aliases. A short alias before ":" or
-        // "=" is a field name, in brackets too, as in "age 28 (in): 180 lbs". Other units are
-        // always unit labels, so "180 lbs = 82 kg" keeps 180 lb. A bracket label keeps its opening
-        // bracket, and a label after a field separator gets a field mark first.
-        .replace(
-          LABEL_PATTERN,
-          (_, field = '', open = '', alias?: string, assign?: string, name?: string) => {
-            const word = alias ?? name ?? 'in';
-            const short = LABEL_ALIASES.get(word);
-            return `${field && `${field}${FIELD_MARK} `}${open}${short && (assign || name) ? NAME_MARK : UNIT_MARK} ${short ?? word}`;
-          }
-        )
-        // "#" right after a number means pounds, as in "185#". Before a number, or before a letter,
-        // a digit or another "#", as in "#5", "185#kg" and "12#3", it isn't a unit.
-        .replace(/(?<=\d)#(?![\p{L}\p{N}_#])/gu, ' lb ')
-        // Split punctuation, hyphens that join two values after a feet or inch mark, as in `5'-11`,
-        // `5"-5 in`, `5'-eleven` and `five'-10"`, and underscores before minus signs.
-        .replace(PUNCTUATION, ' ')
-        // After a number, a unit and a hyphen join two parts or values, as in "5 ft-11",
-        // "1 m-80 cm" and "150 lbs-180 lbs". A unit prefix without a number before it keeps the
-        // minus sign, as in "kg-70.5". Check the prefix first so the lookbehind only runs when
-        // needed. The lookbehind skips spaces and semicolons before the unit, as in "1;m-80 cm" and
-        // "1 ; m-80 cm". It then captures the token before them only when that token has only
-        // letters, digits and periods. That token must start after a space, a semicolon or the
-        // start of the input, as in "kg;5 ft-11". Any other character matches the "\S" and captures
-        // nothing. So the lookbehind reads back only over spaces, semicolons and those characters,
-        // and a long token with many words before hyphens takes linear time.
-        .replace(
-          /(?<![\w-])(?=[a-z]+-)(?<=(?:(?<![^\s;])([a-z\d.]*)|\S)[\s;]*)([a-z]+)-(?=\.?\d)/g,
-          (match, previous: string | undefined, word: string) => {
-            const unit =
-              matchUnit(word, 'height', fuzziness) || matchUnit(word, 'weight', fuzziness);
-            // A token with other characters captures nothing, so it isn't a number either.
-            return unit &&
-              // Stryker disable next-line StringLiteral: any text that isn't a number gives null, as "" does.
-              wordsToNumber(previous ?? '') === null
-              ? `${word} -`
-              : match;
-          }
-        )
-        .replace(SPLIT, ' ')
-        // Keep semicolons as separate tokens without adding surrounding whitespace.
-        .match(/;|[^\s;]+/g) || []
-    ).map(token => trimTrailing(token, '.'))
-  );
+export function tokenizeNormalized(input: string, fuzziness?: number): Token[] {
+  const words = (
+    input
+      // Two apostrophes right after a number are an inch mark, as in "72''" (AFA-106).
+      // normalizeForms writes "´´" and "’’" as two apostrophes too. They don't close a number
+      // that two apostrophes open, as in "the ''5'' kg bag", and a third mark keeps them as
+      // they are, as in "72'''", so each form gives what main gives. The lookahead runs first, so
+      // the lookbehind doesn't scan back from every digit of a long number.
+      .replace(/(?<=\d)(?='')(?<!(?:^|[^\w'"’])['’]{2}[^'’\s]*)''(?!['’])/g, '"')
+      // A capital G right after a number, as in "5G phone", is a network generation, not
+      // grams, which are written "g". Rename it before case is lost.
+      .replace(/(?<=\d)G(?![A-Za-z])/g, 'gen')
+      // Convert to lowercase for case-insensitive matching
+      .toLowerCase()
+      // Mark labels before the punctuation that marks them is removed, so the parser knows what
+      // kind of label each one is, and spell out the short aliases. A bracket label keeps its
+      // opening bracket, and a label after a field separator gets a field word first.
+      .replace(
+        LABEL_PATTERN,
+        (_, field = '', open = '', alias?: string, assign?: string, name?: string) => {
+          const word = alias ?? name ?? 'in';
+          const short = LABEL_ALIASES.get(word);
+          return `${field && `${field}${FIELD_WORD} `}${open}${short && (assign || name) ? NAME_WORD : UNIT_WORD} ${short ?? word}`;
+        }
+      )
+      // "#" right after a number means pounds, as in "185#". Before a number, or before a letter,
+      // a digit or another "#", as in "#5", "185#kg" and "12#3", it isn't a unit.
+      .replace(/(?<=\d)#(?![\p{L}\p{N}_#])/gu, ' lb ')
+      // Split punctuation, hyphens that join two values after a feet or inch mark, as in `5'-11`,
+      // `5"-5 in`, `5'-eleven` and `five'-10"`, and underscores before minus signs.
+      .replace(PUNCTUATION, ' ')
+      // After a number, a unit and a hyphen join two parts or values, as in "5 ft-11",
+      // "1 m-80 cm" and "150 lbs-180 lbs". A unit prefix without a number before it keeps the
+      // minus sign, as in "kg-70.5". Check the prefix first so the lookbehind only runs when
+      // needed. The lookbehind skips spaces and semicolons before the unit, as in "1;m-80 cm" and
+      // "1 ; m-80 cm". It then captures the token before them only when that token has only
+      // letters, digits and periods. That token must start after a space, a semicolon or the
+      // start of the input, as in "kg;5 ft-11". Any other character matches the "\S" and captures
+      // nothing. So the lookbehind reads back only over spaces, semicolons and those characters,
+      // and a long token with many words before hyphens takes linear time.
+      .replace(
+        /(?<![\w-])(?=[a-z]+-)(?<=(?:(?<![^\s;])([a-z\d.]*)|\S)[\s;]*)([a-z]+)-(?=\.?\d)/g,
+        (match, previous: string | undefined, word: string) => {
+          const unit = matchUnit(word, 'height', fuzziness) || matchUnit(word, 'weight', fuzziness);
+          // A token with other characters captures nothing, so it isn't a number either.
+          return unit &&
+            // Stryker disable next-line StringLiteral: any text that isn't a number gives null, as "" does.
+            wordsToNumber(previous ?? '') === null
+            ? `${word} -`
+            : match;
+        }
+      )
+      .replace(SPLIT, ' ')
+      // Keep semicolons as separate tokens without adding surrounding whitespace.
+      .match(/;|[^\s;]+/g) || []
+  ).map(word => trimTrailing(word, '.'));
+  // Move the kind of each label, and whether it starts a field, into the label's token. The field
+  // word comes before the kind word, and the kind word comes right before the label.
+  const tokens: Token[] = [];
+  let startsField = false;
+  let label: Token['label'];
+  for (const text of words) {
+    if (text === FIELD_WORD) startsField = true;
+    else if (text === NAME_WORD) label = 'name';
+    else if (text === UNIT_WORD) label = 'unit';
+    else {
+      tokens.push(label ? { text, label, startsField } : { text });
+      startsField = false;
+      label = undefined;
+    }
+  }
+  return tokens;
 }

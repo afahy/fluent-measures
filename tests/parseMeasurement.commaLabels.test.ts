@@ -38,7 +38,7 @@ describe('commas separating labels from measurements', () => {
       raw,
       matches: [{ value: 180, unit: 'cm' }],
     });
-    expect(tokenize(raw)).toEqual(['phase2', '180', 'cm']);
+    expect(tokenize(raw).map(({ text }) => text)).toEqual(['phase2', '180', 'cm']);
   });
 
   it.each([
