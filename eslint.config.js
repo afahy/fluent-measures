@@ -3,8 +3,9 @@ import tseslint from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
 import vitest from '@vitest/eslint-plugin';
 
-// Every format that vitest.config.ts runs as a test (AFA-68). TypeScript's project covers the
-// TypeScript formats. The JavaScript formats get ESLint's own parser.
+// The file formats that vitest.config.ts runs as tests (AFA-68), for every file under tests/.
+// TypeScript's project covers the TypeScript formats. The JavaScript formats get ESLint's own
+// parser, and tests/lintFormats.test.ts checks that the two lists cover Vitest's formats.
 const TS_TESTS = 'tests/**/*.{ts,mts,cts,tsx}';
 const JS_TESTS = 'tests/**/*.{js,mjs,cjs,jsx}';
 
@@ -41,6 +42,10 @@ export default [
   {
     files: [JS_TESTS],
     languageOptions: { parserOptions: { ecmaFeatures: { jsx: true } } },
+    rules: {
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
+    },
   },
   // Every test must be able to fail (AGENTS.md rule 11): it must reach an expect, and no expect
   // may sit in a branch that can be skipped.
