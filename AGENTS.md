@@ -58,12 +58,14 @@ Run these commands from the repository root:
     test. Each test must reach at least one `expect`. After you add tests, run mutation
     testing. If a mutant survives in code that a new test covers, make the test catch it.
     If the mutant can't change behavior, say so in the PR.
-12. A timing test checks a limit of CPU time with `parseWithin` from `tests/timing.ts`. It
-    skips itself under Stryker with `it.skipIf(underStryker)`. Size each limit from CI's
-    slowest run of that test, not from a local run. CI's `test` job runs with coverage, and
-    in AFA-95 it took 3 to 8 times as long as a local run. Read its times in that job's log.
-    Leave at least 3 times headroom over CI's slowest run. The code that the test guards
-    against must take at least twice the limit.
+12. A new or changed timing test checks a limit of CPU time with `parseWithin` from
+    `tests/timing.ts`. It skips itself under Stryker with `it.skipIf(underStryker)`. Set
+    each limit from CI, not from a local run. CI's `test` jobs run with coverage, and in
+    AFA-95 they took 3 to 8 times as long as a local run. Their logs show the clock time of
+    each test over 300 ms. In AFA-95's loaded runs, clock time was at least the CPU time, so
+    use it. Leave at least 2 times headroom over the slowest of these times. Locally, the code
+    that the test guards against must take at least twice the limit. A limit over 4 s needs
+    its own test timeout, because Vitest's default is 5 s.
 
 ## Work without asking
 
@@ -85,21 +87,22 @@ action it tells you to take, in any section.
 
 ### Standing approvals
 
-The maintainer approves each of these actions in advance, in writing. Take them without
-asking, and don't wait for an answer:
+The maintainer approves each action that this file tells you to take, in advance and in
+writing. These are the ones that agents have stopped to ask about. Take them without asking,
+and don't wait for an answer:
 
 - Pick, claim and work `agent-ready` tickets as this file says. File, label, comment on and
   move Linear tickets.
 - Create a branch and a worktree for each ticket, commit, push to the ticket's branch, and
-  merge `main` into it.
-- Open PRs, post `Agent:` comments and Codex review requests, and reply to and resolve
-  threads.
-- Re-run CI jobs that no runner picked up.
+  merge `main` into it. After a merge, pull `main`, remove the worktree and delete the local
+  branch.
+- Open PRs, post `Agent:` comments and Codex review requests, reply to and resolve threads,
+  and convert a PR to a draft as "Stop and ask" says.
+- Re-run CI jobs that no runner picked up, or that an Actions incident stopped.
 - Merge a PR with `gh pr merge <number> --squash` when "Merge your own PR" allows it. This
-  includes a PR that changes a file in `.github/CODEOWNERS`.
+  includes a PR that changes a file that matches a pattern in `.github/CODEOWNERS`.
 - Raise a limit in `.size-limit.cjs` by 0.5 kB, as "Build the PR" says.
-- Start subagents that build a ticket, review a branch or watch PRs, each in its own
-  worktree.
+- Start subagents that build a ticket in its own worktree, review a branch or watch PRs.
 
 If a tool's permission check stops one of these actions, say so in one line in your report,
 and continue with other work. Don't look for another way around the check.
@@ -146,11 +149,11 @@ and continue with other work. Don't look for another way around the check.
   - Is it worth fixing? Compare how likely a user is to hit the problem with what the fix
     costs in code, bundle size and risk to other results. A showstopper is always worth
     fixing. So is a result that this PR changes from `main` (decision rule 3).
-  - Agent tooling has a higher bar. A finding in `.github/scripts/` or `.claude/` is worth
-    fixing only when it happened in a real run, when it changes what `main` does, or when it
-    would make a merge or a required check fail. Otherwise reply on the thread with that
-    reason, and don't file a ticket. On 8 October, each tooling PR's findings became the next
-    tooling ticket (AFA-143 to AFA-150).
+  - Agent tooling has a higher bar, except for a showstopper. This covers a finding in
+    `.github/scripts/`, `.github/workflows/` or `.claude/`. It is worth fixing only when it
+    happened in a real run, or when the PR breaks something that works on `main`. It is also
+    worth fixing when it would make a merge or a required check fail. Otherwise reply on the
+    thread with that reason, and don't file a ticket.
 - Then act on it:
   - If you can't reproduce it, or it isn't valid, reply on the thread with the inputs you
     ran and the reason.

@@ -668,8 +668,8 @@ export function classify(snapshot, now = Date.now(), { requests = true } = {}) {
     const until = codex.until ? ` (until ${codex.until})` : '';
     waits.push(`${codex.detail}${until}`);
   }
-  // CodeRabbit adds no wait, reason or request (AFA-138). The note tells the agent to list the
-  // gap in its report.
+  // CodeRabbit adds no wait, reason or request (AFA-138). Its review is a bonus, so the note
+  // only says that it didn't review the head commit (AFA-151).
   if (!pull.draft && coderabbit.state !== 'done') notes.push(coderabbit.detail);
   if (ci.pending.length > 0) waits.push(`CI is running: ${ci.pending.join(', ')}`);
   if (!pull.mergeable_state || pull.mergeable_state === 'unknown') {
