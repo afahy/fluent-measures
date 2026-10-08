@@ -98,6 +98,7 @@ const isSigned = (token: string | undefined): boolean =>
 /** Run `read` with the minus signs of `tokens[at]` removed, and then put the token back. */
 function withoutSignAt<T>(tokens: string[], at: number, read: () => T): T {
   const token = tokens[at];
+  // Stryker disable next-line Regex: the tokenizer splits hyphens inside words, so a signed token's only hyphens are at its start.
   tokens[at] = token.replace(/^-+/, '');
   const result = read();
   tokens[at] = token;
@@ -301,6 +302,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       const valueAt = skipMarks(remainingTokens, i + 1);
       const value = remainingTokens[valueAt];
       const signedValue = label && isSigned(value);
+      // Stryker disable next-line Regex: the tokenizer splits hyphens inside words, so a signed token's only hyphens are at its start.
       if (signedValue) remainingTokens[valueAt] = value.replace(/^-+/, '');
       // A field name takes any number after it, but not a signed one with its own unit, as in
       // "72 in: -180 lbs".
@@ -317,8 +319,8 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       let matchEnd = i + 1;
       // A sign on the first word of a phrase in words signs the whole phrase, as in "-twenty five
       // kg", which returns null as "-5 feet" does. Without its sign, that word joins the phrase.
+      // When no number came before the unit, matchStart is already end.
       if (
-        num !== null &&
         isSigned(remainingTokens[end]) &&
         withoutSignAt(remainingTokens, end, () =>
           readNumberPhrase(remainingTokens, readFrom, -1)

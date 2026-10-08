@@ -258,6 +258,10 @@ describe('signed parts', () => {
     '-one hundred eighty lbs',
     // As "stone 25, 4 lb" returns null.
     'stone -twenty five, 4 lb',
+    // Two signs are a sign too, as "--12 st 4 lb" is.
+    'age 28 kg: --5',
+    // A quote before a unit doesn't make a number, so the sign stays, as in "kg-70.5" (README).
+    '"kg-70"',
   ])('returns null for %s', raw => {
     expect(parseMeasurement(raw)).toBeNull();
   });
