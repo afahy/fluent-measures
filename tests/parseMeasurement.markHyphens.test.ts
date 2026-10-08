@@ -12,6 +12,12 @@ describe('a hyphen after a feet or inch mark', () => {
     [`6'1"-seventy kg`, { type: 'weight' }, 70, 'kg'],
     // A semicolon before the mark, as `5;in-5 in` and `5;" 5 in`.
     ['5;"-5 in', {}, 5, 'in'],
+    // A number word before the mark, as `five ft-eleven` and `five;in-5 in`.
+    [`five'-eleven`, {}, 71, 'in'],
+    ['five;"-5 in', {}, 5, 'in'],
+    // Digits after a number and a unit count as a number, as `5ft11in-185 lbs` and `1m80in-5 in`.
+    ['5ft11"-185 lbs', {}, 185, 'lb'],
+    ['1m80"-5 in', {}, 5, 'in'],
     // "Must not change" in AFA-112.
     [`5'-11"`, {}, 71, 'in'],
     ['5"-5 in', {}, 5, 'in'],
@@ -25,6 +31,11 @@ describe('a hyphen after a feet or inch mark', () => {
     'x11"-5 in',
     // The second "5" comes after a hyphen, not at a token's start, as in `5 in-5 in-5 in`.
     '5"-5"-5"',
+    // Letters, or letters and a period, before the digits, as in `abc5 in-5 in`.
+    'abc5"-5 in',
+    'x.5"-5 in',
+    // A mark that closes a quotation, as on main (AFA-93).
+    '"ten"-5 kg',
     // "Must not change" in AFA-112: two heights.
     '72"-74"',
     `5'11"-6'1"`,
