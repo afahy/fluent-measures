@@ -10,8 +10,7 @@ commit and reports CI, Codex, CodeRabbit, bot threads with no reply and the merg
 write your own checks for any of these. Earlier sessions wrote about 50 watchers of their own,
 and most of them misjudged the head commit, Codex's 👀 or CodeRabbit's rate limit. If
 `pr:status` gets something wrong, don't change it in the PR you're watching. File a ticket for
-`.github/scripts/pr-state.mjs` with a test built from the PR's real API responses, as AGENTS.md
-says for scripts under `.github/scripts/`.
+`.github/scripts/pr-state.mjs` with a test built from the PR's real API responses.
 
 ## Each time you look at a PR
 
@@ -21,14 +20,14 @@ prints. Add `--json` if you need to parse the output. After a PR's third review 
 to ask them again. The flag applies to every PR in the call, so check PRs past their third round
 in a separate call.
 
-| State           | Exit code | What to do                                                                                                                                                 |
-| --------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `needs-agent`   | 10        | Do each item under "Do", and handle each item under "Why" as AGENTS.md "Handle findings and CI" says. Push if you changed code, then wait.                 |
-| `waiting`       | 20        | Wait, as the next section says.                                                                                                                            |
-| `waiting-human` | 30        | Say once, in one line, what the maintainer needs to do. Then wait for the maintainer, as the next section says.                                            |
-| `ready`         | 0         | Do "Finish the PR" in AGENTS.md, then merge as "Merge your own PR" says. A PR that changes files that CODEOWNERS covers is `waiting-human`, never `ready`. |
-| `merged`        | 40        | Do the comment check from "Finish the PR" at once. `pr:status` still lists bot threads with no reply. Then do the rest of "Finish the PR".                 |
-| `closed`        | 41        | The same as `merged`.                                                                                                                                      |
+| State           | Exit code | What to do                                                                                                                                 |
+| --------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `needs-agent`   | 10        | Do each item under "Do", and handle each item under "Why" as AGENTS.md "Handle findings and CI" says. Push if you changed code, then wait. |
+| `waiting`       | 20        | Wait, as the next section says.                                                                                                            |
+| `waiting-human` | 30        | Say once, in one line, what the maintainer needs to do. Then wait for the maintainer, as the next section says.                            |
+| `ready`         | 0         | Do "Finish the PR" in AGENTS.md, then merge as "Merge your own PR" says.                                                                   |
+| `merged`        | 40        | Do the comment check from "Finish the PR" at once. `pr:status` still lists bot threads with no reply. Then do the rest of "Finish the PR". |
+| `closed`        | 41        | The same as `merged`.                                                                                                                      |
 
 Read "Notes" as well. They list bot replies after yours, nitpicks, other bot comments since the
 push, and bots that never reviewed the head commit. Act on findings as AGENTS.md says, and list
