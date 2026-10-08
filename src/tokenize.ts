@@ -162,8 +162,8 @@ export function tokenizeNormalized(input: string, fuzziness?: number): string[] 
         // minus sign, as in "kg-70.5". Check the prefix first so the lookbehind only runs when
         // needed. The lookbehind skips spaces and semicolons before the unit, as in "1;m-80 cm"
         // and "1 ; m-80 cm". It then captures the token before them only when that token has only
-        // letters, digits and periods, and starts after a space, a semicolon or the start, as in
-        // "kg;5 ft-11". Any other character matches the "\S" and captures nothing. So the
+        // letters, digits and periods. That token must start after a space, a semicolon or the
+        // start of the input, as in "kg;5 ft-11". Any other character matches the "\S" and captures nothing. So the
         // lookbehind reads back only over spaces, semicolons and those characters, and a long
         // token with many words before hyphens takes linear time.
         .replace(

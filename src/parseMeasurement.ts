@@ -98,7 +98,7 @@ const isSigned = (token: string | undefined): boolean =>
 /** Run `read` with the minus signs of `tokens[at]` removed, and then put the token back. */
 function withoutSignAt<T>(tokens: string[], at: number, read: () => T): T {
   const token = tokens[at];
-  // Stryker disable next-line Regex: the tokenizer splits hyphens inside words, so a signed token's only hyphens are at its start.
+  // Stryker disable next-line Regex: with no "g" flag, "/-+/" also removes only the first run of hyphens, which starts a signed token.
   tokens[at] = token.replace(/^-+/, '');
   const result = read();
   tokens[at] = token;
@@ -225,8 +225,8 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   for (const type of onlyType ? [onlyType] : (['height', 'weight'] as const)) {
     let matches: QualifiedMatch[] = [];
     const remainingTokens = [...tokens];
-    // A measurement can't be negative. Each part in a field with a signed part, as in "-5 ft" or
-    // "kg -5", is dropped. So the rest of that field can't decide the result, as in "-5 ft 6 ft".
+    // A measurement can't be negative. A signed part, as in "-5 ft" or "kg -5", drops each part of
+    // its type in its field. So the rest of that field can't decide the result, as in "-5 ft 6 ft".
     const signedFields = new Set<number>();
     const matchFields = new Map<QualifiedMatch, number[]>();
 
@@ -245,9 +245,9 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
           let at = i - 1;
           while (remainingTokens[at] === ';') at--;
           const previous = remainingTokens[at];
-          const [before, beforeEnd] = isSigned(previous)
-            ? [withoutSign(previous), at - 1]
-            : readNumberPhrase(remainingTokens, i - 1, -1);
+          const unsigned = previous?.startsWith('-') ? withoutSign(previous) : null;
+          const [before, beforeEnd] =
+            unsigned === null ? readNumberPhrase(remainingTokens, i - 1, -1) : [unsigned, at - 1];
           // Reading backward already skips semicolons, so skip them reading forward too, as in
           // "8 oz; 7 lb" and "12 st 4;lb". Commas don't separate parts, so skip field marks too,
           // as in "Stone: 12, lb: 4".
@@ -302,15 +302,15 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       const valueAt = skipMarks(remainingTokens, i + 1);
       const value = remainingTokens[valueAt];
       const signedValue = label && isSigned(value);
-      // Stryker disable next-line Regex: the tokenizer splits hyphens inside words, so a signed token's only hyphens are at its start.
-      if (signedValue) remainingTokens[valueAt] = value.replace(/^-+/, '');
       // A field name takes any number after it, but not a signed one with its own unit, as in
       // "72 in: -180 lbs".
-      const valueFollows =
+      const readValue = (): boolean =>
         mark === NAME_MARK && !signedValue
           ? readNumberPhrase(remainingTokens, valueAt)[0] !== null
           : label && readValueAfter(remainingTokens, i + 1, unit, label, fuzziness)[0] !== null;
-      if (signedValue) remainingTokens[valueAt] = value;
+      const valueFollows = signedValue
+        ? withoutSignAt(remainingTokens, valueAt, readValue)
+        : readValue();
       const readFrom = label ? i - 2 : i - 1;
       let [num, end]: [number | null, number] = valueFollows
         ? [null, i - 1]
@@ -342,8 +342,8 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         (num === null || unit !== 'ft' || remainingTokens[i - 1] === ';') &&
         !LABEL_ALIASES.has(remainingTokens[i])
       ) {
-        // A signed value with its own unit of the other type isn't this unit's, as in
-        // "in: -180 lbs, 72 in", so it doesn't drop this field.
+        // A label's signed value with its own unit isn't the label's value, as in
+        // "in: -180 lbs, 72 in", so it doesn't drop the label's field. Its own unit drops its field.
         if (isSigned(remainingTokens[valueAt]) && !(signedValue && !valueFollows)) {
           signedFields.add(fieldOf[i]).add(fieldOf[valueAt]);
           continue;
