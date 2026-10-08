@@ -411,6 +411,16 @@ export function coderabbitState(snapshot) {
 }
 
 /**
+ * The IDs of the review comments that start a thread with a person's reply in it.
+ *
+ * @param {import('./pr-state.d.mts').ReviewComment[]} comments
+ * @returns {Set<number | null | undefined>}
+ */
+function repliedThreads(comments) {
+  return new Set(comments.filter(c => !byBot(c) && c.in_reply_to_id).map(c => c.in_reply_to_id));
+}
+
+/**
  * Review threads that Codex or CodeRabbit started and no person has replied to. AGENTS.md asks
  * agents to reply to each of them.
  *
@@ -418,9 +428,7 @@ export function coderabbitState(snapshot) {
  * @returns {import('./pr-state.d.mts').ReviewComment[]}
  */
 export function unansweredBotThreads(comments) {
-  const answered = new Set(
-    comments.filter(c => !byBot(c) && c.in_reply_to_id).map(c => c.in_reply_to_id)
-  );
+  const answered = repliedThreads(comments);
   return comments
     .filter(c => !c.in_reply_to_id && byReviewBot(c) && !answered.has(c.id))
     .sort((a, b) => byTime(a.created_at, b.created_at));
@@ -453,8 +461,11 @@ export function botFollowUps(comments) {
 }
 
 /**
- * Codex and CodeRabbit reviews since the push that `test` matches, with no later comment or
- * review from a person. A comment that only asks a bot to review isn't an answer.
+ * Codex and CodeRabbit reviews since the push that `test` matches, with no answer from a person.
+ * An answer is a later PR comment or review from a person that links to the review, with
+ * `#pullrequestreview-<id>` (AFA-144). Any other comment can be about something else, so it
+ * doesn't answer the review. A comment that is edited after the review counts from its edit.
+ * A comment that only asks a bot to review isn't an answer.
  *
  * @param {import('./pr-state.d.mts').Snapshot} snapshot
  * @param {(review: import('./pr-state.d.mts').Review) => boolean} test
@@ -465,22 +476,24 @@ function unansweredBotReviews(snapshot, test) {
   const answers = [
     ...snapshot.issueComments
       .filter(c => !byBot(c) && !BOT_COMMAND.test(c.body ?? ''))
-      .map(c => c.created_at),
-    ...snapshot.reviews.filter(r => !byBot(r) && r.submitted_at).map(r => r.submitted_at ?? ''),
+      .map(c => ({ time: c.updated_at ?? c.created_at, body: c.body ?? '' })),
+    ...snapshot.reviews
+      .filter(r => !byBot(r) && r.submitted_at)
+      .map(r => ({ time: r.submitted_at ?? '', body: r.body ?? '' })),
   ];
-  return snapshot.reviews.filter(
-    r =>
-      byReviewBot(r) &&
-      r.submitted_at &&
-      byTime(r.submitted_at, pushed) >= 0 &&
-      test(r) &&
-      !answers.some(t => byTime(t, r.submitted_at ?? '') > 0)
-  );
+  return snapshot.reviews.filter(r => {
+    if (!byReviewBot(r) || !r.submitted_at || byTime(r.submitted_at, pushed) < 0 || !test(r)) {
+      return false;
+    }
+    const link = new RegExp(`#pullrequestreview-${r.id}(?!\\d)`);
+    return !answers.some(a => byTime(a.time, r.submitted_at ?? '') > 0 && link.test(a.body));
+  });
 }
 
 /**
  * Codex and CodeRabbit reviews since the push that put comments in the review body instead of
- * in a thread ("Outside diff range comments"), with no later comment or review from a person.
+ * in a thread ("Outside diff range comments"), with no comment from a person that links to them.
+ * A reply in one of the review's threads is about that thread, so it doesn't count.
  *
  * @param {import('./pr-state.d.mts').Snapshot} snapshot
  * @returns {import('./pr-state.d.mts').Review[]}
@@ -492,20 +505,16 @@ export function unansweredReviewBodies(snapshot) {
 }
 
 /**
- * Codex and CodeRabbit reviews since the push that request changes, with no later comment or
- * review from a person. An answer from a person clears it, as for comments outside the diff
- * (AFA-138), because the bot may never review again. A reply in a thread that the review started
- * is an answer too. GitHub also records such a reply as a review from that person, but AFA-144
- * will count only answers tied to the review, so the thread check stays.
+ * Codex and CodeRabbit reviews since the push that request changes, with no answer from a
+ * person. An answer clears it, as for comments outside the diff (AFA-138), because the bot may
+ * never review again. A person's reply in one of the review's threads answers it too.
  * unansweredBotThreads lists each of the review's threads that has no reply.
  *
  * @param {import('./pr-state.d.mts').Snapshot} snapshot
  * @returns {import('./pr-state.d.mts').Review[]}
  */
 export function botChangeRequests(snapshot) {
-  const replied = new Set(
-    snapshot.reviewComments.filter(c => !byBot(c) && c.in_reply_to_id).map(c => c.in_reply_to_id)
-  );
+  const replied = repliedThreads(snapshot.reviewComments);
   return unansweredBotReviews(
     snapshot,
     r =>
@@ -639,9 +648,16 @@ export function classify(snapshot, now = Date.now(), { requests = true } = {}) {
     }
   }
   for (const review of unansweredReviewBodies(snapshot)) {
-    reasons.push(`${who(review)} put comments outside the diff in ${review.html_url}`);
+    reasons.push(
+      `${who(review)} put comments outside the diff in ${review.html_url}. Answer in a PR comment that links to it.`
+    );
   }
-  for (const review of [...botChangeRequests(snapshot), ...changesRequested(snapshot.reviews)]) {
+  for (const review of botChangeRequests(snapshot)) {
+    reasons.push(
+      `${who(review)} requested changes: ${review.html_url}. Answer in its threads or in a PR comment that links to it.`
+    );
+  }
+  for (const review of changesRequested(snapshot.reviews)) {
     reasons.push(`${who(review)} requested changes: ${review.html_url}`);
   }
   if (pull.mergeable_state === 'dirty') reasons.push('The PR has a merge conflict with its base');
