@@ -86,13 +86,15 @@ const MINUS_SIGN = new RegExp(
   'gi'
 );
 
-// Where a space separates two tokens: between a number and an attached unit or quote mark, between
-// a quote mark and the number after it, which keeps a sign after an opening quote, and at a word
-// hyphen, so "six-foot-two" becomes "six foot two". A number word or "half" before a quote mark is
-// a number too, as in "five' ten\"" and "10 and a half\"" (AFA-93). The lookahead comes first, so
-// that lookbehind runs only before a quote mark.
+// The places where a space separates two tokens. One is between a number and an attached unit or
+// quote mark. Another is between a quote mark and the number after it, which keeps a sign after an
+// opening quote. A word hyphen is a third, so "six-foot-two" becomes "six foot two". A number word
+// is a number too, as in "five' ten\"" (AFA-93). After a quote, it's a quoted word, as in
+// "\"ten\" 5", and after a letter, it's part of a word, as in "tone'". "half" counts only after a
+// number and "and a", as in "10 and a half\"". No letter may follow the mark, as in "one's". The
+// lookahead comes first, so the lookbehind runs only before a quote mark.
 const SPLIT = new RegExp(
-  String.raw`(?<=\d)(?=[a-z'"])|(?=['"])(?<=\b(?:${NUMBER_WORD}|half))|(?<=['"])(?=-?\.?\d)|(?<!-)\b-(?=\b|\.\d)`,
+  String.raw`(?<=\d)(?=[a-z'"])|(?=['"](?![a-z]))(?<=(?:^|[^\w'"])(?:${NUMBER_WORD})|(?:\d|\b(?:${NUMBER_WORD}))\s+and\s+a\s+half)|(?<=['"])(?=-?\.?\d)|(?<!-)\b-(?=\b|\.\d)`,
   'g'
 );
 
