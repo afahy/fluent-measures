@@ -147,11 +147,9 @@ jobs:
           key: stryker-incremental-${{ steps.inputs.outputs.hash }}-${{ github.sha }}-1
           restore-keys: stryker-incremental-${{ steps.inputs.outputs.hash }}-
 
-      # The step's own limit is below the job's, so a slow run fails the step, and the job still
-      # saves what Stryker wrote. Stryker writes its results before it checks the score, so a run
-      # below the threshold saves them too.
+      # Stryker writes its results at the end of a run, before it checks the score, so a run below
+      # the threshold saves them too. A run that the job's time limit stops writes nothing.
       - name: Mutation tests
-        timeout-minutes: 27
         run: pnpm test:mutation --incremental
 
       # Each attempt saves under its own key, because a key can't be saved twice.
