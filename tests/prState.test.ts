@@ -653,6 +653,70 @@ describe('createClient', () => {
     });
   });
 
+  // AFA-147: an error says whether another try can help, and whether GitHub refused the token.
+  it.each([
+    ['a server error', { status: 503 }, { retryable: true, refused: false, retryAt: null }],
+    ['a 401', { status: 401 }, { retryable: false, refused: true, retryAt: null }],
+    [
+      'a 403 that refuses the token',
+      { status: 403, body: { message: 'Resource not accessible by integration' } },
+      { retryable: false, refused: true, retryAt: null },
+    ],
+    ['a 404', { status: 404 }, { retryable: false, refused: false, retryAt: null }],
+  ])('marks %s', async (_name, answer, marks) => {
+    const url = 'https://api.test/pull';
+    const { fetch } = fakeFetch({ [url]: [answer] });
+    const api = createClient({ apiUrl: 'https://api.test', fetch });
+    await expect(api.get('/pull')).rejects.toMatchObject({ status: answer.status, ...marks });
+  });
+
+  it.each([
+    [
+      'a 403 that names a secondary rate limit',
+      { status: 403, body: { message: 'You have exceeded a secondary rate limit.' } },
+      60_000,
+    ],
+    ['a 429', { status: 429 }, 60_000],
+    [
+      'a 429 with a Retry-After in seconds',
+      { status: 429, headers: { 'retry-after': '5' } },
+      5_000,
+    ],
+  ])('waits out %s', async (_name, answer, wait) => {
+    const url = 'https://api.test/pull';
+    const { fetch } = fakeFetch({ [url]: [answer] });
+    const api = createClient({ apiUrl: 'https://api.test', fetch });
+    const before = Date.now();
+    const error = (await api.get('/pull').catch(e => e)) as { retryAt: number };
+    expect(error).toMatchObject({ retryable: true, refused: false });
+    expect(error.retryAt).toBeGreaterThanOrEqual(before + wait);
+    expect(error.retryAt).toBeLessThanOrEqual(Date.now() + wait);
+  });
+
+  it('reads a Retry-After that gives a date', async () => {
+    const url = 'https://api.test/pull';
+    const date = 'Wed, 07 Oct 2026 19:06:40 GMT';
+    const { fetch } = fakeFetch({ [url]: [{ status: 403, headers: { 'retry-after': date } }] });
+    const api = createClient({ apiUrl: 'https://api.test', fetch });
+    await expect(api.get('/pull')).rejects.toMatchObject({
+      retryAt: 1791400000000,
+      retryable: true,
+      refused: false,
+    });
+  });
+
+  it('marks a network error as one that another try can help', async () => {
+    const fetch = (async () => {
+      throw new TypeError('fetch failed');
+    }) as unknown as typeof globalThis.fetch;
+    const api = createClient({ apiUrl: 'https://api.test', fetch });
+    await expect(api.get('/pull')).rejects.toMatchObject({
+      message: "GitHub didn't answer for https://api.test/pull: fetch failed",
+      retryable: true,
+      refused: false,
+    });
+  });
+
   it('reports any other error with its status', async () => {
     const url = 'https://api.test/pull';
     const { fetch } = fakeFetch({ [url]: [{ status: 404, body: { message: 'Not Found' } }] });

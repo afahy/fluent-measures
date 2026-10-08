@@ -15,12 +15,13 @@
 // With several PRs, the exit code is that of the most urgent state. A bad argument exits with
 // 2, a token that GitHub refuses with 3, and another API error with 1.
 //
-// --wait prints nothing while it polls. It rides out up to five network or server errors in a
-// row, its first request too, and waits out a rate limit that ends before --timeout (AFA-147). It
-// returns at once if a PR needs the agent, is ready, or has closed. Otherwise it returns when a PR's state changes to anything but `waiting`, or
-// when a waiting-human PR gets news, such as a bot reply. It stops after --timeout minutes
-// (default 100, under the 2-hour limit for a background command). 304 answers to its polls
-// don't count against GitHub's rate limit.
+// --wait prints nothing while it polls. It tries again after a network or server error, or after
+// a rate limit ends, for its first request too (AFA-147). It ends after five such errors in a row,
+// and at once after another error or a rate limit that lasts past --timeout. It returns at once
+// if a PR needs the agent, is ready, or has closed. Otherwise it returns when a PR's state changes
+// to anything but `waiting`, or when a waiting-human PR gets news, such as a bot reply. It stops
+// after --timeout minutes (default 100, under the 2-hour limit for a background command). 304
+// answers to its polls don't count against GitHub's rate limit.
 //
 // --no-requests is for after the third review round, when AGENTS.md says not to ask Codex
 // again: a Codex that hasn't reviewed is waited for until its 2 hours are up, not asked.
@@ -147,8 +148,9 @@ try {
   process.exit(2);
 }
 const { prs, json, wait, timeout, interval, repo, requests } = options;
+const token = findToken();
 const api = createClient({
-  token: findToken(),
+  token,
   apiUrl: process.env.GITHUB_API_URL || 'https://api.github.com',
 });
 const check = async () =>
@@ -156,70 +158,70 @@ const check = async () =>
     prs.map(async pr => classify(await collect(api, repo, pr), Date.now(), { requests }))
   );
 
-/**
- * Whether GitHub refused the token: a 401, or a 403 that isn't a rate limit. Another try won't
- * help, so the call ends with its own exit code.
- *
- * @param {unknown} error
- */
-const refused = error => {
-  const { status, retryAt } = /** @type {{ status?: number, retryAt?: number | null }} */ (error);
-  return status === 401 || (status === 403 && !retryAt);
-};
-
 try {
+  const deadline = Date.now() + timeout * 60 * 1000;
   const started = Date.now();
-  const deadline = started + timeout * 60 * 1000;
   let failures = 0;
+  /** @type {unknown} */
+  let lastError = null;
   /**
-   * One poll's statuses, or null after an error that a later poll can ride out. Without --wait,
-   * any error ends the call. With it, a refused token or a fifth error in a row ends it, and a
-   * rate limit that ends in time is waited out.
+   * One poll's statuses, or null after an error that a later poll can try again. Without --wait,
+   * any error ends the call. With it, an error that can pass is tried again. A rate limit that
+   * ends before --timeout is waited out, and then the poll runs again at once.
    */
   const poll = async () => {
-    try {
-      const statuses = await check();
-      failures = 0;
-      return statuses;
-    } catch (error) {
-      if (!wait || refused(error)) throw error;
-      const retryAt = /** @type {{ retryAt?: number | null }} */ (error).retryAt;
-      if (retryAt && retryAt < deadline) await sleep(retryAt - Date.now());
-      else if (++failures >= 5) throw error;
-      return null;
+    for (;;) {
+      try {
+        const statuses = await check();
+        failures = 0;
+        return statuses;
+      } catch (error) {
+        const { retryable, retryAt } =
+          /** @type {{ retryable?: boolean, retryAt?: number | null }} */ (error);
+        if (!wait || !retryable || (retryAt && retryAt >= deadline)) throw error;
+        if (retryAt) {
+          await sleep(retryAt - Date.now());
+          continue;
+        }
+        if (++failures >= 5) throw error;
+        lastError = error;
+        return null;
+      }
     }
   };
-  const pause = () => sleep(Math.min(interval * 1000, Math.max(deadline - Date.now(), 0)));
 
-  let first = await poll();
-  while (!first && Date.now() < deadline) {
-    await pause();
-    first = await poll();
-  }
-  if (!first) throw new Error(`GitHub didn't answer in ${timeout} min.`);
-  if (!wait || first.some(s => ACTIONABLE.has(s.state))) finish(first, json);
-
-  const before = new Map(first.map(s => [s.pr, digest(s)]));
-  let latest = first;
-  while (Date.now() < deadline) {
-    await pause();
+  /** @type {import('./pr-state.d.mts').PrStatus[] | null} */
+  let latest = null;
+  /** @type {Map<number, string> | null} */
+  let before = null;
+  for (;;) {
     const statuses = await poll();
-    if (!statuses) continue;
-    latest = statuses;
-    const changed = latest.filter(s => s.state !== 'waiting' && digest(s) !== before.get(s.pr));
-    if (changed.length > 0) {
-      const minutes = Math.round((Date.now() - started) / 60000);
-      const which = changed.map(s => `#${s.pr} is now ${s.state}`).join(', ');
-      finish(latest, json, `After ${minutes} min: ${which}.`);
+    if (statuses && !before) {
+      if (!wait || statuses.some(s => ACTIONABLE.has(s.state))) finish(statuses, json);
+      before = new Map(statuses.map(s => [s.pr, digest(s)]));
+    } else if (statuses && before) {
+      const was = before;
+      const changed = statuses.filter(s => s.state !== 'waiting' && digest(s) !== was.get(s.pr));
+      if (changed.length > 0) {
+        const minutes = Math.round((Date.now() - started) / 60000);
+        const which = changed.map(s => `#${s.pr} is now ${s.state}`).join(', ');
+        finish(statuses, json, `After ${minutes} min: ${which}.`);
+      }
     }
+    if (statuses) latest = statuses;
+    if (Date.now() >= deadline) break;
+    await sleep(Math.min(interval * 1000, Math.max(deadline - Date.now(), 0)));
   }
+  // No poll got through before --timeout, so the last error says why.
+  if (!latest) throw lastError;
   finish(latest, json, `Nothing changed in ${timeout} min.`);
 } catch (error) {
-  const { message } = /** @type {Error} */ (error);
-  if (refused(error)) {
-    console.error(`${message}\nGitHub refused the token. Set GH_TOKEN, or run \`gh auth login\`.`);
-    process.exit(3);
-  }
-  console.error(message);
-  process.exit(1);
+  const { message, refused } = /** @type {{ message: string, refused?: boolean }} */ (error);
+  const hint = refused
+    ? 'GitHub refused the token. Set GH_TOKEN, or run `gh auth login`.'
+    : token
+      ? ''
+      : 'No token was found. Set GH_TOKEN, or run `gh auth login`.';
+  console.error([message, hint].filter(Boolean).join('\n'));
+  process.exit(refused ? 3 : 1);
 }

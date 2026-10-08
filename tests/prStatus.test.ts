@@ -29,11 +29,13 @@ type Failure = { status: number; headers?: Record<string, string> };
 async function serve(
   snapshots: Snapshot[],
   failures: Failure[] = []
-): Promise<{ url: string; polls: () => number }> {
+): Promise<{ url: string; polls: () => number; hits: (end: string) => number }> {
   let polls = 0;
   let requests = 0;
+  const paths: string[] = [];
   const server = createServer((request, response) => {
     const path = new URL(request.url ?? '', 'http://localhost').pathname;
+    paths.push(path);
     const base = `/repos/${repo}`;
     if (path.endsWith('/pulls/43')) {
       const failure = failures[requests++];
@@ -70,7 +72,11 @@ async function serve(
   });
   servers.push(server);
   await new Promise<void>(done => server.listen(0, '127.0.0.1', done));
-  return { url: `http://127.0.0.1:${(server.address() as AddressInfo).port}`, polls: () => polls };
+  return {
+    url: `http://127.0.0.1:${(server.address() as AddressInfo).port}`,
+    polls: () => polls,
+    hits: end => paths.filter(path => path.endsWith(end)).length,
+  };
 }
 
 /** Runs pr-status.mjs against a fake API, without the proxy that cloud sessions set. */
@@ -160,16 +166,60 @@ describe('pr-status.mjs', () => {
     expect(api.polls()).toBe(1);
   });
 
-  // AFA-147: with --wait, the first request rides out a passing error as later polls do.
+  // AFA-147: with --wait, the first request is tried again after an error that can pass, as
+  // later polls are.
   it.each([
     ['a server error', { status: 503 }],
     ['a secondary rate limit', { status: 403, headers: { 'retry-after': '1' } }],
-  ])('with --wait, rides out %s on its first request', async (_name, failure) => {
+  ])('with --wait, tries its first request again after %s', async (_name, failure) => {
     const api = await serve([fixture('pr-43-at-1810')], [failure]);
     const result = await run(api.url, ['43', '--wait', '--interval', '1']);
     expect(result.code).toBe(10);
     expect(api.polls()).toBe(1);
     expect(result.stdout).toContain('#43 needs-agent');
+  });
+
+  // AFA-147: another try can't find a PR that isn't there, so --wait doesn't make one.
+  it('with --wait, exits with 1 at once for a 404', async () => {
+    const api = await serve([fixture('pr-43-at-1810')]);
+    const result = await run(api.url, ['44', '--wait', '--interval', '1']);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain('GitHub answered 404');
+    expect(api.hits('/pulls/44')).toBe(1);
+  });
+
+  // AFA-147: a Retry-After on a server error doesn't make it a rate limit, so five in a row end
+  // the call.
+  it('with --wait, exits with 1 after five server errors in a row', async () => {
+    const failure = { status: 503, headers: { 'retry-after': '1' } };
+    const api = await serve([fixture('pr-43-at-1810')], Array(10).fill(failure));
+    const result = await run(api.url, ['43', '--wait', '--interval', '1']);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain('GitHub answered 503');
+    expect(api.hits('/pulls/43')).toBe(5);
+  });
+
+  // AFA-147: when --timeout ends before a poll gets through, the call says what GitHub answered.
+  it('with --wait, gives the last error when no poll gets through in time', async () => {
+    const api = await serve([fixture('pr-43-at-1810')], Array(10).fill({ status: 503 }));
+    const result = await run(api.url, ['43', '--wait', '--interval', '1', '--timeout', '0.02']);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain('GitHub answered 503');
+    expect(api.hits('/pulls/43')).toBeLessThan(5);
+  });
+
+  // AFA-147: a rate limit that ends after --timeout can't be waited out, so the call ends at once.
+  it('with --wait, exits with 1 at once for a rate limit that lasts past --timeout', async () => {
+    const reset = String(Math.floor(Date.now() / 1000) + 3600);
+    const failure = {
+      status: 403,
+      headers: { 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': reset },
+    };
+    const api = await serve([fixture('pr-43-at-1810')], [failure]);
+    const result = await run(api.url, ['43', '--wait', '--interval', '1', '--timeout', '1']);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain("GitHub's rate limit is used up until");
+    expect(api.hits('/pulls/43')).toBe(1);
   });
 
   it('without --wait, exits with 1 at once for a server error', async () => {
