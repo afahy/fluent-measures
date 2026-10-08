@@ -74,13 +74,37 @@ const CURLY_DOUBLE = new RegExp(
   'g'
 );
 
+// The number words, as alternatives in a pattern.
+const NUMBER_WORD = [...NUMBER_WORDS.keys(), ...MULTIPLIERS.keys()].join('|');
+
 // A minus sign before a number, when no number comes earlier: no digit, Unicode fraction or number
-// word. After a number, a minus sign joins two parts or values, as in "1 m−80 cm" and "½ lb−180
+// word. The number can be a word too, as in "−five'". After a number, a minus sign joins two parts or values, as in "1 m−80 cm" and "½ lb−180
 // lbs". The parser would read a hyphen-minus there as a sign. The lookbehind runs only after a
 // minus sign, and its lazy part stops at the nearest earlier number.
 const MINUS_SIGN = new RegExp(
-  String.raw`[−﹣](?=[.,]?\d|[¼-¾⅐-⅞↉])(?<!(?:[\d¼-¾⅐-⅞↉]|\b(?:${[...NUMBER_WORDS.keys(), ...MULTIPLIERS.keys()].join('|')})\b)[\s\S]*?.)`,
+  String.raw`[−﹣](?=[.,]?\d|[¼-¾⅐-⅞↉]|(?:${NUMBER_WORD})\b)(?<!(?:[\d¼-¾⅐-⅞↉]|\b(?:${NUMBER_WORD})\b)[\s\S]*?.)`,
   'gi'
+);
+
+// The places where a space separates two tokens. One is between a number and an attached unit or
+// quote mark. Another is between a quote mark and the number after it, which keeps a sign after an
+// opening quote. A word hyphen is a third, so "six-foot-two" becomes "six foot two". A number word
+// is a number too, as in "five' ten\"" (AFA-93), but not inside a word, as in "tone'". "half"
+// counts only after a number and "and a", as in "10 and a half\"" and "six-and-a-half'". No letter
+// may follow the mark, as in "one's". A mark that closes a quotation isn't split, as in
+// "\"twenty five\" 5" and "\"it's five\"": OPEN starts a quotation, and no quote of the same kind
+// comes between. The lookahead comes first, so each lookbehind runs only before a quote mark.
+const OPEN = String.raw`(?:^|[^\w'"])`;
+const SPLIT = new RegExp(
+  String.raw`(?<=\d)(?=[a-z'"])|(?=['"](?![a-z]))(?:(?=")(?<!${OPEN}"[^"]*)|(?=')(?<!${OPEN}'[^']*))(?<=\b(?:${NUMBER_WORD})|(?:\d|\b(?:${NUMBER_WORD}))[\s-]+and[\s-]+a[\s-]+half)|(?<=['"])(?=-?\.?\d)|(?<!-)\b-(?=\b|\.\d)`,
+  'g'
+);
+
+// Punctuation, a hyphen after a feet or inch mark after a number, and an underscore before a minus
+// sign. After a number word, the mark mustn't close a quotation, as in "\"ten\"-5 kg".
+const PUNCTUATION = new RegExp(
+  String.raw`(?<=\d\s*['"])-(?=\.?\d)|(?<=\b(?:${NUMBER_WORD})\s*['"])(?<!${OPEN}(?:"[^"]*"|'[^']*')\s*)-(?=\.?\d)|_(?=-)|[^\w\s'".;-]`,
+  'g'
 );
 
 /**
@@ -154,9 +178,9 @@ export function tokenizeNormalized(input: string, fuzziness?: number): string[] 
         // "#" right after a number means pounds, as in "185#". Before a number, or before a letter,
         // a digit or another "#", as in "#5", "185#kg" and "12#3", it isn't a unit.
         .replace(/(?<=\d)#(?![\p{L}\p{N}_#])/gu, ' lb ')
-        // Split punctuation, hyphens after a feet or inch mark, as in `5'-11` and `5"-5 in`, and
-        // underscores before minus signs.
-        .replace(/(?<=\d\s*['"])-(?=\.?\d)|_(?=-)|[^\w\s'".;-]/g, ' ')
+        // Split punctuation, hyphens after a feet or inch mark, as in `5'-11`, `5"-5 in` and
+        // `five'-10"`, and underscores before minus signs.
+        .replace(PUNCTUATION, ' ')
         // After a number, a unit and a hyphen join two parts or values, as in "5 ft-11",
         // "1 m-80 cm" and "150 lbs-180 lbs". A unit prefix without a number before it keeps the
         // minus sign, as in "kg-70.5". Check the prefix first so the lookbehind only runs when
@@ -179,9 +203,7 @@ export function tokenizeNormalized(input: string, fuzziness?: number): string[] 
               : match;
           }
         )
-        // Separate numbers from attached units or quotes, retaining signs after opening quotes.
-        // Word hyphens also separate tokens: "six-foot-two" -> "six foot two".
-        .replace(/(?<=\d)(?=[a-z'"])|(?<=['"])(?=-?\.?\d)|(?<!-)\b-(?=\b|\.\d)/g, ' ')
+        .replace(SPLIT, ' ')
         // Keep semicolons as separate tokens without adding surrounding whitespace.
         .match(/;|[^\s;]+/g) || []
     ).map(token => trimTrailing(token, '.'))
