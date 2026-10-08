@@ -102,5 +102,6 @@ hasn't completed 45 minutes after the merge, read the commit's other check runs.
 hasn't completed can be missing, or have a status such as `queued` or `in_progress`. Find the CI
 job that failed or was cancelled, or the one that no runner picked up. If you find none, report
 that CI on `main` is stuck, and stop. Workflows other than CI, such as `pr-status.yml`,
-`late-bot-findings.yml` and `deploy-docs.yml`, add check runs to the merge commit too. Their results aren't CI results. Don't use `gh run list --branch main`, which
-hid queued runs during an Actions incident.
+`late-bot-findings.yml` and `deploy-docs.yml`, add check runs to the merge commit too. Their
+results aren't CI results. Don't use `gh run list --branch main`, which hid queued runs during
+an Actions incident.
