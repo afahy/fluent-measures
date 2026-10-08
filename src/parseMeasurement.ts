@@ -95,7 +95,7 @@ const withoutSign = (token: string): number | null =>
  * Whether a word is a stone, ounce or gram unit after the number token before it. "st" after a
  * whole number that ends in 1, except 11, is an ordinal, as in "Oct 1st", but "10.1st" is stone.
  */
-const isUnsupportedUnit = (word: string, number = ''): boolean =>
+const isUnsupportedUnit = (word: string, number: string): boolean =>
   UNSUPPORTED_WEIGHT_UNITS.test(word) && !(word === 'st' && /^-*(?:\d*[02-9])?1$/.test(number));
 
 /** Whether a token is a number with a minus sign, as in "-5". A sign before a word doesn't count. */
