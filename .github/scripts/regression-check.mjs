@@ -16,6 +16,7 @@ import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { normalizeSource } from './normalize-source.mjs';
 import { isTypeAssertionError } from './type-assertion.mjs';
+import { escapeData, logText } from './workflow-commands.mjs';
 
 // HEAD is the merge of the PR into the base branch, so its first parent is the base branch.
 const BASE = 'HEAD^1';
@@ -96,7 +97,7 @@ if (fixed.length === 0) {
   setResult('unchanged');
   process.exit(0);
 }
-console.log(`This PR changes:\n${fixed.map(path => `  ${path}`).join('\n')}`);
+console.log(`This PR changes:\n${fixed.map(path => `  ${logText(path)}`).join('\n')}`);
 
 const testPaths = git(
   'diff',
@@ -199,17 +200,19 @@ for (const error of typeErrors) {
 }
 
 if (caught.length > 0) {
-  console.log(`These fail against the base branch:\n${caught.map(item => `  ${item}`).join('\n')}`);
+  console.log(
+    `These fail against the base branch:\n${caught.map(item => `  ${logText(item)}`).join('\n')}`
+  );
   setResult('caught');
 } else {
   for (const path of unloadable) {
     console.log(
-      `::notice::${path} doesn't load against the base branch because it imports a module or export that this PR adds, so its tests don't count. Put the regression test in a file that loads on the base branch.`
+      `::notice::${escapeData(path)} doesn't load against the base branch because it imports a module or export that this PR adds, so its tests don't count. Put the regression test in a file that loads on the base branch.`
     );
   }
   for (const [path, { line, code }] of ignoredTypeErrors) {
     console.log(
-      `::notice::${path} fails the type check against the base branch (${code} on line ${line}), but that doesn't count because it isn't in a type assertion. For a type-level regression test, use expectTypeOf, assertType or @ts-expect-error.`
+      `::notice::${escapeData(path)} fails the type check against the base branch (${code} on line ${line}), but that doesn't count because it isn't in a type assertion. For a type-level regression test, use expectTypeOf, assertType or @ts-expect-error.`
     );
   }
   setResult(ran.size > 0 ? 'not-caught' : 'no-tests');
