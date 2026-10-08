@@ -285,6 +285,8 @@ describe('a sign on the first word of a phrase', () => {
     // A signed part drops each part of its type in its field, as in "lost -5 lbs, now 180 lbs".
     '-a hundred kg, 70 kg',
     'kg -a hundred, 70 kg',
+    // As "70 kg, kg -5" returns null.
+    '70 kg, kg -a hundred',
     // A semicolon between a number and its unit drops both fields, as in "6 ft -5;ft".
     '70 kg -a hundred; kg',
   ])('returns null for %s', raw => {
