@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
+  botChangeRequests,
   botFollowUps,
   botOutputSincePush,
   ciSummary,
@@ -552,7 +553,7 @@ describe('coderabbitState edges', () => {
 describe('unansweredReviewBodies edges', () => {
   const outside = '<summary>⚠️ Outside diff range comments (12)</summary>';
 
-  it('counts bot reviews from the push on, until a person comments or reviews later', () => {
+  it('counts bot reviews from the push on, until a person answers them later', () => {
     const snapshot = fixture('pr-67');
     snapshot.reviews.push(
       review(1, rabbit, 'COMMENTED', outside, '2026-10-07T14:43:10Z'),
@@ -577,7 +578,12 @@ describe('unansweredReviewBodies edges', () => {
       comment(7, human, 'Agent: @codex review', '2026-10-07T15:01:30Z')
     );
     expect(unansweredReviewBodies(snapshot).map(r => r.id)).toEqual([1]);
+    // AFA-144: a person's review that doesn't name the bot's review doesn't answer it.
     snapshot.reviews.push(review(9, human, 'COMMENTED', null, '2026-10-07T15:02:00Z'));
+    expect(unansweredReviewBodies(snapshot).map(r => r.id)).toEqual([1]);
+    snapshot.reviews.push(
+      review(10, human, 'COMMENTED', `See ${pull67}#pullrequestreview-1.`, '2026-10-07T15:03:00Z')
+    );
     expect(unansweredReviewBodies(snapshot)).toEqual([]);
   });
 
@@ -588,11 +594,94 @@ describe('unansweredReviewBodies edges', () => {
       comment(
         2,
         human,
-        'Agent: @codex review once the outside-diff comment is fixed.',
+        'Agent: @codex review once the outside-diff comment in #pullrequestreview-1 is fixed.',
         '2026-10-07T15:01:00Z'
       )
     );
     expect(unansweredReviewBodies(snapshot)).toEqual([]);
+  });
+});
+
+// AFA-144: only an answer that is tied to the bot's review clears it.
+describe('answers to a bot review', () => {
+  const outside =
+    '<summary>⚠️ Outside diff range comments (1)</summary>\n\nThe label check misses `kg:`.';
+  const unanswered = (answer: (snapshot: Snapshot) => void): number[] => {
+    const snapshot = fixture('pr-67');
+    snapshot.reviews.push(
+      review(1, rabbit, 'COMMENTED', outside, '2026-10-07T15:00:00Z'),
+      review(
+        12,
+        rabbit,
+        'CHANGES_REQUESTED',
+        'Actionable comments posted: 1',
+        '2026-10-07T15:00:00Z'
+      )
+    );
+    answer(snapshot);
+    return [...unansweredReviewBodies(snapshot), ...botChangeRequests(snapshot)].map(r => r.id);
+  };
+
+  it('needs an answer for each review when no one answers', () => {
+    expect(unanswered(() => {})).toEqual([1, 12]);
+  });
+
+  it('takes a link to a review as an answer to that review only, not to one whose ID it starts', () => {
+    const answered = unanswered(snapshot =>
+      snapshot.issueComments.push(
+        comment(2, human, `Fixed: ${pull67}#pullrequestreview-1`, '2026-10-07T15:01:00Z')
+      )
+    );
+    expect(answered).toEqual([12]);
+  });
+
+  it('takes no link to a review whose ID starts with this one as an answer to this one', () => {
+    const answered = unanswered(snapshot =>
+      snapshot.issueComments.push(
+        comment(2, human, `Fixed: ${pull67}#pullrequestreview-12`, '2026-10-07T15:01:00Z')
+      )
+    );
+    expect(answered).toEqual([1]);
+  });
+
+  it('takes no quote as an answer, only a link', () => {
+    const answered = unanswered(snapshot =>
+      snapshot.issueComments.push(
+        comment(2, human, '> The label check misses `kg:`.\n\nFixed.', '2026-10-07T15:01:00Z')
+      )
+    );
+    expect(answered).toEqual([1, 12]);
+  });
+
+  it('takes a comment that an edit after the review links to it as an answer', () => {
+    const answered = unanswered(snapshot =>
+      snapshot.issueComments.push({
+        ...comment(2, human, `Fixed: ${pull67}#pullrequestreview-1`, '2026-10-07T14:59:00Z'),
+        updated_at: '2026-10-07T15:01:00Z',
+      })
+    );
+    expect(answered).toEqual([12]);
+  });
+
+  it('takes no answer from a comment before the review or from a bot', () => {
+    const answered = unanswered(snapshot =>
+      snapshot.issueComments.push(
+        comment(2, human, `See ${pull67}#pullrequestreview-1`, '2026-10-07T14:59:00Z'),
+        comment(3, rabbit, `See ${pull67}#pullrequestreview-12`, '2026-10-07T15:01:00Z')
+      )
+    );
+    expect(answered).toEqual([1, 12]);
+  });
+
+  it("takes a person's thread reply as an answer to a request for changes only", () => {
+    const reply = (review: number) => (snapshot: Snapshot) =>
+      snapshot.reviewComments.push(
+        { ...threadComment(20, rabbit, '2026-10-07T15:00:00Z'), pull_request_review_id: review },
+        threadComment(21, human, '2026-10-07T15:01:00Z', 20)
+      );
+    expect(unanswered(reply(12))).toEqual([1]);
+    // A reply in a thread is about that thread, not about the comments outside the diff.
+    expect(unanswered(reply(1))).toEqual([1, 12]);
   });
 });
 
@@ -705,7 +794,14 @@ describe('classify edges', () => {
       review(1, null, 'CHANGES_REQUESTED', null, '2026-10-07T15:56:00Z'),
       review(2, rabbit, 'CHANGES_REQUESTED', null, '2026-10-07T15:56:00Z'),
       review(3, human, 'CHANGES_REQUESTED', null, '2026-10-07T15:56:00Z'),
-      review(4, human, 'DISMISSED', null, '2026-10-07T15:57:00Z'),
+      // AFA-144: the person's later review links CodeRabbit's, so it answers it.
+      review(
+        4,
+        human,
+        'DISMISSED',
+        `Answered ${pull67}#pullrequestreview-2`,
+        '2026-10-07T15:57:00Z'
+      ),
       review(5, human, 'CHANGES_REQUESTED', null, null)
     );
     const status = classify(snapshot, at('2026-10-07T16:00:00Z'));
@@ -1119,8 +1215,10 @@ describe('pr-state.mjs details', () => {
     expect(answered('@codex review')).toBe(false);
     expect(answered('Agent: @codex review.')).toBe(false);
     expect(answered('agent:@coderabbitai  review')).toBe(false);
-    expect(answered('Thanks. @codex review')).toBe(true);
-    expect(answered('x@codex review')).toBe(true);
+    expect(answered('Thanks for #pullrequestreview-1. @codex review')).toBe(true);
+    expect(answered('x@codex review #pullrequestreview-1')).toBe(true);
+    // AFA-144: a comment that doesn't name the review doesn't answer it.
+    expect(answered('Thanks. @codex review')).toBe(false);
   });
 
   it('lists a nitpick section with a two-digit count, and bot output at the second of the push', () => {

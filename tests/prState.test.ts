@@ -447,7 +447,8 @@ describe('classify', () => {
   });
 
   // AFA-138, CodeRabbit on #104: a bot's request for changes counts too, until a person answers.
-  // A bot can't approve after the agent answers, so an answer clears it.
+  // A bot can't approve after the agent answers, so an answer clears it. AFA-144: only an answer
+  // that links to the review counts, not a comment about something else.
   it('needs the agent after CodeRabbit requests changes, until a person answers', () => {
     const snapshot = fixture('pr-67');
     snapshot.reviews.push({
@@ -462,15 +463,24 @@ describe('classify', () => {
     const status = classify(snapshot, at('2026-10-07T16:00:00Z'));
     expect(status.state).toBe('needs-agent');
     expect(status.reasons).toEqual([
-      'coderabbitai[bot] requested changes: https://github.com/afahy/fluent-measures/pull/67#pullrequestreview-2',
+      'coderabbitai[bot] requested changes: https://github.com/afahy/fluent-measures/pull/67#pullrequestreview-2. Answer in its threads or in a PR comment that links to it.',
     ]);
     snapshot.issueComments.push({
       id: 3,
       user: { login: 'afahy', type: 'User' },
-      body: 'Agent: Not valid, because …',
+      body: 'Agent: CI passed on the last push.',
+      created_at: '2026-10-07T15:57:00Z',
+      updated_at: '2026-10-07T15:57:00Z',
+      html_url: 'https://github.com/afahy/fluent-measures/pull/67#issuecomment-3',
+    });
+    expect(classify(snapshot, at('2026-10-07T16:00:00Z')).state).toBe('needs-agent');
+    snapshot.issueComments.push({
+      id: 4,
+      user: { login: 'afahy', type: 'User' },
+      body: 'Agent: https://github.com/afahy/fluent-measures/pull/67#pullrequestreview-2 is not valid, because …',
       created_at: '2026-10-07T15:58:00Z',
       updated_at: '2026-10-07T15:58:00Z',
-      html_url: 'https://github.com/afahy/fluent-measures/pull/67#issuecomment-3',
+      html_url: 'https://github.com/afahy/fluent-measures/pull/67#issuecomment-4',
     });
     expect(classify(snapshot, at('2026-10-07T16:00:00Z')).state).toBe('ready');
   });
@@ -496,7 +506,7 @@ describe('classify', () => {
     });
     expect(classify(snapshot, at('2026-10-07T16:00:00Z')).reasons).toEqual([
       'coderabbitai[bot] left a thread with no reply: https://github.com/afahy/fluent-measures/pull/67#discussion_r10',
-      'coderabbitai[bot] requested changes: https://github.com/afahy/fluent-measures/pull/67#pullrequestreview-2',
+      'coderabbitai[bot] requested changes: https://github.com/afahy/fluent-measures/pull/67#pullrequestreview-2. Answer in its threads or in a PR comment that links to it.',
     ]);
     snapshot.reviewComments.push({
       id: 11,
@@ -553,12 +563,12 @@ describe('classify', () => {
       html_url: 'https://github.com/afahy/fluent-measures/pull/67#pullrequestreview-2',
     });
     expect(classify(snapshot, at('2026-10-07T16:00:00Z')).reasons).toEqual([
-      'coderabbitai[bot] put comments outside the diff in https://github.com/afahy/fluent-measures/pull/67#pullrequestreview-2',
+      'coderabbitai[bot] put comments outside the diff in https://github.com/afahy/fluent-measures/pull/67#pullrequestreview-2. Answer in a PR comment that links to it.',
     ]);
     snapshot.issueComments.push({
       id: 3,
       user: { login: 'afahy', type: 'User' },
-      body: 'Agent: The comment outside the diff is about code this PR does not change.',
+      body: 'Agent: https://github.com/afahy/fluent-measures/pull/67#pullrequestreview-2 is about code that this PR does not change.',
       created_at: '2026-10-07T15:58:00Z',
       updated_at: '2026-10-07T15:58:00Z',
       html_url: 'https://github.com/afahy/fluent-measures/pull/67#issuecomment-3',
