@@ -282,6 +282,11 @@ describe('a sign on the first word of a phrase', () => {
     // As "12 lb -25 oz" and "70 kg -500 g" return null (the AFA-114 comment).
     '12 lb -twenty five oz',
     '70 kg -5 hundred g',
+    // A signed part drops each part of its type in its field, as in "lost -5 lbs, now 180 lbs".
+    '-a hundred kg, 70 kg',
+    'kg -a hundred, 70 kg',
+    // A semicolon between a number and its unit drops both fields, as in "6 ft -5;ft".
+    '70 kg -a hundred; kg',
   ])('returns null for %s', raw => {
     expect(parseMeasurement(raw)).toBeNull();
   });
@@ -297,6 +302,14 @@ describe('a sign on the first word of a phrase', () => {
     ['-a; hundred kg', 100, 'kg'],
     // "5 12" isn't one number, so the sign on 5 doesn't sign 12.
     ['-5 12 kg', 12, 'kg'],
+    // A minus sign before a word doesn't make the word a number, as in "-x st 4 lb".
+    ['-and 5 kg', 5, 'kg'],
+    // A sign after the first word doesn't sign the phrase before it, as in "5 ft -11" (5 ft).
+    ['kg twenty -five', 20, 'kg'],
+    // A semicolon separates fields, so the signed part drops only its own field, as in
+    // "invalid -5 ft; actual 180 cm" (180 cm).
+    ['-a hundred kg; 70 kg', 70, 'kg'],
+    ['70 kg one; -eighty kg', 70, 'kg'],
   ] as const)('reads %s as %s %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });

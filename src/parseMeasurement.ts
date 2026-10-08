@@ -86,6 +86,11 @@ function readNumberPhrase(
   return Number.isInteger(value) && half(end - 1) ? [value! + 0.5, end + 2] : [value, end];
 }
 
+/** The value of a token that starts with minus signs, without them, as in "-12" and "--12". */
+const withoutSign = (token: string): number | null =>
+  // Stryker disable next-line Regex: callers pass only tokens that start with a minus sign, so "/-+/" removes the same signs.
+  wordsToNumber(token.replace(/^-+/, ''));
+
 /**
  * Whether a word is a stone, ounce or gram unit after the number token before it. "st" after a
  * whole number that ends in 1, except 11, is an ordinal, as in "Oct 1st", but "10.1st" is stone.
@@ -93,14 +98,9 @@ function readNumberPhrase(
 const isUnsupportedUnit = (word: string, number: string): boolean =>
   UNSUPPORTED_WEIGHT_UNITS.test(word) && !(word === 'st' && /^-*(?:\d*[02-9])?1$/.test(number));
 
-/**
- * Whether a token is a number with minus signs, as in "-5" and "--12". A sign before a word
- * doesn't count.
- */
+/** Whether a token is a number with a minus sign, as in "-5". A sign before a word doesn't count. */
 const isSigned = (token: string | undefined): boolean =>
-  token?.startsWith('-') === true &&
-  // Stryker disable next-line Regex: the token starts with a minus sign, so "/-+/" removes the same signs.
-  wordsToNumber(token.replace(/^-+/, '')) !== null;
+  token?.startsWith('-') === true && withoutSign(token) !== null;
 
 /**
  * Read a number phrase as readNumberPhrase does, but let minus signs start its first word. They
@@ -114,17 +114,20 @@ function readSignedPhrase(
   step = 1
 ): [value: number | null, end: number, signed: boolean] {
   const [value, end] = readNumberPhrase(tokens, start, step);
-  const at = step > 0 ? start : end;
-  const token = tokens[at] ?? '';
+  // Stryker disable next-line EqualityOperator: step is 1 or -1, so "step >= 0" is the same.
+  const forward = step > 0;
+  const at = forward ? start : end;
+  const token = tokens[at];
+  if (!token?.startsWith('-')) return [value, end, false];
+  // Stryker disable next-line Regex: the token starts with a minus sign, so "/-+/" removes the same signs.
   const word = token.replace(/^-+/, '');
-  if (word === token) return [value, end, false];
   if (word === 'a' || word === 'an') {
     // "a" and "an" add nothing to the value, but a sign on them signs the number words right
     // after them. Digits don't take them, as in "-a 12 lb" (12 lb), and a semicolon after them
     // ends the phrase, as in "-a; hundred kg" (100 kg).
-    const next = tokens[at + 1] ?? '';
+    const next = tokens[at + 1];
     if (NUMBER_WORDS.has(next) || MULTIPLIERS.has(next)) {
-      return step > 0 ? [...readNumberPhrase(tokens, at + 1), true] : [value, at - 1, true];
+      return forward ? [...readNumberPhrase(tokens, at + 1), true] : [value, at - 1, true];
     }
   } else if (wordsToNumber(word) !== null) {
     // Read again with the word in place of the token, and then put the token back. A copy of the
@@ -134,7 +137,7 @@ function readSignedPhrase(
     tokens[at] = token;
     // Reading backward, the word must join the phrase, so "-5 12 kg" is 12 kg. The phrase then
     // starts at the signed word, as after "a" and "an".
-    if (signedEnd !== at) return [signedValue, step > 0 ? signedEnd : at - 1, true];
+    if (signedEnd !== at) return [signedValue, forward ? signedEnd : at - 1, true];
   }
   return [value, end, false];
 }
@@ -336,8 +339,9 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       const readFrom = label ? i - 2 : i - 1;
       // A sign on the first word of a phrase signs the whole phrase, as in "-twenty five kg" and
       // "-a hundred kg". So those inputs return null, as "-5 feet" does.
+      // When the value follows, nothing before the unit is read.
       let [num, end, signed]: [number | null, number, boolean] = valueFollows
-        ? [null, i - 1, false]
+        ? [null, readFrom, false]
         : readSignedPhrase(remainingTokens, readFrom, -1);
       let matchStart = num === null ? end : end + 1;
       let matchEnd = i + 1;
