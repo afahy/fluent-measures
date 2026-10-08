@@ -101,8 +101,9 @@ export function isSourceFile(file) {
 /**
  * Returns the files that the `mutate` patterns in the Stryker config cover. As in Stryker, the
  * patterns apply in order: a pattern that starts with "!" leaves files out, and a later pattern
- * can put them back. A line range after a pattern, as in `src/a.ts:1-10`, doesn't change which
- * files match. The project's pattern leaves out test files under `src/`: Vitest finds tests only
+ * can put them back. Stryker reads a pattern from the project folder, so `./src/a.ts` is
+ * `src/a.ts`, and a line range after a pattern, as in `src/a.ts:1-10`, doesn't change which files
+ * match. The project's pattern leaves out test files under `src/`: Vitest finds tests only
  * under `tests/`, so their mutants would get no coverage.
  *
  * @param {string[]} files
@@ -113,7 +114,10 @@ export function mutatedFiles(files, patterns) {
   return files.filter(file =>
     patterns.reduce((mutated, pattern) => {
       const negated = pattern.startsWith('!');
-      const glob = pattern.replace(/^!/, '').replace(/:\d+(?::\d+)?-\d+(?::\d+)?$/, '');
+      const glob = pattern
+        .replace(/^!/, '')
+        .replace(/^\.\//, '')
+        .replace(/:\d+(?::\d+)?-\d+(?::\d+)?$/, '');
       return matchesGlob(file, glob) ? !negated : mutated;
     }, false)
   );
@@ -267,48 +271,28 @@ export function unexplainedIgnores(report, changed) {
 const DIRECTIVE = /^\s?Stryker disable(?: next-line)? [a-zA-Z, ]+(?::(.+))?/;
 
 /**
- * Returns the text of each comment that a line can hold: each block comment, and the rest of the
- * line after each `//` outside them. A block comment that doesn't end on the line runs to its end,
- * because Stryker reads a directive only at the start of a comment, and `.+` in its pattern stops
- * at a line break. A `//` inside a string, as in a URL, gives text that isn't a comment, but that
- * text doesn't start with a directive.
- *
- * @param {string} line
- * @returns {string[]}
- */
-function commentTexts(line) {
-  /** @type {string[]} */
-  const texts = [];
-  const rest = line.replace(/\/\*(.*?)(?:\*\/|$)/g, (_, text) => {
-    texts.push(text);
-    return ' ';
-  });
-  for (const [, text] of rest.matchAll(/\/\/(?=(.*))/g)) texts.push(text);
-  return texts;
-}
-
-/**
  * Returns the changed lines of `source` that hold a Stryker disable directive without a reason.
  * A directive can ignore mutants on lines that didn't change, such as the line after a
- * `disable next-line`, so the directive itself is checked. Each comment on a line is read as
- * Stryker reads it, so a block comment's closing `*\/` isn't a reason, and another directive on the
- * same line doesn't give it one.
+ * `disable next-line`, so the directive itself is checked. Each comment is read as Stryker reads
+ * it: a block comment can span lines, and a directive must start its text, after at most one
+ * space or line break. So a block comment's closing `*\/` isn't a reason, and another directive
+ * on the same line doesn't give it one. The line of a directive is the line of its "Stryker".
  *
  * @param {string} source
  * @param {Array<[number, number]>} ranges
  * @returns {number[]}
  */
 export function reasonlessDirectives(source, ranges) {
-  return source
-    .split('\n')
-    .map((text, index) => ({ text, line: index + 1 }))
-    .filter(
-      ({ text, line }) =>
-        ranges.some(([from, to]) => line >= from && line <= to) &&
-        commentTexts(text).some(comment => {
-          const match = DIRECTIVE.exec(comment);
-          return match !== null && !match[1]?.trim();
-        })
-    )
-    .map(({ line }) => line);
+  /** @type {Set<number>} */
+  const lines = new Set();
+  // After a `//`, the scan goes on from the next character, so a `//` inside a string, as in a
+  // URL, doesn't hide a comment later on the line.
+  for (const match of source.matchAll(/\/\*([\s\S]*?)(?:\*\/|$)|\/\/(?=(.*))/g)) {
+    const text = match[1] ?? match[2];
+    const directive = DIRECTIVE.exec(text);
+    if (directive === null || directive[1]?.trim()) continue;
+    const line = source.slice(0, match.index + 2 + text.indexOf('Stryker')).split('\n').length;
+    if (ranges.some(([from, to]) => line >= from && line <= to)) lines.add(line);
+  }
+  return [...lines].sort((a, b) => a - b);
 }

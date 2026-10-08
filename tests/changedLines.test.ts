@@ -118,6 +118,8 @@ describe('mutatedFiles', () => {
       ['src/a.ts:1:2-10:4', 'src/b.ts'],
       ['src/a.ts', 'src/b.ts'],
     ],
+    // Codex, round 2 of #81: Stryker reads a pattern from the project folder.
+    [['./src/**/*.ts', '!./src/b.ts'], ['src/a.ts']],
   ])('applies %j in order', (patterns, expected) => {
     expect(mutatedFiles(['src/a.ts', 'src/b.ts'], patterns)).toEqual(expected);
   });
@@ -360,5 +362,14 @@ describe('reasonlessDirectives', () => {
     ['/*\n Stryker disable next-line all */', []],
   ])('checks the block comment over two lines %j', (comment, expected) => {
     expect(reasonlessDirectives(`${comment}\nconst b = a ?? 2;`, [[1, 2]])).toEqual(expected);
+  });
+
+  // Codex, round 2 of #81: Stryker allows one line break before the directive, so it reads this
+  // comment's second line. Only that line changed here.
+  it.each([
+    ['/*\nStryker disable next-line all\n*/', [2]],
+    ['/*\nStryker disable next-line all: a reason\n*/', []],
+  ])('checks a directive on the line after "/*" in %j', (comment, expected) => {
+    expect(reasonlessDirectives(`${comment}\nconst b = a ?? 2;`, [[2, 2]])).toEqual(expected);
   });
 });
