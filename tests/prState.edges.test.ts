@@ -1003,6 +1003,33 @@ describe('pr-state.mjs details', () => {
     expect(coderabbitState(snapshot, at('2026-10-07T15:56:00Z')).state).toBe('running');
   });
 
+  it('lets a status after a rate-limited refusal win over the refusal', () => {
+    const snapshot = fixture('pr-67');
+    snapshot.issueComments.push(
+      comment(1, human, '@coderabbitai review', '2026-10-07T15:50:00Z'),
+      comment(
+        2,
+        rabbit,
+        '<summary>⚠️ Action not completed</summary>\n\nReview rate limited.',
+        '2026-10-07T15:50:05Z'
+      )
+    );
+    snapshot.statuses.push({
+      context: 'CodeRabbit',
+      state: 'failure',
+      description: 'Review failed',
+      created_at: '2026-10-07T15:55:00Z',
+    });
+    // CodeRabbit tried a review after the refusal, so it isn't only rate limited. The commit has
+    // had its one request, so the PR waits out the 2 hours, as for any refusal: 14:51:34 plus
+    // 2 hours.
+    expect(coderabbitState(snapshot, at('2026-10-07T15:56:00Z'))).toEqual({
+      state: 'refused',
+      detail: 'CodeRabbit refused the review request: Review rate limited.',
+      until: '2026-10-07T16:51:34.000Z',
+    });
+  });
+
   it('asks again after a failed review, even when its status names a rate limit', () => {
     const snapshot = fixture('pr-67');
     snapshot.statuses.push({
