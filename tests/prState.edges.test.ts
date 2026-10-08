@@ -519,8 +519,8 @@ describe('coderabbitState edges', () => {
         '2026-10-07T14:52:00Z'
       )
     );
-    expect(coderabbitState(snapshot, at('2026-10-07T15:00:00Z')).until).toBe(
-      '2026-10-07T15:21:50.000Z'
+    expect(coderabbitState(snapshot, at('2026-10-07T15:00:00Z')).detail).toBe(
+      "CodeRabbit was rate limited on 318c1b7 until 2026-10-07T15:21:50.000Z, so the PR doesn't wait for it"
     );
     // Notes last edited before the 14:43:10 push are about earlier commits. Without one, the
     // limit ends an hour after the 14:51:46 status.
@@ -530,8 +530,8 @@ describe('coderabbitState edges', () => {
     }));
     expect(coderabbitState(snapshot, at('2026-10-07T15:00:00Z'))).toEqual({
       state: 'rate-limited',
-      detail: 'CodeRabbit is rate limited until 2026-10-07T15:51:46.000Z (assumed)',
-      until: '2026-10-07T15:51:46.000Z',
+      detail:
+        "CodeRabbit was rate limited on 318c1b7 until 2026-10-07T15:51:46.000Z (assumed), so the PR doesn't wait for it",
     });
   });
 
@@ -785,6 +785,7 @@ describe('mostUrgent and digest', () => {
       actions: [],
       notes: [
         'coderabbitai[bot] replied after your reply: https://github.com/afahy/fluent-measures/pull/66#discussion_r4208534586',
+        "CodeRabbit was rate limited on c7ad2f4 until 2026-10-07T16:01:19.000Z (assumed), so the PR doesn't wait for it",
       ],
     });
   });
@@ -1013,8 +1014,8 @@ describe('pr-state.mjs details', () => {
     const note = snapshot.issueComments.find(c => c.user?.login === rabbit.login)!;
     // The push was at 14:43:10. 14:43:10 plus 57 minutes is 15:40:10.
     note.updated_at = '2026-10-07T14:43:10Z';
-    expect(coderabbitState(snapshot, at('2026-10-07T15:00:00Z')).until).toBe(
-      '2026-10-07T15:40:10.000Z'
+    expect(coderabbitState(snapshot, at('2026-10-07T15:00:00Z')).detail).toBe(
+      "CodeRabbit was rate limited on 318c1b7 until 2026-10-07T15:40:10.000Z, so the PR doesn't wait for it"
     );
   });
 
@@ -1056,6 +1057,7 @@ describe('pr-state.mjs details', () => {
     expect(status.notes).toEqual([
       `coderabbitai[bot] left 12 nitpick comments in ${pull67}#pullrequestreview-1`,
       `chatgpt-codex-connector[bot] commented: ${pull67}#issuecomment-2`,
+      "CodeRabbit was rate limited on 318c1b7 until 2026-10-07T15:48:45.000Z, so the PR doesn't wait for it",
     ]);
   });
 

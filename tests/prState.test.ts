@@ -190,7 +190,7 @@ describe('classify', () => {
     ]);
   });
 
-  it("waits while Codex has 30 minutes to start and CodeRabbit's limit runs (#66 at 15:20)", () => {
+  it("waits for Codex to start, but not for CodeRabbit's rate limit (#66 at 15:20)", () => {
     const status = classify(fixture('pr-66'), at('2026-10-07T15:20:00Z'));
     expect(status.state).toBe('waiting');
     expect(status.pushedAt).toBe('2026-10-07T15:00:44Z');
@@ -200,10 +200,10 @@ describe('classify', () => {
     expect(status.coderabbit.state).toBe('rate-limited');
     expect(status.waits).toEqual([
       "Codex hasn't started on c7ad2f4; its last review was of 91a5d29 (until 2026-10-07T15:30:44.000Z)",
-      'CodeRabbit is rate limited until 2026-10-07T16:01:19.000Z (assumed)',
     ]);
     expect(status.notes).toEqual([
       `coderabbitai[bot] replied after your reply: ${pr66}#discussion_r4208534586`,
+      "CodeRabbit was rate limited on c7ad2f4 until 2026-10-07T16:01:19.000Z (assumed), so the PR doesn't wait for it",
     ]);
   });
 
@@ -218,19 +218,23 @@ describe('classify', () => {
     expect(status.actions).toEqual(['Post `@codex review`']);
   });
 
-  it('asks CodeRabbit again once its rate limit ends (#66 at 16:02, #67 at 15:48:45)', () => {
+  it("doesn't wait for or ask a rate-limited CodeRabbit (#66 at 16:02, #67 at 15:48)", () => {
     const pr66Status = classify(fixture('pr-66'), at('2026-10-07T16:02:00Z'));
-    expect(pr66Status.actions).toEqual(['Post `@codex review`', 'Post `@coderabbitai review`']);
+    expect(pr66Status.actions).toEqual(['Post `@codex review`']);
 
-    const waiting = classify(fixture('pr-67'), at('2026-10-07T15:48:44Z'));
-    expect(waiting.state).toBe('waiting');
-    expect(waiting.waits).toEqual(['CodeRabbit is rate limited until 2026-10-07T15:48:45.000Z']);
-    expect(waiting.codex.state).toBe('done');
-
-    const status = classify(fixture('pr-67'), at('2026-10-07T15:48:45Z'));
-    expect(status.state).toBe('needs-agent');
-    expect(status.reasons).toEqual(["CodeRabbit's rate limit ended at 2026-10-07T15:48:45.000Z"]);
-    expect(status.actions).toEqual(['Post `@coderabbitai review`']);
+    // #67's only open item was CodeRabbit's limit, which ends at 15:48:45. The PR is ready
+    // before and after that time, with no request to CodeRabbit.
+    for (const time of ['2026-10-07T15:48:44Z', '2026-10-07T15:48:45Z']) {
+      const status = classify(fixture('pr-67'), at(time));
+      expect(status.state).toBe('ready');
+      expect(status.waits).toEqual([]);
+      expect(status.reasons).toEqual([]);
+      expect(status.actions).toEqual([]);
+      expect(status.codex.state).toBe('done');
+      expect(status.notes).toEqual([
+        "CodeRabbit was rate limited on 318c1b7 until 2026-10-07T15:48:45.000Z, so the PR doesn't wait for it",
+      ]);
+    }
   });
 
   it('leaves the merge to the maintainer when Codex never reviews the head in 2 hours', () => {

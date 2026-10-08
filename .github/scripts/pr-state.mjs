@@ -11,7 +11,8 @@
 //     it, or its summary comment says the review of the head commit is Completed. 👀 means it's
 //     still running.
 //   - CodeRabbit sets a "CodeRabbit" commit status on each commit it looks at. "Review rate
-//     limited" is a success status, so it must not count as a passing check or a review.
+//     limited" is a success status, so it must not count as a passing check or a review. The
+//     PR doesn't wait for a rate-limited CodeRabbit, and doesn't ask it again for that commit.
 //   - CodeRabbit's summary and rate-limit comments also name a commit range, but only its
 //     reviews mean that it reviewed the commit.
 //   - Bots name commits by short SHAs, so a SHA matches any prefix of 7 or more characters.
@@ -411,17 +412,11 @@ export function coderabbitState(snapshot, now) {
     const resetAt =
       (note && rateLimitResetAt(note.body ?? '', note.updated_at)) ??
       after(Date.parse(status?.created_at ?? pushed), RATE_LIMIT_DEFAULT_WAIT);
-    if (now < Date.parse(resetAt)) {
-      return {
-        state: 'rate-limited',
-        detail: `CodeRabbit is rate limited until ${resetAt}${note ? '' : ' (assumed)'}`,
-        until: resetAt,
-      };
-    }
+    // Don't wait for a rate-limited CodeRabbit, and don't ask it again for this commit after
+    // the limit ends. CodeRabbit reviews the next push if its limit allows.
     return {
-      state: 'not-requested',
-      detail: `CodeRabbit's rate limit ended at ${resetAt}`,
-      action: 'Post `@coderabbitai review`',
+      state: 'rate-limited',
+      detail: `CodeRabbit was rate limited on ${short} until ${resetAt}${note ? '' : ' (assumed)'}, so the PR doesn't wait for it`,
     };
   }
   if (
@@ -662,8 +657,8 @@ export function classify(snapshot, now = Date.now(), { requests = true } = {}) {
   for (const bot of [codex, coderabbit]) {
     if (bot.state === 'not-requested') reasons.push(bot.detail);
     if (bot.action) actions.push(bot.action);
-    if (bot.state === 'gave-up') notes.push(bot.detail);
-    if (['pending', 'running', 'requested', 'rate-limited', 'refused'].includes(bot.state)) {
+    if (bot.state === 'gave-up' || bot.state === 'rate-limited') notes.push(bot.detail);
+    if (['pending', 'running', 'requested', 'refused'].includes(bot.state)) {
       const until = bot.until && !bot.detail.includes(bot.until) ? ` (until ${bot.until})` : '';
       waits.push(`${bot.detail}${until}`);
     }
