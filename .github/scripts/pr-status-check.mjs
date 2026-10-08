@@ -28,7 +28,7 @@ const MAX_DESCRIPTION = 140;
  * lone surrogates.
  */
 const FOUR_BYTE =
-  /\s*\((?:[\u200D\uFE0F\s]*[\u{10000}-\u{10FFFF}])+[\u200D\uFE0F\s]*\)|[ \t]?\u200D?[\u{10000}-\u{10FFFF}][\u200D\uFE0F]*|[\uD800-\uDFFF]/gu;
+  /\s*\((?:(?:\u200D|\uFE0F|\s)*[\u{10000}-\u{10FFFF}])+(?:\u200D|\uFE0F|\s)*\)|[ \t]?\u200D?[\u{10000}-\u{10FFFF}](?:\u200D|\uFE0F)*|[\uD800-\uDFFF]/gu;
 
 /**
  * The status's one-line description: the state and the first reason or wait, without links,
