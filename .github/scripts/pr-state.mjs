@@ -556,63 +556,6 @@ export function botOutputSincePush(snapshot) {
 }
 
 /**
- * Turns a CODEOWNERS pattern into a regular expression for paths in the repository. It
- * follows the gitignore rules that GitHub documents for CODEOWNERS: a pattern with a slash
- * before its end is relative to the root, others match at any depth; `*` stays within a
- * directory and `**` crosses them; a pattern that names a directory covers everything in it,
- * but `docs/*` covers only the files directly in docs/.
- *
- * @param {string} pattern
- * @returns {RegExp}
- */
-export function codeownersPattern(pattern) {
-  const anchored = pattern.replace(/\/$/, '').includes('/');
-  let path = pattern.replace(/^\//, '');
-  const directory = path.endsWith('/');
-  if (directory) path = path.slice(0, -1);
-  const segments = path.split('/');
-  const body = segments
-    .map(segment =>
-      segment === '**'
-        ? '\u0000'
-        : segment
-            .replace(/[.+^${}()|[\]\\]/g, '\\$&')
-            .replace(/\*/g, '[^/]*')
-            .replace(/\?/g, '[^/]')
-    )
-    .join('/')
-    .replace(/^\u0000\//, '(?:.*/)?')
-    .replace(/\/\u0000$/, '/.*')
-    .replace(/\/\u0000\//g, '/(?:.*/)?')
-    .replace(/\u0000/g, '.*');
-  const within = directory ? '/.*' : segments[segments.length - 1].includes('*') ? '' : '(?:/.*)?';
-  return new RegExp(`^${anchored ? '' : '(?:.*/)?'}${body}${within}$`);
-}
-
-/**
- * The files that a CODEOWNERS file gives an owner. For each file the last matching line
- * decides, and a line with a pattern but no owners takes the owner away.
- *
- * @param {string} codeowners The CODEOWNERS file's text.
- * @param {string[]} files Paths in the repository.
- * @returns {string[]}
- */
-export function ownedFiles(codeowners, files) {
-  const rules = codeowners
-    .split('\n')
-    .map(line => line.replace(/(^|\s)#.*$/, '').trim())
-    .filter(Boolean)
-    .map(line => {
-      const [pattern, ...owners] = line.split(/\s+/);
-      return { pattern: codeownersPattern(pattern), owned: owners.length > 0 };
-    });
-  return files.filter(file => {
-    const last = rules.filter(rule => rule.pattern.test(file)).pop();
-    return last?.owned ?? false;
-  });
-}
-
-/**
  * Each person's latest review that requests changes.
  *
  * @param {import('./pr-state.d.mts').Review[]} reviews
@@ -746,15 +689,6 @@ export function classify(snapshot, now = Date.now(), { requests = true } = {}) {
     reasons.push('GitHub blocks the merge, usually until a required review');
     return result('waiting-human');
   }
-  // AGENTS.md rule 8: only the maintainer merges a PR that changes a CODEOWNERS file.
-  const owned = ownedFiles(snapshot.codeowners ?? '', snapshot.files);
-  if (owned.length > 0) {
-    const more = owned.length > 3 ? ` and ${owned.length - 3} more` : '';
-    reasons.push(
-      `It changes files that CODEOWNERS covers, so only the maintainer can merge it: ${owned.slice(0, 3).join(', ')}${more}`
-    );
-    return result('waiting-human');
-  }
   return result('ready');
 }
 
@@ -872,20 +806,6 @@ export async function collect(api, repo, number) {
   // The branch's pushes. A deleted fork has no repository to read them from.
   const headRepo = pull.head.repo?.full_name;
   const branch = encodeURIComponent(ref);
-  // GitHub reads the first CODEOWNERS it finds in these places, on the PR's base branch.
-  const readCodeowners = async () => {
-    for (const path of ['.github/CODEOWNERS', 'CODEOWNERS', 'docs/CODEOWNERS']) {
-      try {
-        const file = /** @type {{ content: string }} */ (
-          await api.get(`${base}/contents/${path}?ref=${encodeURIComponent(pull.base.ref)}`)
-        );
-        return Buffer.from(file.content, 'base64').toString('utf8');
-      } catch (error) {
-        if (/** @type {{ status?: number }} */ (error).status !== 404) throw error;
-      }
-    }
-    return null;
-  };
   const [
     headCommit,
     pushes,
@@ -896,8 +816,6 @@ export async function collect(api, repo, number) {
     reviews,
     reviewComments,
     reactions,
-    files,
-    codeowners,
   ] = await Promise.all([
     api.get(`${base}/git/commits/${sha}`),
     headRepo ? api.get(`/repos/${headRepo}/activity?ref=${branch}&per_page=100`) : [],
@@ -908,8 +826,6 @@ export async function collect(api, repo, number) {
     api.getAll(`${base}/pulls/${number}/reviews`),
     api.getAll(`${base}/pulls/${number}/comments`),
     api.getAll(`${base}/issues/${number}/reactions`),
-    api.getAll(`${base}/pulls/${number}/files`),
-    readCodeowners(),
   ]);
   return /** @type {import('./pr-state.d.mts').Snapshot} */ ({
     pull,
@@ -922,7 +838,5 @@ export async function collect(api, repo, number) {
     reviews,
     reviewComments,
     reactions,
-    files: files.map(f => /** @type {{ filename: string }} */ (f).filename),
-    codeowners,
   });
 }

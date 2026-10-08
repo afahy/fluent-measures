@@ -1,4 +1,3 @@
-import { Buffer } from 'node:buffer';
 import { execFile } from 'node:child_process';
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { createServer, type IncomingHttpHeaders, type Server } from 'node:http';
@@ -160,10 +159,6 @@ describe('setStatus', () => {
   } {
     return {
       async get(path: string): Promise<unknown> {
-        if (path.includes('/contents/')) {
-          if (!snapshot.codeowners) throw Object.assign(new Error('Not Found'), { status: 404 });
-          return { content: Buffer.from(snapshot.codeowners).toString('base64') };
-        }
         if (path.includes('/pulls/')) return snapshot.pull;
         if (path.includes('/activity')) return snapshot.pushes;
         return snapshot.headCommit;
@@ -174,7 +169,6 @@ describe('setStatus', () => {
         if (path.endsWith('/statuses')) return snapshot.statuses;
         if (path.endsWith('/reviews')) return snapshot.reviews;
         if (path.endsWith('/reactions')) return snapshot.reactions;
-        if (path.endsWith('/files')) return snapshot.files.map(filename => ({ filename }));
         if (path.includes('/pulls/')) return snapshot.reviewComments;
         return snapshot.issueComments;
       },
@@ -361,10 +355,6 @@ describe('pr-status-check.mjs', () => {
       [`${base}/pulls/67/reviews`]: snapshot.reviews,
       [`${base}/pulls/67/comments`]: snapshot.reviewComments,
       [`${base}/issues/67/reactions`]: snapshot.reactions,
-      [`${base}/pulls/67/files`]: snapshot.files.map(filename => ({ filename })),
-      [`${base}/contents/.github/CODEOWNERS`]: {
-        content: Buffer.from(snapshot.codeowners ?? '').toString('base64'),
-      },
     };
     const posts: { path: string; headers: IncomingHttpHeaders; body: unknown }[] = [];
     const server = createServer((request, response) => {

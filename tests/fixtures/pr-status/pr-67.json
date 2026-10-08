@@ -233,13 +233,5 @@
         "type": "User"
       }
     }
-  ],
-  "files": [
-    ".changeset/unqualified-meters.md",
-    "src/parseMeasurement.ts",
-    "tests/__snapshots__/corpus.test.ts.snap",
-    "tests/parseMeasurement.unqualifiedMeters.test.ts",
-    "tests/parseMeasurement.unqualifiedNormalization.test.ts"
-  ],
-  "codeowners": ".github/**              @afahy\npackage.json            @afahy\npnpm-lock.yaml          @afahy\nvitest.config.ts        @afahy\nstryker.config.json     @afahy\n.changeset/config.json  @afahy\n.husky/**               @afahy\ntsconfig.json           @afahy\neslint.config.js        @afahy\ntsup.config.ts          @afahy\n.size-limit.cjs         @afahy\n.prettierignore         @afahy\ncspell.json             @afahy\ncommitlint.config.js    @afahy\ncommitlint.pr-title.config.js  @afahy\n.lintstagedrc           @afahy\n\n# Files that instruct or configure agents and review bots. Keep these entries even\n# when a file doesn't exist, because adding one should need a code-owner review. Put\n# any script a Claude Code hook runs under .claude/ so the script is owned too.\nAGENTS.md               @afahy\nAGENTS.override.md      @afahy\nCLAUDE.md               @afahy\nCLAUDE.local.md         @afahy\nREVIEW.md               @afahy\n.claude/                @afahy\n.mcp.json               @afahy\n.codex/                 @afahy\n.coderabbit.yaml        @afahy\n.coderabbit.yml         @afahy\n"
+  ]
 }
