@@ -128,14 +128,15 @@ jobs:
           node-version: 22
 
       # Stryker's incremental mode reuses the result of each mutant whose code and killing tests
-      # haven't changed (AFA-111). It doesn't compare the files that tests read or the packages,
-      # so their hash is part of the cache key, and a change to one of them starts a full run.
-      # A pull request starts from its own last run, or from main's.
+      # haven't changed (AFA-111). It compares the source files and the test files, but not the
+      # files that tests read, the packages or this job. So their hash is part of the cache key,
+      # and a change to one of them starts a full run. A pull request starts from its own last
+      # run, or from main's.
       - name: Hash the inputs that Stryker doesn't compare
         id: inputs
-        run: echo "hash=${{ hashFiles('package.json', 'pnpm-lock.yaml', 'tsconfig.json', 'stryker.config.json', 'vitest.config.ts', 'README.md', 'tests/**', '!tests/**/*.test.*') }}" >> "$GITHUB_OUTPUT"
+        run: echo "hash=${{ hashFiles('package.json', 'pnpm-lock.yaml', 'tsconfig.json', 'stryker.config.json', 'vitest.config.ts', '.github/workflows/ci.yml', '.github/actions/setup/action.yml', 'README.md', 'tests/**', '!tests/**/*.test.ts') }}" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/cache@v4
+      - uses: actions/cache/restore@v4
         with:
           path: reports/stryker-incremental.json
           key: stryker-incremental-${{ steps.inputs.outputs.hash }}-${{ github.sha }}
@@ -146,6 +147,14 @@ jobs:
       # score and the results that pull requests reuse are exact.
       - name: Mutation tests
         run: pnpm test:mutation --incremental ${{ github.event_name == 'push' && '--force' || '' }}
+
+      # Stryker writes its results before it checks the score, so a run below the threshold still
+      # saves them, and the next push doesn't start from nothing.
+      - uses: actions/cache/save@v4
+        if: ${{ !cancelled() }}
+        with:
+          path: reports/stryker-incremental.json
+          key: stryker-incremental-${{ steps.inputs.outputs.hash }}-${{ github.sha }}
 
   # Every mutant on a line that the pull request adds or changes under src/ must be killed. When
   # there is no pull request or it doesn't change src/, the steps are skipped and the job passes.
