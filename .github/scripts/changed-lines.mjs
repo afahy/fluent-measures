@@ -273,16 +273,16 @@ export function unexplainedIgnores(report, changed) {
 const DIRECTIVE = /^\s?Stryker disable(?: next-line)? [a-zA-Z, ]+(?::(.+))?/;
 
 /**
- * Returns each comment in `source`: the line where its text starts, and its text. The text has no
- * `//`, or `/*` and `*\/`, as Babel gives it to Stryker. The TypeScript parser finds the comments,
- * so a `/*` or `//` inside a string, a template literal or a regex literal isn't one. TypeScript
- * puts a comment on its own line before the next token, and a comment after code after the token
- * before it. So the walk reads the comments before and after each token. It keeps its own stack,
- * so a long expression or a long list doesn't overflow the call stack. The nodes of a JSDoc
- * comment start inside the comment, so the walk skips them.
+ * Returns each comment in `source`: the offset where its text starts, or of its "Stryker" when it
+ * has one, and its text. The text has no `//`, or `/*` and `*\/`, as Babel gives it to Stryker.
+ * The TypeScript parser finds the comments, so a `/*` or `//` inside a string, a template literal
+ * or a regex literal isn't one. TypeScript puts a comment on its own line before the next token,
+ * and a comment after code after the token before it. So the walk reads the comments before and
+ * after each token. It keeps its own stack, so a long expression or a long list doesn't overflow
+ * the call stack. The nodes of a JSDoc comment start inside the comment, so the walk skips them.
  *
  * @param {string} source
- * @returns {Array<{ line: number, text: string }>}
+ * @returns {Array<{ at: number, text: string }>}
  */
 function comments(source) {
   const file = ts.createSourceFile('source.ts', source, ts.ScriptTarget.Latest, true);
@@ -307,8 +307,7 @@ function comments(source) {
       pos + 2,
       kind === ts.SyntaxKind.MultiLineCommentTrivia && source.endsWith('*/', end) ? end - 2 : end
     );
-    const at = pos + 2 + Math.max(text.indexOf('Stryker'), 0);
-    return { line: file.getLineAndCharacterOfPosition(at).line + 1, text };
+    return { at: pos + 2 + Math.max(text.indexOf('Stryker'), 0), text };
   });
 }
 
@@ -319,8 +318,8 @@ function comments(source) {
  * Stryker's pattern: a block comment can span lines, and a directive must start the text, after at
  * most one space or line break. So a block comment's closing `*\/` isn't a reason, and another
  * directive on the same line doesn't give it one. The line of a directive is the line of its
- * "Stryker". Stryker reads only the comments before code, so this check also flags a directive with
- * no code after it, which fails safe.
+ * "Stryker", counted only at "\n", as git counts the changed lines. Stryker reads only the comments
+ * before code, so this check also flags a directive with no code after it, which fails safe.
  *
  * @param {string} source
  * @param {Array<[number, number]>} ranges
@@ -329,7 +328,7 @@ function comments(source) {
 export function reasonlessDirectives(source, ranges) {
   const changed = (/** @type {number} */ line) =>
     ranges.some(([from, to]) => line >= from && line <= to);
-  /** @type {Array<{ line: number, text: string }>} */
+  /** @type {Array<{ at: number, text: string }>} */
   let found;
   try {
     found = comments(source);
@@ -344,11 +343,23 @@ export function reasonlessDirectives(source, ranges) {
         changed(index + 1) && text.includes('Stryker disable') ? [index + 1] : []
       );
   }
+  const offsets = found
+    .filter(({ text }) => {
+      const directive = DIRECTIVE.exec(text);
+      return directive !== null && !directive[1]?.trim();
+    })
+    .map(({ at }) => at)
+    .sort((a, b) => a - b);
+  // Git, which gives the changed lines, breaks lines only at "\n". TypeScript's line numbers also
+  // break at a lone "\r", U+2028 and U+2029 (AFA-115). One pass counts the "\n" before each
+  // directive, so many directives in a long file don't make the check slow.
   /** @type {Set<number>} */
   const lines = new Set();
-  for (const { line, text } of found) {
-    const directive = DIRECTIVE.exec(text);
-    if (directive !== null && !directive[1]?.trim() && changed(line)) lines.add(line);
+  let line = 1;
+  let next = source.indexOf('\n');
+  for (const at of offsets) {
+    for (; next !== -1 && next < at; next = source.indexOf('\n', next + 1)) line++;
+    if (changed(line)) lines.add(line);
   }
   return [...lines].sort((a, b) => a - b);
 }
