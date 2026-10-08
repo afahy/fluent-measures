@@ -274,12 +274,12 @@ const DIRECTIVE = /^\s?Stryker disable(?: next-line)? [a-zA-Z, ]+(?::(.+))?/;
 
 /**
  * Returns each comment in `source`: the offset where its text starts, or of its "Stryker" when it
- * has one, and its text. The text has no `//`, or `/*` and `*\/`, as Babel gives it to Stryker. The TypeScript parser finds the comments,
- * so a `/*` or `//` inside a string, a template literal or a regex literal isn't one. TypeScript
- * puts a comment on its own line before the next token, and a comment after code after the token
- * before it. So the walk reads the comments before and after each token. It keeps its own stack,
- * so a long expression or a long list doesn't overflow the call stack. The nodes of a JSDoc
- * comment start inside the comment, so the walk skips them.
+ * has one, and its text. The text has no `//`, or `/*` and `*\/`, as Babel gives it to Stryker.
+ * The TypeScript parser finds the comments, so a `/*` or `//` inside a string, a template literal
+ * or a regex literal isn't one. TypeScript puts a comment on its own line before the next token,
+ * and a comment after code after the token before it. So the walk reads the comments before and
+ * after each token. It keeps its own stack, so a long expression or a long list doesn't overflow
+ * the call stack. The nodes of a JSDoc comment start inside the comment, so the walk skips them.
  *
  * @param {string} source
  * @returns {Array<{ at: number, text: string }>}
@@ -318,8 +318,8 @@ function comments(source) {
  * Stryker's pattern: a block comment can span lines, and a directive must start the text, after at
  * most one space or line break. So a block comment's closing `*\/` isn't a reason, and another
  * directive on the same line doesn't give it one. The line of a directive is the line of its
- * "Stryker". Stryker reads only the comments before code, so this check also flags a directive with
- * no code after it, which fails safe.
+ * "Stryker", counted only at "\n", as git counts the changed lines. Stryker reads only the comments
+ * before code, so this check also flags a directive with no code after it, which fails safe.
  *
  * @param {string} source
  * @param {Array<[number, number]>} ranges
@@ -350,14 +350,7 @@ export function reasonlessDirectives(source, ranges) {
     if (directive === null || directive[1]?.trim()) continue;
     // Git, which gives the changed lines, breaks lines only at "\n". TypeScript's line numbers also
     // break at a lone "\r", U+2028 and U+2029 (AFA-115). Only a directive needs its line.
-    let line = 1;
-    for (
-      let next = source.indexOf('\n');
-      next !== -1 && next < at;
-      next = source.indexOf('\n', next + 1)
-    ) {
-      line++;
-    }
+    const line = source.slice(0, at).split('\n').length;
     if (changed(line)) lines.add(line);
   }
   return [...lines].sort((a, b) => a - b);
