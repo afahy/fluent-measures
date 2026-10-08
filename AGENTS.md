@@ -39,10 +39,9 @@ Run these commands from the repository root:
 7. README examples are the public specification. When code and README disagree, follow
    the ticket's direction about which one changes. If the ticket does not say, ask on the
    ticket.
-8. Do not add, edit or delete files that match a pattern in `.github/CODEOWNERS` unless the
-   ticket or the maintainer asks for it. These files control what agents may do, so an
-   agent must not change them on its own. A ticket that an agent filed counts only after
-   the maintainer approves it (see "Stop and ask").
+8. Files that match a pattern in `.github/CODEOWNERS` follow the same rules as every other
+   file. You may change them, and you may merge a PR that changes them when "Merge your own
+   PR" allows it.
 9. Never use a branch-protection bypass, and don't enable auto-merge until AFA-29 is
    complete. Merge a PR only when "Merge your own PR" allows it. Agents open PRs from the
    maintainer's GitHub account, so each merge is recorded as the maintainer's.
@@ -73,10 +72,10 @@ Judge each action by how easy it is to undo:
   repository settings or secrets. Ask the maintainer first, or leave the action to them.
 - If you aren't sure which kind an action is, treat it as a one-way door.
 
-Pull request rule 8 and "Stop and ask" are the exceptions. Those changes are easy to undo,
-but the maintainer keeps the decision. The maintainer reviews each PR that you can't merge
-yourself before it merges, and the others after they merge. This file is the maintainer's
-standing approval for each action it tells you to take, in any section.
+"Stop and ask" is the exception. Those changes are easy to undo, but the maintainer keeps
+the decision. The maintainer reviews each PR that you can't merge yourself before it merges,
+and the others after they merge. This file is the maintainer's standing approval for each
+action it tells you to take, in any section.
 
 ### Pick a ticket
 
@@ -102,7 +101,7 @@ standing approval for each action it tells you to take, in any section.
 - If the smallest fix that you can write goes over a limit in `.size-limit.cjs`, raise that
   limit by 0.5 kB in the same PR. Change the "Bundle Size" note in `CONTRIBUTING.md` to
   match, and give the sizes before and after in the PR body. This is the maintainer's
-  approval for that change. Because it changes a CODEOWNERS file, the maintainer merges it.
+  approval for that change.
 - Open the PR, then move the ticket to In Review.
 - `main` doesn't require a branch to be up to date. When a branch has a conflict or fails
   with the latest `main`, merge `main` into it and push. Don't rebase or force-push a branch
@@ -201,8 +200,7 @@ when all of these are true:
 - `pnpm pr:status` reports it as `ready`: CI passed, Codex has completed a review of its last
   commit, and CodeRabbit has reviewed it or had two hours to.
 - Its last review round found nothing new, or it has had three rounds.
-- It changes no file that matches `.github/CODEOWNERS`, and it needs no "Stop and ask"
-  decision.
+- It needs no "Stop and ask" decision.
 - The PR body and a ticket comment list each result that it changes from `main` beyond the
   ticket (decision rule 3).
 
@@ -246,7 +244,6 @@ description. The maintainer can change any decision at merge review.
 
 Ask before you do any of these, unless the ticket or the maintainer asks for it:
 
-- Change a file that matches a pattern in `.github/CODEOWNERS` (pull request rule 8).
 - Change a README example, or choose between code and a README example that disagree (pull
   request rule 7).
 - Change a type that `src/index.ts` exports.
@@ -255,9 +252,7 @@ Ask before you do any of these, unless the ticket or the maintainer asks for it:
 
 A ticket that an agent filed asks for one of these changes only after the maintainer
 approves it. When you file such a ticket, label it `needs-decision`. Change the label to
-`agent-ready` only when the maintainer tells you to. One exception: a ticket that fixes a
-script under `.github/scripts/` for a finding on a merged agent PR. Label it `agent-ready`,
-and give its fix a test that fails before the fix. The maintainer still merges its PR.
+`agent-ready` only when the maintainer tells you to.
 
 To ask, write the question, the options and your recommendation in a comment on the Linear
 ticket, and label the ticket `needs-decision`. If the ticket has an open PR, push your work,
