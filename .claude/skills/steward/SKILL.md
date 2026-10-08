@@ -58,33 +58,40 @@ that's `waiting` or `waiting-human`. There are two exceptions:
 - When the timed check-ins in step 3 run out, say so in your report and stop.
 
 1. If the session can run a background command, run `pnpm pr:status <pr>... --wait` in the
-   background, with every PR you're watching in one call. It polls without spending tokens. It
-   returns when a PR needs you, is ready or closes, or when a PR that waits on the maintainer
-   gets news. It gives up after `--timeout` minutes, 100 by default. Give the background command
-   a longer timeout than that: Claude Code stops a background command after 30 minutes unless
-   you set a timeout, up to 2 hours. When it returns, act on what it printed. If it printed
-   "Nothing changed in 100 min." and a PR is still `waiting`, run it again. Once every PR is
-   `waiting-human`, don't run it again: each return wakes you past the prompt cache, so wait as
-   step 3 says instead.
+   background, with every PR you're watching in one call. Put the PRs past their third review
+   round in a second call with `--no-requests`, as "Each time you look at a PR" says. It polls
+   without spending tokens. It returns when a PR needs you, is ready or closes, or when a PR
+   that waits on the maintainer gets news. It gives up after `--timeout` minutes, 100 by
+   default. Give the background command a longer timeout than that: Claude Code stops a
+   background command after 30 minutes unless you set a timeout, up to 2 hours. When it
+   returns, act on what it printed. If it printed "Nothing changed in 100 min." and a PR is
+   still `waiting`, run it again. Once every PR that it watches is `waiting-human`, don't run
+   it again. Each return wakes you past the prompt cache, so wait as step 3 says instead.
 2. In a cloud session, also subscribe to the PR's GitHub events. The container can stop and take
    the background command with it. On each event or check-in, run `pnpm pr:status <pr>...`
-   first. Then start `--wait` again if it isn't running, unless every PR is `waiting-human`. If
-   the output is the same as last time, end the turn in one short line.
+   first, with `--no-requests` for the PRs past their third round. Then start `--wait` again if
+   it isn't running, unless every PR that `--wait` would watch is `waiting-human`. If the
+   output is the same as last time, end the turn in one short line.
 3. Use a timed check-in (`send_later`, a scheduled wake-up or cron) only when neither of those
-   can wake you. Each check-in that misses the 1-hour prompt cache rewrites the whole
-   conversation, which cost $1 to $3 a wake in earlier sessions. Hourly check-ins fire just past
-   the cache's hour, so they always miss it.
+   can wake you. The exception is a time when every PR that `--wait` would watch is
+   `waiting-human`. Steps 1 and 2 don't run `--wait` then, so arm the check-ins even when a
+   background command could run. Each check-in that misses the 1-hour prompt cache rewrites the
+   whole conversation, which cost $1 to $3 a wake in earlier sessions. Hourly check-ins fire just
+   past the cache's hour, so they always miss it.
    - While a PR is `waiting`, check in 40 to 50 minutes after the last turn, so the cache is
      still warm. After 3 check-ins in a row that find nothing new, Codex's 2 hours are over.
      If CI is still running then, report that it's stuck and stop.
-   - While every PR is `waiting-human`, check in every 4 hours, for up to 24 hours. Don't ask
-     the maintainer to tell you when they merge.
+   - While every PR that `--wait` would watch is `waiting-human`, check in every 4 hours, for
+     up to 24 hours. Do the same for a `ready` PR that only the maintainer may merge, and
+     leave it out of `--wait`, which returns at once for it. Don't ask the maintainer to tell
+     you when they merge.
 
 ## CI on main
 
 `pnpm pr:status` doesn't cover `main`. After a merge, watch CI on `main` by the merge commit's
-full SHA, for example with `gh api repos/afahy/fluent-measures/commits/<sha>/check-runs`. An
-empty or short list right after the merge means the runs haven't started yet, so wait until the
-CI workflow's checks are there and finished. Ignore `Set the PR status` check runs: they come
-from `pr-status.yml`, not CI. Don't use `gh run list --branch main`, which hid queued runs during
-an Actions incident.
+full SHA. Read only the CI workflow's `ci-ok` check, for example with
+`gh api 'repos/afahy/fluent-measures/commits/<sha>/check-runs?check_name=ci-ok'`. It runs after
+the other CI jobs and fails when one of them fails, so an empty list means that CI hasn't
+finished yet. Other workflows, such as `pr-status.yml`, `late-bot-findings.yml` and
+`deploy-docs.yml`, add check runs to the merge commit too. Their results aren't CI results.
+Don't use `gh run list --branch main`, which hid queued runs during an Actions incident.

@@ -133,7 +133,9 @@ action it tells you to take, in any section.
   each thread that a pushed commit fixes.
 - After each push, watch CI and Codex's review of that commit as
   `.claude/skills/steward/SKILL.md` says. `pnpm pr:status <pr>...` decides when they're
-  done, and `pnpm pr:status <pr>... --wait` waits for them. Don't ask whether to watch.
+  done, and `pnpm pr:status <pr>... --wait` waits for them. After a PR's third review round,
+  add `--no-requests` to both commands, and run them for that PR in a separate call. Don't
+  ask whether to watch.
 - Post the Codex review requests that `pnpm pr:status <pr>...` lists. It lists one when Codex
   hasn't started 30 minutes after it could, once for each commit. It stops waiting for Codex
   after two hours. Note each gap in your report.
@@ -145,7 +147,7 @@ action it tells you to take, in any section.
   branch.
 - A review round is one push and the bot reviews of that push. Codex reviews every push, so
   the rounds don't stop by themselves. After three rounds, don't ask Codex for more reviews.
-  Run `pnpm pr:status <pr>... --no-requests` instead.
+  Add `--no-requests` to each `pnpm pr:status` command for that PR, including `--wait`.
   After the third round, fix only showstoppers. File the other findings that are valid and
   worth fixing together as one ticket, reply on each thread with its ID, and list them in
   your report.
@@ -166,7 +168,7 @@ action it tells you to take, in any section.
 without the fix`. A skipped check counts as passed.
 - Right before you merge or close a PR, check its comments one last time. A bot can post a
   finding after you report a PR as ready, such as Codex's review of the last commit. Run
-  `pnpm pr:status <pr>...`, which lists bot threads with no reply, then read all review
+  `pnpm pr:status <pr>`, which lists bot threads with no reply. Then read all review
   threads, reviews and PR comments with `gh api --paginate`. Judge each finding
   that you haven't answered as "Handle findings and CI" says. Then:
   - If it is a showstopper, don't merge or close the PR. Fix it, even after the third
@@ -176,10 +178,10 @@ without the fix`. A skipped check counts as passed.
     ID.
   - If not, reply on its thread with the reason.
   - Then merge or close the PR.
-- If "Merge your own PR" allows it, merge the PR. If not, wait for the maintainer as the
-  steward skill says: with `pnpm pr:status <pr>... --wait` or the PR's GitHub events, else
-  with a check-in every 4 hours for up to 24 hours. Don't ask the maintainer to tell you when
-  it merges.
+- If "Merge your own PR" allows it, merge the PR. If not, wait for the maintainer with a
+  check-in every 4 hours for up to 24 hours, as the steward skill says. In a cloud session,
+  also subscribe to the PR's GitHub events. Don't use `--wait` for that PR, because it
+  returns at once for a `ready` PR. Don't ask the maintainer to tell you when it merges.
 - When the maintainer merges or closes the PR, do the same comment check at once. File
   each new finding that is valid and worth fixing. If one is a showstopper, give its ticket
   Urgent priority, and tell the maintainer in your report.
@@ -199,7 +201,7 @@ when all of these are true:
 
 - It is ready to merge, as "Finish the PR" says, and the last comment check found no
   showstopper.
-- `pnpm pr:status <pr>...` reports it as `ready`: CI passed, and Codex has completed a review
+- `pnpm pr:status <pr>` reports it as `ready`: CI passed, and Codex has completed a review
   of its last commit.
 - Its last review round found nothing new, or it has had three rounds.
 - It needs no "Stop and ask" decision.
