@@ -360,7 +360,7 @@ const proseCases: ProseCase[] = [
   {
     section: 'Weight',
     input: 'Top 10 in the class',
-    expected: { value: 10, unit: 'in' },
+    expected: { value: 10, unit: 'in', type: 'height' },
     statement: '`Top 10 in the class` returns 10 inches',
   },
   {

@@ -387,10 +387,10 @@
 {"id": "prose-born", "input": "born in 1990", "expected": null, "category": "prose", "source": "handwritten"}
 {"id": "prose-check-in", "input": "check-in: 5", "expected": null, "category": "prose", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
 {"id": "prose-m-28", "input": "M 28", "expected": null, "category": "prose", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "prose-top-10-in", "input": "Top 10 in the class", "expected": {"value": 10, "unit": "in", "type": "height"}, "category": "prose", "source": "handwritten", "note": "\"in\" after a number always means inches (README, AFA-67)."}
-{"id": "prose-ranked-3-in", "input": "ranked 3 in the state", "expected": {"value": 3, "unit": "in", "type": "height"}, "category": "prose", "source": "AFA-67", "note": "\"in\" after a number always means inches (README, AFA-67)."}
-{"id": "prose-2-in-a-row", "input": "2 in a row", "expected": {"value": 2, "unit": "in", "type": "height"}, "category": "prose", "source": "AFA-67", "note": "\"in\" after a number always means inches (README, AFA-67)."}
-{"id": "prose-5-in-total", "input": "5 in total", "expected": {"value": 5, "unit": "in", "type": "height"}, "category": "prose", "source": "AFA-67", "note": "\"in\" after a number always means inches (README, AFA-67)."}
+{"id": "prose-top-10-in", "input": "Top 10 in the class", "expected": {"value": 10, "unit": "in", "type": "height"}, "category": "prose", "source": "handwritten", "note": "\"in\" after a number means inches (README, AFA-67)."}
+{"id": "prose-ranked-3-in", "input": "ranked 3 in the state", "expected": {"value": 3, "unit": "in", "type": "height"}, "category": "prose", "source": "AFA-67", "note": "\"in\" after a number means inches (README, AFA-67)."}
+{"id": "prose-2-in-a-row", "input": "2 in a row", "expected": {"value": 2, "unit": "in", "type": "height"}, "category": "prose", "source": "AFA-67", "note": "\"in\" after a number means inches (README, AFA-67)."}
+{"id": "prose-5-in-total", "input": "5 in total", "expected": {"value": 5, "unit": "in", "type": "height"}, "category": "prose", "source": "AFA-67", "note": "\"in\" after a number means inches (README, AFA-67)."}
 {"id": "prose-kids-cats", "input": "I have 2 kids and 3 cats", "expected": null, "category": "prose", "source": "handwritten"}
 {"id": "prose-5g", "input": "5G", "expected": null, "category": "prose", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
 {"id": "prose-age", "input": "I'm 30 years old", "expected": null, "category": "prose", "source": "handwritten"}
