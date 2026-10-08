@@ -343,14 +343,22 @@ export function reasonlessDirectives(source, ranges) {
         changed(index + 1) && text.includes('Stryker disable') ? [index + 1] : []
       );
   }
+  const offsets = found
+    .filter(({ text }) => {
+      const directive = DIRECTIVE.exec(text);
+      return directive !== null && !directive[1]?.trim();
+    })
+    .map(({ at }) => at)
+    .sort((a, b) => a - b);
+  // Git, which gives the changed lines, breaks lines only at "\n". TypeScript's line numbers also
+  // break at a lone "\r", U+2028 and U+2029 (AFA-115). One pass counts the "\n" before each
+  // directive, so many directives in a long file don't make the check slow.
   /** @type {Set<number>} */
   const lines = new Set();
-  for (const { at, text } of found) {
-    const directive = DIRECTIVE.exec(text);
-    if (directive === null || directive[1]?.trim()) continue;
-    // Git, which gives the changed lines, breaks lines only at "\n". TypeScript's line numbers also
-    // break at a lone "\r", U+2028 and U+2029 (AFA-115). Only a directive needs its line.
-    const line = source.slice(0, at).split('\n').length;
+  let line = 1;
+  let next = source.indexOf('\n');
+  for (const at of offsets) {
+    for (; next !== -1 && next < at; next = source.indexOf('\n', next + 1)) line++;
     if (changed(line)) lines.add(line);
   }
   return [...lines].sort((a, b) => a - b);
