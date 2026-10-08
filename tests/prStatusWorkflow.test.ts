@@ -2,7 +2,8 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 // GitHub runs .github/workflows/pr-status.yml from main for most of its events, so a PR can't
-// run its own copy. These tests read the file instead. Each expected value is from AFA-108.
+// run its own copy. These tests read the file instead. Each expected value is from AFA-108 or
+// AFA-143.
 const workflow = readFileSync('.github/workflows/pr-status.yml', 'utf8');
 
 /** The `types` list of an event under `on:`. */

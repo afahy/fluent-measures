@@ -14,6 +14,7 @@ on:
     types: [created, deleted]
   issue_comment:
     types: [created, edited, deleted]
+  # No status events: only CodeRabbit sent them, and its state is only a note (AFA-143).
   # GitHub doesn't send check_suite events for suites that Actions creates, so follow the
   # workflows that a PR's checks come from. They can start again without a push, for example
   # after a title edit or a re-run, so a start counts as well as the end. GitHub sends

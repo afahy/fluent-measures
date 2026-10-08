@@ -1,6 +1,8 @@
 // Sets a `pr-status` commit status on a pull request's head commit with what pr-state.mjs
 // decides, so the maintainer and agents can see on the PR what it waits on (AFA-100). Used by
-// .github/workflows/pr-status.yml, which runs on the events that can change a PR's state.
+// .github/workflows/pr-status.yml, which runs on PR, review and comment events, when the CI
+// workflows start or end, and every 30 minutes. A commit status doesn't start it (AFA-143), so a
+// CI that reports with commit statuses shows its end at the next 30-minute run.
 //
 // The status is `success` when the PR is ready, `failure` when it needs the agent, and
 // `pending` while it waits on CI or a bot. When nothing else is open and the PR waits only for
@@ -65,13 +67,6 @@ export function describeStatus(status) {
  * @returns {Promise<number[]>}
  */
 export async function prsForEvent(api, repo, name, event) {
-  /** @param {string} sha */
-  const openPrsWith = async sha => {
-    const pulls = /** @type {{ number: number, state: string }[]} */ (
-      await api.get(`/repos/${repo}/commits/${sha}/pulls`)
-    );
-    return pulls.filter(p => p.state === 'open').map(p => p.number);
-  };
   switch (name) {
     case 'pull_request':
     case 'pull_request_review':
@@ -91,8 +86,6 @@ export async function prsForEvent(api, repo, name, event) {
       );
       return pulls.map(p => p.number);
     }
-    case 'status':
-      return openPrsWith(event.sha);
     // Bots' and CI's timers run out without an event, so a schedule checks every open PR.
     case 'schedule':
     case 'workflow_dispatch': {
