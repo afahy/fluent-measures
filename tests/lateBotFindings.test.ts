@@ -259,6 +259,11 @@ describe('lateFinding', () => {
       'Stray:\n\n```js',
       '\n\n```\ncode\n```',
     ],
+    [
+      'a prompt whose emoji title is in a <b> tag, after an unclosed fence',
+      'Stray:\n\n```js\n\n<details>\n<summary><b>🤖 Prompt for AI Agents</b></summary>\n\n```\nagent instructions\n```\n\n</details>',
+      '',
+    ],
   ])('keeps the next file after %s', (_name, inside, inB) => {
     const body = `<details>\n<summary>🧹 Nitpick comments (2)</summary><blockquote>\n\n<details>\n<summary>README.md (1)</summary><blockquote>\n\nFinding A\n\n${inside}\n\n</blockquote></details>\n<details>\n<summary>src/b.ts (1)</summary><blockquote>\n\nFinding B${inB}\n\n</blockquote></details>\n\n</blockquote></details>\n\n${SETTINGS}`;
     const finding = lateFinding('pull_request_review', {
@@ -307,6 +312,10 @@ describe('lateFinding', () => {
     [
       'in a Markdown quote',
       '> **🧹 Nitpick comments (1)**\n>\n> <details>\n> <summary>src/a.ts (1)</summary>\n>\n> Finding A\n>\n> </details>',
+    ],
+    [
+      'whose path is one character',
+      '**🧹 Nitpick comments (1)**\n\n<details>\n<summary>a (1)</summary><blockquote>\n\nFinding A\n\n</blockquote></details>',
     ],
     [
       'whose path has a space',

@@ -167,8 +167,9 @@ function codeBlocks(text) {
    * @param {number} at
    */
   const closesInSection = (open, at) => {
+    // The summary's text, without inline tags such as `<b>`.
     const summary = /^<details>[ \t]*$/.test(bare(at))
-      ? /^<summary>([^<]*)/.exec(bare(at + 1))?.[1]
+      ? /^<summary>(.*)$/.exec(bare(at + 1))?.[1].replace(/<[^>]*>/g, '')
       : undefined;
     if (summary !== undefined && /^\s*\p{Extended_Pictographic}/u.test(summary)) return false;
     for (let next = at + 1; next < lines.length; next++) {
@@ -490,7 +491,7 @@ function findingSections(body) {
         !collapsed &&
         depth === 0 &&
         !tag[1] &&
-        /prompt|^[\p{L}\p{N}._/-][^<]*\S \(\d+\)$/iu.test(tag[2]?.trim() ?? '');
+        /prompt|^[\p{L}\p{N}._/-](?:[^<]*\S)? \(\d+\)$/iu.test(tag[2]?.trim() ?? '');
       if (depth === 0 && !collapsed && !inner) {
         end = index + (tag.index ?? 0);
         break;
