@@ -76,7 +76,8 @@ export default [
       // Other ways to skip a test or to mark it as expected to fail, which rule 3 forbids too, and
       // a count of 0 assertions (AFA-70). A skipIf with a real condition, such as the one for
       // Stryker in AFA-95, stays allowed. no-disabled-tests finds .skip on an alias or a chain such
-      // as test.concurrent.skip, but not .fails or .todo, so those match by name alone.
+      // as test.concurrent.skip, but not .fails or .todo. So a call to a .fails or .todo, or to its
+      // .each or .for, matches by name, and a field such as result.todo doesn't.
       'no-restricted-syntax': [
         'error',
         {
@@ -85,7 +86,10 @@ export default [
           message: 'A literal condition always skips the test or always runs it. Use a real one.',
         },
         {
-          selector: 'MemberExpression[property.name=/^(fails|todo)$/]',
+          selector: [
+            'CallExpression > MemberExpression.callee[property.name=/^(fails|todo)$/]',
+            'MemberExpression[property.name=/^(each|for)$/] > MemberExpression.object[property.name=/^(fails|todo)$/]',
+          ].join(', '),
           message: "Don't mark a test as expected to fail or as a todo (AGENTS.md rule 3).",
         },
         {
