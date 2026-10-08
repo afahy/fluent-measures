@@ -67,6 +67,19 @@ const OPTION_SETS: readonly (readonly [name: string, options: ParseOptions])[] =
 
 const INPUT_COUNT = 1800;
 
+// The alias "metre" has its own path in matchUnit. It isn't in UNITS, because a new word there
+// would change the generated inputs that AFA-86 recorded, so these inputs use it (AFA-87).
+const METRE_INPUTS = [
+  'metre',
+  '1.8 metre',
+  '1.8metre',
+  '1 metre 80 cm',
+  'metre: 1.8',
+  '(metre) 1.8',
+  '180 cm (1.8 metre)',
+  '6 ft = 1.83 metre',
+];
+
 // Mulberry32: a small seeded generator, so each run makes the same inputs.
 function random(seed: number): () => number {
   let state = seed;
@@ -98,13 +111,18 @@ function makeInputs(): string[] {
     for (let count = Math.floor(next() * 3); count > 0; count--) input += pick(JOINERS) + chunk();
     inputs.add(input);
   }
-  return [...inputs];
+  return [...inputs, ...METRE_INPUTS];
 }
 
 function describeResult(raw: string, options: ParseOptions): string {
   try {
     const result = parseMeasurement(raw, options);
-    return result ? `${result.value} ${result.unit} ${result.type}` : 'null';
+    if (!result) return 'null';
+    // The parts show which numbers and units the result came from (AFA-87). One part with the
+    // result's own value and unit adds nothing, so the line leaves it out.
+    const total = `${result.value} ${result.unit}`;
+    const parts = result.matches.map(({ value, unit }) => `${value} ${unit}`).join(' + ');
+    return `${total} ${result.type}${parts === total ? '' : ` = ${parts}`}`;
   } catch (error) {
     return `throws: ${error instanceof Error ? error.message : String(error)}`;
   }

@@ -749,25 +749,66 @@ export function createClient({
     if (token) headers.Authorization = `Bearer ${token}`;
     const cached = cache.get(url);
     if (cached) headers['If-None-Match'] = cached.etag;
-    const response = await get(url, { headers });
+    /**
+     * Runs one step of the request. A network error can pass, so another try can help, also when
+     * the connection drops while the body is read (AFA-147).
+     *
+     * @template T
+     * @param {() => Promise<T>} step
+     * @returns {Promise<T>}
+     */
+    async function answer(step) {
+      try {
+        return await step();
+      } catch (error) {
+        const message = `GitHub didn't answer for ${url}: ${/** @type {Error} */ (error).message}`;
+        throw Object.assign(new Error(message), { retryAt: null, retryable: true, refused: false });
+      }
+    }
+    const response = await answer(() => get(url, { headers }));
     if (response.status === 304 && cached) return cached;
     if (!response.ok) {
+      const { status } = response;
+      const text = (await answer(() => response.text())).slice(0, 200);
+      // GitHub sends these headers with every answer, but only a 403 or a 429 is a rate limit.
       const remaining = response.headers.get('x-ratelimit-remaining');
       const reset = response.headers.get('x-ratelimit-reset');
-      const limited = remaining === '0' && reset;
+      const limited = (status === 403 || status === 429) && remaining === '0' && reset;
+      // A secondary rate limit is a 429, or a 403 that says so or gives a Retry-After. That header
+      // gives the wait in seconds or as a date. Without it, GitHub's docs say to wait a minute.
+      const after = response.headers.get('retry-after');
+      const secondary =
+        !limited &&
+        (status === 429 || (status === 403 && (after !== null || /rate limit/i.test(text))));
+      const afterAt =
+        after === null
+          ? NaN
+          : /^\s*\d+\s*$/.test(after)
+            ? Date.now() + Number(after) * 1000
+            : Date.parse(after);
+      const retryAt = limited
+        ? Number(reset) * 1000
+        : secondary
+          ? Number.isFinite(afterAt)
+            ? afterAt
+            : Date.now() + 60_000
+          : null;
       const error = new Error(
         limited
           ? `GitHub's rate limit is used up until ${new Date(Number(reset) * 1000).toISOString()}`
-          : `GitHub answered ${response.status} for ${url}: ${(await response.text()).slice(0, 200)}`
+          : `GitHub answered ${status} for ${url}: ${text}`
       );
-      Object.assign(error, {
-        status: response.status,
-        retryAt: limited ? Number(reset) * 1000 : null,
+      // A rate limit or a server error can pass, so another try can help. It can't help a token
+      // that GitHub refuses, a 401 or another 403, or a path that isn't there (AFA-147).
+      throw Object.assign(error, {
+        status,
+        retryAt,
+        retryable: retryAt !== null || status >= 500,
+        refused: retryAt === null && (status === 401 || status === 403),
       });
-      throw error;
     }
     const next = /<([^>]+)>;\s*rel="next"/.exec(response.headers.get('link') ?? '')?.[1] ?? null;
-    const result = { data: await response.json(), next };
+    const result = { data: JSON.parse(await answer(() => response.text())), next };
     const etag = response.headers.get('etag');
     if (etag) cache.set(url, { etag, ...result });
     else cache.delete(url);

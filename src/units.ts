@@ -37,18 +37,6 @@ export const LABEL_ALIASES = new Map([
   ['m', 'meter'],
 ]);
 
-// The tokenizer puts one of these tokens before each label, so the parser knows the label's value
-// comes after it, as in "age=28, in=72" and "age=28, kg=72". They're words that ordinary input
-// doesn't contain. A short alias before ":" or "=" is a field name. Any other label can also be
-// the unit of the number before it, as in "72 (in), 180 lbs" and "180 lbs = 82 kg".
-export const NAME_MARK = '_name';
-export const UNIT_MARK = '_unit';
-
-// The tokenizer puts this token before a label that starts a new field, after a comma, semicolon,
-// colon, equals sign or "&", as in "age=28, in=180 lbs". The label can't take the number before
-// this token, because that number belongs to the field before it.
-export const FIELD_MARK = '_field';
-
 // The unit of the next smaller part of a compound measurement, as in "5 ft 11 in" and
 // "1 m 80 cm". Inches have no smaller part.
 export const NEXT_PART: Partial<Record<Unit, Unit>> = { ft: 'in', m: 'cm' };

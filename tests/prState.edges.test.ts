@@ -674,11 +674,14 @@ describe('answers to a bot review', () => {
   });
 
   it("takes a person's thread reply as an answer to a request for changes only", () => {
-    const reply = (review: number) => (snapshot: Snapshot) =>
-      snapshot.reviewComments.push(
-        { ...threadComment(20, rabbit, '2026-10-07T15:00:00Z'), pull_request_review_id: review },
-        threadComment(21, human, '2026-10-07T15:01:00Z', 20)
-      );
+    const reply =
+      (review: number): ((snapshot: Snapshot) => void) =>
+      (snapshot: Snapshot): void => {
+        snapshot.reviewComments.push(
+          { ...threadComment(20, rabbit, '2026-10-07T15:00:00Z'), pull_request_review_id: review },
+          threadComment(21, human, '2026-10-07T15:01:00Z', 20)
+        );
+      };
     expect(unanswered(reply(12))).toEqual([1]);
     // A reply in a thread is about that thread, not about the comments outside the diff.
     expect(unanswered(reply(1))).toEqual([1, 12]);

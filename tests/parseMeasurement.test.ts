@@ -109,6 +109,23 @@ describe('parseMeasurement', () => {
     });
   });
 
+  // The inches' unit belongs to the inches, so it can't also take a number after it.
+  it.each(['5 ft 11 inches 2 years old', '5\'11" 2'])(
+    'keeps the inches unit with the inches in %s',
+    raw => {
+      expect(parseMeasurement(raw)).toEqual({
+        value: 71,
+        unit: 'in',
+        type: 'height',
+        matches: [
+          { value: 5, unit: 'ft' },
+          { value: 11, unit: 'in' },
+        ],
+        raw,
+      });
+    }
+  );
+
   it('normalizes to centimeters', () => {
     const result = parseMeasurement('5\' 11"', {
       type: 'height',

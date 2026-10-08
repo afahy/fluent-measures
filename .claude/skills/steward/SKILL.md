@@ -66,13 +66,16 @@ that's `waiting` or `waiting-human`. There are two exceptions:
    timeout, up to 2 hours. When a call returns with a state, or with "Nothing changed in …
    min.", act on what it printed. Then run that call again, and leave the other call running.
    A call can also end with an error, or Claude Code can stop it at its timeout. Then read what
-   it printed. If the token or an argument is wrong, fix it before you run the call again. After
-   other errors, such as GitHub or network errors, run the call again after 10 minutes, or after
-   the rate limit resets. Arm a timed check-in for that time, such as a scheduled wake-up. When
-   you run a call again, leave out each PR that merged or closed. Also leave out each `ready` PR
-   that only the maintainer may merge, because `--wait` returns at once for it. Once every PR in
-   both calls is `waiting-human`, don't run them again, and stop the call that is still
-   running. Each return wakes you past the prompt cache, so wait as step 3 says instead.
+   it printed. Exit code 3 means that GitHub refused the token, and 2 that an argument is wrong.
+   With code 1 after a 404 or 422, a PR number or the repository is wrong. Fix these before you
+   run the call again. Network and server errors end the call only after five tries in a row. A
+   rate limit that lasts past `--timeout` ends it at once. After these, run the call again after
+   10 minutes, or after the rate limit resets. Arm a timed check-in for that time, such as a
+   scheduled wake-up. When you run a call again, leave out each PR that merged or closed. Also
+   leave out each `ready` PR that only the maintainer may merge, because `--wait` returns at once
+   for it. Once every PR in both calls is `waiting-human`, don't run them again, and stop the
+   call that is still running. Each return wakes you past the prompt cache, so wait as step 3
+   says instead.
 2. In a cloud session, also subscribe to the PR's GitHub events. The container can stop and take
    the background command with it. On each event or check-in, run `pnpm pr:status <pr>...`
    first, as "Each time you look at a PR" says. Then start the `--wait` calls again if they

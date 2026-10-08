@@ -132,6 +132,22 @@ pnpm docs
 6. Fill in every section of the pull request template (`.github/pull_request_template.md`), including the related issue or Linear ticket and the tests you ran. Don't replace the template with a different format
 7. The PR will be merged once you have the sign-off of at least one maintainer
 
+### Automated Reviews
+
+Codex reviews each push to a pull request, and CodeRabbit reviews when its rate limit allows.
+`.github/workflows/claude-review.yml` asks Claude for one review when a pull request opens or
+becomes ready for review. The review posts comments only and blocks no merge. Claude posts its
+inline comments, and `github-actions` posts its summary.
+
+The Claude review needs this setup, which only the maintainer can do:
+
+1. Install the [Claude GitHub App](https://github.com/apps/claude) on the repository.
+2. Run `claude setup-token`, which prints a token for your Claude subscription.
+3. Add that token as the repository secret `CLAUDE_CODE_OAUTH_TOKEN`.
+4. Create a new token, and replace the secret, before the old token expires one year later.
+
+Without the secret, the workflow skips the review.
+
 ## Key Modules
 
 ### parseMeasurement.ts
@@ -144,7 +160,7 @@ Responsible for identifying and matching unit strings in the input (e.g., "ft", 
 
 ### tokenize.ts
 
-Splits input strings into tokens for processing, handling various formats and special character cases.
+Splits input strings into tokens for processing, handling various formats and special character cases. Each token is an object with its text. A label, such as "(kg)" or "in:", is one token that also gives the kind of label and whether it starts a field. The parser sets a flag on each token that a measurement uses.
 
 ### units.ts
 

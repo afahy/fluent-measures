@@ -97,4 +97,14 @@ describe('any unit as a label', () => {
       expect(parseMeasurement(raw)).toBeNull();
     }
   );
+
+  // Only brackets, ":", "=" and "in." make a label. The words "_unit" and "_name" marked one
+  // before AFA-87, so "5 _unit kg" was 5 kg. Now they're plain words between the number and the
+  // unit, as "unit" is.
+  it.each(['5 _unit kg', '5 _name in', '5 UNIT kg'])(
+    'reads the words in %s as plain words',
+    raw => {
+      expect(parseMeasurement(raw)).toBeNull();
+    }
+  );
 });
