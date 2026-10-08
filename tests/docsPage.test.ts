@@ -139,7 +139,7 @@ describe('the docs page', () => {
     const css = readFileSync(new URL('../docs/tailwind.css', import.meta.url), 'utf8');
     const used = [
       ...[...page.matchAll(/\sclass="([^"]*)"/g)].flatMap(([, list]) => list.split(/\s+/)),
-      ...[...page.matchAll(/classList\.add\(([^)]*)\)/g)].flatMap(([, list]) =>
+      ...[...page.matchAll(/classList\.\w+\(([^)]*)\)/g)].flatMap(([, list]) =>
         [...list.matchAll(/'([^']+)'/g)].map(([, name]) => name)
       ),
     ];
@@ -148,9 +148,11 @@ describe('the docs page', () => {
     const other = new Set(['', 'copied', 'copy-button', 'text-link', 'prose', 'prose-slate']);
     const missing = [...new Set(used)].filter(name => {
       if (other.has(name) || name.startsWith('language-')) return false;
-      // Tailwind escapes a "," in a class name as "\2c " and each other symbol with a "\".
+      // Tailwind escapes a "," in a class name as "\2c " and each other symbol with a "\". The
+      // name must end there, so "border-gray" doesn't match ".border-gray-200".
       const escaped = name.replace(/,/g, '\\2c ').replace(/[^\w\\ -]/g, '\\$&');
-      return !css.includes(`.${escaped}`);
+      const selector = `\\.${escaped.replace(/[\\[\](){}.*+?^$|]/g, '\\$&')}(?![\\w-])`;
+      return !new RegExp(selector).test(css);
     });
     expect(missing).toEqual([]);
   });
