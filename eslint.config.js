@@ -75,7 +75,8 @@ export default [
       'vitest/no-disabled-tests': 'error',
       // Other ways to skip a test or to mark it as expected to fail, which rule 3 forbids too, and
       // a count of 0 assertions (AFA-70). A skipIf with a real condition, such as the one for
-      // Stryker in AFA-95, stays allowed.
+      // Stryker in AFA-95, stays allowed. no-disabled-tests finds .skip on an alias or a chain such
+      // as test.concurrent.skip, but not .fails or .todo, so those match by name alone.
       'no-restricted-syntax': [
         'error',
         {
@@ -84,8 +85,8 @@ export default [
           message: 'A literal condition always skips the test or always runs it. Use a real one.',
         },
         {
-          selector: "MemberExpression[object.name=/^(describe|it|test)$/][property.name='fails']",
-          message: "Don't mark a test as expected to fail (AGENTS.md rule 3).",
+          selector: 'MemberExpression[property.name=/^(fails|todo)$/]',
+          message: "Don't mark a test as expected to fail or as a todo (AGENTS.md rule 3).",
         },
         {
           selector:
