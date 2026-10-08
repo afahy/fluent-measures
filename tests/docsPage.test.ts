@@ -42,27 +42,43 @@ const HASHES: Record<string, string> = {
 /**
  * The class names in a style sheet's selectors, unescaped (AFA-121). Tailwind writes a "\" before
  * a symbol in a class name, as in ".sm\:flex". It writes a "," or a first digit as a hex code
- * point that a space can end, as in ".\32 xl\:text-lg". Comments and at-rules hold no classes.
+ * point that a space can end, as in ".\32 xl\:text-lg". Comments, at-rules and quoted strings
+ * hold no classes, and a class name can't start with a digit, as in a keyframe's "33.3%".
  */
 function cssClasses(css: string): Set<string> {
-  const selectors = [...css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/(?<=^|[{}])([^{}]*)\{/g)]
-    .map(([, text]) => text.trim())
-    .filter(text => !text.startsWith('@'));
   const escape = String.raw`\\[\da-f]{1,6}(?:\r\n|[ \t\n\r\f])?|\\[^\da-f\n\r\f]`;
-  const name = new RegExp(String.raw`\.((?:${escape}|[\w-]|[^\x00-\x7f])+)`, 'gi');
+  // Read up to each brace that isn't escaped. The text before a "{" is a selector or an at-rule,
+  // after the last ";", which ends an at-rule such as @charset.
+  const selectors = [
+    ...css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/((?:\\[\s\S]|[^{}\\])*)([{}])/g),
+  ]
+    .filter(([, , brace]) => brace === '{')
+    .map(([, text]) => text.slice(text.lastIndexOf(';') + 1).trim())
+    .filter(text => !text.startsWith('@'))
+    .map(text =>
+      text.replace(/\\[\s\S]|"(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*'/g, match =>
+        match.startsWith('\\') ? match : ''
+      )
+    );
+  const name = new RegExp(
+    String.raw`\.((?:${escape}|[a-z_-]|[^\x00-\x7f])(?:${escape}|[\w-]|[^\x00-\x7f])*)`,
+    'gi'
+  );
   const unescape = (_: string, hex?: string, symbol?: string): string => {
     if (!hex) return symbol ?? '';
-    // CSS reads code point 0, a surrogate or one past U+10FFFF as U+FFFD.
+    // CSS reads code point 0, a surrogate or any code point above U+10FFFF as U+FFFD.
     const code = parseInt(hex, 16);
     return code === 0 || code > 0x10ffff || (code >= 0xd800 && code <= 0xdfff)
-      ? '�'
+      ? '\uFFFD'
       : String.fromCodePoint(code);
   };
+  const unescapes = new RegExp(
+    String.raw`\\([\da-f]{1,6})(?:\r\n|[ \t\n\r\f])?|\\([^\da-f\n\r\f])`,
+    'gi'
+  );
   return new Set(
     selectors.flatMap(text =>
-      [...text.matchAll(name)].map(([, escaped]) =>
-        escaped.replace(/\\([\da-f]{1,6})(?:\r\n|[ \t\n\r\f])?|\\([\s\S])/gi, unescape)
-      )
+      [...text.matchAll(name)].map(([, escaped]) => escaped.replace(unescapes, unescape))
     )
   );
 }
@@ -197,6 +213,13 @@ describe('the docs page', () => {
     [".content-\\[\\'→\\'\\] { }", ["content-['→']"]],
     ['.\\32\txl { }', ['2xl']],
     ['.\\110000 a { }', ['\uFFFDa']],
+    ['.\\0 a { }', ['\uFFFDa']],
+    ['.\\d800 a { }', ['\uFFFDa']],
+    // An at-rule that ends with ";", a quoted string, a keyframe step and an escaped brace.
+    ['@charset "UTF-8";\n.a { }', ['a']],
+    ['a[href$=".pdf"] { } .b { }', ['b']],
+    ['@keyframes k { 33.3% { opacity: 0; } } .c { }', ['c']],
+    [".content-\\[\\'\\{\\'\\] { } .d { }", ["content-['{']", 'd']],
   ])('reads the classes in %s', (css, names) => {
     expect([...cssClasses(css)]).toEqual(names);
   });
