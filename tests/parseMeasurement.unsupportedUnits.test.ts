@@ -132,8 +132,8 @@ describe('unsupported weight units', () => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });
 
-  // The amount with its own unit now acts as a supported weight does after feet: `5 ft 8 lbs 3 in`
-  // gives 5 × 12 + 3 = 63 in, and `5 ft 8 kg 11 in` gives 71 in.
+  // An amount with an unsupported unit acts as a supported weight does after feet. So
+  // `5 ft 8 lbs 3 in` gives 5 × 12 + 3 = 63 in, and `5 ft 8 kg 11 in` gives 71 in.
   it.each([
     ['5 ft 8 oz 3 in', 63],
     ['5 ft 8 g 11 in', 71],
