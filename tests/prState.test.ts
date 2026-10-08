@@ -167,7 +167,8 @@ describe('classify', () => {
     ]);
   });
 
-  it("waits for Codex to start, but not for CodeRabbit's rate limit (#66 at 15:20)", () => {
+  // AFA-138: CodeRabbit adds no wait, so only the Codex wait remains.
+  it('waits only for Codex to start, and notes CodeRabbit (#66 at 15:20)', () => {
     const status = classify(fixture('pr-66'), at('2026-10-07T15:20:00Z'));
     expect(status.state).toBe('waiting');
     expect(status.pushedAt).toBe('2026-10-07T15:00:44Z');
@@ -179,7 +180,7 @@ describe('classify', () => {
     ]);
     expect(status.notes).toEqual([
       `coderabbitai[bot] replied after your reply: ${pr66}#discussion_r4208534586`,
-      "CodeRabbit was rate limited on c7ad2f4, so the PR doesn't wait for it",
+      'CodeRabbit was rate limited on c7ad2f4',
     ]);
   });
 
@@ -207,9 +208,7 @@ describe('classify', () => {
       expect(status.reasons).toEqual([]);
       expect(status.actions).toEqual([]);
       expect(status.codex.state).toBe('done');
-      expect(status.notes).toEqual([
-        "CodeRabbit was rate limited on 318c1b7, so the PR doesn't wait for it",
-      ]);
+      expect(status.notes).toEqual(['CodeRabbit was rate limited on 318c1b7']);
     }
   });
 
@@ -294,7 +293,9 @@ describe('classify', () => {
     expect(status.state).toBe('waiting');
   });
 
-  it('waits out the 2 hours when CodeRabbit refuses its one review request', () => {
+  // AFA-138: a PR doesn't wait for CodeRabbit after a refusal, an open request or a running
+  // review. The note tells the agent what CodeRabbit did.
+  it('is ready, with a note, when CodeRabbit refuses a review request', () => {
     const snapshot = fixture('pr-67');
     // CodeRabbit's real answer to a request on #43.
     const refusal = fixture('pr-43').issueComments.find(c =>
@@ -312,18 +313,49 @@ describe('classify', () => {
       { ...refusal!, created_at: '2026-10-07T15:50:08Z' }
     );
     const status = classify(snapshot, at('2026-10-07T15:51:00Z'));
-    // AGENTS.md asks each bot once per commit and lets a PR merge after 2 hours without
-    // CodeRabbit. The bots could start when the PR opened at 14:51:34.
     expect(status.coderabbit).toEqual({
       state: 'refused',
       detail: 'CodeRabbit refused the review request: Pull request base or head changed.',
-      until: '2026-10-07T16:51:34.000Z',
     });
-    expect(status.state).toBe('waiting');
-    const later = classify(snapshot, at('2026-10-07T16:51:34Z'));
-    expect(later.coderabbit.state).toBe('gave-up');
-    // Codex reviewed the head, so the PR is ready.
-    expect(later.state).toBe('ready');
+    expect(status.state).toBe('ready');
+    expect(status.notes).toEqual([
+      'CodeRabbit refused the review request: Pull request base or head changed.',
+    ]);
+  });
+
+  it('is ready, with a note that names the request, while a CodeRabbit request is open (#67 at 15:51)', () => {
+    const snapshot = fixture('pr-67');
+    snapshot.issueComments.push({
+      id: 1,
+      user: { login: 'afahy', type: 'User' },
+      body: 'Agent: @coderabbitai review',
+      created_at: '2026-10-07T15:50:00Z',
+      updated_at: '2026-10-07T15:50:00Z',
+      html_url: 'https://github.com/afahy/fluent-measures/pull/67#issuecomment-1',
+    });
+    const status = classify(snapshot, at('2026-10-07T15:51:00Z'));
+    expect(status.coderabbit.state).toBe('requested');
+    expect(status.state).toBe('ready');
+    expect(status.waits).toEqual([]);
+    expect(status.actions).toEqual([]);
+    expect(status.notes).toEqual([
+      'CodeRabbit was asked at 2026-10-07T15:50:00Z for a review of 318c1b7',
+    ]);
+  });
+
+  it('is ready, with a note, while CodeRabbit reviews the head', () => {
+    const snapshot = fixture('pr-67');
+    snapshot.statuses.push({
+      context: 'CodeRabbit',
+      state: 'pending',
+      description: 'Review in progress',
+      created_at: '2026-10-07T15:50:00Z',
+    });
+    const status = classify(snapshot, at('2026-10-07T15:51:00Z'));
+    expect(status.coderabbit.state).toBe('running');
+    expect(status.state).toBe('ready');
+    expect(status.waits).toEqual([]);
+    expect(status.notes).toEqual(['CodeRabbit is reviewing 318c1b7']);
   });
 
   it('is ready when CI passed, both bots reviewed the head and GitHub allows the merge', () => {

@@ -131,19 +131,20 @@ action it tells you to take, in any section.
     and ask", label it `needs-decision` instead.
 - Start each comment that you post with `Agent:`. Reply to each bot thread, and resolve
   each thread that a pushed commit fixes.
-- After each push, watch CI and the bot reviews of that commit as
+- After each push, watch CI and Codex's review of that commit as
   `.claude/skills/steward/SKILL.md` says. `pnpm pr:status <pr>...` decides when they're
   done, and `pnpm pr:status <pr>... --wait` waits for them. Don't ask whether to watch.
-- Post the bot review requests that `pnpm pr:status <pr>...` lists. It lists one for a bot
-  that hasn't started 30 minutes after it could, and for a CodeRabbit review that ended
-  without success. It lists each request once for each commit, and stops waiting for a bot
-  after two hours. It doesn't wait for CodeRabbit when CodeRabbit is rate limited on the
-  commit, and doesn't ask it again for that commit. Note each gap in your report.
+- Post the Codex review requests that `pnpm pr:status <pr>...` lists. It lists one when Codex
+  hasn't started 30 minutes after it could, once for each commit. It stops waiting for Codex
+  after two hours.
+- Don't wait for CodeRabbit, and don't ask it to review: it reviews in time or it doesn't.
+  Handle its findings when they arrive before the merge. The late-bot-findings workflow
+  records a finding that arrives after the merge. Note each gap in your report.
 - If a CI job fails because no runner picked it up, re-run the failed jobs. If GitHub
   reports an Actions incident, re-run them when it ends. Fix all other CI failures on the
   branch.
 - A review round is one push and the bot reviews of that push. Codex reviews every push, so
-  the rounds don't stop by themselves. After three rounds, don't ask for more bot reviews.
+  the rounds don't stop by themselves. After three rounds, don't ask Codex for more reviews.
   Run `pnpm pr:status <pr>... --no-requests` instead.
   After the third round, fix only showstoppers. File the other findings that are valid and
   worth fixing together as one ticket, reply on each thread with its ID, and list them in
@@ -199,8 +200,7 @@ when all of these are true:
 - It is ready to merge, as "Finish the PR" says, and the last comment check found no
   showstopper.
 - `pnpm pr:status <pr>...` reports it as `ready`: CI passed, and Codex has completed a review
-  of its last commit. CodeRabbit has reviewed that commit, had two hours to, or was rate
-  limited on it.
+  of its last commit.
 - Its last review round found nothing new, or it has had three rounds.
 - It needs no "Stop and ask" decision.
 - The PR body and a ticket comment list each result that it changes from `main` beyond the

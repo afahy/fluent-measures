@@ -151,7 +151,7 @@ export function codexSummaryRows(
   body: string
 ): { review: string; status: string; commit: string | null }[];
 export function codexState(snapshot: Snapshot, now: number): BotState;
-export function coderabbitState(snapshot: Snapshot, now: number): BotState;
+export function coderabbitState(snapshot: Snapshot): BotState;
 export function unansweredBotThreads(comments: ReviewComment[]): ReviewComment[];
 export function botFollowUps(comments: ReviewComment[]): ReviewComment[];
 export function unansweredReviewBodies(snapshot: Snapshot): Review[];
