@@ -212,6 +212,7 @@ function hasUnsupportedPart(
 ): boolean {
   const word = remainingTokens[i];
   if (!UNSUPPORTED_WEIGHT_UNITS.test(word)) return false;
+  // Stryker disable next-line StringLiteral: a missing token and "Stryker was here!" are both no weight unit.
   const isWeightUnit = (token = ''): boolean => matchUnit(token, 'weight', fuzziness) !== null;
   // A signed number here reads as its value without the sign. A minus sign doesn't make
   // the part unrelated, as in "-12st 4lb", "-12;st 4lb", "stone -12, 4 lb" and
