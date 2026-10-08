@@ -200,11 +200,11 @@ try {
   // with the error.
   /** @param {unknown} [error] */
   const unchanged = error => {
+    if (!error) finish(latest, json, `Nothing changed in ${timeout} min.`);
     const minutes = Math.round((Date.now() - started) / 60000);
-    const why = error
-      ? ` The next try would come after --timeout: ${/** @type {Error} */ (error).message}`
-      : '';
-    finish(latest, json, `Nothing changed in ${minutes} min.${why}`);
+    const { message } = /** @type {Error} */ (error);
+    const why = `The next try would come after --timeout: ${message}`;
+    finish(latest, json, `Nothing changed in ${minutes} min. ${why}`);
   };
   while (Date.now() < deadline) {
     await sleep(Math.min(interval * 1000, deadline - Date.now()));

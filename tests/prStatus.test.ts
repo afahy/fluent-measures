@@ -267,6 +267,17 @@ describe('pr-status.mjs', () => {
     }
   );
 
+  // With nothing new before --timeout, the call prints the last result with the --timeout that it
+  // was given (AFA-148 keeps this from main).
+  it('with --wait, prints the last result with its --timeout when nothing changes', async () => {
+    const blocked = answered();
+    blocked.pull.mergeable_state = 'blocked';
+    const api = await serve([blocked]);
+    const result = await run(api.url, ['43', '--wait', '--interval', '1', '--timeout', '0.03']);
+    expect(result.code).toBe(30);
+    expect(result.stdout.split('\n')[0]).toBe('Nothing changed in 0.03 min.');
+  });
+
   // AFA-148 item 1: a rate limit that lasts past --timeout ends a call that has a result with that
   // result, as before AFA-147, not with exit 1.
   it('with --wait, prints the last result when a later rate limit lasts past --timeout', async () => {

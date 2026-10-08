@@ -795,10 +795,10 @@ export function createClient({
     if (response.status === 304 && cached) return cached;
     if (!response.ok) {
       const { status } = response;
-      // A body that stops is a network error, which another try can help (AFA-147). But a 401, a
-      // 404 or another 4xx still says what is wrong without it, so a 401 still exits 3 and a 404
-      // still ends the call (AFA-148). Only a 403's text can tell a rate limit from a refused
-      // token, so a 403, a 429 and a 5xx stay network errors.
+      // A body that stops is a network error, which another try can help (AFA-147). A 401, a 404
+      // or another 4xx still says what is wrong without its body. So a 401 still exits 3, and a
+      // 404 still ends the call (AFA-148). Only a 403's text can tell a rate limit from a
+      // refused token, so a 403, a 429 and a 5xx stay network errors.
       const read =
         [403, 429].includes(status) || status >= 500
           ? answer(() => response.text())
