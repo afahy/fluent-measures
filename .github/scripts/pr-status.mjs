@@ -179,7 +179,9 @@ try {
         const { retryable, retryAt } =
           /** @type {{ retryable?: boolean, retryAt?: number | null }} */ (error);
         if (!wait || !retryable || (retryAt && retryAt >= deadline)) throw error;
-        if (retryAt) {
+        // A reset time that has passed, as with a skewed clock, counts as another error, so the
+        // call can't try again at once without end.
+        if (retryAt && retryAt > Date.now()) {
           await sleep(retryAt - Date.now());
           continue;
         }

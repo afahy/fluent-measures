@@ -222,6 +222,21 @@ describe('pr-status.mjs', () => {
     expect(api.hits('/pulls/43')).toBe(1);
   });
 
+  // AFA-147, CodeRabbit on #114: a reset time that has passed counts as an error, so five in a row
+  // end the call.
+  it('with --wait, exits with 1 after five rate limits whose reset time has passed', async () => {
+    const reset = String(Math.floor(Date.now() / 1000) - 60);
+    const failure = {
+      status: 403,
+      headers: { 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': reset },
+    };
+    const api = await serve([fixture('pr-43-at-1810')], Array(10).fill(failure));
+    const result = await run(api.url, ['43', '--wait', '--interval', '1']);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain("GitHub's rate limit is used up until");
+    expect(api.hits('/pulls/43')).toBe(5);
+  });
+
   it('without --wait, exits with 1 at once for a server error', async () => {
     const api = await serve([fixture('pr-43-at-1810')], [{ status: 503 }]);
     const result = await run(api.url, ['43']);
