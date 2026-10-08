@@ -1,4 +1,3 @@
-import { Buffer } from 'node:buffer';
 import { execFile } from 'node:child_process';
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { createServer, type IncomingHttpHeaders, type Server } from 'node:http';
@@ -67,16 +66,57 @@ describe('describeStatus', () => {
     expect(describeStatus(bare)).toBe('needs-agent: See');
   });
 
-  it('keeps the description to 140 characters, without splitting an emoji', () => {
+  it('keeps the description to 140 characters', () => {
     const status = classify(ready67(), at('2026-10-07T16:00:00Z'));
     const long: PrStatus = { ...status, state: 'waiting-human', reasons: ['x'.repeat(200)] };
     expect(describeStatus(long)).toBe(`waiting-human: ${'x'.repeat(124)}…`);
     // 15 + 125 is exactly 140, so nothing is cut.
     const full: PrStatus = { ...long, reasons: ['x'.repeat(125)] };
     expect(describeStatus(full)).toBe(`waiting-human: ${'x'.repeat(125)}`);
-    // "waiting-human: " is 15 characters, so the 124th character after it is the 👍.
+  });
+
+  // GitHub answered 422, "Description doesn't accept 4-byte Unicode", to a status with the 👀
+  // (AFA-108).
+  it('drops each character outside the Basic Multilingual Plane, and the brackets around it', () => {
+    const snapshot = fixture('pr-66');
+    snapshot.reactions.push({
+      user: { login: 'chatgpt-codex-connector[bot]', type: 'Bot' },
+      content: 'eyes',
+      created_at: '2026-10-07T15:10:00Z',
+    });
+    // At 15:20 the first wait was "Codex hasn't started" (above). After the 👀, it is
+    // "Codex is reviewing (👀)", and the other wait stays.
+    expect(describeStatus(classify(snapshot, at('2026-10-07T15:20:00Z')))).toBe(
+      'waiting: Codex is reviewing (+1 more)'
+    );
+    const status = classify(ready67(), at('2026-10-07T16:00:00Z'));
     const emoji: PrStatus = { ...status, state: 'waiting-human', reasons: ['👍'.repeat(200)] };
-    expect(describeStatus(emoji)).toBe(`waiting-human: ${'👍'.repeat(124)}…`);
+    expect(describeStatus(emoji)).toBe('waiting-human');
+    // The 👍s are dropped before the length check, so 15 + 125 characters fit with no cut.
+    const mixed: PrStatus = { ...emoji, reasons: [`${'👍'.repeat(5)}${'x'.repeat(125)}`] };
+    expect(describeStatus(mixed)).toBe(`waiting-human: ${'x'.repeat(125)}`);
+    // A character in the plane, such as ✅ (U+2705), stays.
+    const check: PrStatus = { ...emoji, reasons: ['✅ (ok)'] };
+    expect(describeStatus(check)).toBe('waiting-human: ✅ (ok)');
+  });
+
+  it('leaves no extra spaces, joiners, other brackets or lone surrogates', () => {
+    const status = classify(ready67(), at('2026-10-07T16:00:00Z'));
+    const describe = (reason: string): string =>
+      describeStatus({ ...status, state: 'waiting-human', reasons: [reason] });
+    expect(describe("Codex's review of abc is 🔄 Running")).toBe(
+      "waiting-human: Codex's review of abc is Running"
+    );
+    expect(describe('call parseMeasurement() first (👀)')).toBe(
+      'waiting-human: call parseMeasurement() first'
+    );
+    // 👨‍💻 is 👨, a zero-width joiner and 💻. In ❤️‍🔥, only 🔥 is outside the plane, so ❤️
+    // (U+2764 and U+FE0F) stays without the joiner.
+    expect(describe('👨\u200D💻 (❤\uFE0F\u200D🔥) done')).toBe('waiting-human: (❤\uFE0F) done');
+    expect(describe('\uD83D x')).toBe('waiting-human: x');
+    expect(describe('one 👍, two')).toBe('waiting-human: one, two');
+    // Spaces that weren't next to a dropped character stay as they are.
+    expect(describe('a  b 👀')).toBe('waiting-human: a  b');
   });
 
   it("says only the state when there's nothing to name", () => {
@@ -160,10 +200,6 @@ describe('setStatus', () => {
   } {
     return {
       async get(path: string): Promise<unknown> {
-        if (path.includes('/contents/')) {
-          if (!snapshot.codeowners) throw Object.assign(new Error('Not Found'), { status: 404 });
-          return { content: Buffer.from(snapshot.codeowners).toString('base64') };
-        }
         if (path.includes('/pulls/')) return snapshot.pull;
         if (path.includes('/activity')) return snapshot.pushes;
         return snapshot.headCommit;
@@ -174,7 +210,6 @@ describe('setStatus', () => {
         if (path.endsWith('/statuses')) return snapshot.statuses;
         if (path.endsWith('/reviews')) return snapshot.reviews;
         if (path.endsWith('/reactions')) return snapshot.reactions;
-        if (path.endsWith('/files')) return snapshot.files.map(filename => ({ filename }));
         if (path.includes('/pulls/')) return snapshot.reviewComments;
         return snapshot.issueComments;
       },
@@ -361,10 +396,6 @@ describe('pr-status-check.mjs', () => {
       [`${base}/pulls/67/reviews`]: snapshot.reviews,
       [`${base}/pulls/67/comments`]: snapshot.reviewComments,
       [`${base}/issues/67/reactions`]: snapshot.reactions,
-      [`${base}/pulls/67/files`]: snapshot.files.map(filename => ({ filename })),
-      [`${base}/contents/.github/CODEOWNERS`]: {
-        content: Buffer.from(snapshot.codeowners ?? '').toString('base64'),
-      },
     };
     const posts: { path: string; headers: IncomingHttpHeaders; body: unknown }[] = [];
     const server = createServer((request, response) => {

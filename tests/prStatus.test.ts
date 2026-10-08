@@ -1,4 +1,3 @@
-import { Buffer } from 'node:buffer';
 import { execFile } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
@@ -46,10 +45,6 @@ async function serve(snapshots: Snapshot[]): Promise<{ url: string; polls: () =>
       [`${base}/pulls/43/reviews`]: s?.reviews,
       [`${base}/pulls/43/comments`]: s?.reviewComments,
       [`${base}/issues/43/reactions`]: s?.reactions,
-      [`${base}/pulls/43/files`]: s?.files.map(filename => ({ filename })),
-      [`${base}/contents/.github/CODEOWNERS`]: s?.codeowners && {
-        content: Buffer.from(s.codeowners).toString('base64'),
-      },
     };
     const body = routes[path];
     response.writeHead(body === undefined ? 404 : 200, { 'Content-Type': 'application/json' });

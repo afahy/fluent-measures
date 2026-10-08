@@ -3,11 +3,20 @@ import tseslint from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
 import vitest from '@vitest/eslint-plugin';
 
+// The file formats that vitest.config.ts runs as tests (AFA-68), for every file under tests/.
+// TypeScript's project covers the TypeScript formats. The JavaScript formats get ESLint's own
+// parser, and tests/lintFormats.test.ts checks that the two lists cover Vitest's formats.
+const TS_TESTS = 'tests/**/*.{ts,mts,cts,tsx}';
+const JS_TESTS = 'tests/**/*.{js,mjs,cjs,jsx}';
+// Options that the TypeScript and JavaScript blocks share.
+const UNUSED = { argsIgnorePattern: '^_', varsIgnorePattern: '^_' };
+const CONSOLE = ['warn', { allow: ['warn', 'error'] }];
+
 export default [
   eslint.configs.recommended,
   {
     ignores: ['**/node_modules/**', '**/dist/**'],
-    files: ['src/**/*.ts', 'tests/**/*.ts'],
+    files: ['src/**/*.ts', TS_TESTS],
     languageOptions: {
       parser: tsParser,
       parserOptions: {
@@ -22,21 +31,29 @@ export default [
     rules: {
       ...tseslint.configs.recommended.rules,
       '@typescript-eslint/explicit-function-return-type': 'warn',
-      '@typescript-eslint/no-unused-vars': [
-        'error',
-        {
-          argsIgnorePattern: '^_',
-          varsIgnorePattern: '^_',
-        },
-      ],
+      '@typescript-eslint/no-unused-vars': ['error', UNUSED],
       '@typescript-eslint/no-explicit-any': 'error',
-      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'no-console': CONSOLE,
     },
+  },
+  {
+    files: [JS_TESTS],
+    languageOptions: { parserOptions: { ecmaFeatures: { jsx: true } } },
+    rules: {
+      'no-unused-vars': ['error', UNUSED],
+      'no-console': CONSOLE,
+    },
+  },
+  // A .cjs test can't import Vitest, which is ESM only, so it uses the globals that
+  // vitest.config.ts turns on.
+  {
+    files: ['tests/**/*.cjs'],
+    languageOptions: { globals: vitest.environments.env.globals },
   },
   // Every test must be able to fail (AGENTS.md rule 11): it must reach an expect, and no expect
   // may sit in a branch that can be skipped.
   {
-    files: ['tests/**/*.ts'],
+    files: [TS_TESTS, JS_TESTS],
     plugins: { vitest },
     rules: {
       ...vitest.configs.recommended.rules,
