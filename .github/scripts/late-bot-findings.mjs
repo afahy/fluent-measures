@@ -49,47 +49,116 @@ const BLANK_LINES = /\n(?:[^\S\n]*\n){2,}/g;
 const INNERMOST_DETAILS = /<details\b[^>]*>(?:(?!<details\b)[\s\S])*?<\/details>/gi;
 
 /**
- * The text with each code span and fenced block blanked out, so that the patterns don't read
- * HTML in code. A code span starts at a run of backticks and ends at the next run of the same
- * length, as in CommonMark. An odd number of backslashes before a backtick makes it plain text,
- * and an inline span ends at a blank line, so a stray backtick can't hide a collapsed section.
- * Only a fence, three or more backticks after at most three spaces at the start of a line, can
- * hold blank lines. Line breaks stay, and the length doesn't change, so an index is the same in
- * both.
+ * The code in Markdown text, as CommonMark reads it, so that the patterns don't read HTML in
+ * code. Each range runs from `start` to `end`, with its backticks, and `inline` is true for a
+ * code span.
+ *
+ * The first pass reads code blocks line by line, after any `>` that starts a quote:
+ * - A fence is three or more backticks after at most three spaces, with no backtick after them.
+ *   A line of at least as many backticks and nothing else closes it, and an unclosed fence runs
+ *   to the end.
+ * - A line indented four spaces or a tab after a blank line starts an indented block. The block
+ *   ends before the next line that has text and a smaller indent.
+ *
+ * The second pass reads code spans outside those blocks. A span starts at a run of backticks
+ * and ends at the next run of the same length. An odd number of backslashes before a backtick
+ * makes it plain text. A span ends at a blank line, so a stray backtick can't hide a collapsed
+ * section.
+ *
+ * @param {string} text
+ * @returns {{ start: number, end: number, inline: boolean }[]}
+ */
+function codeRanges(text) {
+  /** @type {{ start: number, end: number, inline: boolean }[]} */
+  const ranges = [];
+  /** @type {{ start: number, length: number } | null} */
+  let fence = null;
+  let block = -1;
+  let blockEnd = 0;
+  let blank = true;
+  let start = 0;
+  for (const line of text.split('\n')) {
+    const end = start + line.length;
+    const rest = line.replace(/^(?: {0,3}> ?)*/, '');
+    const empty = rest.trim() === '';
+    if (fence) {
+      const close = /^ {0,3}(`+) *$/.exec(rest);
+      if (close && close[1].length >= fence.length) {
+        ranges.push({ start: fence.start, end, inline: false });
+        fence = null;
+      }
+    } else {
+      const indented = !empty && /^(?: {4}|\t)/.test(rest);
+      if (block !== -1 && !empty && !indented) {
+        ranges.push({ start: block, end: blockEnd, inline: false });
+        block = -1;
+      }
+      const open = /^ {0,3}(`{3,})[^`]*$/.exec(rest);
+      if (indented && (block !== -1 || blank)) {
+        if (block === -1) block = start;
+        blockEnd = end;
+      } else if (open && !indented) {
+        fence = { start, length: open[1].length };
+      }
+    }
+    blank = empty;
+    start = end + 1;
+  }
+  if (fence) ranges.push({ start: fence.start, end: text.length, inline: false });
+  if (block !== -1) ranges.push({ start: block, end: blockEnd, inline: false });
+
+  const blocks = mask(text, ranges);
+  let at = blocks.indexOf('`');
+  while (at !== -1) {
+    let slashes = 0;
+    while (blocks[at - 1 - slashes] === '\\') slashes += 1;
+    if (slashes % 2 === 1) {
+      at = blocks.indexOf('`', at + 1);
+      continue;
+    }
+    let end = at;
+    while (blocks[end] === '`') end += 1;
+    const run = blocks.slice(at, end);
+    let close = blocks.indexOf(run, end);
+    // A run of a different length doesn't close the span.
+    while (close !== -1 && (blocks[close - 1] === '`' || blocks[close + run.length] === '`')) {
+      close = blocks.indexOf(run, close + 1);
+    }
+    if (close === -1 || /\n[^\S\n]*\n/.test(blocks.slice(end, close))) {
+      at = blocks.indexOf('`', end);
+      continue;
+    }
+    ranges.push({ start: at, end: close + run.length, inline: true });
+    at = blocks.indexOf('`', close + run.length);
+  }
+  return ranges;
+}
+
+/**
+ * The text with each range blanked out. Line breaks stay, and the length doesn't change, so an
+ * index is the same in both.
+ *
+ * @param {string} text
+ * @param {{ start: number, end: number }[]} ranges
+ * @returns {string}
+ */
+function mask(text, ranges) {
+  let masked = text;
+  for (const { start, end } of ranges) {
+    masked =
+      masked.slice(0, start) + masked.slice(start, end).replace(/[^\n]/g, ' ') + masked.slice(end);
+  }
+  return masked;
+}
+
+/**
+ * The text with its code blanked out, as `mask` does.
  *
  * @param {string} text
  * @returns {string}
  */
 function maskCode(text) {
-  let masked = '';
-  let done = 0;
-  let at = text.indexOf('`');
-  while (at !== -1) {
-    let slashes = 0;
-    while (text[at - 1 - slashes] === '\\') slashes += 1;
-    if (slashes % 2 === 1) {
-      at = text.indexOf('`', at + 1);
-      continue;
-    }
-    let end = at;
-    while (text[end] === '`') end += 1;
-    const run = text.slice(at, end);
-    const lineStart = text.lastIndexOf('\n', at - 1) + 1;
-    const fence = run.length >= 3 && /^ {0,3}$/.test(text.slice(lineStart, at));
-    let close = text.indexOf(run, end);
-    // A run of a different length doesn't close the span.
-    while (close !== -1 && (text[close - 1] === '`' || text[close + run.length] === '`')) {
-      close = text.indexOf(run, close + 1);
-    }
-    if (close === -1 || (!fence && /\n[^\S\n]*\n/.test(text.slice(end, close)))) {
-      at = text.indexOf('`', end);
-      continue;
-    }
-    masked += text.slice(done, end) + text.slice(end, close).replace(/[^\n]/g, ' ');
-    done = close;
-    at = text.indexOf('`', close + run.length);
-  }
-  return masked + text.slice(done);
+  return mask(text, codeRanges(text));
 }
 
 /**
@@ -167,18 +236,18 @@ export function lateFinding(name, event) {
   } else if (kind === 'review') {
     // The findings in a review's threads arrive as their own events. Only CodeRabbit puts
     // findings in the review body, inside collapsed sections.
-    const sections = [...body.matchAll(BODY_FINDINGS)];
-    if (sections.length === 0) return null;
-    const names = sections.map(
+    const sections = findingSections(body);
+    if (sections.titles.length === 0) return null;
+    const names = sections.titles.map(
       m => `${m[2]} ${m[1].toLowerCase()} comment${m[2] === '1' ? '' : 's'}`
     );
     summary = `a review with ${names.join(' and ')}`;
     // Quote only the sections of findings, so the collapsed sections after them, such as the
     // review's settings, stay out. Drop the prompts for AI agents, which repeat the findings as
-    // instructions.
+    // instructions. In a Markdown quote, a `>` starts each line between the tags.
     const prompts =
-      /<details\b[^>]*>\s*<summary>[^<]*prompt[^<]*<\/summary>(?:(?!<details\b)[\s\S])*?<\/details>/gi;
-    text = plainText(removeAll(findingSections(body, sections), [prompts]));
+      /<details\b[^>]*>[\s>]*<summary>[^<]*prompt[^<]*<\/summary>(?:(?!<details\b)[\s\S])*?<\/details>/gi;
+    text = plainText(removeAll(sections.text, [prompts]));
   } else {
     if (ROUTINE.test(body)) return null;
     if (author === 'chatgpt-codex-connector[bot]' && CODEX_TASK.test(body)) return null;
@@ -198,32 +267,40 @@ export function lateFinding(name, event) {
 }
 
 /**
- * The text of each section of findings in a review body, from its title to the `</details>`
- * that closes the collapsed section around it, or to the end if none does.
+ * The sections of findings in a review body, outside code and HTML comments. A title inside a
+ * section that is already quoted adds nothing. A title in a `<summary>` is collapsed, and its
+ * section runs to the `</details>` that closes it. Any other title's section runs to the next
+ * title or collapsed section, or to a `</details>` that closes one around it. A section with no
+ * such end runs to the end of the body.
  *
  * @param {string} body
- * @param {RegExpMatchArray[]} sections The matches of BODY_FINDINGS.
- * @returns {string}
+ * @returns {{ titles: RegExpMatchArray[], text: string }}
  */
-function findingSections(body, sections) {
-  const masked = maskCode(body);
+function findingSections(body) {
+  const masked = maskCode(body).replace(HTML_COMMENT, comment => comment.replace(/[^\n]/g, ' '));
+  const all = [...masked.matchAll(BODY_FINDINGS)];
+  const titles = [];
   const parts = [];
   let end = 0;
-  for (const { index = 0 } of sections) {
-    // A title inside a section that is already quoted adds nothing.
+  for (const [n, title] of all.entries()) {
+    const index = title.index ?? 0;
     if (index < end) continue;
-    end = body.length;
-    let depth = 1;
-    for (const tag of masked.slice(index).matchAll(/<(\/?)details\b[^>]*>/gi)) {
+    const collapsed = /^<summary\b[^>]*>[^<]*$/i.test(
+      masked.slice(masked.lastIndexOf('<', index), index)
+    );
+    end = collapsed ? body.length : (all[n + 1]?.index ?? body.length);
+    let depth = collapsed ? 1 : 0;
+    for (const tag of masked.slice(index, end).matchAll(/<(\/?)details\b[^>]*>/gi)) {
       depth += tag[1] ? -1 : 1;
-      if (depth === 0) {
+      if (depth <= 0 || !collapsed) {
         end = index + (tag.index ?? 0);
         break;
       }
     }
+    titles.push(title);
     parts.push(body.slice(index, end));
   }
-  return parts.join('\n\n');
+  return { titles, text: parts.join('\n\n') };
 }
 
 /**
@@ -252,10 +329,16 @@ export function excerpt(body) {
     .trim();
   // Count characters, not UTF-16 units, so the cut doesn't split an emoji.
   const characters = Array.from(text);
-  const short =
-    characters.length > EXCERPT_LENGTH
-      ? `${characters.slice(0, EXCERPT_LENGTH).join('').trimEnd()}…`
-      : text;
+  let short = text;
+  if (characters.length > EXCERPT_LENGTH) {
+    let cut = characters.slice(0, EXCERPT_LENGTH).join('').length;
+    // A cut inside a code span would leave the HTML in it live, so cut before the span. A cut
+    // fence or indented block stays code to the end of the quote.
+    for (const { start, end, inline } of codeRanges(text)) {
+      if (inline && start < cut && cut < end) cut = start;
+    }
+    short = `${text.slice(0, cut).trimEnd()}…`;
+  }
   return short
     .split('\n')
     .map(line => `> ${line}`.trimEnd())
