@@ -381,6 +381,9 @@ describe('reasonlessDirectives', () => {
     ['const a = 1;\r\n// Stryker disable next-line all\r\nconst b = a ?? 2;', [[2, 2]], [2]],
     // Git's line 2 holds only "y;", so the directive isn't on a changed line.
     ['x;\u2028// Stryker disable all\ny;', [[2, 2]], []],
+    // A line break that Babel and TypeScript count inside a block comment, before "Stryker".
+    ['x;\n/*\u2028Stryker disable all */\ny;', [[2, 2]], [2]],
+    ['x;\n/*\rStryker disable all */\ny;', [[2, 2]], [2]],
   ])('counts lines as git does in %j', (source, ranges, expected) => {
     expect(reasonlessDirectives(source, ranges)).toEqual(expected);
   });

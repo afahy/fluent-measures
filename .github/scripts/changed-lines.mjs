@@ -273,9 +273,8 @@ export function unexplainedIgnores(report, changed) {
 const DIRECTIVE = /^\s?Stryker disable(?: next-line)? [a-zA-Z, ]+(?::(.+))?/;
 
 /**
- * Returns each comment in `source`: the line where its text starts, and its text. The line counts
- * only "\n", as git does, so it matches the changed ranges (AFA-115). The text has no `//`, or `/*`
- * and `*\/`, as Babel gives it to Stryker. The TypeScript parser finds the comments,
+ * Returns each comment in `source`: the offset where its text starts, or of its "Stryker" when it
+ * has one, and its text. The text has no `//`, or `/*` and `*\/`, as Babel gives it to Stryker. The TypeScript parser finds the comments,
  * so a `/*` or `//` inside a string, a template literal or a regex literal isn't one. TypeScript
  * puts a comment on its own line before the next token, and a comment after code after the token
  * before it. So the walk reads the comments before and after each token. It keeps its own stack,
@@ -283,7 +282,7 @@ const DIRECTIVE = /^\s?Stryker disable(?: next-line)? [a-zA-Z, ]+(?::(.+))?/;
  * comment start inside the comment, so the walk skips them.
  *
  * @param {string} source
- * @returns {Array<{ line: number, text: string }>}
+ * @returns {Array<{ at: number, text: string }>}
  */
 function comments(source) {
   const file = ts.createSourceFile('source.ts', source, ts.ScriptTarget.Latest, true);
@@ -308,10 +307,7 @@ function comments(source) {
       pos + 2,
       kind === ts.SyntaxKind.MultiLineCommentTrivia && source.endsWith('*/', end) ? end - 2 : end
     );
-    const at = pos + 2 + Math.max(text.indexOf('Stryker'), 0);
-    // Git, which gives the changed lines, breaks lines only at "\n". TypeScript's line numbers also
-    // break at a lone "\r", U+2028 and U+2029 (AFA-115).
-    return { line: source.slice(0, at).split('\n').length, text };
+    return { at: pos + 2 + Math.max(text.indexOf('Stryker'), 0), text };
   });
 }
 
@@ -332,7 +328,7 @@ function comments(source) {
 export function reasonlessDirectives(source, ranges) {
   const changed = (/** @type {number} */ line) =>
     ranges.some(([from, to]) => line >= from && line <= to);
-  /** @type {Array<{ line: number, text: string }>} */
+  /** @type {Array<{ at: number, text: string }>} */
   let found;
   try {
     found = comments(source);
@@ -349,9 +345,20 @@ export function reasonlessDirectives(source, ranges) {
   }
   /** @type {Set<number>} */
   const lines = new Set();
-  for (const { line, text } of found) {
+  for (const { at, text } of found) {
     const directive = DIRECTIVE.exec(text);
-    if (directive !== null && !directive[1]?.trim() && changed(line)) lines.add(line);
+    if (directive === null || directive[1]?.trim()) continue;
+    // Git, which gives the changed lines, breaks lines only at "\n". TypeScript's line numbers also
+    // break at a lone "\r", U+2028 and U+2029 (AFA-115). Only a directive needs its line.
+    let line = 1;
+    for (
+      let next = source.indexOf('\n');
+      next !== -1 && next < at;
+      next = source.indexOf('\n', next + 1)
+    ) {
+      line++;
+    }
+    if (changed(line)) lines.add(line);
   }
   return [...lines].sort((a, b) => a - b);
 }
