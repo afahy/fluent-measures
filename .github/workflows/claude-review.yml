@@ -35,8 +35,12 @@ jobs:
       # skipped.
       HAS_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}
     steps:
+      # `pnpm pr:status` counts this check, and an agent can't fix a failed review, for example
+      # at the subscription's usage limit or after a network error. So a failed step leaves the
+      # check green.
       - uses: actions/checkout@v4
         if: env.HAS_TOKEN == 'true'
+        continue-on-error: true
         with:
           fetch-depth: 1
           persist-credentials: false
@@ -44,8 +48,6 @@ jobs:
       # The commit of the v1 tag, so a moved tag can't change what runs with the secret.
       - uses: anthropics/claude-code-action@6fed3ca145920b639991cb756090506e1bcaf515 # v1
         if: env.HAS_TOKEN == 'true'
-        # `pnpm pr:status` counts this check. An agent can't fix a review that fails, for example
-        # at the subscription's usage limit, so a failure leaves the check green.
         continue-on-error: true
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -63,7 +65,9 @@ jobs:
             - A bug fix adds a test with the failure inputs that the PR body names, and each
               expected result comes from the ticket, the README or a hand calculation.
             - No existing test is skipped, deleted or loosened.
-            - The README changes when the PR changes a result that the README documents.
+            - A result that a README example documents changes only when the PR body says that
+              the ticket asks for that change, and then the README changes with it. The README
+              is the public specification, so flag any other change to such a result as a bug.
             - A change under `src/`, or to a `package.json` field that reaches consumers, adds a
               changeset under `.changeset/`.
             - The changed code has no bug: no wrong result, no throw and no security problem.
