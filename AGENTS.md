@@ -143,8 +143,8 @@ standing approval for each action it tells you to take, in any section.
   reports an Actions incident, re-run them when it ends. Fix all other CI failures on the
   branch.
 - A review round is one push and the bot reviews of that push. Codex reviews every push, so
-  the rounds don't stop by themselves. After three rounds, don't ask for more bot reviews, and
-  run `pnpm pr:status <pr>... --no-requests`.
+  the rounds don't stop by themselves. After three rounds, don't ask for more bot reviews.
+  Run `pnpm pr:status <pr>... --no-requests` instead.
   After the third round, fix only showstoppers. File the other findings that are valid and
   worth fixing together as one ticket, reply on each thread with its ID, and list them in
   your report.

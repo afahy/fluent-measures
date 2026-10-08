@@ -65,7 +65,7 @@ that's `waiting` or `waiting-human`. There are two exceptions:
    step 3 says instead.
 2. In a cloud session, also subscribe to the PR's GitHub events. The container can stop and take
    the background command with it. On each event or check-in, run `pnpm pr:status <pr>...`
-   first, and start `--wait` again if it isn't running, unless every PR is `waiting-human`. If
+   first. Then start `--wait` again if it isn't running, unless every PR is `waiting-human`. If
    the output is the same as last time, end the turn in one short line.
 3. Use a timed check-in (`send_later`, a scheduled wake-up or cron) only when neither of those
    can wake you. Each check-in that misses the 1-hour prompt cache rewrites the whole
