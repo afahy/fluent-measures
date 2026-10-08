@@ -63,11 +63,16 @@ that's `waiting` or `waiting-human`. There are two exceptions:
    a PR needs you, is ready or closes, or when a PR that waits on the maintainer gets news. It
    gives up after `--timeout` minutes, 100 by default. Give the background command a longer
    timeout than that: Claude Code stops a background command after 30 minutes unless you set a
-   timeout, up to 2 hours. When a call returns, act on what it printed. Then run that call
-   again, and leave the other call running. Leave out each PR that merged or closed, and each
-   `ready` PR that only the maintainer may merge, because `--wait` returns at once for it. Once
-   every PR in both calls is `waiting-human`, don't run them again, and stop the call that is
-   still running. Each return wakes you past the prompt cache, so wait as step 3 says instead.
+   timeout, up to 2 hours. When a call returns with a state, or with "Nothing changed in …
+   min.", act on what it printed. Then run that call again, and leave the other call running.
+   A call can also end with an error, or Claude Code can stop it at its timeout. Then read what
+   it printed. If the token or an argument is wrong, fix it before you run the call again. After
+   other errors, such as GitHub or network errors, run the call again after 10 minutes, or after
+   the rate limit resets. Arm a timed check-in for that time, such as a scheduled wake-up. When
+   you run a call again, leave out each PR that merged or closed. Also leave out each `ready` PR
+   that only the maintainer may merge, because `--wait` returns at once for it. Once every PR in
+   both calls is `waiting-human`, don't run them again, and stop the call that is still
+   running. Each return wakes you past the prompt cache, so wait as step 3 says instead.
 2. In a cloud session, also subscribe to the PR's GitHub events. The container can stop and take
    the background command with it. On each event or check-in, run `pnpm pr:status <pr>...`
    first, as "Each time you look at a PR" says. Then start the `--wait` calls again if they
@@ -92,9 +97,11 @@ that's `waiting` or `waiting-human`. There are two exceptions:
 full SHA. Its result is the CI workflow's `ci-ok` check, for example from
 `gh api 'repos/afahy/fluent-measures/commits/<sha>/check-runs?check_name=ci-ok'`. `ci-ok` starts
 after the other CI jobs end, and it fails when one of them fails. Wait until it is there and its
-status is `completed`, then read its conclusion. If `ci-ok` fails, or isn't there 45 minutes
-after the merge, read the commit's other check runs. Find the CI job that failed, or the one
-that no runner picked up. Workflows other than CI, such as `pr-status.yml`,
+status is `completed`, then read its conclusion. If the conclusion isn't `success`, or `ci-ok`
+hasn't completed 45 minutes after the merge, read the commit's other check runs. A `ci-ok` that
+hasn't completed can be missing, or have a status such as `queued` or `in_progress`. Find the CI
+job that failed or was cancelled, or the one that no runner picked up. If you find none, report
+that CI on `main` is stuck, and stop. Workflows other than CI, such as `pr-status.yml`,
 `late-bot-findings.yml` and `deploy-docs.yml`, add check runs to the merge commit too. Their
 results aren't CI results. Don't use `gh run list --branch main`, which hid queued runs during
 an Actions incident.

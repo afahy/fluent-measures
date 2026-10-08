@@ -63,8 +63,8 @@ const LIST_MARKER = /^(?:[-+*]|\d{1,9}[.)])(?: {1,4}|$)/;
 /**
  * Whether a line, without its quote marks, starts or ends one of the bots' collapsed sections:
  * `<details>` alone on its line with a `<summary>` on the next line, or a line that starts with
- * `</blockquote></details>`. The bots never write these lines in code. HTML code puts a
- * `<summary>` on the same line, as in `<details><summary>x</summary></details>`.
+ * `</blockquote></details>`. HTML code usually puts a `<summary>` on the same line, as in
+ * `<details><summary>x</summary></details>`, but it can hold such lines too (AFA-145).
  *
  * @param {string} line
  * @param {string} next The next line, without its quote marks.
@@ -95,12 +95,15 @@ function fenceRun(words) {
  * marker, which starts a list item. Indents count from the text of the list item.
  * - A fence is three or more backticks or tildes, indented at most three columns. A line of at
  *   least as many of the same marks and spaces or tabs closes it. A fence also ends with its quote
- *   or list item. A fence that is still open at the end of the text, or at a line that starts or
- *   ends one of the bots' collapsed sections, isn't code. A bot that doesn't close a fence more
- *   likely broke its Markdown than put the rest of its comment in code. One case: a suggested
- *   diff for a Markdown file can hold a line of three backticks, which closes its fence early,
- *   and the fence after it then pairs with the fence of the next prompt for AI agents. The
- *   unclosed fence's opening line is in `marks`, so its backticks open no code span.
+ *   or list item. A fence that is still open at the end of the text isn't code: a bot that doesn't
+ *   close a fence more likely broke its Markdown than put the rest of its comment in code.
+ * - A fence that is open at a line that starts or ends one of the bots' collapsed sections isn't
+ *   code either, unless it closes before the next such line. Then the line is HTML code in it
+ *   (AFA-145). The start of one of the bots' own subsections, whose summary starts with an emoji,
+ *   as in "🤖 Prompt for AI Agents" and "🔧 Suggested fix", always ends an open fence. One case:
+ *   a suggested diff for a Markdown file can hold a line of three backticks, which closes its fence
+ *   early, and the fence after it would pair with the fence in the next subsection (AFA-123).
+ * - The opening line of a fence that isn't code is in `marks`, so its backticks open no code span.
  * - A line indented four columns starts an indented block, but not right after a paragraph line.
  *   The block ends before the next line that has text and a smaller indent.
  *
@@ -128,39 +131,75 @@ function codeBlocks(text) {
   /** The line at `at`, without its `\r` and quote marks. */
   const bare = (/** @type {number} */ at) =>
     (lines[at] ?? '').replace(/\r$/, '').replace(/^(?: {0,3}> ?)*/, '');
+  /**
+   * How the line at `at` stands to the open fence: `close` if it closes the fence, `inside` if it's
+   * in the fence, or `ended` if the fence's quote or list item ended before it. In a fence, only
+   * the fence's own quote marks are marks. A closing line must be in the fence's list item, at most
+   * three columns past its text.
+   *
+   * @param {{ mark: string, length: number, quote: RegExp, list: number }} open
+   * @param {number} at
+   * @returns {'close' | 'inside' | 'ended'}
+   */
+  const fenceLine = (open, at) => {
+    const line = (lines[at] ?? '').replace(/\r$/, '');
+    const quote = open.quote.exec(line);
+    if (!quote) return 'ended';
+    const rest = line.slice(quote[0].length);
+    const indent = indentOf(rest);
+    const close = /^(`+|~+)[ \t]*$/.exec(rest.trimStart());
+    if (
+      close &&
+      close[1][0] === open.mark &&
+      close[1].length >= open.length &&
+      indent >= open.list &&
+      indent <= open.list + 3
+    ) {
+      return 'close';
+    }
+    return rest.trim() === '' || indent >= open.list ? 'inside' : 'ended';
+  };
+  /**
+   * Whether a fence that is open at the section line at `at` closes before the next section line,
+   * so that the section line is code in it.
+   *
+   * @param {{ mark: string, length: number, quote: RegExp, list: number }} open
+   * @param {number} at
+   */
+  const closesInSection = (open, at) => {
+    // The summary's text, without inline tags such as `<b>`.
+    const summary = /^<details>[ \t]*$/.test(bare(at))
+      ? /^<summary>(.*)$/.exec(bare(at + 1))?.[1].replace(/<[^>]*>/g, '')
+      : undefined;
+    if (summary !== undefined && /^\s*\p{Extended_Pictographic}/u.test(summary)) return false;
+    for (let next = at + 1; next < lines.length; next++) {
+      if (sectionLine(bare(next), bare(next + 1))) return false;
+      const state = fenceLine(open, next);
+      if (state !== 'inside') return state === 'close';
+    }
+    // The fence never closes, so it isn't code anyway.
+    return false;
+  };
   for (const [at, raw] of lines.entries()) {
     const end = start + raw.length;
     const line = raw.endsWith('\r') ? raw.slice(0, -1) : raw;
-    if (fence && sectionLine(bare(at), bare(at + 1))) {
+    if (fence && sectionLine(bare(at), bare(at + 1)) && !closesInSection(fence, at)) {
       marks.push({ start: fence.start, end: fence.end });
       fence = null;
       blank = true;
     }
     if (fence) {
-      // In a fence, only the fence's own quote marks are marks. A line without them ends the quote.
-      const quote = fence.quote.exec(line);
-      if (quote) {
-        const rest = line.slice(quote[0].length);
-        const indent = indentOf(rest);
-        const close = /^(`+|~+)[ \t]*$/.exec(rest.trimStart());
-        // A closing line must be in the fence's list item, at most three columns past its text.
-        if (
-          close &&
-          close[1][0] === fence.mark &&
-          close[1].length >= fence.length &&
-          indent >= fence.list &&
-          indent <= fence.list + 3
-        ) {
-          ranges.push({ start: fence.start, end, inline: false, marks: 0 });
-          fence = null;
-          blank = true;
-          start = end + 1;
-          continue;
-        }
-        if (rest.trim() === '' || indent >= fence.list) {
-          start = end + 1;
-          continue;
-        }
+      const state = fenceLine(fence, at);
+      if (state === 'close') {
+        ranges.push({ start: fence.start, end, inline: false, marks: 0 });
+        fence = null;
+        blank = true;
+        start = end + 1;
+        continue;
+      }
+      if (state === 'inside') {
+        start = end + 1;
+        continue;
       }
       // The quote or the list item ended, and the fence with it.
       ranges.push({ start: fence.start, end: start - 1, inline: false, marks: 0 });
@@ -404,7 +443,8 @@ export function lateFinding(name, event) {
  * The sections of findings in a review body, outside code and HTML comments. A title in a
  * `<summary>` is collapsed, and its section runs to the `</details>` that closes it. Any other
  * title must start its line, after marks such as `**` and an emoji. Its section holds the
- * collapsed sections of files, such as `src/a.ts (1)`, and of prompts. It ends at the next title,
+ * collapsed sections of files, such as `src/a.ts (1)`, and of prompts. A file's summary starts
+ * with a letter, a digit, `.`, `_`, `/` or `-`, and ends with a count. It ends at the next title,
  * at another collapsed section, such as the review's settings, or at a `</details>` that closes
  * one around it. A title inside a section that is already quoted adds nothing, and a section
  * with no end runs to the end of the body.
@@ -444,13 +484,14 @@ function findingSections(body) {
     if (index < end) continue;
     end = collapsed ? body.length : (all[n + 1]?.title.index ?? body.length);
     let depth = collapsed ? 1 : 0;
-    const tags = /<(\/?)details\b[^>]*>(?:\s*<summary\b[^>]*>([^<]*)<\/summary>)?/gi;
+    // In a Markdown quote, a `>` starts each line between the tags.
+    const tags = /<(\/?)details\b[^>]*>(?:[\s>]*<summary\b[^>]*>([^<]*)<\/summary>)?/gi;
     for (const tag of masked.slice(index, end).matchAll(tags)) {
       const inner =
         !collapsed &&
         depth === 0 &&
         !tag[1] &&
-        /prompt|^[^\s<]+ \(\d+\)$/i.test(tag[2]?.trim() ?? '');
+        /prompt|^[\p{L}\p{N}._/-](?:[^<]*\S)? \(\d+\)$/iu.test(tag[2]?.trim() ?? '');
       if (depth === 0 && !collapsed && !inner) {
         end = index + (tag.index ?? 0);
         break;
