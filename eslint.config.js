@@ -44,6 +44,12 @@ export default [
       'no-console': CONSOLE,
     },
   },
+  // A .cjs test can't import Vitest, which is ESM only, so it uses the globals that
+  // vitest.config.ts turns on.
+  {
+    files: ['tests/**/*.cjs'],
+    languageOptions: { globals: vitest.environments.env.globals },
+  },
   // Every test must be able to fail (AGENTS.md rule 11): it must reach an expect, and no expect
   // may sit in a branch that can be skipped.
   {

@@ -37,27 +37,23 @@ it('lints every test format that Vitest runs with the rule-11 checks', async () 
 // tests do, so `no-undef` stays on.
 describe('the lint config for each test format', () => {
   const eslint = new ESLint();
-  /** An import in each format: a .cjs file is CommonJS, so it uses require. */
-  const load = (format: string, names: string, from: string): string =>
+  /**
+   * The test's imports in each format. A .cjs file is CommonJS, so it uses require, and it can't
+   * load Vitest, which is ESM only, so it uses Vitest's globals.
+   */
+  const imports = (format: string, vitestNames: string): string =>
     format === 'cjs'
-      ? `const { ${names} } = require('${from}');`
-      : `import { ${names} } from '${from}';`;
+      ? "const { env } = require('node:process');"
+      : `import { env } from 'node:process';\nimport { ${vitestNames} } from 'vitest';`;
 
-  it.each(['js', 'mjs', 'cjs', 'jsx'])(
-    'lints a .%s test that imports its globals',
-    async format => {
-      const code = [
-        load(format, 'env', 'node:process'),
-        load(format, 'expect, it', 'vitest'),
-        "it('reads X', () => {\n  expect(env.X ?? 'x').toBe('x');\n});\n",
-      ].join('\n');
-      const [result] = await eslint.lintText(code, { filePath: `tests/a/x.test.${format}` });
-      expect(result.messages).toEqual([]);
-    }
-  );
+  it.each(['js', 'mjs', 'cjs', 'jsx'])('lints a .%s test that runs', async format => {
+    const code = `${imports(format, 'expect, it')}\nit('reads X', () => {\n  expect(env.X ?? 'x').toBe('x');\n});\n`;
+    const [result] = await eslint.lintText(code, { filePath: `tests/a/x.test.${format}` });
+    expect(result.messages).toEqual([]);
+  });
 
   it.each(['js', 'mjs', 'cjs', 'jsx'])('finds a .%s test with no expect', async format => {
-    const code = `${load(format, 'it', 'vitest')}\nit('does nothing', () => {});\n`;
+    const code = `${imports(format, 'it')}\nit('does nothing', () => {\n  void env;\n});\n`;
     const [result] = await eslint.lintText(code, { filePath: `tests/a/x.test.${format}` });
     expect(result.messages.map(message => message.ruleId)).toEqual(['vitest/expect-expect']);
   });
