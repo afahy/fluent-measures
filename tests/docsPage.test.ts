@@ -18,13 +18,7 @@ function externalTags(html: string): { tag: string; url: string }[] {
     String.raw`<script\b[^>]*\ssrc=${external}[^>]*>|<link\b(?=[^>]*\srel="(?:[^"]*\s)?stylesheet[\s"])[^>]*\shref=${external}[^>]*>`,
     'gi'
   );
-  return (
-    [...html.matchAll(pattern)]
-      .map(([tag, src, href]) => ({ tag, url: src ?? href }))
-      // The Tailwind Play CDN sends no CORS header, so it can't take a hash (AFA-97). Only this
-      // exact URL is skipped, so another path or plain http on that host is still checked.
-      .filter(({ url }) => url !== 'https://cdn.tailwindcss.com')
-  );
+  return [...html.matchAll(pattern)].map(([tag, src, href]) => ({ tag, url: src ?? href }));
 }
 
 const tags = externalTags(page);
@@ -119,6 +113,8 @@ describe('the docs page', () => {
       'https://a.example/x.css',
     ],
     ['<SCRIPT src="//a.example/x.js"></SCRIPT>', '//a.example/x.js'],
+    // AFA-97: the Tailwind Play CDN is no longer an exception.
+    ['<script src="https://cdn.tailwindcss.com"></script>', 'https://cdn.tailwindcss.com'],
     ['<script src="http://cdn.tailwindcss.com"></script>', 'http://cdn.tailwindcss.com'],
     [
       '<script src="https://cdn.tailwindcss.com/3.4.0"></script>',
@@ -129,12 +125,34 @@ describe('the docs page', () => {
   });
 
   it.each([
-    '<script src="https://cdn.tailwindcss.com"></script>',
     '<link rel="stylesheets" href="https://a.example/x.css" />',
     '<link rel="icon" href="https://a.example/x.png" />',
     '<script src="/local.js"></script>',
   ])('finds no external file to check in %s', html => {
     expect(externalTags(html)).toEqual([]);
+  });
+
+  // AFA-97: the page loads Tailwind's CSS from docs/tailwind.css, built from
+  // docs/tailwind.config.cjs, so each class on the page needs a rule there.
+  it('loads tailwind.css, which has a rule for each Tailwind class on the page', () => {
+    expect(page).toContain('<link href="tailwind.css" rel="stylesheet" />');
+    const css = readFileSync(new URL('../docs/tailwind.css', import.meta.url), 'utf8');
+    const used = [
+      ...[...page.matchAll(/\sclass="([^"]*)"/g)].flatMap(([, list]) => list.split(/\s+/)),
+      ...[...page.matchAll(/classList\.add\(([^)]*)\)/g)].flatMap(([, list]) =>
+        [...list.matchAll(/'([^']+)'/g)].map(([, name]) => name)
+      ),
+    ];
+    // The page's script, Prism and the page's own <style> use these. "prose" needs Tailwind's
+    // typography plugin, which the Play CDN didn't load either.
+    const other = new Set(['', 'copied', 'copy-button', 'text-link', 'prose', 'prose-slate']);
+    const missing = [...new Set(used)].filter(name => {
+      if (other.has(name) || name.startsWith('language-')) return false;
+      // Tailwind escapes a "," in a class name as "\2c " and each other symbol with a "\".
+      const escaped = name.replace(/,/g, '\\2c ').replace(/[^\w\\ -]/g, '\\$&');
+      return !css.includes(`.${escaped}`);
+    });
+    expect(missing).toEqual([]);
   });
 
   // If the browser blocks clipboard.js, or cdnjs is down, "new ClipboardJS" would throw, and the
