@@ -26,7 +26,7 @@ import {
   unkilledMutants,
   unmatchedFiles,
 } from './changed-lines.mjs';
-import { escapeData, escapeProperty, logText } from './workflow-commands.mjs';
+import { escapeData, escapeProperty } from './workflow-commands.mjs';
 
 const baseFlag = process.argv.indexOf('--base');
 const base = baseFlag >= 0 ? process.argv[baseFlag + 1] : 'HEAD^1';
@@ -107,7 +107,7 @@ for (const file of controlled) {
 if (controlled.length > 0) process.exit(1);
 
 const lines = [...changed].flatMap(([file, ranges]) =>
-  ranges.map(([from, to]) => `  ${logText(file)}:${from}${from === to ? '' : `-${to}`}`)
+  ranges.map(([from, to]) => `  ${file}:${from}${from === to ? '' : `-${to}`}`)
 );
 console.log(`Changed lines:\n${lines.join('\n')}`);
 

@@ -26,11 +26,13 @@ describe('workflow command escapes', () => {
     expect(escapeProperty(text)).toBe(escaped);
   });
 
-  // A plain log line writes CR and LF as `\r` and `\n`, so a name can't start a new line.
+  // A plain log line writes CR and LF as `\r` and `\n`, so a name can't start a new line. It
+  // writes a backslash as `\\`, so a backslash and "n" don't look like a line break.
   it.each([
     ['src/units.ts', 'src/units.ts'],
     ['src/a\nb.ts', 'src/a\\nb.ts'],
     ['src/a\r\n::error::b', 'src/a\\r\\n::error::b'],
+    ['src/a\\nb.ts', 'src/a\\\\nb.ts'],
   ])('writes %j in a log line as %j', (text, written) => {
     expect(logText(text)).toBe(written);
   });

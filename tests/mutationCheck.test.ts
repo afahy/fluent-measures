@@ -82,6 +82,17 @@ if (['trace', 'debug', 'info'].includes(config.fileLogLevel)) {
 process.exit(1);
 `;
 
+// A stand-in for Stryker that reports a surviving mutant and a mutant that a directive ignores
+// without a reason, both on line 1 of the file.
+const strykerWithMutants = (file: string): string => `${STUB_CONFIG}
+const location = { start: { line: 1, column: 17 }, end: { line: 1, column: 21 } };
+const mutants = [
+  { mutatorName: 'BooleanLiteral', replacement: 'false', status: 'Survived', location },
+  { mutatorName: 'EqualityOperator', status: 'Ignored', statusReason: 'Ignored using a comment', location },
+];
+fs.writeFileSync(config.jsonReporter.fileName, JSON.stringify({ files: { ${JSON.stringify(file)}: { mutants } } }));
+`;
+
 /** Puts a Stryker stand-in where the check runs Stryker from. Git doesn't track it. */
 function addStrykerStub(repository: string, stub = STRYKER_STUB): void {
   const bin = resolve(repository, 'node_modules/@stryker-mutator/core/bin');
@@ -115,6 +126,8 @@ describe('mutation-check.mjs', () => {
       'src/units.ts': 'export const a = 2;\n',
       'src/a\\b.ts': 'export const b = 1;\n',
       'src/c\\d/e.ts': 'export const e = 1;\n',
+      // AFA-79: the `file=` property escapes a comma too.
+      'src/f\\g,h.ts': 'export const h = 1;\n',
     });
 
     const check = runCheck(repository, base);
@@ -122,6 +135,7 @@ describe('mutation-check.mjs', () => {
     expect(check.status).toBe(1);
     expect(check.stderr).toContain('::error file=src/a\\b.ts::Rename src/a\\b.ts.');
     expect(check.stderr).toContain('::error file=src/c\\d/e.ts::Rename src/c\\d/e.ts.');
+    expect(check.stderr).toContain('::error file=src/f\\g%2Ch.ts::Rename src/f\\g,h.ts.');
     expect(check.stderr).not.toContain('src/units.ts');
     expect(check.stderr).not.toContain('Stryker exited');
   });
@@ -266,6 +280,25 @@ describe('mutation-check.mjs', () => {
     );
   });
 
+  // AFA-79 final review: the annotations of an unkilled mutant and of a mutant that a directive
+  // ignores without a reason escape the path too.
+  it('escapes the path in the annotation of each unkilled or ignored mutant', () => {
+    const repository = createRepository();
+    const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
+    commitFiles(repository, { 'src/a,b.ts': 'export const a = true;\n' });
+    addStrykerStub(repository, strykerWithMutants('src/a,b.ts'));
+
+    const check = runCheck(repository, base);
+
+    expect(check.status).toBe(1);
+    expect(check.stderr).toContain(
+      `::error file=src/a%2Cb.ts,line=1,col=17::The BooleanLiteral mutant "false" on a changed line isn't killed: it survived.`
+    );
+    expect(check.stderr).toContain(
+      '::error file=src/a%2Cb.ts,line=1,col=17::A Stryker disable comment ignores the EqualityOperator mutant without a reason.'
+    );
+  });
+
   // AFA-82 review: --text doesn't turn off a textconv filter, which can drop changed lines.
   it('reads the changed lines of a file that a textconv filter changes', () => {
     const repository = createRepository();
@@ -291,6 +324,8 @@ describe('mutation-check.mjs', () => {
     const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
     commitFiles(repository, {
       'src/node_modules/x.ts': 'export const x = 1;\n',
+      // AFA-79: the `file=` property escapes a comma too.
+      'src/node_modules/y,z.ts': 'export const y = 1;\n',
       'src/units.ts': 'export const a = 1;\n',
     });
     addStrykerStub(repository);
@@ -300,6 +335,9 @@ describe('mutation-check.mjs', () => {
     expect(check.status).toBe(1);
     expect(check.stderr).toContain(
       '::error file=src/node_modules/x.ts::Move src/node_modules/x.ts. Stryker never reads'
+    );
+    expect(check.stderr).toContain(
+      '::error file=src/node_modules/y%2Cz.ts::Move src/node_modules/y,z.ts. Stryker never reads'
     );
     expect(check.stderr).not.toContain('src/units.ts');
     expect(existsSync(resolve(repository, 'stryker.log'))).toBe(false);
