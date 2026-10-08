@@ -36,7 +36,7 @@ const NUMBERS: Groups = [
 // Each unit alias, the unsupported weight units, some typos and the marks for feet and inches.
 const UNITS: Groups = [
   [8, ['ft', 'feet', 'foot', 'in', 'inch', 'inches', 'cm', 'centimeter', 'centimeters']],
-  [8, ['m', 'meter', 'meters', 'lb', 'lbs', 'pound', 'pounds']],
+  [8, ['m', 'meter', 'meters', 'metre', 'lb', 'lbs', 'pound', 'pounds']],
   [6, ['kg', 'kilo', 'kilos', 'kilogram', 'kilograms']],
   [3, ['st', 'stone', 'oz', 'ounces', 'g', 'grams']],
   [2, ['kilogams', 'fet', 'inchs', 'poundz', 'metres', 'centimetre', 'centimetres', '#']],
@@ -104,7 +104,12 @@ function makeInputs(): string[] {
 function describeResult(raw: string, options: ParseOptions): string {
   try {
     const result = parseMeasurement(raw, options);
-    return result ? `${result.value} ${result.unit} ${result.type}` : 'null';
+    if (!result) return 'null';
+    // The parts show which numbers and units the result came from (AFA-87). One part with the
+    // result's own value and unit adds nothing, so the line leaves it out.
+    const total = `${result.value} ${result.unit}`;
+    const parts = result.matches.map(({ value, unit }) => `${value} ${unit}`).join(' + ');
+    return `${total} ${result.type}${parts === total ? '' : ` = ${parts}`}`;
   } catch (error) {
     return `throws: ${error instanceof Error ? error.message : String(error)}`;
   }
