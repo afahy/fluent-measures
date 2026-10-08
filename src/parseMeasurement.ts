@@ -43,8 +43,8 @@ function readNumberPhrase(
   // the loop below skips them.
   //
   // A number before "and a half" that can't take it leaves no number, not only the multipliers, as
-  // in "1.5 and a half thousand". The read then stops at that number, so the check for a sign
-  // finds a signed one, as in "-2 and a half thousand".
+  // in "1.5 and a half thousand". A signed one leaves no number too, and the read stops at its
+  // sign, so readSignedPhrase finds it there, as in "-2 and a half thousand".
   //
   // A read forward doesn't do this, so it stops before a multiplier after "and a half". The whole
   // number before "and a half" can't end in another "and a half", so that read doesn't check for
@@ -62,11 +62,11 @@ function readNumberPhrase(
       multiplier *= nearest = next;
     }
     if (half(at - 2)) {
-      const [whole, end] = readNumberPhrase(tokens, at - 3, -1, false);
+      const [whole, end, signed] = readSignedPhrase(tokens, at - 3, -1, false);
+      if (signed) return [null, end + 1];
       if (ordered && Number.isInteger(whole) && whole! < nearest) {
         return [(whole! + 0.5) * multiplier, end];
       }
-      if (isSigned(tokens[end])) return [null, end];
       if (whole !== null) return [null, at];
     }
   }
@@ -86,11 +86,6 @@ function readNumberPhrase(
   return Number.isInteger(value) && half(end - 1) ? [value! + 0.5, end + 2] : [value, end];
 }
 
-/** The value of a token that starts with minus signs, without them, as in "-12" and "--12". */
-const withoutSign = (token: string): number | null =>
-  // Stryker disable next-line Regex: callers pass only tokens that start with a minus sign, so "/-+/" removes the same signs.
-  wordsToNumber(token.replace(/^-+/, ''));
-
 /**
  * Whether a word is a stone, ounce or gram unit after the number token before it. "st" after a
  * whole number that ends in 1, except 11, is an ordinal, as in "Oct 1st", but "10.1st" is stone.
@@ -98,18 +93,46 @@ const withoutSign = (token: string): number | null =>
 const isUnsupportedUnit = (word: string, number: string): boolean =>
   UNSUPPORTED_WEIGHT_UNITS.test(word) && !(word === 'st' && /^-*(?:\d*[02-9])?1$/.test(number));
 
-/** Whether a token is a number with a minus sign, as in "-5". A sign before a word doesn't count. */
-const isSigned = (token: string | undefined): boolean =>
-  token?.startsWith('-') === true && withoutSign(token) !== null;
-
-/** Run `read` with the minus signs of `tokens[at]` removed, and then put the token back. */
-function withoutSignAt<T>(tokens: string[], at: number, read: () => T): T {
+/**
+ * Read a number phrase as readNumberPhrase does, but let minus signs start its first word, as in
+ * "-5" and "--12". They sign the whole phrase, as in "-twenty five" and "-a hundred", so `signed`
+ * is true, and the value doesn't include them. A sign before another word doesn't count. Reading
+ * forward, the first word is at `start`. Reading backward, it's the word where readNumberPhrase
+ * stops, and `end` is the token before it.
+ */
+function readSignedPhrase(
+  tokens: string[],
+  start: number,
+  step = 1,
+  readHalf = true
+): [value: number | null, end: number, signed: boolean] {
+  const [value, end] = readNumberPhrase(tokens, start, step, readHalf);
+  // Stryker disable next-line EqualityOperator: step is 1 or -1, so "step >= 0" is the same.
+  const forward = step > 0;
+  const at = forward ? start : end;
   const token = tokens[at];
-  // Stryker disable next-line Regex: with no "g" flag, "/-+/" also removes only the first run of hyphens, which starts a signed token.
-  tokens[at] = token.replace(/^-+/, '');
-  const result = read();
-  tokens[at] = token;
-  return result;
+  if (!token?.startsWith('-')) return [value, end, false];
+  // Stryker disable next-line Regex: the token starts with a minus sign, so "/-+/" removes the same signs.
+  const word = token.replace(/^-+/, '');
+  if (word === 'a' || word === 'an') {
+    // "a" and "an" add nothing to the value, but a sign on them signs the number words right
+    // after them. Digits don't take them, as in "-a 12 lb" (12 lb), and a semicolon after them
+    // ends the phrase, as in "-a; hundred kg" (100 kg).
+    const next = tokens[at + 1];
+    if (NUMBER_WORDS.has(next) || MULTIPLIERS.has(next)) {
+      return forward ? [...readNumberPhrase(tokens, at + 1), true] : [value, at - 1, true];
+    }
+  } else if (wordsToNumber(word) !== null) {
+    // Read again with the word in place of the token, and then put the token back. A copy of the
+    // tokens would make long inputs with many signs slow.
+    tokens[at] = word;
+    const [signedValue, signedEnd] = readNumberPhrase(tokens, start, step, readHalf);
+    tokens[at] = token;
+    // Reading backward, the word must join the phrase, so "-5 12 kg" is 12 kg. The phrase then
+    // starts at the signed word, as after "a" and "an".
+    if (signedEnd !== at) return [signedValue, forward ? signedEnd : at - 1, true];
+  }
+  return [value, end, false];
 }
 
 /** Add up a measurement's parts in the target unit. */
@@ -158,7 +181,8 @@ function readValueAfter(
   label: boolean,
   fuzziness?: number
 ): [value: number | null, end: number] {
-  const [value, end] = readNumberPhrase(tokens, skipMarks(tokens, start));
+  // This read takes a signed value too, so the check for a label's value finds it, as in "kg: -5".
+  const [value, end] = readSignedPhrase(tokens, skipMarks(tokens, start));
   // A label doesn't take a number that has its own unit, as in "weigh in: 180 lbs" and
   // "180 lbs = 82 kg", even an unsupported one, as in "kg=400 g", so the check for stone, ounces
   // and grams still sees that part. A semicolon or a unit label's mark can come between a number
@@ -247,23 +271,15 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         const word = remainingTokens[i];
         if (type === 'weight' && UNSUPPORTED_WEIGHT_UNITS.test(word)) {
           // A signed number here reads as its value without the sign. A minus sign doesn't make
-          // the part unrelated, as in "-12st 4lb", "-12;st 4lb" and "stone -12, 4 lb".
-          let at = i - 1;
-          while (remainingTokens[at] === ';') at--;
-          const previous = remainingTokens[at];
-          const [before, beforeEnd] = isSigned(previous)
-            ? [withoutSign(previous), at - 1]
-            : readNumberPhrase(remainingTokens, i - 1, -1);
+          // the part unrelated, as in "-12st 4lb", "-12;st 4lb", "stone -12, 4 lb" and
+          // "12 lb -twenty five oz".
+          const [before, beforeEnd] = readSignedPhrase(remainingTokens, i - 1, -1);
           // Reading backward already skips semicolons, so skip them reading forward too, as in
           // "8 oz; 7 lb" and "12 st 4;lb". Commas don't separate parts, so skip field marks too,
           // as in "Stone: 12, lb: 4".
           const skip = (start: number): number => skipMarks(tokens, start, true);
           const next = skip(i + 1);
-          // A sign on the first word of a phrase in words, as in "stone -twenty five", signs the
-          // whole phrase.
-          const [after, afterEnd] = isSigned(tokens[next])
-            ? withoutSignAt(tokens, next, () => readNumberPhrase(tokens, next))
-            : readNumberPhrase(tokens, next);
+          const [after, afterEnd] = readSignedPhrase(tokens, next);
           const unitAt = skip(afterEnd);
           // A supported part before it can have its unit first, as in "kg 3, 400 g". Earlier
           // matches blank their tokens, so check the original tokens for a unit.
@@ -303,40 +319,28 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       const mark = remainingTokens[i - 1];
       const label = mark === NAME_MARK || mark === UNIT_MARK;
       // A signed value after a label is its value too, so the check for a sign below finds it.
-      // As for a value without a sign, one with its own unit isn't, as in "180 cm = -82 kg". The
-      // check reads the value without its sign in place, and then puts the token back.
+      // As for a value without a sign, one with its own unit isn't, as in "180 cm = -82 kg".
       const valueAt = skipMarks(remainingTokens, i + 1);
-      const value = remainingTokens[valueAt];
-      const signedValue = label && isSigned(value);
+      const valueSigned = readSignedPhrase(remainingTokens, valueAt)[2];
+      const signedValue = label && valueSigned;
       // A field name takes any number after it, but not a signed one with its own unit, as in
       // "72 in: -180 lbs".
-      const readValue = (): boolean =>
+      const valueFollows =
         mark === NAME_MARK && !signedValue
           ? readNumberPhrase(remainingTokens, valueAt)[0] !== null
           : label && readValueAfter(remainingTokens, i + 1, unit, label, fuzziness)[0] !== null;
-      const valueFollows = signedValue
-        ? withoutSignAt(remainingTokens, valueAt, readValue)
-        : readValue();
       const readFrom = label ? i - 2 : i - 1;
-      let [num, end]: [number | null, number] = valueFollows
-        ? [null, i - 1]
-        : readNumberPhrase(remainingTokens, readFrom, -1);
+      // A sign on the first word of a phrase signs the whole phrase, as in "-twenty five kg" and
+      // "-a hundred kg". So those inputs return null, as "-5 feet" does.
+      // When the value follows, the read before the unit takes nothing.
+      let [num, end, signed]: [number | null, number, boolean] = valueFollows
+        ? [null, readFrom, false]
+        : readSignedPhrase(remainingTokens, readFrom, -1);
       let matchStart = num === null ? end : end + 1;
       let matchEnd = i + 1;
-      // A sign on the first word of a phrase signs the whole phrase, as in "-twenty five kg". So
-      // that input returns null, as "-5 feet" does. Without its sign, that word joins the phrase.
-      // When no number came before the unit, matchStart is already end.
-      if (
-        isSigned(remainingTokens[end]) &&
-        withoutSignAt(remainingTokens, end, () =>
-          readNumberPhrase(remainingTokens, readFrom, -1)
-        )[1] < end
-      ) {
-        matchStart = end;
-      }
 
       // A semicolon can come between a number and its unit, as in "-5;feet", so both fields go.
-      if (isSigned(remainingTokens[matchStart])) {
+      if (signed) {
         signedFields.add(fieldOf[matchStart]).add(fieldOf[i]);
         continue;
       }
@@ -350,7 +354,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       ) {
         // A label's signed value with its own unit isn't the label's value, as in
         // "in: -180 lbs, 72 in", so it doesn't drop the label's field. Its own unit drops its field.
-        if (isSigned(remainingTokens[valueAt]) && (!signedValue || valueFollows)) {
+        if (valueSigned && (!signedValue || valueFollows)) {
           signedFields.add(fieldOf[i]).add(fieldOf[valueAt]);
           continue;
         }

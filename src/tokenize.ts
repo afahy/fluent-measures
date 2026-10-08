@@ -78,11 +78,12 @@ const CURLY_DOUBLE = new RegExp(
 const NUMBER_WORD = [...NUMBER_WORDS.keys(), ...MULTIPLIERS.keys()].join('|');
 
 // A minus sign before a number, when no number comes earlier: no digit, Unicode fraction or number
-// word. The number can be a word too, as in "−five'". After a number, a minus sign joins two parts or values, as in "1 m−80 cm" and "½ lb−180
-// lbs". The parser would read a hyphen-minus there as a sign. The lookbehind runs only after a
+// word. The number can be a word too, as in "−five'", also after "a" or "an", as in "−a hundred"
+// and "−a-hundred". After a number, a minus sign joins two parts or values, as in "1 m−80 cm" and
+// "½ lb−180 lbs". The parser would read a hyphen-minus there as a sign. The lookbehind runs only after a
 // minus sign, and its lazy part stops at the nearest earlier number.
 const MINUS_SIGN = new RegExp(
-  String.raw`[−﹣](?=[.,]?\d|[¼-¾⅐-⅞↉]|(?:${NUMBER_WORD})\b)(?<!(?:[\d¼-¾⅐-⅞↉]|\b(?:${NUMBER_WORD})\b)[\s\S]*?.)`,
+  String.raw`[−﹣](?=[.,]?\d|[¼-¾⅐-⅞↉]|(?:an?[\s-]+)?(?:${NUMBER_WORD})\b)(?<!(?:[\d¼-¾⅐-⅞↉]|\b(?:${NUMBER_WORD})\b)[\s\S]*?.)`,
   'gi'
 );
 
