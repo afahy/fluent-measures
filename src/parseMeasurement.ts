@@ -1,5 +1,5 @@
 import { matchUnit } from './matchUnit';
-import { normalize, Token, tokenizeNormalized } from './tokenize';
+import { Token, tokenize } from './tokenize';
 import { MULTIPLIERS, NUMBER_WORDS, wordsToNumber } from './wordsToNumber';
 
 import {
@@ -15,18 +15,22 @@ import { ParseOptions, ParsedValue, Match, MeasurementType, Unit } from './types
 type QualifiedMatch = Match & { unit: NonNullable<Match['unit']> };
 
 /**
- * Reads the text of the token at an index, or undefined past either end, as an array does. Each
- * reader takes one, so it can read the tokens with or without the ones that a match has used.
+ * Reads the text of the token at an index, or undefined past either end, as an array does. With
+ * `unsigned` true, it reads the text after the token's minus signs. Each reader takes one, so it
+ * can read the tokens with or without the ones that a match has used.
  */
-type Words = (at: number) => string;
+type Words = (at: number, unsigned?: boolean) => string;
 
-/** Read the tokens as if each one that a match has used were "", so no other match can use it. */
-const remainingWords =
-  (tokens: Token[]): Words =>
-  at => {
+/**
+ * Read the tokens. With `remaining` true, read each one that a match has used as "", so no other
+ * match can use it.
+ */
+const readWords =
+  (tokens: Token[], remaining: boolean): Words =>
+  (at, unsigned) => {
     const token = tokens[at];
     // Stryker disable next-line StringLiteral: "Stryker was here!" is no number or unit, as "" is.
-    return token?.used ? '' : token?.text;
+    return remaining && token?.used ? '' : token?.text.slice(unsigned ? token.sign : 0);
   };
 
 /**
@@ -96,11 +100,12 @@ function readNumberPhrase(
 }
 
 /**
- * Whether a word is a stone, ounce or gram unit after the number token before it. "st" after a
- * whole number that ends in 1, except 11, is an ordinal, as in "Oct 1st", but "10.1st" is stone.
+ * Whether a word is a stone, ounce or gram unit after the number token before it, without its
+ * minus signs. "st" after a whole number that ends in 1, except 11, is an ordinal, as in "Oct 1st",
+ * but "10.1st" is stone.
  */
 const isUnsupportedUnit = (word: string, number: string): boolean =>
-  UNSUPPORTED_WEIGHT_UNITS.test(word) && !(word === 'st' && /^-*(?:\d*[02-9])?1$/.test(number));
+  UNSUPPORTED_WEIGHT_UNITS.test(word) && !(word === 'st' && /^(?:\d*[02-9])?1$/.test(number));
 
 /**
  * Read a number phrase as readNumberPhrase does, but let minus signs start its first word, as in
@@ -119,10 +124,9 @@ function readSignedPhrase(
   // Stryker disable next-line EqualityOperator: step is 1 or -1, so "step >= 0" is the same.
   const forward = step > 0;
   const at = forward ? start : end;
-  const token = words(at);
-  if (!token?.startsWith('-')) return [value, end, false];
-  // Stryker disable next-line Regex: the token starts with a minus sign, so "/-+/" removes the same signs.
-  const word = token.replace(/^-+/, '');
+  // A token without minus signs reads the same without them.
+  const word = words(at, true);
+  if (word === words(at)) return [value, end, false];
   if (word === 'a' || word === 'an') {
     // "a" and "an" add nothing to the value, but a sign on them signs the number words right
     // after them. Digits don't take them, as in "-a 12 lb" (12 lb), and a semicolon after them
@@ -134,7 +138,7 @@ function readSignedPhrase(
   } else if (wordsToNumber(word) !== null) {
     // Read again with the word in place of the token.
     const [signedValue, signedEnd] = readNumberPhrase(
-      index => (index === at ? word : words(index)),
+      (index, unsigned) => (index === at ? word : words(index, unsigned)),
       start,
       step,
       readHalf
@@ -245,7 +249,7 @@ function hasUnsupportedPart(text: Words, remaining: Words, i: number, fuzziness?
         word !== 'g' &&
         !(isWeightUnit(text(unitAt)) && readNumberPhrase(text, skip(unitAt + 1))[0] === null) &&
         (partEndsAt(i - 1) || isWeightUnit(text(skip(readNumberPhrase(text, unitAt)[1]))))
-    : isUnsupportedUnit(word, remaining(i - 1)) &&
+    : isUnsupportedUnit(word, remaining(i - 1, true)) &&
         (partEndsAt(beforeEnd) || isWeightUnit(text(unitAt)));
 }
 
@@ -316,19 +320,11 @@ function combineParts(
 
 /** Parse a height or weight, optionally inferring its unit or normalizing the result. */
 export function parseMeasurement(input: string, options: ParseOptions = {}): ParsedValue | null {
-  // Stryker disable next-line StringLiteral: the replacement "Stryker was here!" also returns null.
-  const trimmed = normalize(input?.trim() || '');
-  if (!trimmed) {
-    return null;
-  }
-
-  // Replace whole ranges with a boundary so neither endpoint becomes a measurement.
-  // Preserve semicolon boundaries so independent fields cannot form a compound height.
+  // The tokenizer replaces each whole range with a boundary, so neither endpoint becomes a
+  // measurement. Semicolons stay, so independent fields can't form a compound height.
   const fuzziness = options.fuzziness;
-  let tokens = tokenizeNormalized(
-    trimmed.replace(/(?<![\d.])[\d.]+(?:\s*\p{Dash}\s*[\d.]+)+/gu, ' - '),
-    fuzziness
-  );
+  // Stryker disable next-line StringLiteral: the replacement "Stryker was here!" also returns null.
+  let tokens = tokenize(input?.trim() || '', fuzziness, true);
   if (tokens.length && options.allowUnqualified && !options.type) {
     throw new Error('allowUnqualified requires type');
   }
@@ -339,29 +335,22 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   }
   const onlyType = options.type || unitType;
 
-  // Two number words work too when the feet are 3 to 8, so "five-eleven" is "5-11". A part that
-  // isn't one number word, digits included, joins as an empty string, so the pattern doesn't match.
-  const parts = trimmed
-    .toLowerCase()
-    .split('-')
-    .map(word => NUMBER_WORDS.get(word));
-  const shorthand = (parts[0]! > 2 && parts[0]! < 9 ? parts.join('-') : trimmed).match(
-    /^(\d+)-((?:\d*\.)?\d+)$/
-  );
-  if (shorthand) {
+  // A bare height, as in "5-11" and "five-eleven", is two numbers that a part joiner joins.
+  const [feet, inches] = tokens;
+  if (tokens.length === 2 && inches.joiner === 'part') {
     // Bare N-M is ambiguous unless the caller explicitly requests a height. Feet too large to
     // represent return null when the measurement is read.
-    if (options.type !== 'height' || +shorthand[2] >= 12) return null;
+    if (options.type !== 'height' || +inches.text >= 12) return null;
     // Feed the components through the same parser as explicit feet and inches.
-    tokens = [shorthand[1], 'ft', shorthand[2], 'in'].map(text => ({ text }));
+    tokens = [feet, { text: 'ft' }, inches, { text: 'in' }];
   }
 
   // Each token's field: a semicolon starts a new one, as in "invalid -5 ft; actual 180 cm".
   let field = 0;
   // Stryker disable next-line UpdateOperator: each field only needs a number that differs from the others'.
   const fieldOf = tokens.map(({ text }) => (text === ';' ? ++field : field));
-  const allWords: Words = at => tokens[at]?.text;
-  const remaining = remainingWords(tokens);
+  const allWords = readWords(tokens, false);
+  const remaining = readWords(tokens, true);
   /** Mark the tokens from `start` up to `end` as used. */
   const use = (start: number, end: number): void => {
     for (let at = start; at < end; at++) tokens[at].used = true;
@@ -475,7 +464,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
               inches < 12 &&
               !nextUnit &&
               !matchUnit(nextWord, 'weight', fuzziness) &&
-              !isUnsupportedUnit(nextWord, remaining(inchesEnd - 1))))
+              !isUnsupportedUnit(nextWord, remaining(inchesEnd - 1, true))))
         ) {
           const inchesMatch: QualifiedMatch = { value: inches, unit: 'in' };
           // The inches' number starts at matchEnd, and reading forward stops at a semicolon.
