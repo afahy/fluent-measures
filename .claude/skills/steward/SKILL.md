@@ -43,7 +43,7 @@ maintainer. Say so in your report.
 
 `pr:status` never waits for CodeRabbit and never asks it to review (AFA-138). Its threads, its
 comments outside the diff and its requested changes still make a PR `needs-agent`. When it
-hasn't reviewed the head commit, a note says so. Its review is a bonus, so that gap needs no
+hasn't reviewed the head commit, a note says so. Its review is optional, so that gap needs no
 mention in your report.
 
 ## Waiting
