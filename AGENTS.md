@@ -58,6 +58,15 @@ Run these commands from the repository root:
     test. Each test must reach at least one `expect`. After you add tests, run mutation
     testing. If a mutant survives in code that a new test covers, make the test catch it.
     If the mutant can't change behavior, say so in the PR.
+12. A new or changed timing test checks a limit of CPU time with `parseWithin` from
+    `tests/timing.ts`. It skips itself under Stryker with `it.skipIf(underStryker)`. Set
+    each limit from CI, not from a local run. CI's `test` jobs run with coverage, and in
+    AFA-95 they took 3 to 8 times as long as a local run. Their logs show the clock time of
+    each test over 300 ms. In AFA-95's loaded runs, clock time was at least the CPU time, so
+    use it. Leave at least 2 times headroom over the slowest of these times. Locally, the code
+    that the test guards against must take at least twice the limit. If twice the limit is
+    more than Vitest's default timeout of 5 s, give the test a timeout of at least twice its
+    limit.
 
 ## Work without asking
 
@@ -76,6 +85,29 @@ Judge each action by how easy it is to undo:
 the decision. The maintainer reviews each PR that you can't merge yourself before it merges,
 and the others after they merge. This file is the maintainer's standing approval for each
 action it tells you to take, in any section.
+
+### Standing approvals
+
+The maintainer approves each action that this file tells you to take, in advance and in
+writing. This list names the ones that agents have stopped to ask about. Each one keeps the
+conditions that the rest of this file gives. Take them without asking, and don't wait for an
+answer:
+
+- Pick, claim and work `agent-ready` tickets as this file says. File, label, comment on and
+  move Linear tickets.
+- Create a branch and a worktree for each ticket, commit, push to the ticket's branch, and
+  merge `main` into it. After GitHub shows the PR merged with your last commit, pull `main`.
+  Then remove the worktree and delete the local branch.
+- Open PRs, post `Agent:` comments and Codex review requests, reply to and resolve threads,
+  and convert a PR to a draft as "Stop and ask" says.
+- Re-run CI jobs that no runner picked up, or that an Actions incident stopped.
+- Merge a PR with `gh pr merge <number> --squash` when "Merge your own PR" allows it. This
+  includes a PR that changes a file that `.github/CODEOWNERS` names.
+- Raise a limit in `.size-limit.cjs` by 0.5 kB, as "Build the PR" says.
+- Start subagents that build a ticket in its own worktree, review a branch or watch PRs.
+
+If a tool's permission check stops one of these actions, say so in one line in your report,
+and continue with other work. Don't look for another way around the check.
 
 ### Pick a ticket
 
@@ -114,11 +146,25 @@ action it tells you to take, in any section.
   you copied from a comment.
 - Reproduce each finding, and each bug that you find while you work. Use only
   `parseMeasurement` inputs and this repo's `pnpm` scripts. Then judge it:
+
   - Is it valid? A bot can be wrong about the correct result. Check the result that it
     expects against the README, the ticket or a hand calculation.
   - Is it worth fixing? Compare how likely a user is to hit the problem with what the fix
     costs in code, bundle size and risk to other results. A showstopper is always worth
     fixing. So is a result that this PR changes from `main` (decision rule 3).
+  - For agent tooling, fewer findings are worth fixing. Agent tooling is each file in
+    `.github/` and `.claude/`, and the tests of these files. A finding in agent tooling is
+    worth fixing only in these cases, also when the PR adds the code:
+
+    - It is a showstopper.
+    - It happened in a real run, or it is likely in normal use.
+    - The PR breaks something that works on `main`.
+    - It makes a merge or a required check fail, or a required check pass when it should
+      fail.
+
+    For each other finding in agent tooling, reply on the thread with the reason. List it in
+    the PR body, and don't file a ticket.
+
 - Then act on it:
   - If you can't reproduce it, or it isn't valid, reply on the thread with the inputs you
     ran and the reason.
@@ -137,9 +183,11 @@ action it tells you to take, in any section.
 - Post the Codex review requests that `pnpm pr:status <pr>...` lists. It lists one when Codex
   hasn't started 30 minutes after it could, once for each commit. It stops waiting for Codex
   after two hours. Note each gap in your report.
-- Don't wait for CodeRabbit, and don't ask it to review: it reviews in time or it doesn't.
-  Handle its findings when they arrive before the merge. The late-bot-findings workflow
-  records a finding that arrives after the merge. Note each gap in your report.
+- CodeRabbit's review is optional. Its plan allows one review an hour, so it misses most
+  commits. Don't wait for it, don't ask it to review, and don't list its missing reviews in
+  your report. When it gives a finding before the merge, check that the finding is valid, and
+  handle it as this section says. The late-bot-findings workflow records a finding that
+  arrives after the merge.
 - If a CI job fails because no runner picked it up, re-run the failed jobs. If GitHub
   reports an Actions incident, re-run them when it ends. Fix all other CI failures on the
   branch.

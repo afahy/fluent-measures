@@ -31,7 +31,7 @@ separate call.
 
 Read "Notes" as well. They list bot replies after yours, nitpicks, other bot comments since the
 push, and bots that never reviewed the head commit. Act on findings as AGENTS.md says, and list
-each gap in your report.
+each Codex gap in your report.
 
 ## Bot reviews
 
@@ -43,7 +43,8 @@ maintainer. Say so in your report.
 
 `pr:status` never waits for CodeRabbit and never asks it to review (AFA-138). Its threads, its
 comments outside the diff and its requested changes still make a PR `needs-agent`. When it
-hasn't reviewed the head commit, a note says so. List that gap in your report.
+hasn't reviewed the head commit, a note says so. Its review is optional, so that gap needs no
+mention in your report.
 
 ## Waiting
 
