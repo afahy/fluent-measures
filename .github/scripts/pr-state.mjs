@@ -721,8 +721,24 @@ export function digest(status) {
 }
 
 /**
+ * An error that can pass, such as a network error, so another try can help (AFA-147).
+ *
+ * @param {string} message
+ * @param {unknown} [cause]
+ * @returns {import('./pr-state.d.mts').ClientError}
+ */
+function passingError(message, cause) {
+  return Object.assign(new Error(message, { cause }), {
+    retryAt: null,
+    retryable: true,
+    refused: false,
+  });
+}
+
+/**
  * A small GitHub REST client. It follows every page of a list, and it sends each URL's last
  * ETag, so a poll that finds nothing new gets a 304, which doesn't count against the rate limit.
+ * Each error from a request is a ClientError.
  *
  * @param {{ token?: string | null, apiUrl?: string, fetch?: typeof fetch }} [options]
  * @returns {import('./pr-state.d.mts').Client}
@@ -732,6 +748,11 @@ export function createClient({
   apiUrl = 'https://api.github.com',
   fetch: get = fetch,
 } = {}) {
+  // Another try can't fix a bad URL, so it ends the call before the first request (AFA-148). A
+  // URL without its scheme, such as "localhost:3000", reads as one with the scheme "localhost:".
+  if (!/^https?:$/.test(URL.canParse(apiUrl) ? new URL(apiUrl).protocol : '')) {
+    throw new Error(`The GitHub API URL isn't an http or https URL: ${apiUrl}`);
+  }
   /** @type {Map<string, { etag: string, data: unknown, next: string | null }>} */
   const cache = new Map();
 
@@ -751,7 +772,8 @@ export function createClient({
     if (cached) headers['If-None-Match'] = cached.etag;
     /**
      * Runs one step of the request. A network error can pass, so another try can help, also when
-     * the connection drops while the body is read (AFA-147).
+     * the connection drops while the body is read (AFA-147). Node's fetch gives the reason, such
+     * as ECONNRESET or a TLS error, as the cause, so the message keeps it (AFA-148).
      *
      * @template T
      * @param {() => Promise<T>} step
@@ -761,15 +783,27 @@ export function createClient({
       try {
         return await step();
       } catch (error) {
-        const message = `GitHub didn't answer for ${url}: ${/** @type {Error} */ (error).message}`;
-        throw Object.assign(new Error(message), { retryAt: null, retryable: true, refused: false });
+        const { message, cause } = /** @type {Error & { cause?: Error & { code?: string } }} */ (
+          error
+        );
+        const reason = cause?.message || cause?.code;
+        const text = `GitHub didn't answer for ${url}: ${message}${reason ? ` (${reason})` : ''}`;
+        throw passingError(text, error);
       }
     }
     const response = await answer(() => get(url, { headers }));
     if (response.status === 304 && cached) return cached;
     if (!response.ok) {
       const { status } = response;
-      const text = (await answer(() => response.text())).slice(0, 200);
+      // A body that stops is a network error, which another try can help (AFA-147). A 401, a 404
+      // or another 4xx still says what is wrong without its body. So a 401 still exits 3, and a
+      // 404 still ends the call (AFA-148). Only a 403's text can tell a rate limit from a
+      // refused token, so a 403, a 429 and a 5xx stay network errors.
+      const read =
+        [403, 429].includes(status) || status >= 500
+          ? answer(() => response.text())
+          : response.text().catch(() => '');
+      const text = (await read).slice(0, 200);
       // GitHub sends these headers with every answer, but only a 403 or a 429 is a rate limit.
       const remaining = response.headers.get('x-ratelimit-remaining');
       const reset = response.headers.get('x-ratelimit-reset');
@@ -808,7 +842,16 @@ export function createClient({
       });
     }
     const next = /<([^>]+)>;\s*rel="next"/.exec(response.headers.get('link') ?? '')?.[1] ?? null;
-    const result = { data: JSON.parse(await answer(() => response.text())), next };
+    const body = await answer(() => response.text());
+    /** @type {unknown} */
+    let data;
+    try {
+      data = JSON.parse(body);
+    } catch (error) {
+      // A proxy can answer with a page that isn't JSON. That can pass too (AFA-148).
+      throw passingError(`GitHub's answer for ${url} isn't JSON: ${body.slice(0, 200)}`, error);
+    }
+    const result = { data, next };
     const etag = response.headers.get('etag');
     if (etag) cache.set(url, { etag, ...result });
     else cache.delete(url);
