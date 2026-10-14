@@ -35,7 +35,7 @@ describe('two apostrophes as an inch mark', () => {
   });
 
   // Ranges that repeat their unit stay null. Two apostrophes that don't come right after a digit
-  // keep main's result too ("must not change"), after a space or a number word.
+  // return null too ("must not change"), after a space or a number word.
   it.each([`72''-74''`, `5'11''-6'1''`, `72 ''`, `five''`])('returns null for %s', raw => {
     expect(parseMeasurement(raw)).toBeNull();
   });

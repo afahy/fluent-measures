@@ -239,9 +239,10 @@ describe('lateFinding', () => {
     expect(finding?.excerpt).not.toContain('Configuration used');
   });
 
-  // AFA-145 review: a fence that a finding leaves open ends at the start of each of the bots' own
-  // subsections, not only a prompt. It also stops at the next section line, or a stray fence
-  // would pair with the fence in the next file's section.
+  // AFA-145: a fence that a finding leaves open ends at the start of each of the bots' own
+  // subsections, not only a prompt, or it would pair with the subsection's fence, and the
+  // subsection's </details> would end the file's section. It also stops at the next section line,
+  // or a stray fence would pair with the fence in the next file's section.
   it.each([
     [
       'a suggested fix after a diff whose fence closes early',
@@ -531,7 +532,7 @@ describe('excerpt', () => {
     );
   });
 
-  // AFA-123: reading code by lines still removes the prompt in these inputs.
+  // AFA-123: reading code by lines removes the prompt in these inputs.
   it.each([
     [
       'with \\r\\n line breaks',
