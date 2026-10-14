@@ -34,7 +34,10 @@ export const OWN_CHECK = 'Set the PR status';
 const MINUTE = 60 * 1000;
 /** How long a bot gets to start before the agent asks it (AGENTS.md). */
 export const BOT_START_WAIT = 30 * MINUTE;
-/** How long to wait for a bot in all (AGENTS.md: it "stops waiting for Codex after two hours"). */
+/**
+ * How long to wait for a bot in all. AGENTS.md says that pr:status "stops waiting for Codex after
+ * two hours".
+ */
 export const BOT_MAX_WAIT = 120 * MINUTE;
 /** How long CI gets to start before a missing run is reported. */
 export const CI_START_WAIT = 30 * MINUTE;
