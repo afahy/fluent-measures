@@ -35,7 +35,7 @@ describe('a zero before a unit', () => {
   });
 
   // A zero part of a height is that part's own number, so the weight after it stays a weight:
-  // 1 m + 0 cm = 1 m. On main, "cm" took 80 and gave 180 cm.
+  // 1 m + 0 cm = 1 m.
   it.each([
     ['1 m 0 cm 80 kg', {}],
     ['1 m 0 cm 80 kg', { type: 'height' }],

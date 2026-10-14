@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
 
-// AFA-106: two apostrophes stand in for the inch mark (corpus: symbols-two-apostrophes), but
-// on their own after a number they were ignored. They now read as `"`.
+// AFA-106: two apostrophes stand in for the inch mark (corpus: symbols-two-apostrophes), so
+// after a number they read as `"`.
 describe('two apostrophes as an inch mark', () => {
   it.each([
     // The ticket's rows. Each gives what the same input with `"` gives.
@@ -40,9 +40,9 @@ describe('two apostrophes as an inch mark', () => {
     expect(parseMeasurement(raw)).toBeNull();
   });
 
-  // The final review of #93: two apostrophes that close a number they opened are quotes, and
-  // three or four marks after a number aren't an inch mark. Each keeps main's null, in every
-  // form that normalizeForms writes as apostrophes.
+  // Two apostrophes that close a number they opened are quotes, and three or four marks after a
+  // number aren't an inch mark. Each returns null, in every form that normalizeForms writes as
+  // apostrophes.
   it.each([
     `weight ''180'' lbs`,
     `the ''5'' kg bag`,

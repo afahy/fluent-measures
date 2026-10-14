@@ -38,7 +38,7 @@ describe('a hyphen after a feet or inch mark', () => {
     '5"-5"-5"',
     // Letters, or letters and a period, before the digits, as in `abc5 in-5 in`.
     'abc5"-5 in',
-    // CodeRabbit on #97: the number before the unit must start the token too.
+    // The number before the unit must start the token too.
     'abc5ft11"-5 in',
     'x.5"-5 in',
     // A mark that closes a quotation, as on main (AFA-93).
@@ -51,8 +51,7 @@ describe('a hyphen after a feet or inch mark', () => {
   });
 
   // The "11" comes after a hyphen, not at a token's start, so the second hyphen stays a minus
-  // sign, as in `5 ft-11 in-185 lbs` (null). On main this was 185 lb (decision rule 3, listed on
-  // #97 and AFA-112).
+  // sign, as in `5 ft-11 in-185 lbs` (null).
   it('returns null for 5\'-11"-185 lbs with type weight', () => {
     expect(parseMeasurement(`5'-11"-185 lbs`, { type: 'weight' })).toBeNull();
   });

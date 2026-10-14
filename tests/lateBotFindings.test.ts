@@ -240,9 +240,8 @@ describe('lateFinding', () => {
   });
 
   // AFA-145 review: a fence that a finding leaves open ends at the start of each of the bots' own
-  // subsections, not only a prompt. Before the fix, it paired with the subsection's fence, so the
-  // subsection's </details> ended the file's section and Finding B was lost. Without the stop at
-  // the next section line, a stray fence also paired with the fence in the next file's section.
+  // subsections, not only a prompt. It also stops at the next section line, or a stray fence
+  // would pair with the fence in the next file's section.
   it.each([
     [
       'a suggested fix after a diff whose fence closes early',
@@ -514,7 +513,6 @@ describe('excerpt', () => {
     expect(excerpt(body)).toBe('> it`s broken\n>\n> see `x`');
   });
 
-  // AFA-109: the old pattern also took the spaces that start the next line.
   it('keeps the indent of the line after removed blank lines', () => {
     expect(excerpt('x\n\n\n    indented code')).toBe('> x\n>\n>     indented code');
   });
@@ -533,8 +531,7 @@ describe('excerpt', () => {
     );
   });
 
-  // AFA-123: the review of the first fix found these inputs, where reading code by lines
-  // removed less than main did.
+  // AFA-123: reading code by lines still removes the prompt in these inputs.
   it.each([
     [
       'with \\r\\n line breaks',
@@ -657,7 +654,6 @@ describe('plainText', () => {
     expect(plainText('```html\n<b>a</b>\n\n<i>b</i>')).toBe('```html\na\n\nb');
   });
 
-  // AFA-123: the second review of the fix found these inputs.
   it.each([
     [
       "a fence in a list item, with a code line that starts with '>'",

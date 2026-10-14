@@ -195,9 +195,9 @@ try {
   });
   if (!wait || latest.some(s => ACTIONABLE.has(s.state))) finish(latest, json);
   const before = new Map(latest.map(s => [s.pr, digest(s)]));
-  // After a result, the end of --timeout ends the call with that result, as before AFA-147, also
-  // when it comes before the next try after an error (AFA-148). Five errors in a row still end it
-  // with the error.
+  // After a result, the end of --timeout ends the call with that result, also when it comes
+  // before the next try after an error (AFA-148). Five errors in a row still end it with the
+  // error.
   /** @param {unknown} [error] */
   const unchanged = error => {
     if (!error) finish(latest, json, `Nothing changed in ${timeout} min.`);

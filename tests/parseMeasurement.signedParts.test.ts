@@ -34,7 +34,7 @@ describe('signed parts', () => {
   });
 
   // A weight after a height with marks reads as it does after the same height in words, as in
-  // "6 ft 1 in-185 lbs" (185 lb). The hyphen after the inch mark no longer signs the weight.
+  // "6 ft 1 in-185 lbs" (185 lb). The hyphen after the inch mark doesn't sign the weight.
   it('reads the weight in 6\'1"-185 lbs', () => {
     expect(parseMeasurement('6\'1"-185 lbs', { type: 'weight' })).toMatchObject({
       value: 185,
@@ -177,8 +177,8 @@ describe('signed parts', () => {
     expect(parseMeasurement('x--5 kg, 70 kg')).toMatchObject({ value: 70, unit: 'kg' });
   });
 
-  // Round 1 (Codex). A signed value with its own unit isn't the label's value, a semicolon can
-  // stand between a number and its unit, and implied inches belong to their own field.
+  // A signed value with its own unit isn't the label's value, a semicolon can stand between a
+  // number and its unit, and implied inches belong to their own field.
   it.each([
     ['180 cm = -82 kg', 180, 'cm'],
     ['72 in: -180 lbs', 72, 'in'],
