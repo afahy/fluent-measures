@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { tokenize } from '../src/tokenize';
 
-// The text of each token.
 const tokenTexts = (input: string): string[] => tokenize(input).map(({ text }) => text);
 
 describe('tokenize', () => {

@@ -126,8 +126,6 @@ export function mutatedFiles(files, patterns, root = process.cwd()) {
 }
 
 /**
- * Returns the paths that have a control character, such as a line break or an escape.
- *
  * @param {string[]} files
  * @returns {string[]}
  */

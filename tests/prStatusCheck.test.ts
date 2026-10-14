@@ -359,7 +359,6 @@ describe('setStatus', () => {
     ]);
   });
 
-  // AFA-125 review: a draft waits for the maintainer, but it stays pending while its CI runs.
   it('keeps a draft pending while its CI runs, and sets success when CI is done', async () => {
     const snapshot = fixture('pr-67');
     snapshot.pull.draft = true;

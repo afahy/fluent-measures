@@ -207,7 +207,6 @@ export function tokenizeNormalized(input: string, fuzziness?: number): Token[] {
       // A capital G right after a number, as in "5G phone", is a network generation, not
       // grams, which are written "g". Rename it before case is lost.
       .replace(/(?<=\d)G(?![A-Za-z])/g, 'gen')
-      // Convert to lowercase for case-insensitive matching
       .toLowerCase()
       // Mark labels before the punctuation that marks them is removed, so the parser knows what
       // kind of label each one is, and spell out the short aliases. A bracket label keeps its

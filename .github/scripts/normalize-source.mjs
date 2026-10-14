@@ -23,7 +23,6 @@ const IGNORED_PROPERTIES = new Set([
 // record things like attached JSDoc comments or parse errors.
 const SYNTAX_FLAGS = ts.NodeFlags.BlockScoped | ts.NodeFlags.GlobalAugmentation;
 
-/** A JSON.stringify replacer that leaves out positions. */
 const withoutPositions = (key, value) => (key === 'pos' || key === 'end' ? undefined : value);
 
 /**

@@ -7,10 +7,8 @@ build/
 node_modules/
 .pnpm-store/
 
-# Coverage directory
 coverage/
 
-# Changesets
 .changeset/
 
 # Package manager files

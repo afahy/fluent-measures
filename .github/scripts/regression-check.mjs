@@ -27,8 +27,6 @@ const PACKAGE_PATHS = ['src/', 'package.json', 'tsup.config.ts'];
 const IMPORT_ERRORS = new Set(['TS2305', 'TS2307', 'TS2459', 'TS2460', 'TS2614', 'TS2724']);
 
 /**
- * Runs git and returns the non-empty lines it prints.
- *
  * @param {...string} args
  * @returns {string[]}
  */
@@ -63,8 +61,6 @@ function run(script, args, options) {
 }
 
 /**
- * Prints the result and writes it to the step's outputs.
- *
  * @param {'unchanged' | 'no-tests' | 'caught' | 'not-caught'} result
  */
 function setResult(result) {

@@ -696,8 +696,6 @@ export function classify(snapshot, now = Date.now(), { requests = true } = {}) {
 }
 
 /**
- * The most urgent of several states.
- *
  * @param {import('./pr-state.d.mts').PrState[]} states
  * @returns {import('./pr-state.d.mts').PrState}
  */

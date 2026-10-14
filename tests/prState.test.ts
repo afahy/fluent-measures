@@ -167,7 +167,6 @@ describe('classify', () => {
     ]);
   });
 
-  // AFA-138: CodeRabbit adds no wait, so only the Codex wait remains.
   it('waits only for Codex to start, and notes CodeRabbit (#66 at 15:20)', () => {
     const status = classify(fixture('pr-66'), at('2026-10-07T15:20:00Z'));
     expect(status.state).toBe('waiting');
@@ -486,7 +485,6 @@ describe('classify', () => {
     expect(classify(snapshot, at('2026-10-07T16:00:00Z')).state).toBe('ready');
   });
 
-  // Codex on #104: a reply in a thread that the review started answers it too.
   it('takes a reply in one of its threads as an answer to a bot that requests changes', () => {
     const snapshot = fixture('pr-67');
     snapshot.reviews.push({

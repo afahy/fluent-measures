@@ -434,7 +434,6 @@ function readmeSection(section: string): string {
   return text.split(/^#+ /m)[0];
 }
 
-/** The code block languages that can hold examples. */
 const CODE_LANGUAGES = new Set(['typescript', 'ts', 'tsx', 'javascript', 'js', 'jsx']);
 
 /** Evaluates a JavaScript expression from the README, which is part of this repository. */
@@ -568,7 +567,6 @@ const UNIT_NAMES = new Map(
   Object.values(UNIT_ALIASES).flatMap(groups => groups.map(names => [names[0], names]))
 );
 
-/** Every unit name, of any unit. */
 const ALL_UNIT_NAMES = new Set([...UNIT_NAMES.values()].flat());
 
 /**

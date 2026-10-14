@@ -118,7 +118,6 @@ describe('matchUnit', () => {
     });
 
     it('handles short words with fuzziness correctly', () => {
-      // Should not match words shorter than 3 chars with fuzziness
       expect(matchUnit('f', 'height', 1)).toBeNull();
       expect(matchUnit('i', 'height', 1)).toBeNull();
       expect(matchUnit('k', 'weight', 1)).toBeNull();
