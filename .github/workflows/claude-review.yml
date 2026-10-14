@@ -44,7 +44,7 @@ jobs:
       # The base commit, not the PR's, so a PR can't change the AGENTS.md that it's reviewed by.
       # Each action is pinned to the commit of its tag, because a moved tag could change what
       # runs in the job that holds the secret.
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         if: env.HAS_TOKEN == 'true'
         continue-on-error: true
         with:
