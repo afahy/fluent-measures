@@ -8,8 +8,8 @@
 //   - Every check is for the PR's current head commit. A 👍 or a review of an earlier commit
 //     doesn't count.
 //   - Codex is done when it reviews the head commit, comments that it found no major issues in
-//     it, or its summary comment says the review of the head commit is Completed. 👀 means it's
-//     still running.
+//     it, its summary comment says the review of the head commit is Completed, or it reacts 👍
+//     to the PR after the head commit was pushed. 👀 means it's still running.
 //   - A PR never waits for CodeRabbit, and pr:status never asks it to review (AFA-138): it
 //     reviews in time or it doesn't. Its threads, its comments outside the diff and its requested
 //     changes still need the agent, and its state for the head commit is a note.
@@ -34,7 +34,7 @@ export const OWN_CHECK = 'Set the PR status';
 const MINUTE = 60 * 1000;
 /** How long a bot gets to start before the agent asks it (AGENTS.md). */
 export const BOT_START_WAIT = 30 * MINUTE;
-/** How long to wait for a bot in all (AGENTS.md: "Wait at most two hours for a bot"). */
+/** How long to wait for a bot in all (AGENTS.md: it "stops waiting for Codex after two hours"). */
 export const BOT_MAX_WAIT = 120 * MINUTE;
 /** How long CI gets to start before a missing run is reported. */
 export const CI_START_WAIT = 30 * MINUTE;
