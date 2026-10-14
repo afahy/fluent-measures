@@ -74,7 +74,7 @@ jobs:
       # a classifier approves calls. In dontAsk mode, Claude Code denies each call that needs an
       # approval, such as a read outside the workspace. Claude ignores the repository's Claude
       # settings. It posts only inline comments, and the last step posts its summary.
-      - uses: anthropics/claude-code-action@6fed3ca145920b639991cb756090506e1bcaf515 # v1
+      - uses: anthropics/claude-code-action@6fed3ca145920b639991cb756090506e1bcaf515 # v1.0.245
         id: review
         if: env.HAS_TOKEN == 'true'
         continue-on-error: true
