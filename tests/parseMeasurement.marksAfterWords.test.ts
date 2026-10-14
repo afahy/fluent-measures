@@ -27,7 +27,7 @@ describe('a mark right after a word', () => {
     [`six-and-a-half'`, 6.5, 'ft'],
     [`6-and-a-half"`, 6.5, 'in'],
     [`twenty-five-and-a-half'`, 25.5, 'ft'],
-    // A hyphen after the mark separates two parts, as in "5'-10"" (README): 5 × 12 + 10 = 70.
+    // A hyphen after the mark separates two parts, as in "5'-10"": 5 × 12 + 10 = 70.
     [`five'-10"`, 70, 'in'],
   ] as const)('reads %s as %s %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
