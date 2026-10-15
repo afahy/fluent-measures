@@ -12,7 +12,7 @@ const PAIRS = SIZES.flatMap(sizes =>
   )
 );
 
-// Inputs and results from AFA-6. The maintainer chose option (a) for both of its questions.
+// Inputs and results from AFA-6.
 describe('unit conversions', () => {
   it.each([
     ['6 ft', { normalizedUnit: 'm' }, 1.8288, 'm'], // 72 × 0.0254

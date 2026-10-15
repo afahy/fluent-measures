@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement, type ParseOptions } from '../src';
 
-// AFA-12: the allowUnqualified fallback read the number at the start of the input and dropped the
-// rest. So a unit of the other type, a second number or other text gave the requested type. #24
-// and #27 fixed these inputs, and these tests keep them fixed.
+// AFA-12: the allowUnqualified fallback reads a value only when the whole input is one number. So
+// a unit of the other type, a second number or other text doesn't give the requested type.
 describe('extra text after a number', () => {
   it.each([
     // A unit of the other type means the input isn't an unqualified value.

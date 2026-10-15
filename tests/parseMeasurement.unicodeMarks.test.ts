@@ -30,7 +30,6 @@ describe('Unicode quote marks and forms', () => {
     });
   });
 
-  // From the self-review of afahy/fluent-measures#55.
   it.each([
     // A curly opening quote that is an apostrophe doesn't make the feet mark a closing quote.
     ['‘90s 5’11”', 71, 'in'],

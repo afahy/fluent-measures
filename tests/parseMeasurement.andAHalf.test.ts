@@ -71,7 +71,7 @@ describe('and a half', () => {
   // As in "two hundred thousand", each multiplier must be smaller than the one after it, and the
   // whole number smaller than the nearest one. Only a whole number takes "and a half", as
   // "1.5 and a half m" shows, and a measurement can't be negative. So none of these has a number
-  // before the unit, and the half isn't dropped to read only the multiplier, as it was on main.
+  // before the unit, and the half isn't dropped to read only the multiplier.
   it.each([
     'two thousand and a half hundred lbs',
     'one thousand and a half thousand pounds',

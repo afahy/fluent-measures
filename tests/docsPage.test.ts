@@ -183,7 +183,7 @@ describe('the docs page', () => {
       'https://a.example/x.css',
     ],
     ['<SCRIPT src="//a.example/x.js"></SCRIPT>', '//a.example/x.js'],
-    // AFA-97: the Tailwind Play CDN is no longer an exception.
+    // AFA-97: the Tailwind Play CDN is an external script like any other.
     ['<script src="https://cdn.tailwindcss.com"></script>', 'https://cdn.tailwindcss.com'],
     ['<script src="http://cdn.tailwindcss.com"></script>', 'http://cdn.tailwindcss.com'],
     [

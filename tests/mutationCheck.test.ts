@@ -113,8 +113,8 @@ function commitFiles(repository: string, files: Record<string, string>): string 
 }
 
 describe('mutation-check.mjs', () => {
-  // AFA-71: Stryker reads a backslash as a slash, so the check passed without checking the file.
-  // The check now stops before it runs Stryker.
+  // AFA-71: Stryker reads a backslash as a slash, so it wouldn't check the file. The check stops
+  // before it runs Stryker.
   it('fails for each changed path with a backslash, and asks for a rename', () => {
     const repository = createRepository();
     const base = commitFiles(repository, {
