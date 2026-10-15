@@ -504,8 +504,8 @@ const heightCm = parseMeasurement('5\' 11"', {
   unit: 'cm',
   type: 'height',
   matches: [
-    { value: 5, unit: 'ft', match: '5\'' },
-    { value: 11, unit: 'in', match: '11"' }
+    { value: 5, unit: 'ft' },
+    { value: 11, unit: 'in' }
   ],
   raw: '5\' 11"'
 }
@@ -522,8 +522,8 @@ const heightIn = parseMeasurement('5\' 11"', {
   unit: 'in',
   type: 'height',
   matches: [
-    { value: 5, unit: 'ft', match: '5\'' },
-    { value: 11, unit: 'in', match: '11"' }
+    { value: 5, unit: 'ft' },
+    { value: 11, unit: 'in' }
   ],
   raw: '5\' 11"'
 }
@@ -542,7 +542,7 @@ const weightConverted = parseMeasurement('150 lbs', {
   type: 'weight',
   normalizedUnit: 'kg'
 });
-// ✓ Returns: { value: 68.04, unit: 'kg', type: 'weight', matches: [{ value: 150, unit: 'lb' }], raw: '150 lbs' }
+// ✓ Returns: { value: 68.0388555, unit: 'kg', type: 'weight', matches: [{ value: 150, unit: 'lb' }], raw: '150 lbs' }
 
 // Unit inference for unqualified values
 const inferredHeight = parseMeasurement('72', {

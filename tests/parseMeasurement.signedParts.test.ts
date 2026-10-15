@@ -114,6 +114,7 @@ describe('signed parts', () => {
 
   // From the README unless marked.
   it.each([
+    // Existing test: a minus sign before a height.
     ['-5 feet', {}],
     ['kg-70.5', {}],
     ['150 lbs - 180 lbs', {}],
@@ -151,7 +152,7 @@ describe('signed parts', () => {
     // A minus sign before a word doesn't make the word a number, as in "x st 4 lb".
     ['-x st 4 lb', {}, 4, 'lb'],
     ['-approx kg, 70 kg', {}, 70, 'kg'],
-    // "1st" is an ordinal, with a minus sign too (README: "Oct 1st").
+    // "1st" is an ordinal, with a minus sign too, as in "Oct 1st" (src/parseMeasurement.ts).
     ['-1st 70 kg', {}, 70, 'kg'],
     // An unrelated amount in an unsupported unit doesn't count, signed or not (README: "8 oz").
     ['-8 oz of water, 70 kg', {}, 70, 'kg'],
@@ -245,8 +246,8 @@ describe('signed parts', () => {
   });
 
   // AFA-90 items 3 and 5: a sign on the first word of a phrase in words signs the whole phrase,
-  // as "-5 feet" returns null (README). A number too large for digits reads as "age 28 kg: -5"
-  // does.
+  // as "-5 feet" returns null (existing test). A number too large for digits reads as
+  // "age 28 kg: -5" does.
   it.each([
     'age 28 kg: -1000000000000000000000',
     '-twenty five kg',
@@ -281,7 +282,7 @@ describe('a sign on the first word of a phrase', () => {
     '12 lb -a hundred oz',
     // As "12 lb -5 oz" and "12 lbs 5 and a half oz" return null.
     '12 lbs -5 and a half oz',
-    // The Unicode minus sign, as "−5 ft" returns null (README).
+    // The Unicode minus sign, as "−5 ft" returns null (existing test).
     '−a hundred kg',
     '﹣an eighty kg',
     '−a-hundred kg',
