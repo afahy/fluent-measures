@@ -287,7 +287,6 @@ describe('the docs page', () => {
     expect(clicks).toEqual([]);
     expect(Object.keys(handlers).sort()).toEqual(['error', 'success']);
 
-    // A copy marks its button and shows the success toast. A failed copy shows the error toast.
     const classes: string[] = [];
     let cleared = false;
     handlers.success({

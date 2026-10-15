@@ -45,7 +45,6 @@ export const NEXT_PART: Partial<Record<Unit, Unit>> = { ft: 'in', m: 'cm' };
 // rather than the supported part alone, as in "12st 4lb".
 export const UNSUPPORTED_WEIGHT_UNITS = /^(?:st|stones?|oz|ounces?|g|grams?)$/;
 
-// Height conversion functions
 export const ftToIn = (value: number): number => value * 12;
 
 export const inToFt = (value: number): number => value / 12;
@@ -62,7 +61,6 @@ export const ftToCm = (value: number): number => value * 12 * 2.54;
 
 export const cmToFt = (value: number): number => value / (12 * 2.54);
 
-// Weight conversion functions
 export const lbToKg = (value: number): number => value * 0.45359237;
 
 export const kgToLb = (value: number): number => value / 0.45359237;

@@ -204,7 +204,6 @@ describe('pr-status.mjs', () => {
     }
   );
 
-  // AFA-147: when --timeout ends before a poll gets through, the call says what GitHub answered.
   it('with --wait, gives the last error when no poll gets through in time', async () => {
     const api = await serve([fixture('pr-43-at-1810')], Array(10).fill({ status: 503 }));
     const result = await run(api.url, ['43', '--wait', '--interval', '1', '--timeout', '0.02']);
@@ -267,8 +266,6 @@ describe('pr-status.mjs', () => {
     }
   );
 
-  // With nothing new before --timeout, the call prints the last result with the --timeout that it
-  // was given (AFA-148 keeps this from main).
   it('with --wait, prints the last result with its --timeout when nothing changes', async () => {
     const blocked = answered();
     blocked.pull.mergeable_state = 'blocked';
@@ -278,8 +275,6 @@ describe('pr-status.mjs', () => {
     expect(result.stdout.split('\n')[0]).toBe('Nothing changed in 0.03 min.');
   });
 
-  // AFA-148 item 1: a rate limit that lasts past --timeout ends a call that has a result with that
-  // result, as before AFA-147, not with exit 1.
   it('with --wait, prints the last result when a later rate limit lasts past --timeout', async () => {
     const blocked = answered();
     blocked.pull.mergeable_state = 'blocked';

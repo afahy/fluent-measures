@@ -146,11 +146,9 @@ function readSignedPhrase(
   return [value, end, false];
 }
 
-/** Add up a measurement's parts in the target unit. */
 function total(parts: QualifiedMatch[], targetUnit: Unit): number {
   let sum = 0;
   for (const { value, unit } of parts) {
-    // Zero components contribute nothing.
     if (!value) continue;
     if (unit === targetUnit) {
       sum += value;
@@ -165,7 +163,6 @@ function total(parts: QualifiedMatch[], targetUnit: Unit): number {
   return sum;
 }
 
-/** Return the index of the first token at or after `start` that isn't a semicolon. */
 function skipSemicolons(words: Words, start: number): number {
   while (words(start) === ';') start++;
   return start;
@@ -362,7 +359,6 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   const fieldOf = tokens.map(({ text }) => (text === ';' ? ++field : field));
   const allWords: Words = at => tokens[at]?.text;
   const remaining = remainingWords(tokens);
-  /** Mark the tokens from `start` up to `end` as used. */
   const use = (start: number, end: number): void => {
     for (let at = start; at < end; at++) tokens[at].used = true;
   };
@@ -376,7 +372,6 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     const signedFields = new Set<number>();
     const matchFields = new Map<QualifiedMatch, number[]>();
 
-    // Process tokens looking for units and numbers
     for (let i = 0; i < tokens.length; i++) {
       const unit = matchUnit(remaining(i), type, fuzziness);
       if (!unit) {

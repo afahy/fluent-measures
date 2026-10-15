@@ -324,8 +324,6 @@ function mask(text, ranges) {
 }
 
 /**
- * The text with its code blanked out, as `mask` does.
- *
  * @param {string} text
  * @returns {string}
  */

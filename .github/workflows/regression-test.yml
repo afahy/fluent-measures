@@ -16,7 +16,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # A bug fix must add a test that fails without the fix.
   regression-test:
     name: Regression test fails without the fix
     # Test the title only in this expression: interpolating it into a run script would allow

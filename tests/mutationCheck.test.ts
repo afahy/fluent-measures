@@ -100,7 +100,6 @@ function addStrykerStub(repository: string, stub = STRYKER_STUB): void {
   writeFileSync(resolve(bin, 'stryker.js'), stub);
 }
 
-/** Writes the files, commits them, and returns the commit's hash. */
 function commitFiles(repository: string, files: Record<string, string>): string {
   for (const [file, content] of Object.entries(files)) {
     mkdirSync(dirname(resolve(repository, file)), { recursive: true });
@@ -375,7 +374,6 @@ describe('mutation-check.mjs', () => {
     expect(check.status).toBe(0);
   });
 
-  // A changed declaration or data file under src/ isn't one either.
   it.each(['src/types.d.ts', 'src/data.json'])(
     'says that %s is not a file that Stryker mutates',
     file => {
@@ -429,7 +427,6 @@ describe('mutation-check.mjs', () => {
     expect(check.status).toBe(0);
   });
 
-  // A changed file with mutants that no test imports still fails, as on main.
   it('fails when no test imports the changed files and they have mutants', () => {
     const repository = createRepository();
     const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
@@ -443,7 +440,6 @@ describe('mutation-check.mjs', () => {
     expect(check.stdout).not.toContain('nothing to check');
   });
 
-  // The check still finds a directive without a reason in a changed file with no mutants.
   it('fails for a directive without a reason when the changed files have no mutants', () => {
     const repository = createRepository();
     const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
@@ -478,7 +474,6 @@ describe('mutation-check.mjs', () => {
     expect(check.stderr).toContain('::error::Stryker exited with status 1.');
   });
 
-  // AFA-82 review: the check reads only this run's warnings, and keeps a log that it didn't make.
   it('ignores the warnings in an older stryker.log, and keeps that file', () => {
     const repository = createRepository();
     const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
