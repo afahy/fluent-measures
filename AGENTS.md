@@ -139,6 +139,9 @@ and continue with other work. Don't look for another way around the check.
 - Push only to the ticket's branch. Never push to `main`, even though GitHub allows it for
   this account.
 - Run `pnpm install` and `pnpm check`.
+- The Evidence check lists the results that the PR changes. When it lists changed results, put a
+  "Changed results" line or heading under "Description" in the PR body. Under it, list each
+  result that the ticket doesn't ask for (decision rule 3).
 - Use the `fix` type when the PR changes a result that `parseMeasurement` returns. Never
   change a PR's type to skip a CI check.
 - Before you open the PR, review your own diff and fix the findings that are in scope. In
@@ -220,8 +223,8 @@ and continue with other work. Don't look for another way around the check.
   review doesn't cover them. Fix the findings that are in scope.
 - Report a PR as ready to merge only when each finding is fixed, filed as a ticket, or
   answered on its thread as not reproducible, not valid or not worth fixing. These checks
-  must also pass: `ci-ok`, `Validate commits and PR title` and `Regression test fails
-without the fix`. A skipped check counts as passed.
+  must also pass: `ci-ok`, `Validate commits and PR title`, `Regression test fails
+without the fix` and `Evidence of changed results`. A skipped check counts as passed.
 - Right before you merge or close a PR, check its comments one last time. A bot can post a
   finding after you report a PR as ready, such as Codex's review of the last commit. Run
   `pnpm pr:status <pr>`, which lists bot threads with no reply. Then read all review

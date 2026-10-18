@@ -46,7 +46,7 @@ describe('pr-status workflow', () => {
     ]);
     expect(types('pull_request_review')).toEqual(['submitted', 'dismissed']);
     expect(workflow).toMatch(
-      /^ {2}workflow_run:\n {4}workflows: \[CI, Commitlint, Regression test\]\n {4}types: \[in_progress, completed\]$/m
+      /^ {2}workflow_run:\n {4}workflows: \[CI, Commitlint, Regression test, Evidence\]\n {4}types: \[in_progress, completed\]$/m
     );
   });
 });

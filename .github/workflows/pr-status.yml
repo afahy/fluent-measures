@@ -21,7 +21,7 @@ on:
   # after a title edit or a re-run, so a start counts as well as the end. GitHub sends
   # `requested` only for new runs, but `in_progress` for re-runs too.
   workflow_run:
-    workflows: [CI, Commitlint, Regression test]
+    workflows: [CI, Commitlint, Regression test, Evidence]
     types: [in_progress, completed]
   # A bot's or CI's time running out sends no event, and nor does Codex's 👍 or 👀, so check
   # every open PR now and then. Each PR costs about 13 requests of the token's 1,000 an hour,

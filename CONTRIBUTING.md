@@ -331,6 +331,34 @@ installed in an empty project.
 the maintainer's approval. When the ticket has it, run `pnpm check:api --update` and commit the
 report.
 
+### Evidence and risk
+
+On each pull request, `.github/workflows/evidence.yml` writes a summary on the run's page. It lists
+each result that changes in `tests/__snapshots__/resultSnapshot.txt` and each corpus entry whose
+outcome changes. It also lists the changed examples in the README and `PARSING.md`, a change to
+`api-report.d.ts`, and the bundle sizes before and after. When results change, the check fails until
+the PR body has a "Changed results" line, list item or heading under "Description". Text must
+follow it on the same line, or a list must follow it. A corpus entry that the PR edits doesn't
+count as a changed result, because the edit, not the parser, can change its outcome.
+
+The summary also rates the risk as low, medium or high, for the maintainer's review. No label or
+merge rule uses the rating. A high risk is a change that the maintainer decides on:
+
+- an example in the README or `PARSING.md`: a line of a code block that calls `parseMeasurement`,
+  or a paragraph with a code span
+- an exported type, or a `package.json` field that reaches users
+- an expected output of a corpus entry, or a removed entry
+- a lower test limit, a deleted test, or a test file renamed so that Vitest doesn't run it
+- the test settings: `stryker.config.json`, the Vitest, ESLint, commitlint and TypeScript configs,
+  and the `package.json` scripts
+- a size budget that rises by more than 0.5 kB, or that the PR removes
+- CI: a workflow, the setup action, or a script that a workflow runs
+
+A medium risk changes code that runs or a result, or removes `expect` calls from the tests. A
+comment that turns off a mutation or coverage check, such as `// Stryker disable`, is also a
+medium risk. A low risk changes none of these. The script from the base branch rates the PR, so a
+change to the script doesn't rate its own PR.
+
 ## Documentation
 
 Add JSDoc comments to all public functions and types:
