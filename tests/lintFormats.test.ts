@@ -1,8 +1,9 @@
 import tsParser from '@typescript-eslint/parser';
 import { ESLint } from 'eslint';
 import { readFileSync } from 'node:fs';
-import { basename, matchesGlob } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
+import { dirname, join, matchesGlob } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import vitestConfig from '../vitest.config';
 
@@ -45,14 +46,20 @@ it('lints all of src/ and tests/ in the lint scripts', () => {
 });
 
 // The pre-commit hook must run ESLint on each test format too, so a test with no expect fails
-// before CI. lint-staged matches a pattern with no slash against the file's name only.
-it('runs ESLint on every test format in the pre-commit hook', () => {
+// before CI. lint-staged's own matcher reads each pattern as the hook does.
+it('runs ESLint on every test format in the pre-commit hook', async () => {
   const tasks = readJson('.lintstagedrc') as Record<string, string[]>;
   const eslintGlobs = Object.keys(tasks).filter(glob => tasks[glob].includes('eslint --fix'));
-  const unlinted = formats.filter(format => {
-    const file = `tests/a/x.test.${format}`;
-    return !eslintGlobs.some(glob => matchesGlob(glob.includes('/') ? file : basename(file), glob));
-  });
+  const lintStaged = dirname(createRequire(import.meta.url).resolve('lint-staged/package.json'));
+  const { matchFiles } = (await import(
+    pathToFileURL(join(lintStaged, 'lib/matchFiles.js')).href
+  )) as {
+    matchFiles: (files: { filepath: string }[], pattern: string) => unknown[];
+  };
+  const files = formats.flatMap(format => [`tests/x.test.${format}`, `tests/a/x.test.${format}`]);
+  const unlinted = files.filter(
+    filepath => !eslintGlobs.some(glob => matchFiles([{ filepath }], glob).length > 0)
+  );
   expect(unlinted).toEqual([]);
 });
 
@@ -94,9 +101,26 @@ describe('the lint config for each test format', () => {
     ]);
   });
 
-  // TypeScript files can't be linted from text here, because their parser needs each file to be
-  // in the TypeScript project. So these check the config that each one gets.
-  it.each([...tsFormats.map(format => `tests/a/x.test.${format}`), 'src/x.ts'])(
+  // TypeScript's parser lints only a file in the TypeScript project, so text is linted under the
+  // name of a file that exists. No test file has another TypeScript format, so those formats get a
+  // check of their config.
+  it('warns only about console.log in a TypeScript test', async () => {
+    const code = `import { expect, it } from 'vitest';\nit('warns', () => {\n  console.warn('w');\n  console.log('l');\n  expect(1).toBe(1);\n});\n`;
+    const [result] = await eslint.lintText(code, { filePath: 'tests/lintFormats.test.ts' });
+    expect(result.messages.map(({ ruleId, severity }) => [ruleId, severity])).toEqual([
+      ['no-console', 1],
+    ]);
+  });
+
+  it('warns only about console.log in src/', async () => {
+    const code = `export const report = (): void => {\n  console.warn('w');\n  console.log('l');\n};\n`;
+    const [result] = await eslint.lintText(code, { filePath: 'src/index.ts' });
+    expect(result.messages.map(({ ruleId, severity }) => [ruleId, severity])).toEqual([
+      ['no-console', 1],
+    ]);
+  });
+
+  it.each(tsFormats.map(format => `tests/a/x.test.${format}`))(
     'declares console as a global for %s',
     async file => {
       expect((await configFor(file)).globals?.console).toBe('readonly');
