@@ -47,12 +47,21 @@ describe('the lint for tests that skip or are expected to fail', () => {
     [`it.each([1])('x %i', { fails: true }, n => {\n  expect(n).toBe(1);\n});`, fails],
     [`it.concurrent.each([1])('x %i', { fails: true }, n => {\n  expect(n).toBe(1);\n});`, fails],
     [`it('x', { 'fails': true }, ${pass});`, fails],
+    [`it.skipIf(Date.now() < 0).concurrent('x', { todo: true }, ${pass});`, fails],
     [`it('x', { todo: 'false' }, ${pass});`, fails],
     // Item 2: a skip from the test's context.
     [`it('x', ({ skip }) => {\n  skip();\n  expect(1).toBe(1);\n});`, skip],
     [`it.concurrent('x', ({ skip }) => {\n  skip();\n  expect(1).toBe(1);\n});`, skip],
     [`it.skipIf(Date.now() < 0)('x', ({ skip }) => {\n  skip();\n  expect(1).toBe(1);\n});`, skip],
     [`it.for([1])('x', (n, { skip }) => {\n  skip();\n  expect(n).toBe(1);\n});`, skip],
+    [
+      `it.skipIf(Date.now() < 0).concurrent('x', ({ skip }) => {\n  skip();\n  expect(1).toBe(1);\n});`,
+      skip,
+    ],
+    [
+      `it.skipIf(Date.now() < 0).for([1])('x', (n, { skip }) => {\n  skip();\n  expect(n).toBe(1);\n});`,
+      skip,
+    ],
     // Item 3: constant conditions that aren't literals.
     [`it.runIf(undefined)('x', ${pass});`, constant],
     [`it.runIf(void 0)('x', ${pass});`, constant],

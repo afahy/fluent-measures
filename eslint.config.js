@@ -12,14 +12,16 @@ const JS_TESTS = 'tests/**/*.{js,mjs,cjs,jsx}';
 const UNUSED = { argsIgnorePattern: '^_', varsIgnorePattern: '^_' };
 const CONSOLE = ['warn', { allow: ['warn', 'error'] }];
 // Vitest's test and suite functions, and a call to one of them. The call can be on a chain such
-// as test.concurrent, or after a call such as it.each(cases) or it.concurrent.each(cases).
-// test.extend and test.scoped take fixtures, not test options, so they don't count.
+// as test.concurrent, or after a call such as it.each(cases) or it.concurrent.each(cases), or on
+// a chain after a call such as it.skipIf(c).concurrent. test.extend and test.scoped take
+// fixtures, not test options, so they don't count.
 const TEST_NAMES = '/^(it|test|describe|suite)$/';
 const TEST_CALL = `CallExpression:matches(${[
   `[callee.name=${TEST_NAMES}]`,
   `[callee.object.name=${TEST_NAMES}][callee.property.name!=/^(extend|scoped)$/]`,
   `[callee.callee.object.name=${TEST_NAMES}]`,
   `[callee.callee.object.object.name=${TEST_NAMES}]`,
+  `[callee.object.callee.object.name=${TEST_NAMES}]`,
 ].join(', ')})`;
 
 export default [
@@ -137,13 +139,13 @@ export default [
         },
         {
           // The test's context is the first parameter of a call to it or test, also on a chain
-          // such as it.concurrent or after it.skipIf(c). In .for, the context is the second
-          // parameter, after the case. In .each, no parameter is the context, so a case's own
-          // skip field stays allowed.
+          // such as it.concurrent, after it.skipIf(c), or on a chain after it, such as
+          // it.skipIf(c).concurrent. In .for, the context is the second parameter, after the case.
+          // In .each, no parameter is the context, so a case's own skip field stays allowed.
           selector: [
-            "CallExpression:matches([callee.name=/^(it|test)$/], [callee.object.name=/^(it|test)$/][callee.property.name!=/^(each|for|extend|scoped)$/]) > :function.arguments > ObjectPattern.params:first-child > Property[key.name='skip']",
+            "CallExpression:matches([callee.name=/^(it|test)$/], [callee.object.name=/^(it|test)$/][callee.property.name!=/^(each|for|extend|scoped)$/], [callee.object.callee.object.name=/^(it|test)$/][callee.property.name!=/^(each|for)$/]) > :function.arguments > ObjectPattern.params:first-child > Property[key.name='skip']",
             "CallExpression[callee.callee.property.name=/^(skipIf|runIf)$/]:matches([callee.callee.object.name=/^(it|test)$/], [callee.callee.object.object.name=/^(it|test)$/]) > :function.arguments > ObjectPattern.params:first-child > Property[key.name='skip']",
-            "CallExpression[callee.callee.property.name='for']:matches([callee.callee.object.name=/^(it|test)$/], [callee.callee.object.object.name=/^(it|test)$/]) > :function.arguments > ObjectPattern.params:nth-child(2) > Property[key.name='skip']",
+            "CallExpression[callee.callee.property.name='for']:matches([callee.callee.object.name=/^(it|test)$/], [callee.callee.object.object.name=/^(it|test)$/], [callee.callee.object.callee.object.name=/^(it|test)$/]) > :function.arguments > ObjectPattern.params:nth-child(2) > Property[key.name='skip']",
           ].join(', '),
           message: "Don't skip a test (AGENTS.md rule 3).",
         },
