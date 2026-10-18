@@ -36,13 +36,19 @@ export default [
       'no-console': CONSOLE,
     },
   },
+  // `console` is a global in Node, so `no-console` decides which calls a test may make.
   {
     files: [JS_TESTS],
-    languageOptions: { parserOptions: { ecmaFeatures: { jsx: true } } },
+    languageOptions: { globals: { console: 'readonly' } },
     rules: {
       'no-unused-vars': ['error', UNUSED],
       'no-console': CONSOLE,
     },
+  },
+  // Vite reads JSX only in .jsx and .tsx files, so only a .jsx test may hold it.
+  {
+    files: ['tests/**/*.jsx'],
+    languageOptions: { parserOptions: { ecmaFeatures: { jsx: true } } },
   },
   // A .cjs test can't import Vitest, which is ESM only, so it uses the globals that
   // vitest.config.ts turns on.
