@@ -196,7 +196,16 @@ describe('the mutation job in CI', () => {
       `#!/bin/sh\necho "$*" > '${join(bin, 'args')}'\nexit ${timeoutStatus}\n`,
       { mode: 0o755 }
     );
+    // A pgrep stand-in that records its arguments and finds no process, so the wait ends at once.
+    writeFileSync(
+      join(bin, 'pgrep'),
+      `#!/bin/sh\necho "$*" >> '${join(bin, 'pgrep.log')}'\nexit 1\n`,
+      {
+        mode: 0o755,
+      }
+    );
     writeFileSync(join(bin, 'output'), '');
+    writeFileSync(join(bin, 'pgrep.log'), '');
 
     const result = spawnSync('bash', ['-e', '-c', script], {
       env: {
@@ -211,6 +220,8 @@ describe('the mutation job in CI', () => {
       '--signal=INT 27m pnpm test:mutation --incremental\n'
     );
     expect(readFileSync(join(bin, 'output'), 'utf8')).toBe(output);
+    // Only after a stop does the step wait for Stryker to finish writing its results.
+    expect(readFileSync(join(bin, 'pgrep.log'), 'utf8')).toBe(output ? '-f stryker\n' : '');
   });
 
   // A file that a parser test reads must be in the hash, or a change to it would reuse stale

@@ -188,14 +188,18 @@ jobs:
       # the threshold saves them too. On SIGINT, it writes the results so far. The job's own time
       # limit doesn't reach Stryker through the step's shell. So `timeout` sends SIGINT to the whole
       # run 3 minutes before that limit. `timeout` then exits with 124, and the step records that
-      # the run stopped and fails. The save steps keep the results.
+      # the run stopped and fails. `timeout` waits only for pnpm, which exits at once, so the step
+      # waits up to 2 minutes for Stryker to write its results. The save steps then keep them.
       - name: Mutation tests
         id: mutation
         run: |
           set -euo pipefail
           status=0
           timeout --signal=INT 27m pnpm test:mutation --incremental || status=$?
-          if [ "$status" -eq 124 ]; then echo "stopped=true" >> "$GITHUB_OUTPUT"; fi
+          if [ "$status" -eq 124 ]; then
+            echo "stopped=true" >> "$GITHUB_OUTPUT"
+            for _ in $(seq 120); do pgrep -f stryker > /dev/null || break; sleep 1; done
+          fi
           exit "$status"
 
       # Each run and attempt saves under its own key, because a key can't be saved twice. A run that
