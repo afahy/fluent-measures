@@ -6,9 +6,9 @@ description: Watch this repository's pull requests until they merge. Use after e
 # Watching a pull request
 
 `pnpm pr:status <pr>...` decides what a PR needs. It reads GitHub's REST API for the PR's head
-commit and reports CI, Codex, CodeRabbit, bot threads with no reply and the merge state. Don't
+commit and reports CI, the bot reviews, bot threads with no reply and the merge state. Don't
 write your own checks for any of these. Earlier sessions wrote about 50 watchers of their own,
-and most of them misjudged the head commit, Codex's 👀 or CodeRabbit's rate limit. If
+and most of them misjudged the head commit or Codex's 👀. If
 `pr:status` gets something wrong, don't change it in the PR you're watching. File a ticket for
 `.github/scripts/pr-state.mjs` with a test built from the PR's real API responses.
 
@@ -37,14 +37,14 @@ each Codex gap in your report.
 
 `pr:status` doesn't post anything. When "Do" lists `Post @codex review`, post that comment
 yourself, as `Agent: @codex review`. Codex acts on a request with the `Agent:` prefix. Don't
-offer to post it. `pr:status` lists each request once per commit, as AGENTS.md says, and stops
-waiting for Codex 2 hours after it could start. A PR that Codex never reviewed then waits on the
-maintainer. Say so in your report.
+offer to post it. `pr:status` lists a request when Codex hasn't started 30 minutes after it
+could, once for each commit. It stops waiting for Codex 2 hours after it could start. A PR that
+Codex never reviewed then waits on the maintainer. Say so in your report.
 
-`pr:status` never waits for CodeRabbit and never asks it to review (AFA-138). Its threads, its
-comments outside the diff and its requested changes still make a PR `needs-agent`. When it
-hasn't reviewed the head commit, a note says so. Its review is optional, so that gap needs no
-mention in your report.
+The Claude review runs when a PR opens and each time it becomes ready for review. Its
+`Claude review` check counts as CI, and `pr:status` never asks it to review. It posts inline
+comments as `claude[bot]` and a summary comment as `github-actions[bot]`. Read both, and handle
+each finding as AGENTS.md says.
 
 ## Waiting
 

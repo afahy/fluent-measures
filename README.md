@@ -4,7 +4,6 @@
 [![npm version](https://badge.fury.io/js/%40afahy%2Ffluent-measures.svg)](https://badge.fury.io/js/%40afahy%2Ffluent-measures)
 [![Bundle Size](https://img.shields.io/bundlephobia/minzip/@afahy/fluent-measures)](https://bundlephobia.com/package/@afahy/fluent-measures)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/afahy/fluent-measures/blob/main/LICENSE)
-[![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/afahy/fluent-measures?utm_source=oss&utm_medium=github&utm_campaign=afahy%2Ffluent-measures&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)](https://coderabbit.ai)
 
 A small TypeScript library that reads a height or a weight from everyday text and returns
 structured data.

@@ -319,8 +319,9 @@ This library is designed to be lightweight and performant. When contributing, ke
    `pnpm check:size`. To see how much minified code each source file adds, run
    `pnpm exec tsup --metafile` and load `dist/metafile-esm.json` into
    [esbuild's bundle analyzer](https://esbuild.github.io/analyze/). `pnpm check:size:why` can't
-   show this, because it only sees the built file. Raising the budget needs its own ticket, so
-   don't raise it as part of another change.
+   show this, because it only sees the built file. Raise the budget only on its own ticket. The
+   one exception is a fix whose smallest version goes over the budget: `AGENTS.md` ("Build the
+   PR") allows a raise of 0.5 kB in that PR.
 2. **Algorithmic Complexity**: Be mindful of performance in parsing algorithms.
 3. **Memory Usage**: Avoid unnecessary object creation in hot paths.
 
