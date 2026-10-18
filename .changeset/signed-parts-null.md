@@ -1,5 +1,5 @@
 ---
-'@afahy/fluent-measures': patch
+'@afahy/fluent-measures': minor
 ---
 
 A measurement can't be negative. Before, the parser dropped a signed part, such as "-5 ft" or "kg -5", and the rest of the input decided the result.
