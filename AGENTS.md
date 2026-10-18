@@ -40,9 +40,9 @@ ticket ID and text. Don't open a PR without a ticket ID.
    consumers. `pnpm changeset` asks questions that you can't answer, so write the file
    yourself: `.changeset/<short-name>.md`, with `'@afahy/fluent-measures': patch` between two
    `---` lines, and then a summary of the change for users. Use `minor` in place of `patch`
-   when the PR changes a result that `main` returns and that isn't `null` (decision rule 3).
-   While the version is below 1.0.0, a minor bump marks a change that can break users. Never
-   use `major`. Don't change the version in `package.json`. Changesets sets it at release
+   when the PR changes a result that `main` returns and that isn't `null` (decision rule 3),
+   or changes a type that `src/index.ts` exports. While the version is below 1.0.0, a minor
+   bump marks a change that can break users. Never use `major`. Don't change the version in `package.json`. Changesets sets it at release
    time.
 5. Commit messages and PR titles follow Conventional Commits, as configured in
    `commitlint.config.js`. CI checks both, and checks titles against
@@ -76,6 +76,8 @@ ticket ID and text. Don't open a PR without a ticket ID.
 
 When you review a pull request, report each of these problems:
 
+- The PR body doesn't have exactly one `Fixes AFA-n` or `Part of AFA-n` line, or the change
+  goes beyond what the PR body says that the ticket asks for.
 - A result that an example in the README or `PARSING.md` documents changes, and the PR body
   doesn't say that the ticket asks for the change. When the ticket asks for it, the example
   must change too.
@@ -261,9 +263,9 @@ changes, merges become one-way doors: stop merging, and tell the maintainer.
 ### Finish your task
 
 A reply without a tool call ends your turn, and work stops until the maintainer answers.
-Finish the task that the maintainer gave you. For a ticket, that is the merge and CI on
-`main`, or the point where only the maintainer can act. While that work is open, don't end a
-turn with any of these:
+Finish the task that the maintainer gave you. For a ticket, that is the merge, the steps after
+it in "Finish the PR" and CI on `main`. While a PR waits on the maintainer, wait as the steward
+skill says. While that work is open, don't end a turn with any of these:
 
 - A summary that names the next step but doesn't start it.
 - An offer to continue unless the maintainer objects.

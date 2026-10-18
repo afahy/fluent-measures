@@ -30,5 +30,7 @@ ticket to take next, how to work on tickets at the same time, and when to stop.
   ticket.
 - While tickets are left, don't end a turn with a report only because the turn is long or a
   milestone is done.
-- Stop when no `agent-ready` ticket is left that you can start, and each open PR waits on the
-  maintainer. Then report each PR and ticket that waits on the maintainer.
+- When no `agent-ready` ticket is left that you can start, report each PR and ticket that waits
+  on the maintainer. Then watch the open PRs as the steward skill says, and finish each one as
+  `AGENTS.md` says when it merges. Stop when they have all merged or closed, or when the
+  steward skill's check-ins run out.

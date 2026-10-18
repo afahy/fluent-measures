@@ -6,9 +6,9 @@ description: Watch this repository's pull requests until they merge. Use after e
 # Watching a pull request
 
 `pnpm pr:status <pr>...` decides what a PR needs. It reads GitHub's REST API for the PR's head
-commit and reports CI, Codex, CodeRabbit, bot threads with no reply and the merge state. Don't
+commit and reports CI, the bot reviews, bot threads with no reply and the merge state. Don't
 write your own checks for any of these. Earlier sessions wrote about 50 watchers of their own,
-and most of them misjudged the head commit, Codex's 👀 or CodeRabbit's rate limit. If
+and most of them misjudged the head commit or Codex's 👀. If
 `pr:status` gets something wrong, don't change it in the PR you're watching. File a ticket for
 `.github/scripts/pr-state.mjs` with a test built from the PR's real API responses.
 
