@@ -5,8 +5,9 @@
 //                               [--no-requests] [--repo <owner/name>]
 //
 // The state of each PR, from most to least urgent, with the exit code:
-//   needs-agent    10  The agent has something to do: failed CI, a bot thread with no reply,
-//                      a merge conflict, or a bot review to ask for. "Do" lists the requests.
+//   needs-agent    10  The agent has something to do: failed CI, a bot thread or a Claude
+//                      summary with no answer, a merge conflict, or a bot review to ask for.
+//                      "Do" lists the requests.
 //   ready           0  Nothing is left for the agent. Merge it if AGENTS.md lets you.
 //   merged         40
 //   closed         41

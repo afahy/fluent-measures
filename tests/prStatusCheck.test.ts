@@ -49,17 +49,27 @@ describe('describeStatus', () => {
     );
   });
 
-  it('drops a link that follows "in"', () => {
-    const status = classify(fixture('pr-67'), at('2026-10-07T16:00:00Z'));
-    const outside: PrStatus = {
+  it('drops a link that follows a colon, "in" or a space', () => {
+    // The Claude review's summary on #141.
+    const snapshot = fixture('pr-67');
+    snapshot.issueComments.push({
+      id: 6244919783,
+      user: { login: 'github-actions[bot]', type: 'Bot' },
+      body: 'Review of PR #141, based on the full diff and the PR body.',
+      created_at: '2026-10-07T14:56:00Z',
+      updated_at: '2026-10-07T14:56:00Z',
+      html_url: 'https://github.com/afahy/fluent-measures/pull/141#issuecomment-6244919783',
+    });
+    const status = classify(snapshot, at('2026-10-07T16:00:00Z'));
+    expect(describeStatus(status)).toBe(
+      'needs-agent: The Claude review posted a summary. Answer in a PR comment that links to it'
+    );
+    const inside: PrStatus = {
       ...status,
-      state: 'needs-agent',
-      reasons: [
-        'claude[bot] put comments outside the diff in https://github.com/afahy/fluent-measures/pull/67#pullrequestreview-1',
-      ],
+      reasons: ['A check failed in https://github.com/afahy/fluent-measures/actions/runs/1'],
     };
-    expect(describeStatus(outside)).toBe('needs-agent: claude[bot] put comments outside the diff');
-    const bare: PrStatus = { ...outside, reasons: ['See https://github.com/afahy'] };
+    expect(describeStatus(inside)).toBe('needs-agent: A check failed');
+    const bare: PrStatus = { ...status, reasons: ['See https://github.com/afahy'] };
     expect(describeStatus(bare)).toBe('needs-agent: See');
   });
 

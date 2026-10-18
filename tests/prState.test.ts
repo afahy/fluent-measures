@@ -40,6 +40,38 @@ const pr67 = 'https://github.com/afahy/fluent-measures/pull/67';
 const human = { login: 'afahy', type: 'User' };
 const claude = { login: 'claude[bot]', type: 'Bot' };
 
+// The Claude review's summaries on #140 and #141, and afahy's answer on #140, cut to their first
+// lines. Each test moves them to the times it needs.
+const summary140: IssueComment = {
+  id: 6244751877,
+  user: { login: 'github-actions[bot]', type: 'Bot' },
+  body: 'Review of PR 140 against the six checks. Items 1 and 6 have findings. Items 2 to 5 pass.',
+  created_at: '2026-10-18T02:31:36Z',
+  updated_at: '2026-10-18T02:31:36Z',
+  html_url: 'https://github.com/afahy/fluent-measures/pull/140#issuecomment-6244751877',
+};
+const answer140: IssueComment = {
+  id: 6244789733,
+  user: { login: 'afahy', type: 'User' },
+  body: 'Agent: Reply to the Claude review summary (https://github.com/afahy/fluent-measures/pull/140#issuecomment-6244751877).',
+  created_at: '2026-10-18T02:36:17Z',
+  updated_at: '2026-10-18T02:36:17Z',
+  html_url: 'https://github.com/afahy/fluent-measures/pull/140#issuecomment-6244789733',
+};
+const summary141: IssueComment = {
+  id: 6244919783,
+  user: { login: 'github-actions[bot]', type: 'Bot' },
+  body: 'Review of PR #141, based on the full diff and the PR body. It is a partial review: one check was not completed.',
+  created_at: '2026-10-18T02:53:18Z',
+  updated_at: '2026-10-18T02:53:18Z',
+  html_url: 'https://github.com/afahy/fluent-measures/pull/141#issuecomment-6244919783',
+};
+
+/** A comment moved to another time. */
+function postedAt(comment: IssueComment, time: string): IssueComment {
+  return { ...comment, created_at: time, updated_at: time };
+}
+
 function thread(
   pr: string,
   id: number,
@@ -465,31 +497,6 @@ describe('classify', () => {
     expect(classify(snapshot, at('2026-10-07T16:00:00Z')).state).toBe('ready');
   });
 
-  it('needs the agent for review comments outside the diff, until a person answers', () => {
-    const snapshot = fixture('pr-67');
-    snapshot.reviews.push({
-      id: 2,
-      user: claude,
-      state: 'COMMENTED',
-      body: '**Actionable comments posted: 0**\n\n<summary>⚠️ Outside diff range comments (1)</summary>',
-      commit_id: '318c1b7f27c418c6a53ecf1c3de26c32ea207cb0',
-      submitted_at: '2026-10-07T15:54:00Z',
-      html_url: 'https://github.com/afahy/fluent-measures/pull/67#pullrequestreview-2',
-    });
-    expect(classify(snapshot, at('2026-10-07T16:00:00Z')).reasons).toEqual([
-      'claude[bot] put comments outside the diff in https://github.com/afahy/fluent-measures/pull/67#pullrequestreview-2. Answer in a PR comment that links to it.',
-    ]);
-    snapshot.issueComments.push({
-      id: 3,
-      user: { login: 'afahy', type: 'User' },
-      body: 'Agent: https://github.com/afahy/fluent-measures/pull/67#pullrequestreview-2 is about code that this PR does not change.',
-      created_at: '2026-10-07T15:58:00Z',
-      updated_at: '2026-10-07T15:58:00Z',
-      html_url: 'https://github.com/afahy/fluent-measures/pull/67#issuecomment-3',
-    });
-    expect(classify(snapshot, at('2026-10-07T16:00:00Z')).state).toBe('ready');
-  });
-
   // AFA-118: a Claude thread needs a reply as a Codex thread does, but pr:status never waits for
   // Claude or asks it to review.
   it('needs the agent for a Claude thread with no reply, until a person replies', () => {
@@ -508,23 +515,65 @@ describe('classify', () => {
     expect(answered.reasons).toEqual([]);
   });
 
-  // AFA-118: claude-review.yml posts Claude's summary as github-actions[bot]. The user and the
-  // body are from the start of the summary on #138.
-  it('notes the Claude review summary since the push, and is still ready', () => {
+  // AFA-118: claude-review.yml posts Claude's summary as github-actions[bot]. Claude reviews once
+  // per PR and puts each finding that isn't on a diff line in the summary.
+  it('needs the agent for a Claude summary with no answer (#141)', () => {
     const snapshot = fixture('pr-67');
-    snapshot.issueComments.push({
-      id: 5,
-      user: { login: 'github-actions[bot]', type: 'Bot' },
-      body: 'I found nothing that fails.',
-      created_at: '2026-10-07T14:56:00Z',
-      updated_at: '2026-10-07T14:56:00Z',
-      html_url: `${pr67}#issuecomment-5`,
-    });
+    snapshot.issueComments.push(postedAt(summary141, '2026-10-07T14:56:00Z'));
     const status = classify(snapshot, at('2026-10-07T16:00:00Z'));
-    expect(status.state).toBe('ready');
-    expect(status.reasons).toEqual([]);
-    expect(status.waits).toEqual([]);
-    expect(status.notes).toEqual([`The Claude review commented: ${pr67}#issuecomment-5`]);
+    expect(status.state).toBe('needs-agent');
+    expect(status.reasons).toEqual([
+      'The Claude review posted a summary. Answer in a PR comment that links to it: https://github.com/afahy/fluent-measures/pull/141#issuecomment-6244919783',
+    ]);
+    // The summary isn't a note.
+    expect(status.notes).toEqual([]);
+    expect(status.actions).toEqual([]);
+  });
+
+  it("needs an answer to a summary from before the push, and takes only a person's (#140)", () => {
+    const snapshot = fixture('pr-66');
+    // The PR opened at 14:48:59 and its head was pushed at 15:00:44.
+    snapshot.issueComments.push(postedAt(summary140, '2026-10-07T14:50:00Z'));
+    const reason = [
+      'The Claude review posted a summary. Answer in a PR comment that links to it: https://github.com/afahy/fluent-measures/pull/140#issuecomment-6244751877',
+    ];
+    const unanswered = classify(snapshot, at('2026-10-07T15:20:00Z'));
+    expect(unanswered.state).toBe('needs-agent');
+    expect(unanswered.reasons).toEqual(reason);
+    // A bot's comment with the link isn't an answer.
+    snapshot.issueComments.push({
+      ...postedAt(answer140, '2026-10-07T15:05:00Z'),
+      user: { login: 'chatgpt-codex-connector[bot]', type: 'Bot' },
+    });
+    expect(classify(snapshot, at('2026-10-07T15:20:00Z')).reasons).toEqual(reason);
+    snapshot.issueComments.push(postedAt(answer140, '2026-10-07T15:10:00Z'));
+    const answered = classify(snapshot, at('2026-10-07T15:20:00Z'));
+    // Codex still hasn't started on the head.
+    expect(answered.state).toBe('waiting');
+    expect(answered.reasons).toEqual([]);
+  });
+
+  // A summary needs the agent on a draft, as failed CI does. A merged PR lists it, as it lists
+  // threads with no reply, for the final comment check.
+  it('lists a Claude summary with no answer on a draft and on a merged PR', () => {
+    const reason =
+      'The Claude review posted a summary. Answer in a PR comment that links to it: https://github.com/afahy/fluent-measures/pull/140#issuecomment-6244751877';
+    const draft = fixture('pr-66');
+    draft.pull.draft = true;
+    draft.issueComments.push(postedAt(summary140, '2026-10-07T14:50:00Z'));
+    const draftStatus = classify(draft, at('2026-10-07T16:30:00Z'));
+    expect(draftStatus.state).toBe('needs-agent');
+    expect(draftStatus.reasons).toEqual([reason]);
+    draft.issueComments.push(postedAt(answer140, '2026-10-07T15:10:00Z'));
+    expect(classify(draft, at('2026-10-07T16:30:00Z')).state).toBe('waiting-human');
+
+    const merged = fixture('pr-43');
+    merged.issueComments.push(postedAt(summary140, '2026-10-05T17:30:00Z'));
+    const mergedStatus = classify(merged, at('2026-10-07T12:00:00Z'));
+    expect(mergedStatus.state).toBe('merged');
+    expect(mergedStatus.reasons).toEqual([reason]);
+    merged.issueComments.push(postedAt(answer140, '2026-10-05T18:00:00Z'));
+    expect(classify(merged, at('2026-10-07T12:00:00Z')).reasons).toEqual([]);
   });
 });
 

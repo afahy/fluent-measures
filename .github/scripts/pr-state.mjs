@@ -11,8 +11,9 @@
 //     it, its summary comment says the review of the head commit is Completed, or it reacts 👍
 //     to the PR after the head commit was pushed. 👀 means it's still running.
 //   - pr:status never asks Claude to review, and waits for it only as the `Claude review` check.
-//     Claude's threads, its comments outside the diff and its requested changes still need the
-//     agent. Its summary comment is a note.
+//     Claude's threads and its requested changes need the agent. Claude reviews once per PR and
+//     puts each finding that isn't on a diff line in its summary comment, so the summary needs an
+//     answer, also after a later push.
 //   - Bots name commits by short SHAs, so a SHA matches any prefix of 7 or more characters.
 //   - A commit's own date can be hours before its push, and bots and CI start only once the PR
 //     is open and ready for review. Timers count from the latest of those times.
@@ -369,19 +370,14 @@ export function botFollowUps(comments) {
 }
 
 /**
- * Codex and Claude reviews since the push that `test` matches, with no answer from a person.
- * An answer is a later PR comment or review from a person that links to the review, with
- * `#pullrequestreview-<id>` (AFA-144). Any other comment can be about something else, so it
- * doesn't answer the review. A comment that is edited after the review counts from its edit.
- * A comment that only asks a bot to review isn't an answer.
+ * What people said on the PR: their comments and reviews. A comment that is edited counts from
+ * its edit. A comment that only asks a bot to review says nothing.
  *
  * @param {import('./pr-state.d.mts').Snapshot} snapshot
- * @param {(review: import('./pr-state.d.mts').Review) => boolean} test
- * @returns {import('./pr-state.d.mts').Review[]}
+ * @returns {{ time: string, body: string }[]}
  */
-function unansweredBotReviews(snapshot, test) {
-  const pushed = pushedAt(snapshot);
-  const answers = [
+function answers(snapshot) {
+  return [
     ...snapshot.issueComments
       .filter(c => !byBot(c) && !BOT_COMMAND.test(c.body ?? ''))
       .map(c => ({ time: c.updated_at ?? c.created_at, body: c.body ?? '' })),
@@ -389,52 +385,67 @@ function unansweredBotReviews(snapshot, test) {
       .filter(r => !byBot(r) && r.submitted_at)
       .map(r => ({ time: r.submitted_at ?? '', body: r.body ?? '' })),
   ];
-  return snapshot.reviews.filter(r => {
-    if (!byReviewBot(r) || !r.submitted_at || byTime(r.submitted_at, pushed) < 0 || !test(r)) {
-      return false;
-    }
-    const link = new RegExp(`#pullrequestreview-${r.id}(?!\\d)`);
-    return !answers.some(a => byTime(a.time, r.submitted_at ?? '') > 0 && link.test(a.body));
-  });
 }
 
 /**
- * Codex and Claude reviews since the push that put comments in the review body instead of in a
- * thread ("Outside diff range comments"), with no comment from a person that links to them.
- * A reply in one of the review's threads is about that thread, so it doesn't count.
+ * Whether a person answered a bot's output after `time`. An answer links to the output with
+ * `anchor`, such as `#pullrequestreview-<id>` (AFA-144). Any other comment can be about something
+ * else, so it doesn't answer the output.
  *
- * @param {import('./pr-state.d.mts').Snapshot} snapshot
- * @returns {import('./pr-state.d.mts').Review[]}
+ * @param {{ time: string, body: string }[]} said What people said, from answers().
+ * @param {string} time
+ * @param {string} anchor
+ * @returns {boolean}
  */
-export function unansweredReviewBodies(snapshot) {
-  return unansweredBotReviews(snapshot, r =>
-    /outside diff range comments \(\d+\)/i.test(r.body ?? '')
-  );
+function answered(said, time, anchor) {
+  const link = new RegExp(`${anchor}(?!\\d)`);
+  return said.some(a => byTime(a.time, time) > 0 && link.test(a.body));
 }
 
 /**
  * Codex and Claude reviews since the push that request changes, with no answer from a person.
- * An answer clears it, as for comments outside the diff (AFA-138), because the bot may never
- * review again. A person's reply in one of the review's threads answers it too.
- * unansweredBotThreads lists each of the review's threads that has no reply.
+ * An answer clears it, because the bot may never review again. A person's reply in one of the
+ * review's threads answers it too. unansweredBotThreads lists each of the review's threads that
+ * has no reply.
  *
  * @param {import('./pr-state.d.mts').Snapshot} snapshot
  * @returns {import('./pr-state.d.mts').Review[]}
  */
 export function botChangeRequests(snapshot) {
+  const pushed = pushedAt(snapshot);
   const replied = repliedThreads(snapshot.reviewComments);
-  return unansweredBotReviews(
-    snapshot,
-    r =>
-      r.state === 'CHANGES_REQUESTED' &&
-      !snapshot.reviewComments.some(c => c.pull_request_review_id === r.id && replied.has(c.id))
-  );
+  const said = answers(snapshot);
+  return snapshot.reviews.filter(r => {
+    if (!byReviewBot(r) || !r.submitted_at || byTime(r.submitted_at, pushed) < 0) return false;
+    if (r.state !== 'CHANGES_REQUESTED') return false;
+    if (snapshot.reviewComments.some(c => c.pull_request_review_id === r.id && replied.has(c.id))) {
+      return false;
+    }
+    return !answered(said, r.submitted_at, `#pullrequestreview-${r.id}`);
+  });
 }
 
 /**
- * Bot output since the push that has no thread to reply in: the Claude review's summary, and
- * Codex or Claude comments other than Codex's summary. These are worth reading but don't block
- * the PR.
+ * The Claude review's summaries with no answer from a person. Claude reviews once per PR, so a
+ * summary from before the push still counts. An answer is a later comment or review from a
+ * person that links to the summary, with `#issuecomment-<id>`.
+ *
+ * @param {import('./pr-state.d.mts').Snapshot} snapshot
+ * @returns {import('./pr-state.d.mts').IssueComment[]}
+ */
+export function unansweredClaudeSummaries(snapshot) {
+  const said = answers(snapshot);
+  return snapshot.issueComments
+    .filter(
+      c =>
+        c.user?.login === CLAUDE_SUMMARY && !answered(said, c.created_at, `#issuecomment-${c.id}`)
+    )
+    .sort((a, b) => byTime(a.created_at, b.created_at));
+}
+
+/**
+ * Bot output since the push that has no thread to reply in: Codex or Claude comments other than
+ * Codex's summary. These are worth reading but don't block the PR.
  *
  * @param {import('./pr-state.d.mts').Snapshot} snapshot
  * @returns {string[]}
@@ -444,15 +455,9 @@ export function botOutputSincePush(snapshot) {
   /** @type {string[]} */
   const notes = [];
   for (const comment of snapshot.issueComments) {
-    if (byTime(comment.created_at, pushed) < 0) continue;
-    if (comment.user?.login === CLAUDE_SUMMARY) {
-      notes.push(`The Claude review commented: ${comment.html_url}`);
-    } else if (
-      byReviewBot(comment) &&
-      !/codex-pull-request-review-summary/i.test(comment.body ?? '')
-    ) {
-      notes.push(`${who(comment)} commented: ${comment.html_url}`);
-    }
+    if (!byReviewBot(comment) || byTime(comment.created_at, pushed) < 0) continue;
+    if (/codex-pull-request-review-summary/i.test(comment.body ?? '')) continue;
+    notes.push(`${who(comment)} commented: ${comment.html_url}`);
   }
   return notes;
 }
@@ -533,9 +538,15 @@ export function classify(snapshot, now = Date.now(), { requests = true } = {}) {
     codex,
   });
 
-  // A closed PR still lists unanswered threads, for the final comment check after a merge.
+  // A closed PR still lists unanswered threads and summaries, for the final comment check after a
+  // merge.
   for (const thread of unansweredBotThreads(snapshot.reviewComments)) {
     reasons.push(`${who(thread)} left a thread with no reply: ${thread.html_url}`);
+  }
+  for (const summary of unansweredClaudeSummaries(snapshot)) {
+    reasons.push(
+      `The Claude review posted a summary. Answer in a PR comment that links to it: ${summary.html_url}`
+    );
   }
   for (const reply of botFollowUps(snapshot.reviewComments)) {
     notes.push(`${who(reply)} replied after your reply: ${reply.html_url}`);
@@ -551,11 +562,6 @@ export function classify(snapshot, now = Date.now(), { requests = true } = {}) {
     } else {
       waits.push(`CI hasn't started on ${head.slice(0, 7)}`);
     }
-  }
-  for (const review of unansweredReviewBodies(snapshot)) {
-    reasons.push(
-      `${who(review)} put comments outside the diff in ${review.html_url}. Answer in a PR comment that links to it.`
-    );
   }
   for (const review of botChangeRequests(snapshot)) {
     reasons.push(

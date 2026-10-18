@@ -15,7 +15,7 @@ import {
   mostUrgent,
   pushedAt,
   unansweredBotThreads,
-  unansweredReviewBodies,
+  unansweredClaudeSummaries,
   type CheckRun,
   type IssueComment,
   type Review,
@@ -378,66 +378,102 @@ describe('codexState edges', () => {
   });
 });
 
-describe('unansweredReviewBodies edges', () => {
-  const outside = '<summary>⚠️ Outside diff range comments (12)</summary>';
+describe('botChangeRequests edges', () => {
+  const change = 'Fix the label check.';
 
   it('counts bot reviews from the push on, until a person answers them later', () => {
     const snapshot = fixture('pr-67');
     snapshot.reviews.push(
-      review(1, claude, 'COMMENTED', outside, '2026-10-07T14:43:10Z'),
-      review(2, claude, 'COMMENTED', outside, '2026-10-07T14:43:09Z'),
+      review(1, claude, 'CHANGES_REQUESTED', change, '2026-10-07T14:43:10Z'),
+      review(2, claude, 'CHANGES_REQUESTED', change, '2026-10-07T14:43:09Z'),
       // A person's review at the same second neither counts nor answers.
-      review(3, human, 'COMMENTED', outside, '2026-10-07T14:43:10Z'),
-      review(4, claude, 'COMMENTED', outside, null),
+      review(3, human, 'COMMENTED', change, '2026-10-07T14:43:10Z'),
+      review(4, claude, 'CHANGES_REQUESTED', change, null),
       // Only Codex and Claude count.
       review(
         8,
         { login: 'github-advanced-security[bot]', type: 'Bot' },
-        'COMMENTED',
-        outside,
+        'CHANGES_REQUESTED',
+        change,
         '2026-10-07T14:44:00Z'
       )
     );
-    expect(unansweredReviewBodies(snapshot).map(r => r.id)).toEqual([1]);
+    expect(botChangeRequests(snapshot).map(r => r.id)).toEqual([1]);
     snapshot.reviews.push(review(5, codexBot, 'COMMENTED', '', '2026-10-07T15:00:00Z'));
     snapshot.issueComments.push(
       comment(6, claude, 'thanks', '2026-10-07T15:01:00Z'),
       // A request to a bot isn't an answer.
       comment(7, human, 'Agent: @codex review', '2026-10-07T15:01:30Z')
     );
-    expect(unansweredReviewBodies(snapshot).map(r => r.id)).toEqual([1]);
+    expect(botChangeRequests(snapshot).map(r => r.id)).toEqual([1]);
     // AFA-144: a person's review that doesn't name the bot's review doesn't answer it.
     snapshot.reviews.push(review(9, human, 'COMMENTED', null, '2026-10-07T15:02:00Z'));
-    expect(unansweredReviewBodies(snapshot).map(r => r.id)).toEqual([1]);
+    expect(botChangeRequests(snapshot).map(r => r.id)).toEqual([1]);
     snapshot.reviews.push(
       review(10, human, 'COMMENTED', `See ${pull67}#pullrequestreview-1.`, '2026-10-07T15:03:00Z')
     );
-    expect(unansweredReviewBodies(snapshot)).toEqual([]);
+    expect(botChangeRequests(snapshot)).toEqual([]);
   });
 
   it('counts a later comment that says more than a bot command as an answer', () => {
     const snapshot = fixture('pr-67');
-    snapshot.reviews.push(review(1, claude, 'COMMENTED', outside, '2026-10-07T15:00:00Z'));
+    snapshot.reviews.push(review(1, claude, 'CHANGES_REQUESTED', change, '2026-10-07T15:00:00Z'));
     snapshot.issueComments.push(
       comment(
         2,
         human,
-        'Agent: @codex review once the outside-diff comment in #pullrequestreview-1 is fixed.',
+        'Agent: @codex review once the change in #pullrequestreview-1 is made.',
         '2026-10-07T15:01:00Z'
       )
     );
-    expect(unansweredReviewBodies(snapshot)).toEqual([]);
+    expect(botChangeRequests(snapshot)).toEqual([]);
+  });
+});
+
+describe('unansweredClaudeSummaries edges', () => {
+  const actions = { login: 'github-actions[bot]', type: 'Bot' };
+
+  it('lists each github-actions[bot] comment by time, until a person links to it later', () => {
+    const snapshot = fixture('pr-67');
+    snapshot.issueComments.push(
+      comment(1, actions, 'Second summary', '2026-10-07T15:00:00Z'),
+      comment(2, actions, 'First summary', '2026-10-07T14:55:00Z'),
+      // Claude's own comments and people's comments aren't summaries.
+      comment(3, claude, 'A comment', '2026-10-07T14:56:00Z'),
+      comment(4, human, 'A summary', '2026-10-07T14:57:00Z'),
+      // A link from before the summary, a link to a comment whose ID starts with the summary's,
+      // and a bot's link don't answer it.
+      comment(5, human, `See ${pull67}#issuecomment-1`, '2026-10-07T14:59:00Z'),
+      comment(6, human, `See ${pull67}#issuecomment-12`, '2026-10-07T15:01:00Z'),
+      comment(7, codexBot, `See ${pull67}#issuecomment-1`, '2026-10-07T15:02:00Z')
+    );
+    expect(unansweredClaudeSummaries(snapshot).map(c => c.id)).toEqual([2, 1]);
+    // A comment that an edit after the summary links to it answers it.
+    snapshot.issueComments.push({
+      ...comment(9, human, `Fixed: ${pull67}#issuecomment-1`, '2026-10-07T14:58:00Z'),
+      updated_at: '2026-10-07T15:04:00Z',
+    });
+    expect(unansweredClaudeSummaries(snapshot).map(c => c.id)).toEqual([2]);
+    // So does a person's review.
+    snapshot.reviews.push(
+      review(10, human, 'COMMENTED', `See ${pull67}#issuecomment-2.`, '2026-10-07T15:05:00Z')
+    );
+    expect(unansweredClaudeSummaries(snapshot)).toEqual([]);
   });
 });
 
 // AFA-144: only an answer that is tied to the bot's review clears it.
 describe('answers to a bot review', () => {
-  const outside =
-    '<summary>⚠️ Outside diff range comments (1)</summary>\n\nThe label check misses `kg:`.';
   const unanswered = (answer: (snapshot: Snapshot) => void): number[] => {
     const snapshot = fixture('pr-67');
     snapshot.reviews.push(
-      review(1, claude, 'COMMENTED', outside, '2026-10-07T15:00:00Z'),
+      review(
+        1,
+        claude,
+        'CHANGES_REQUESTED',
+        'The label check misses `kg:`.',
+        '2026-10-07T15:00:00Z'
+      ),
       review(
         12,
         claude,
@@ -447,7 +483,7 @@ describe('answers to a bot review', () => {
       )
     );
     answer(snapshot);
-    return [...unansweredReviewBodies(snapshot), ...botChangeRequests(snapshot)].map(r => r.id);
+    return botChangeRequests(snapshot).map(r => r.id);
   };
 
   it('needs an answer for each review when no one answers', () => {
@@ -501,7 +537,7 @@ describe('answers to a bot review', () => {
     expect(answered).toEqual([1, 12]);
   });
 
-  it("takes a person's thread reply as an answer to a request for changes only", () => {
+  it("takes a person's thread reply as an answer to that review only", () => {
     const reply =
       (review: number): ((snapshot: Snapshot) => void) =>
       (snapshot: Snapshot): void => {
@@ -511,13 +547,12 @@ describe('answers to a bot review', () => {
         );
       };
     expect(unanswered(reply(12))).toEqual([1]);
-    // A reply in a thread is about that thread, not about the comments outside the diff.
-    expect(unanswered(reply(1))).toEqual([1, 12]);
+    expect(unanswered(reply(1))).toEqual([12]);
   });
 });
 
 describe('botOutputSincePush', () => {
-  it("lists the Claude review's summary and Codex's and Claude's other comments since the push", () => {
+  it("lists Codex's and Claude's comments since the push, but not the Claude review's summary", () => {
     const snapshot = fixture('pr-67');
     const actions = { login: 'github-actions[bot]', type: 'Bot' };
     snapshot.issueComments.push(
@@ -525,17 +560,16 @@ describe('botOutputSincePush', () => {
       comment(5, claude, 'A comment', '2026-10-07T15:11:00Z'),
       comment(6, claude, 'An old comment', '2026-10-07T14:43:09Z'),
       comment(7, { login: 'vercel[bot]', type: 'Bot' }, 'Deployed', '2026-10-07T15:12:00Z'),
+      // The summary is a reason, not a note.
       comment(8, actions, 'I found nothing that fails.', '2026-10-07T15:13:00Z'),
-      comment(9, actions, 'An old summary', '2026-10-07T14:43:09Z'),
       // A person's comment isn't bot output.
-      comment(10, human, 'The Claude review commented.', '2026-10-07T15:14:00Z')
+      comment(10, human, 'Thanks.', '2026-10-07T15:14:00Z')
     );
     // The fixture's own comments are Codex's summary and CodeRabbit's rate-limit note. CodeRabbit
     // isn't a review bot.
     expect(botOutputSincePush(snapshot)).toEqual([
       `chatgpt-codex-connector[bot] commented: ${pull67}#issuecomment-4`,
       `claude[bot] commented: ${pull67}#issuecomment-5`,
-      `The Claude review commented: ${pull67}#issuecomment-8`,
     ]);
   });
 });
@@ -842,12 +876,13 @@ describe('pr-state.mjs details', () => {
   });
 
   it('treats only a comment that is nothing but a bot command as no answer', () => {
-    const outside = '<summary>⚠️ Outside diff range comments (1)</summary>';
     const answered = (body: string): boolean => {
       const snapshot = fixture('pr-67');
-      snapshot.reviews.push(review(1, claude, 'COMMENTED', outside, '2026-10-07T15:00:00Z'));
+      snapshot.reviews.push(
+        review(1, claude, 'CHANGES_REQUESTED', 'Fix the label check.', '2026-10-07T15:00:00Z')
+      );
       snapshot.issueComments.push(comment(2, human, body, '2026-10-07T15:01:00Z'));
-      return unansweredReviewBodies(snapshot).length === 0;
+      return botChangeRequests(snapshot).length === 0;
     };
     expect(answered('@codex review')).toBe(false);
     expect(answered('Agent: @codex review.')).toBe(false);
@@ -860,14 +895,10 @@ describe('pr-state.mjs details', () => {
 
   it('lists bot output at the second of the push', () => {
     const snapshot = fixture('pr-67');
-    snapshot.issueComments.push(
-      comment(2, codexBot, 'A finding', '2026-10-07T14:43:10Z'),
-      comment(3, { login: 'github-actions[bot]', type: 'Bot' }, 'A summary', '2026-10-07T14:43:10Z')
-    );
+    snapshot.issueComments.push(comment(2, codexBot, 'A finding', '2026-10-07T14:43:10Z'));
     const status = classify(snapshot, at('2026-10-07T15:00:00Z'));
     expect(status.notes).toEqual([
       `chatgpt-codex-connector[bot] commented: ${pull67}#issuecomment-2`,
-      `The Claude review commented: ${pull67}#issuecomment-3`,
     ]);
   });
 
