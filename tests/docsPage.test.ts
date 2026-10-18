@@ -1,3 +1,4 @@
+import { ident, parse, walk, type CssNode } from 'css-tree';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { describe, expect, it } from 'vitest';
@@ -40,60 +41,41 @@ const HASHES: Record<string, string> = {
 };
 
 /**
- * The class names in a style sheet's selectors, unescaped (AFA-121). Tailwind writes a "\" before
- * a symbol in a class name, as in ".sm\:flex". It writes a "," or a first digit as a hex code
- * point that a space can end, as in ".\32 xl\:text-lg". Comments, at-rules and quoted strings
- * hold no classes, and a class name can't start with a digit, as in a keyframe's "33.3%".
+ * The class names in a style sheet's selectors, unescaped (AFA-121). css-tree reads the style
+ * sheet as a browser does, so a comment, a quoted string, a url() or an at-rule's prelude holds no
+ * class, and a newline ends a string that has no closing quote. Tailwind writes a "\" before a
+ * symbol in a class name, as in ".sm\:flex", and a first digit as a hex code point, as in
+ * ".\32 xl\:text-lg". With `ownRule`, a class counts only where the rule is about it: in the last
+ * part of the selector that names a class, between combinators, and not inside a pseudo-class
+ * such as :not(). So ".a .b" is about "b", and ".space-y-2 > :not([hidden])" is about "space-y-2".
  */
-function cssClasses(css: string): Set<string> {
-  const escape = String.raw`\\[\da-f]{1,6}(?:\r\n|[ \t\n\r\f])?|\\[^\da-f\n\r\f]`;
-  // Read the style sheet in tokens: an escape, a quoted string, a comment, a brace, a semicolon
-  // or other text. So a brace, a semicolon or a comment marker in a string or an escape ends
-  // nothing. A comment that isn't closed runs to the end, and it separates the text on each side,
-  // as a space does. The text before a "{" is a selector, or an at-rule, which starts with "@".
-  const tokens =
-    /\\[\s\S]|"(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*'|\/\*[\s\S]*?(?:\*\/|$)|[{};]|[^\\"'/{};]+|\//g;
-  const selectors: string[] = [];
-  let text = '';
-  for (const [token] of css.matchAll(tokens)) {
-    if (token === '{') {
-      if (!text.trim().startsWith('@')) selectors.push(text);
-      text = '';
-    } else if (token === '}' || token === ';') {
-      text = '';
-    } else if (token.startsWith('/*')) {
-      text += ' ';
-    } else if (!/^["']/.test(token)) {
-      text += token;
-    }
-  }
-  // An escape outside a class name matches on its own, so an escaped "." in an ID, as in
-  // "#a\.b", doesn't start a class.
-  const name = new RegExp(
-    String.raw`${escape}|\.((?:${escape}|[a-z_-]|[^\x00-\x7f])(?:${escape}|[\w-]|[^\x00-\x7f])*)`,
-    'gi'
-  );
-  const unescape = (match: string): string => {
-    const hex = /^\\([\da-f]+)/i.exec(match)?.[1];
-    if (!hex) return match.slice(1);
-    // CSS reads code point 0, a surrogate or any code point above U+10FFFF as U+FFFD.
-    const code = parseInt(hex, 16);
-    return code === 0 || code > 0x10ffff || (code >= 0xd800 && code <= 0xdfff)
-      ? '\uFFFD'
-      : String.fromCodePoint(code);
-  };
-  return new Set(
-    selectors.flatMap(text =>
-      [...text.matchAll(name)].flatMap(([, escaped]) =>
-        escaped === undefined ? [] : [escaped.replace(new RegExp(escape, 'gi'), unescape)]
-      )
-    )
-  );
+function cssClasses(css: string, { ownRule = false } = {}): Set<string> {
+  const names: string[] = [];
+  walk(parse(css, { parseValue: false, parseAtrulePrelude: false }), {
+    visit: 'Rule',
+    enter(rule) {
+      if (rule.prelude.type !== 'SelectorList') return;
+      rule.prelude.children.forEach(selector => {
+        if (!ownRule) {
+          walk(selector, { visit: 'ClassSelector', enter: node => names.push(node.name) });
+          return;
+        }
+        const parts: CssNode[][] = [[]];
+        for (const node of selector.type === 'Selector' ? selector.children.toArray() : []) {
+          if (node.type === 'Combinator') parts.push([]);
+          else parts[parts.length - 1].push(node);
+        }
+        const last = [...parts].reverse().find(part => part.some(n => n.type === 'ClassSelector'));
+        for (const node of last ?? []) if (node.type === 'ClassSelector') names.push(node.name);
+      });
+    },
+  });
+  return new Set(names.map(name => ident.decode(name)));
 }
 
 /**
- * The Tailwind classes in an HTML page that have no rule in a style sheet. The page's own script,
- * Prism and the page's own <style> use the other classes.
+ * The Tailwind classes in an HTML page that have no rule of their own in a style sheet. The page's
+ * own script, Prism and the page's own <style> use the other classes.
  */
 function missingClasses(html: string, css: string): string[] {
   const used = [
@@ -103,9 +85,18 @@ function missingClasses(html: string, css: string): string[] {
     ),
   ];
   const other = new Set(['', 'copy-button', 'text-link']);
-  const defined = cssClasses(css);
+  // Tailwind's "group" and the script's "copied" mark an element for a rule on another element,
+  // as in ".group.copied .group-\[\.copied\]\:block", so they have no rule of their own. A selector
+  // must still name them.
+  const context = new Set(['group', 'copied']);
+  const own = cssClasses(css, { ownRule: true });
+  const all = cssClasses(css);
   return [...new Set(used)].filter(
-    name => !other.has(name) && !name.startsWith('language-') && !defined.has(name)
+    name =>
+      !other.has(name) &&
+      !name.startsWith('language-') &&
+      !own.has(name) &&
+      !(context.has(name) && all.has(name))
   );
 }
 
@@ -255,8 +246,27 @@ describe('the docs page', () => {
     ['#a\\.b { } [data-x=a\\.c] { } .d { }', ['d']],
     ['.a/**/b { }', ['a']],
     ['.a { } /* not closed .z { }', ['a']],
+    // AFA-135: a newline ends a string that has no closing quote, and a quote in an unquoted url()
+    // starts no string. A browser applies the rules after each one.
+    ['.a { } .b { content: "x\n} .c { } .d { content: "y" }', ['a', 'b', 'c', 'd']],
+    [".a { background: url(x'y.svg) } .b { } .c { content: 'z' }", ['a', 'b', 'c']],
   ])('reads the classes in %s', (css, names) => {
     expect([...cssClasses(css)]).toEqual(names);
+  });
+
+  // AFA-135: a class that a selector uses only to pick other elements has no rule of its own.
+  // Tailwind's "group" and the script's "copied" are such classes, so they need only a selector
+  // that names them. A Tailwind class whose rule styles its children, such as "space-y-2", has a
+  // rule of its own.
+  it.each([
+    ['foo', '.x:not(.foo) { }', ['foo']],
+    ['foo', '.foo .bar { }', ['foo']],
+    ['foo', '.bar .foo { }', []],
+    ['space-y-2', '.space-y-2 > :not([hidden]) ~ :not([hidden]) { }', []],
+    ['group copied', '.group.copied .group-\\[\\.copied\\]\\:block { }', []],
+    ['group', '.other { }', ['group']],
+  ])('checks the class "%s" against %s', (classes, css, missing) => {
+    expect(missingClasses(`<div class="${classes}"></div>`, css)).toEqual(missing);
   });
 
   // If the browser blocks clipboard.js, or cdnjs is down, "new ClipboardJS" would throw, and the
