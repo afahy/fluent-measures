@@ -8,8 +8,9 @@
 //
 // Reads PR_BODY, the PR's description. When it names a Linear ticket on its `Fixes` or `Part of`
 // line, a new entry must have that ticket as its source. When it names a GitHub issue there, the
-// source must be the issue's URL. When it names neither, the source can be any ticket ID or URL,
-// but not "handwritten".
+// source must be the URL of that issue in this repository. When it names neither, the source can
+// be any ticket ID or any issue URL of this repository. The last such line counts, because the
+// template's `Fixes` line comes after the description.
 
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
@@ -22,7 +23,18 @@ const CORPUS = 'tests/corpus/measurements.jsonl';
 // The files under src/ that hold no parsing code.
 const NOT_PARSER = ['src/index.ts', 'src/types.ts'];
 // A line such as "Fixes AFA-12", "Closes: #4" or "- Part of [AFA-7](https://linear.app/...)".
-const REFERENCE = /^[^\w\n]*(?:fixes|closes|resolves|part of)\b[^\w\n]*(AFA-\d+|#\d+)\b/im;
+const REFERENCE = /^[^\w\n]*(?:fixes|closes|resolves|part of)\b[^\w\n]*(AFA-\d+|#\d+)\b/gim;
+const REPOSITORY = 'afahy/fluent-measures';
+
+/**
+ * The ticket or issue on the last `Fixes` or `Part of` line of the PR body.
+ *
+ * @param {string} body
+ * @returns {string | undefined}
+ */
+function referenceOf(body) {
+  return [...body.matchAll(REFERENCE)].at(-1)?.[1];
+}
 
 /**
  * Whether the PR changes the parser: a file under src/ other than the exports and the types.
@@ -91,7 +103,7 @@ export function addedEntries(diff) {
  * @returns {string | null}
  */
 export function ticketOf(body) {
-  const reference = REFERENCE.exec(body)?.[1];
+  const reference = referenceOf(body);
   return reference && !reference.startsWith('#') ? reference.toUpperCase() : null;
 }
 
@@ -102,13 +114,13 @@ export function ticketOf(body) {
  * @returns {number | null}
  */
 export function issueOf(body) {
-  const reference = REFERENCE.exec(body)?.[1];
+  const reference = referenceOf(body);
   return reference?.startsWith('#') ? Number(reference.slice(1)) : null;
 }
 
 /**
  * Whether one added entry has the ticket, or the issue's URL, as its source. When the body names
- * neither, any ticket ID or https URL will do.
+ * neither, any ticket ID or any issue URL of this repository will do.
  *
  * @param {{ source?: unknown }[]} entries
  * @param {string | null} ticket
@@ -116,14 +128,14 @@ export function issueOf(body) {
  * @returns {boolean}
  */
 export function hasTicketEntry(entries, ticket, issue = null) {
+  const issues = `https://github.com/${REPOSITORY}/issues/`;
   return entries.some(({ source }) => {
     const text = String(source);
     if (ticket !== null) return text === ticket;
-    if (issue !== null) {
-      const number = /^https:\/\/github\.com\/[^/\s]+\/[^/\s]+\/issues\/(\d+)$/.exec(text)?.[1];
-      return Number(number) === issue;
-    }
-    return /^(?:AFA-\d+|https:\/\/\S+)$/.test(text);
+    if (issue !== null) return text === `${issues}${issue}`;
+    return (
+      /^AFA-\d+$/.test(text) || (text.startsWith(issues) && /^\d+$/.test(text.slice(issues.length)))
+    );
   });
 }
 

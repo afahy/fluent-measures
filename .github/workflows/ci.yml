@@ -112,7 +112,7 @@ jobs:
           EOF
 
       # The tests of results import the installed tarball in place of src/, once through import and
-      # once through require, so they also check what the build does to the code.
+      # once through require. So they also check what the build does to the code.
       - name: Run the tests of results against the installed package
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         env:

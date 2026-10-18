@@ -305,7 +305,7 @@ without a change to the snapshot.
 
 `tests/properties.test.ts` makes each measurement first, for example 5 ft and 11 in. It writes the
 measurement in each form that the README or `PARSING.md` shows, such as `5'11"`, `5-foot-11` and
-`five feet eleven inches`, and checks that `parseMeasurement` gives the measurement back. So the
+`five feet eleven inches`. Then it checks that `parseMeasurement` gives the measurement back. So the
 expected value is a hand calculation from the generated parts, as pull request rule 10 in
 `AGENTS.md` asks. `tests/invariants.test.ts` checks a rule for every input: no throw, and a
 positive value in a unit of the result's type.

@@ -227,7 +227,7 @@ describe('generated single measurements', () => {
 
   it('reads thousands groups and a decimal comma', () => {
     expect.hasAssertions();
-    // PARSING.md, "Commas": groups of three digits after one to three digits, and a last group of
+    // PARSING.md, "Commas": groups of three digits come after one to three digits. A last group of
     // one or two digits is a decimal part, as in "1,234,56 kg".
     fc.assert(
       fc.property(
@@ -249,9 +249,9 @@ describe('generated single measurements', () => {
 
   it('reads a unit name with one spelling error only with fuzziness', () => {
     expect.hasAssertions();
-    // PARSING.md, "Fuzzy Matching": the word starts with the unit name's letter, the errors are
-    // fewer than a third of the name's length, names of three characters or fewer and the British
-    // spellings match only when exact, and some words never match.
+    // PARSING.md, "Fuzzy Matching": the word starts with the unit name's letter. The errors are
+    // fewer than a third of the name's length. Names of three characters or fewer and the British
+    // spellings match only when exact. Some words never match.
     // The words that never match come from PARSING.md, the specification. A fix that stops
     // another word from matching adds it to that list, and this test follows the list.
     const never = /The words ([^.]*) never match/.exec(readFileSync('PARSING.md', 'utf8'))?.[1];
@@ -335,7 +335,7 @@ describe('generated pairs of measurements', () => {
         (value, [first, second], percent, higher) => {
           const factor = higher ? 1 + percent / 100 : 1 - percent / 100;
           // Rounding to two decimal places moves `other` by at most 0.005. The converted value is
-          // at least 3.94 (10 cm in inches), so that is at most 0.13% of it, and the two still
+          // at least 3.94 (10 cm in inches), so that is at most 0.13% of it. The two still
           // disagree by more than 1.8%.
           const other = Math.round(convert(value, first, second) * factor * 100) / 100;
           expect(parseMeasurement(`${value} ${first} (${other} ${second})`)).toBeNull();
