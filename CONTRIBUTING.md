@@ -359,6 +359,13 @@ comment that turns off a mutation or coverage check, such as `// Stryker disable
 medium risk. A low risk changes none of these. The script from the base branch rates the PR, so a
 change to the script doesn't rate its own PR.
 
+### Feature map
+
+`features/` has one file for each feature, with each way that a user reaches it, the rules that
+apply and the tests that check it. `features/README.md` says how to use it.
+`tests/featureMap.test.ts` fails when a parser test file, a corpus category or a `PARSING.md`
+section isn't in the map.
+
 ## Documentation
 
 Add JSDoc comments to all public functions and types:
