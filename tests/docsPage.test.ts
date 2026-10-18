@@ -41,9 +41,10 @@ const HASHES: Record<string, string> = {
 };
 
 /**
- * The class names in a style sheet's selectors, unescaped (AFA-121). css-tree reads the style
- * sheet as a browser does, so a comment, a quoted string, a url() or an at-rule's prelude holds no
- * class, and a newline ends a string that has no closing quote. Tailwind writes a "\" before a
+ * The class names in a style sheet's selectors, unescaped (AFA-121). css-tree reads CSS tokens as
+ * a browser does, so a comment, a quoted string, a url() or an at-rule's prelude holds no class,
+ * and a newline ends a string that has no closing quote. It doesn't read nested rules, so a parse
+ * error throws, and a rule that it can't read fails the check. Tailwind writes a "\" before a
  * symbol in a class name, as in ".sm\:flex", and a first digit as a hex code point, as in
  * ".\32 xl\:text-lg". With `ownRule`, a class counts only where the rule is about it: in the last
  * part of the selector that names a class, between combinators, and not inside a pseudo-class
@@ -51,7 +52,14 @@ const HASHES: Record<string, string> = {
  */
 function cssClasses(css: string, { ownRule = false } = {}): Set<string> {
   const names: string[] = [];
-  walk(parse(css, { parseValue: false, parseAtrulePrelude: false }), {
+  const options = {
+    parseValue: false,
+    parseAtrulePrelude: false,
+    onParseError: (error: Error): never => {
+      throw error;
+    },
+  };
+  walk(parse(css, options), {
     visit: 'Rule',
     enter(rule) {
       if (rule.prelude.type !== 'SelectorList') return;
@@ -199,6 +207,16 @@ describe('the docs page', () => {
     expect(page).toContain('<link href="tailwind.css" rel="stylesheet" />');
     const css = readFileSync(new URL('../docs/tailwind.css', import.meta.url), 'utf8');
     expect(missingClasses(page, css)).toEqual([]);
+    // A class with no rule there still fails, such as the ticket's "no-such-class" and "prose".
+    expect(missingClasses('<div class="no-such-class prose"></div>', css)).toEqual([
+      'no-such-class',
+      'prose',
+    ]);
+  });
+
+  // css-tree doesn't read a nested rule, so the check throws, not passes with the rule lost.
+  it('throws for a style sheet that css-tree cannot read', () => {
+    expect(() => cssClasses('.a { .b { } }')).toThrow();
   });
 
   // AFA-121 item 1: Tailwind writes "2xl:text-lg" as ".\32 xl\:text-lg", so the class has a rule.
