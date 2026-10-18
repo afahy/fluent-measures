@@ -331,6 +331,32 @@ installed in an empty project.
 the maintainer's approval. When the ticket has it, run `pnpm check:api --update` and commit the
 report.
 
+### Evidence and risk
+
+On each pull request, `.github/workflows/evidence.yml` writes a summary on the run's page: each
+result that changes in `tests/__snapshots__/resultSnapshot.txt`, each corpus entry whose outcome
+changes, the changed examples in the README and `PARSING.md`, a change to `api-report.d.ts`, and
+the bundle sizes before and after. When results change, the check fails until the PR body has a
+"Changed results" line or heading.
+
+The summary also rates the risk as low, medium or high, for the maintainer's review. No label or
+merge rule uses the rating. A high risk is a change that the maintainer decides on:
+
+- an example in the README or `PARSING.md`: a line of a code block that calls `parseMeasurement`,
+  or a paragraph with a code span
+- an exported type, or a `package.json` field that reaches users
+- an expected output of a corpus entry, or a removed entry
+- a lower test limit, a deleted test, or a test file renamed so that Vitest doesn't run it
+- the test settings: `stryker.config.json`, the Vitest, ESLint, commitlint and TypeScript configs,
+  and the `package.json` scripts
+- a size budget that rises by more than 0.5 kB, or that the PR removes
+- CI: a workflow, the setup action, or a script that a workflow runs
+
+A medium risk changes code that runs or a result, removes `expect` calls from the tests, or adds a
+comment that turns off a mutation or coverage check, such as `// Stryker disable`. A low risk
+changes none of these. The script from the base branch rates the PR, so a change to the script
+doesn't rate its own PR.
+
 ## Documentation
 
 Add JSDoc comments to all public functions and types:
