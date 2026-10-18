@@ -51,6 +51,8 @@ describe('the lint for tests that skip or are expected to fail', () => {
     // Item 2: a skip from the test's context.
     [`it('x', ({ skip }) => {\n  skip();\n  expect(1).toBe(1);\n});`, skip],
     [`it.concurrent('x', ({ skip }) => {\n  skip();\n  expect(1).toBe(1);\n});`, skip],
+    [`it.skipIf(Date.now() < 0)('x', ({ skip }) => {\n  skip();\n  expect(1).toBe(1);\n});`, skip],
+    [`it.for([1])('x', (n, { skip }) => {\n  skip();\n  expect(n).toBe(1);\n});`, skip],
     // Item 3: constant conditions that aren't literals.
     [`it.runIf(undefined)('x', ${pass});`, constant],
     [`it.runIf(void 0)('x', ${pass});`, constant],
@@ -71,6 +73,10 @@ describe('the lint for tests that skip or are expected to fail', () => {
     // In .each and .for, the first parameter is a case, and its skip field doesn't skip the test.
     `it.each([{ skip: false }])('x', ({ skip }) => {\n  expect(skip).toBe(false);\n});`,
     `it.for([{ skip: false }])('x', ({ skip }) => {\n  expect(skip).toBe(false);\n});`,
+    // test.extend takes fixtures, which can have any name, and a skipIf on another object isn't
+    // Vitest's.
+    'export const custom = test.extend({ todo: true });',
+    `const service = { runIf: (value: unknown): unknown => value };\nit('x', () => {\n  expect(service.runIf(undefined)).toBeUndefined();\n});`,
     `describe.each([{ skip: false }])('x', ({ skip }) => {\n  it('y', () => {\n    expect(skip).toBe(false);\n  });\n});`,
   ])('allows %s', async body => {
     expect(await problems(body)).toEqual([]);

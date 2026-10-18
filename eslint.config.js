@@ -13,10 +13,11 @@ const UNUSED = { argsIgnorePattern: '^_', varsIgnorePattern: '^_' };
 const CONSOLE = ['warn', { allow: ['warn', 'error'] }];
 // Vitest's test and suite functions, and a call to one of them. The call can be on a chain such
 // as test.concurrent, or after a call such as it.each(cases) or it.concurrent.each(cases).
+// test.extend and test.scoped take fixtures, not test options, so they don't count.
 const TEST_NAMES = '/^(it|test|describe|suite)$/';
 const TEST_CALL = `CallExpression:matches(${[
   `[callee.name=${TEST_NAMES}]`,
-  `[callee.object.name=${TEST_NAMES}]`,
+  `[callee.object.name=${TEST_NAMES}][callee.property.name!=/^(extend|scoped)$/]`,
   `[callee.callee.object.name=${TEST_NAMES}]`,
   `[callee.callee.object.object.name=${TEST_NAMES}]`,
 ].join(', ')})`;
@@ -108,14 +109,16 @@ export default [
       'no-restricted-syntax': [
         'error',
         {
-          // A literal, a template with no expressions, undefined, or an operator on a literal,
-          // such as !0 or void 0.
-          selector: `CallExpression[callee.property.name=/^(skipIf|runIf)$/]:matches(${[
-            "[arguments.0.type='Literal']",
-            "[arguments.0.type='TemplateLiteral'][arguments.0.expressions.length=0]",
-            "[arguments.0.type='Identifier'][arguments.0.name='undefined']",
-            "[arguments.0.type='UnaryExpression'][arguments.0.argument.type='Literal']",
-          ].join(', ')})`,
+          // A literal, as before AFA-150. On a test function, also a template with no
+          // expressions, undefined, or an operator on a literal, such as !0 or void 0.
+          selector: [
+            "CallExpression[callee.property.name=/^(skipIf|runIf)$/][arguments.0.type='Literal']",
+            `CallExpression[callee.property.name=/^(skipIf|runIf)$/]:matches([callee.object.name=${TEST_NAMES}], [callee.object.object.name=${TEST_NAMES}]):matches(${[
+              "[arguments.0.type='TemplateLiteral'][arguments.0.expressions.length=0]",
+              "[arguments.0.type='Identifier'][arguments.0.name='undefined']",
+              "[arguments.0.type='UnaryExpression'][arguments.0.argument.type='Literal']",
+            ].join(', ')})`,
+          ].join(', '),
           message: 'A constant condition always skips the test or always runs it. Use a real one.',
         },
         {
@@ -134,10 +137,14 @@ export default [
         },
         {
           // The test's context is the first parameter of a call to it or test, also on a chain
-          // such as it.concurrent. In .each and .for, the first parameter is a case, which can
-          // have its own skip field.
-          selector:
-            "CallExpression:matches([callee.name=/^(it|test)$/], [callee.object.name=/^(it|test)$/][callee.property.name!=/^(each|for)$/]) > :function.arguments > ObjectPattern.params:first-child > Property[key.name='skip']",
+          // such as it.concurrent or after it.skipIf(c). In .for, the context is the second
+          // parameter, after the case. In .each, no parameter is the context, so a case's own
+          // skip field stays allowed.
+          selector: [
+            "CallExpression:matches([callee.name=/^(it|test)$/], [callee.object.name=/^(it|test)$/][callee.property.name!=/^(each|for|extend|scoped)$/]) > :function.arguments > ObjectPattern.params:first-child > Property[key.name='skip']",
+            "CallExpression[callee.callee.property.name=/^(skipIf|runIf)$/]:matches([callee.callee.object.name=/^(it|test)$/], [callee.callee.object.object.name=/^(it|test)$/]) > :function.arguments > ObjectPattern.params:first-child > Property[key.name='skip']",
+            "CallExpression[callee.callee.property.name='for']:matches([callee.callee.object.name=/^(it|test)$/], [callee.callee.object.object.name=/^(it|test)$/]) > :function.arguments > ObjectPattern.params:nth-child(2) > Property[key.name='skip']",
+          ].join(', '),
           message: "Don't skip a test (AGENTS.md rule 3).",
         },
         {
