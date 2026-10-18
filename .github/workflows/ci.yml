@@ -36,6 +36,10 @@ jobs:
       - name: Check bundle size
         run: pnpm check:size
 
+      # A change to an exported type must show in api-report.d.ts.
+      - name: Check the exported types
+        run: pnpm check:api
+
   package:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -106,6 +110,14 @@ jobs:
           const { main } = require(manifest);
           assert.equal(path.resolve(path.dirname(manifest), main), resolved, `main is ${main}`);
           EOF
+
+      # The tests of results import the installed tarball in place of src/, once through import and
+      # once through require. So they also check what the build does to the code.
+      - name: Run the tests of results against the installed package
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        env:
+          FLUENT_MEASURES_PACKAGE_DIR: ${{ runner.temp }}/consumer
+        run: pnpm test:package
 
       # publint and attw read the tarball and don't depend on the Node version, so they run
       # in one matrix leg.
