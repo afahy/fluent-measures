@@ -143,12 +143,15 @@ The Claude review needs this setup, which only the maintainer can do:
 
 1. Install the [Claude GitHub App](https://github.com/apps/claude) on the repository.
 2. Run `claude setup-token`, which prints a token for your Claude subscription.
-3. Add that token as the repository secret `CLAUDE_CODE_OAUTH_TOKEN`, under **Secrets and
-   variables > Actions**. A secret under **Agents** goes only to the Copilot cloud agent.
+3. Add that token as the repository secret `CLAUDE_CODE_OAUTH_TOKEN`, under **Settings > Secrets
+   and variables > Actions**. A secret under **Settings > Secrets and variables > Agents** goes
+   only to the Copilot cloud agent.
 4. Create a new token, and replace the secret, before the old token expires one year later.
 
-Without the secret, the workflow skips the review. Claude also skips a pull request that changes
-`claude-review.yml`, because the action runs only when the file matches the one on `main`.
+Without the secret, the workflow skips the review. The review also doesn't run on a pull request
+that changes `claude-review.yml`, because the action stops when that file differs from the one on
+`main`. The check stays green. Put a change to the workflow in its own pull request, so that the
+other changes get a review.
 
 ## Key Modules
 
