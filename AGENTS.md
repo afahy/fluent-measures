@@ -17,7 +17,10 @@ Run these commands from the repository root:
   below the `break` threshold in `stryker.config.json`.
 - `pnpm build` builds the package, and `pnpm check:size` checks the build against the limits in
   `.size-limit.cjs`.
-- `pnpm check` runs lint, the tests, mutation testing, the build and the size check.
+- After the build, `pnpm check:api` compares the build's exported types with `api-report.d.ts`,
+  and `pnpm test:package` runs the tests of results against the build.
+- `pnpm check` runs lint, the tests, mutation testing, the build, the size check, `check:api`
+  and `test:package`.
 - `pnpm pr:status <pr>...` reports what a PR is waiting on, and `--wait` waits for a change.
   `.claude/skills/steward/SKILL.md` says how to watch PRs with it.
 
@@ -33,7 +36,9 @@ ticket ID and text. Don't open a PR without a ticket ID.
    in the PR title.
 2. Every bug fix must add a regression test built from the ticket's failure inputs. Confirm
    that the test fails on `main` and passes with the fix, and say that you checked this in
-   the PR body.
+   the PR body. When the fix changes the parser in `src/`, also add the failure inputs to the
+   corpus, with the ticket ID as `source`, as "Measurement corpus" in `CONTRIBUTING.md` says.
+   The regression test check fails without such an entry.
 3. Never skip, delete, loosen, or mark an existing test as expected to fail just to make CI
    pass.
 4. Add a changeset for any change to `src/` or to `package.json` fields that affect
