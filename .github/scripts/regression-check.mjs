@@ -208,7 +208,7 @@ if (caught.length > 0) {
   }
   for (const [path, { line, code }] of ignoredTypeErrors) {
     console.log(
-      `::notice::${escapeData(path)} fails the type check against the base branch (${code} on line ${line}), but that doesn't count because it isn't in a type assertion. For a type-level regression test, use expectTypeOf, assertType or @ts-expect-error.`
+      `::notice::${escapeData(path)} fails the type check against the base branch (${code} on line ${line}), but that doesn't count because it isn't in a type assertion. For a type-level regression test, use expectTypeOf, assertType or @ts-expect-error. The test also needs an expect (AGENTS.md rule 10).`
     );
   }
   setResult(ran.size > 0 ? 'not-caught' : 'no-tests');
