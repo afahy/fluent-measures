@@ -333,11 +333,12 @@ report.
 
 ### Evidence and risk
 
-On each pull request, `.github/workflows/evidence.yml` writes a summary on the run's page: each
-result that changes in `tests/__snapshots__/resultSnapshot.txt`, each corpus entry whose outcome
-changes, the changed examples in the README and `PARSING.md`, a change to `api-report.d.ts`, and
-the bundle sizes before and after. When results change, the check fails until the PR body has a
-"Changed results" line or heading.
+On each pull request, `.github/workflows/evidence.yml` writes a summary on the run's page. It lists
+each result that changes in `tests/__snapshots__/resultSnapshot.txt` and each corpus entry whose
+outcome changes. It also lists the changed examples in the README and `PARSING.md`, a change to
+`api-report.d.ts`, and the bundle sizes before and after. An edit to only the PR body doesn't build
+the package again, so that summary has no sizes. When results change, the check fails until the PR
+body has a "Changed results" line or heading.
 
 The summary also rates the risk as low, medium or high, for the maintainer's review. No label or
 merge rule uses the rating. A high risk is a change that the maintainer decides on:
@@ -352,9 +353,9 @@ merge rule uses the rating. A high risk is a change that the maintainer decides 
 - a size budget that rises by more than 0.5 kB, or that the PR removes
 - CI: a workflow, the setup action, or a script that a workflow runs
 
-A medium risk changes code that runs or a result, removes `expect` calls from the tests, or adds a
-comment that turns off a mutation or coverage check, such as `// Stryker disable`. A low risk
-changes none of these. The script from the base branch rates the PR, so a change to the script
+A medium risk changes code that runs or a result, or removes `expect` calls from the tests. A
+comment that turns off a mutation or coverage check, such as `// Stryker disable`, is also a
+medium risk. A low risk changes none of these. The script from the base branch rates the PR, so a change to the script
 doesn't rate its own PR.
 
 ## Documentation

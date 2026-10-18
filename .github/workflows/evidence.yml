@@ -35,17 +35,24 @@ jobs:
         with:
           node-version: 22
 
+      # An edit to the PR body can't change the sizes, so it skips this step, and that summary has
+      # no sizes.
       - name: Measure the bundle sizes on the base branch and in the PR
+        if: github.event.action != 'edited'
         run: |
-          if git diff --quiet HEAD^1 HEAD -- src/ package.json tsup.config.ts; then
+          if git diff --quiet HEAD^1 HEAD -- src/ package.json pnpm-lock.yaml tsup.config.ts; then
             echo "The PR doesn't change the package files."
             exit 0
           fi
           # A build over its budget still prints its sizes. CI's own job fails for it.
           pnpm build && pnpm exec size-limit --json > "$RUNNER_TEMP/size-head.json" || true
-          git restore --source=HEAD^1 --worktree -- src/ tsup.config.ts
-          pnpm build && pnpm exec size-limit --json > "$RUNNER_TEMP/size-base.json" || true
-          git restore --source=HEAD --worktree -- src/ tsup.config.ts
+          # The base branch builds in its own worktree, with its own package.json, dependencies and
+          # build config. So a PR that changes the toolchain, or deletes a file, can't change the
+          # base sizes.
+          git worktree add --detach "$RUNNER_TEMP/base" HEAD^1
+          cd "$RUNNER_TEMP/base"
+          pnpm install --frozen-lockfile && pnpm build &&
+            pnpm exec size-limit --json > "$RUNNER_TEMP/size-base.json" || true
 
       - name: Summarize the changed results and rate the risk
         env:
@@ -59,10 +66,10 @@ jobs:
         run: |
           script=.github/scripts/evidence.mjs
           if git cat-file -e "HEAD^1:$script" 2> /dev/null; then
-            mkdir "$RUNNER_TEMP/base-scripts"
-            for file in evidence.mjs workflow-commands.mjs; do
-              git show "HEAD^1:.github/scripts/$file" > "$RUNNER_TEMP/base-scripts/$file"
-            done
-            script="$RUNNER_TEMP/base-scripts/evidence.mjs"
+            # Copy all of the base branch's scripts, so that each module that the script imports is
+            # there. They go inside the workspace, so that an imported package finds node_modules.
+            mkdir .evidence-base
+            git archive HEAD^1 .github/scripts | tar -x -C .evidence-base
+            script=".evidence-base/$script"
           fi
           node "$script"
