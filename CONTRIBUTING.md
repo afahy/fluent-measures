@@ -94,7 +94,7 @@ Use Node.js 22.22.1 or later in 22.x, 24.11 or later in 24.x, or 26 or later. Us
 - lint-staged 17, which the pre-commit hook runs: Node.js `>=22.22.1` and Git 2.32.0 or later.
 
 ```bash
-# Clone the repository
+# Clone your fork of the repository
 git clone https://github.com/your-username/fluent-measures.git
 
 # Install dependencies

@@ -4,8 +4,8 @@ contact_links:
     url: https://github.com/afahy/fluent-measures/issues?q=is%3Aissue
     about: Please search existing issues first to avoid duplicates
   - name: 📖 Documentation
-    url: https://github.com/afahy/fluent-measures/tree/main/docs
-    about: Check our documentation for guides and API reference
+    url: https://afahy.github.io/fluent-measures/
+    about: Read the documentation page, with examples
   - name: 🚀 Contributing Guidelines
     url: https://github.com/afahy/fluent-measures/blob/main/CONTRIBUTING.md
-    about: Learn how to contribute effectively, including how to create feature requests
+    about: Learn how to contribute
