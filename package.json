@@ -52,7 +52,7 @@
     "release:changeset": "changeset",
     "release:lifecycle:prepack": "pnpm clean && pnpm build",
     "release:lifecycle:prepublish": "pnpm build && pnpm test",
-    "release:publish": "pnpm build && git push --follow-tags && changeset publish",
+    "release:publish": "pnpm build && git push --follow-tags && changeset publish && git push --follow-tags",
     "release:validate": "pnpm check",
     "release:version": "changeset version && pnpm install",
     "test": "pnpm test:unit && pnpm test:types",
