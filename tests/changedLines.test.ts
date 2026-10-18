@@ -504,14 +504,11 @@ describe('reasonlessDirectives', () => {
 // line. A file it can't parse fails safe, as `reasonlessDirectives` does.
 describe('directiveLines', () => {
   it.each([
-    ['x;', true],
-    [`const x = ${'('.repeat(5000)}1${')'.repeat(5000)};`, false],
-  ])('says whether it parsed the file after %#', (code, parsed) => {
+    ['x;', { lines: [], parsed: true }],
+    [`const x = ${'('.repeat(5000)}1${')'.repeat(5000)};`, { lines: [2], parsed: false }],
+  ])('says whether it parsed the file after %#', (code, expected) => {
     const comment = '// Stryker disable next-line all: a reason';
-    expect(directiveLines(`${code}\n${comment}\nx;`, [[2, 2]])).toEqual({
-      lines: parsed ? [] : [2],
-      parsed,
-    });
+    expect(directiveLines(`${code}\n${comment}\nx;`, [[2, 2]])).toEqual(expected);
   });
 });
 
