@@ -88,7 +88,7 @@ describe('fractions', () => {
     expect(Date.now() - start).toBeLessThan(1000);
   });
 
-  it('keeps the README shorthand and range rules', () => {
+  it('keeps the shorthand and range rules in PARSING.md', () => {
     expect(parseMeasurement('5-11', { type: 'height' })).toMatchObject({ value: 71, unit: 'in' });
     expect(parseMeasurement('150-180 lbs')).toBeNull();
   });

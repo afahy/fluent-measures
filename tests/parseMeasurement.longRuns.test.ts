@@ -26,7 +26,7 @@ describe('long runs of periods and semicolons', () => {
   });
 
   // The hyphen joiner removes the semicolons at the end of the text before a unit. Here the run
-  // doesn't end that text, and a regex tried a match at each semicolon. The README returns null
+  // doesn't end that text, and a regex tried a match at each semicolon. PARSING.md gives null
   // for "kg-70.5": a unit prefix without a number before it keeps the minus sign. With 200,000
   // semicolons, the code before #62 took 11.2 s here, and the current code takes 37 ms, or 160 ms
   // with coverage.
@@ -37,7 +37,7 @@ describe('long runs of periods and semicolons', () => {
   // AFA-91: at each word before a hyphen and a digit, the hyphen joiner read back over the whole
   // token before it, before it checked for a unit. So a long token with many such words took
   // quadratic time, and ";a-1" has no unit at all. A unit prefix keeps its minus sign, and a lone
-  // number has no unit, so each input is null (README: "kg-70.5").
+  // number has no unit, so each input is null (PARSING.md: "kg-70.5").
   const tokens: [string, number][] = [
     [';a-1', 150_000],
     [';kg-1', 120_000],

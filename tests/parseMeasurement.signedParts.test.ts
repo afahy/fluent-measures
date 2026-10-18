@@ -7,8 +7,8 @@ const unicode = (raw: string): string => raw.replace(/-(?=[\d.])/g, '−');
 
 // Inputs and results from AFA-80 and its comments.
 describe('signed parts', () => {
-  // A range that repeats its unit is two measurements that disagree (README). After a number and
-  // its unit, a hyphen joins two parts or values and isn't a sign.
+  // A range that repeats its unit is two measurements that disagree (PARSING.md). After a number
+  // and its unit, a hyphen joins two parts or values and isn't a sign.
   it.each([
     '150 lbs-180 lbs',
     '70 kg-80 kg',
@@ -42,7 +42,7 @@ describe('signed parts', () => {
     });
   });
 
-  // The README's "1 m 80 cm" is one height: 100 + 80 = 180 cm.
+  // PARSING.md's "1 m 80 cm" is one height: 100 + 80 = 180 cm.
   it('reads 1 m-80 cm as one height', () => {
     expect(parseMeasurement('1 m-80 cm')).toMatchObject({
       value: 180,
@@ -81,7 +81,7 @@ describe('signed parts', () => {
     // A signed value after a label is the label's value.
     'age 28 kg: -5',
     'age 28 (kg) -5',
-    // A number and its unit can stand on two sides of a semicolon, as in "180;lbs" (README).
+    // A number and its unit can stand on two sides of a semicolon, as in "180;lbs" (PARSING.md).
     '-5 kg, 180;lbs',
     'kg; 70, -5 kg',
     // A signed amount in an unsupported unit reads as its unsigned form, which returns null.
@@ -112,7 +112,7 @@ describe('signed parts', () => {
     expect(parseMeasurement('-5 ft, 150 lbs')).toMatchObject({ value: 150, unit: 'lb' });
   });
 
-  // From the README unless marked.
+  // From PARSING.md unless marked.
   it.each([
     // Existing test: a minus sign before a height.
     ['-5 feet', {}],
@@ -139,14 +139,14 @@ describe('signed parts', () => {
     ['temp -5, weight 70 kg', {}, 70, 'kg'],
     // A short alias before a number is usually another word.
     ['in -5 degrees, 70 kg', {}, 70, 'kg'],
-    // A label reads the number after it, not the field before it (README: "age=28, kg=72").
+    // A label reads the number after it, not the field before it (PARSING.md: "age=28, kg=72").
     ['temp=-5, kg=72', {}, 72, 'kg'],
     ['Change: -2, kg: 70', {}, 70, 'kg'],
     ['score -2, in: 72', {}, 72, 'in'],
     ['Delta: -2; lbs: 180', {}, 180, 'lb'],
     ['-3 kg=70', {}, 70, 'kg'],
     ['offset -3 (kg) 70', {}, 70, 'kg'],
-    // "St" and "g" before a number are usually other words (README: "Main St 12").
+    // "St" and "g" before a number are usually other words (PARSING.md: "Main St 12").
     ['Main St -12, 180 lbs', {}, 180, 'lb'],
     ['g -2, 70 kg', {}, 70, 'kg'],
     // A minus sign before a word doesn't make the word a number, as in "x st 4 lb".
@@ -154,7 +154,7 @@ describe('signed parts', () => {
     ['-approx kg, 70 kg', {}, 70, 'kg'],
     // "1st" is an ordinal, with a minus sign too, as in "Oct 1st" (src/parseMeasurement.ts).
     ['-1st 70 kg', {}, 70, 'kg'],
-    // An unrelated amount in an unsupported unit doesn't count, signed or not (README: "8 oz").
+    // An unrelated amount in an unsupported unit doesn't count, signed or not (PARSING.md: "8 oz").
     ['-8 oz of water, 70 kg', {}, 70, 'kg'],
     // "and" joins number words, so 5 is the feet's number.
     ['5 and ft -11', {}, 5, 'ft'],
@@ -167,8 +167,8 @@ describe('signed parts', () => {
     expect(parseMeasurement('-12 st, 6 ft')).toMatchObject({ value: 6, unit: 'ft' });
   });
 
-  // A semicolon can stand inside one measurement, as in "180;lbs" (README), so "-5;ft" is a signed
-  // part, and the fields on both sides of it go.
+  // A semicolon can stand inside one measurement, as in "180;lbs" (PARSING.md), so "-5;ft" is a
+  // signed part, and the fields on both sides of it go.
   it('returns null for a signed part across a semicolon', () => {
     expect(parseMeasurement('6 ft -5;ft')).toBeNull();
   });
@@ -257,7 +257,7 @@ describe('signed parts', () => {
     'stone -twenty five, 4 lb',
     // Two signs are a sign too, as "--12 st 4 lb" is.
     'age 28 kg: --5',
-    // A quote before a unit doesn't make a number, so the sign stays, as in "kg-70.5" (README).
+    // A quote before a unit doesn't make a number, so the sign stays, as in "kg-70.5" (PARSING.md).
     '"kg-70"',
   ])('returns null for %s', raw => {
     expect(parseMeasurement(raw)).toBeNull();

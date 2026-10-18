@@ -16,7 +16,7 @@ describe('a zero before a unit', () => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });
 
-  // "Must not change" in AFA-81: the README's examples.
+  // "Must not change" in AFA-81: the examples in PARSING.md.
   it.each([
     ['0 feet; actual 1.8 meters', 1.8, 'm'],
     ['record 0; kg 70', 70, 'kg'],

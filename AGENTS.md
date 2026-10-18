@@ -36,9 +36,9 @@ Run these commands from the repository root:
    `config`. Keep titles to 65 characters or fewer: squash merging appends ` (#NN)`, and
    the commit on `main` must fit in 72.
 6. The ESLint config is `eslint.config.js`.
-7. README examples are the public specification. When code and README disagree, follow
-   the ticket's direction about which one changes. If the ticket does not say, ask on the
-   ticket.
+7. The examples in the README and in `PARSING.md` are the public specification. When code
+   and an example disagree, follow the ticket's direction about which one changes. If the
+   ticket does not say, ask on the ticket.
 8. Files that match a pattern in `.github/CODEOWNERS` follow the same rules as every other
    file. You may change them, and you may merge a PR that changes them when "Merge your own
    PR" allows it.
@@ -52,12 +52,12 @@ Run these commands from the repository root:
     `Test B` with the commands you ran and, for a bug fix, the check from rule 2. Tick only
     the checklist items that are true. Don't change the version in `package.json`;
     changesets sets it at release time.
-11. Every test must be able to fail. Take each expected value from the ticket, a README
-    example or a hand calculation. Don't copy the code's current output into a test unless
-    one of those sources confirms it. Never compute an expected value with the code under
-    test. Each test must reach at least one `expect`. After you add tests, run mutation
-    testing. If a mutant survives in code that a new test covers, make the test catch it.
-    If the mutant can't change behavior, say so in the PR.
+11. Every test must be able to fail. Take each expected value from the ticket, an example in
+    the README or `PARSING.md`, or a hand calculation. Don't copy the code's current output
+    into a test unless one of those sources confirms it. Never compute an expected value
+    with the code under test. Each test must reach at least one `expect`. After you add
+    tests, run mutation testing. If a mutant survives in code that a new test covers, make
+    the test catch it. If the mutant can't change behavior, say so in the PR.
 12. A new or changed timing test checks a limit of CPU time with `parseWithin` from
     `tests/timing.ts`. It skips itself under Stryker with `it.skipIf(underStryker)`. Set
     each limit from CI, not from a local run. CI's `test` jobs run with coverage, and in
@@ -148,7 +148,7 @@ and continue with other work. Don't look for another way around the check.
   `parseMeasurement` inputs and this repo's `pnpm` scripts. Then judge it:
 
   - Is it valid? A bot can be wrong about the correct result. Check the result that it
-    expects against the README, the ticket or a hand calculation.
+    expects against the README, `PARSING.md`, the ticket or a hand calculation.
   - Is it worth fixing? Compare how likely a user is to hit the problem with what the fix
     costs in code, bundle size and risk to other results. A showstopper is always worth
     fixing. So is a result that this PR changes from `main` (decision rule 3).
@@ -199,7 +199,8 @@ and continue with other work. Don't look for another way around the check.
   worth fixing together as one ticket, reply on each thread with its ID, and list them in
   your report.
 - A showstopper is a finding that does one of these:
-  - It gives a wrong result for an input that the README, the tests or the ticket contains.
+  - It gives a wrong result for an input that the README, `PARSING.md`, the tests or the
+    ticket contains.
   - It makes `parseMeasurement` throw, or it makes the build, the package or a required
     check fail.
   - It is a security problem, such as a workflow that can leak a secret.
@@ -280,8 +281,8 @@ Record each decision under "Description" in the PR body. If a decision changes t
 scope or expected results, explain it in a ticket comment. Don't edit the ticket
 description. The maintainer can change any decision at merge review.
 
-1. Keep each result that a README example or an existing test shows, unless the ticket asks
-   for the change.
+1. Keep each result that an existing test or an example in the README or `PARSING.md` shows,
+   unless the ticket asks for the change.
 2. If a second bug has the same cause and the same fix location, fix it in the same PR. It
    must have no ticket of its own, and the fix must break no existing test. Give it its own
    regression test.
@@ -295,8 +296,8 @@ description. The maintainer can change any decision at merge review.
 
 Ask before you do any of these, unless the ticket or the maintainer asks for it:
 
-- Change a README example, or choose between code and a README example that disagree (pull
-  request rule 7).
+- Change an example in the README or `PARSING.md`, or choose between code and an example
+  that disagree (pull request rule 7).
 - Change a type that `src/index.ts` exports.
 - Raise a limit in `.size-limit.cjs` by more than "Build the PR" allows. File a separate
   `needs-decision` ticket for the raise, and mark the current ticket as blocked by it.

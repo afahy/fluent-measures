@@ -56,15 +56,18 @@ describe('the mutation job in CI', () => {
     expect(read).toEqual(
       expect.arrayContaining([
         'README.md',
+        'PARSING.md',
         'tests/corpus/measurements.jsonl',
         'tests/__snapshots__/corpus.test.ts.snap',
       ])
     );
   });
 
-  // The hash covers the corpus and the README, not a test file, which Stryker compares itself.
+  // The hash covers the corpus, the README and PARSING.md, not a test file, which Stryker compares
+  // itself.
   it.each([
     ['README.md', true],
+    ['PARSING.md', true],
     ['tests/corpus/measurements.jsonl', true],
     ['tests/__snapshots__/corpus.test.ts.snap', true],
     ['tests/corpus.test.ts', false],

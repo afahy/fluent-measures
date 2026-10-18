@@ -114,7 +114,7 @@ describe('unsupported weight units', () => {
   });
 
   // AFA-103: after a feet part, a number with a stone, ounce or gram unit isn't inches. It is an
-  // unrelated amount, as the README says for "I drink 8 oz of water, weight 180 lbs".
+  // unrelated amount, as PARSING.md says for "I drink 8 oz of water, weight 180 lbs".
   it.each([
     ['5 ft 8 oz', 5, 'ft'],
     ["5' 8 oz", 5, 'ft'],

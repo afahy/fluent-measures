@@ -3,7 +3,7 @@ import { parseMeasurement } from '../src';
 
 // Inputs and results from AFA-65, which come from the AFA-41 corpus, and the ticket's comment.
 describe('Unicode minus signs', () => {
-  // A measurement can't be negative, so each of these returns null, as "-5 ft" does. The README
+  // A measurement can't be negative, so each of these returns null, as "-5 ft" does. PARSING.md
   // gives "kg-70.5" → null for a minus sign after a unit prefix.
   it.each([
     ['−5 ft', {}],
@@ -20,7 +20,7 @@ describe('Unicode minus signs', () => {
     expect(parseMeasurement(raw, options)).toBeNull();
   });
 
-  // After a number, a minus sign joins two parts or values. The README reads a dash between two
+  // After a number, a minus sign joins two parts or values. PARSING.md reads a dash between two
   // numbers as a range, and returns null for a range that repeats its unit.
   it.each([
     ['150 lbs−180 lbs', {}],
@@ -45,7 +45,7 @@ describe('Unicode minus signs', () => {
     expect(parseMeasurement(raw, options)).toMatchObject({ value, unit });
   });
 
-  // The README's "1 m 80 cm" is one height with two parts, also when its number is a word.
+  // PARSING.md's "1 m 80 cm" is one height with two parts, also when its number is a word.
   it.each(['1 m−80 cm', 'one m−80 cm'])('keeps the parts of %s', raw => {
     expect(parseMeasurement(raw)?.matches).toEqual([
       { value: 1, unit: 'm' },

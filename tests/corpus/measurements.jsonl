@@ -79,7 +79,7 @@
 {"id": "mixed-hundred-and-5-kg", "input": "one hundred and 5 kg", "expected": {"value": 105, "unit": "kg", "type": "weight"}, "category": "mixed-numbers", "source": "handwritten"}
 {"id": "mixed-6-foot-one-inch", "input": "6 foot one inch", "expected": {"value": 73, "unit": "in", "type": "height"}, "category": "mixed-numbers", "source": "handwritten"}
 {"id": "mixed-three-quarters", "input": "5 feet 8 3/4 inches", "expected": {"value": 68.75, "unit": "in", "type": "height"}, "category": "mixed-numbers", "source": "handwritten"}
-{"id": "decimals-72-5-kg", "input": "72.5 kg", "expected": {"value": 72.5, "unit": "kg", "type": "weight"}, "category": "decimals", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
+{"id": "decimals-72-5-kg", "input": "72.5 kg", "expected": {"value": 72.5, "unit": "kg", "type": "weight"}, "category": "decimals", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
 {"id": "decimals-158-5-pounds", "input": "158.5 pounds", "expected": {"value": 158.5, "unit": "lb", "type": "weight"}, "category": "decimals", "source": "handwritten"}
 {"id": "decimals-1-75-meters", "input": "1.75 meters", "expected": {"value": 1.75, "unit": "m", "type": "height"}, "category": "decimals", "source": "handwritten"}
 {"id": "decimals-5-5-ft", "input": "5.5 ft", "expected": {"value": 5.5, "unit": "ft", "type": "height"}, "category": "decimals", "source": "handwritten"}
@@ -103,43 +103,43 @@
 {"id": "decimals-1-65-m", "input": "1.65 m", "expected": {"value": 1.65, "unit": "m", "type": "height"}, "category": "decimals", "source": "handwritten"}
 {"id": "commas-decimal-kg", "input": "72,5 kg", "expected": {"value": 72.5, "unit": "kg", "type": "weight"}, "category": "commas", "source": "AFA-15"}
 {"id": "commas-thousands-lbs", "input": "1,000 lbs", "expected": {"value": 1000, "unit": "lb", "type": "weight"}, "category": "commas", "source": "AFA-15"}
-{"id": "commas-two-digit-decimal", "input": "72,05 kg", "expected": {"value": 72.05, "unit": "kg", "type": "weight"}, "category": "commas", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "commas-leading-comma", "input": ",5 kg", "expected": {"value": 0.5, "unit": "kg", "type": "weight"}, "category": "commas", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
+{"id": "commas-two-digit-decimal", "input": "72,05 kg", "expected": {"value": 72.05, "unit": "kg", "type": "weight"}, "category": "commas", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
+{"id": "commas-leading-comma", "input": ",5 kg", "expected": {"value": 0.5, "unit": "kg", "type": "weight"}, "category": "commas", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
 {"id": "commas-kg-first", "input": "kg 72,5", "expected": {"value": 72.5, "unit": "kg", "type": "weight"}, "category": "commas", "source": "handwritten"}
 {"id": "commas-metres", "input": "1,75 m", "expected": {"value": 1.75, "unit": "m", "type": "height"}, "category": "commas", "source": "handwritten"}
 {"id": "commas-1-82-m", "input": "1,82 m", "expected": {"value": 1.82, "unit": "m", "type": "height"}, "category": "commas", "source": "handwritten"}
-{"id": "commas-label-weight", "input": "weight 72,5 kg", "expected": {"value": 72.5, "unit": "kg", "type": "weight"}, "category": "commas", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "commas-height-label-hyphen", "input": "height-1,800 cm", "expected": {"value": 1800, "unit": "cm", "type": "height"}, "category": "commas", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "commas-phase-2-180", "input": "phase 2,180 cm", "expected": {"value": 2180, "unit": "cm", "type": "height"}, "category": "commas", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "commas-phase-2-space", "input": "phase-2, 180 cm", "expected": {"value": 180, "unit": "cm", "type": "height"}, "category": "commas", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "commas-phase2", "input": "phase2,180 cm", "expected": {"value": 180, "unit": "cm", "type": "height"}, "category": "commas", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "commas-trailing", "input": "1,000, kg", "expected": {"value": 1000, "unit": "kg", "type": "weight"}, "category": "commas", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "commas-malformed-groups", "input": "12,34,567 kg", "expected": null, "category": "commas", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "commas-malformed-1234", "input": "1234,567 kg", "expected": null, "category": "commas", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
+{"id": "commas-label-weight", "input": "weight 72,5 kg", "expected": {"value": 72.5, "unit": "kg", "type": "weight"}, "category": "commas", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
+{"id": "commas-height-label-hyphen", "input": "height-1,800 cm", "expected": {"value": 1800, "unit": "cm", "type": "height"}, "category": "commas", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
+{"id": "commas-phase-2-180", "input": "phase 2,180 cm", "expected": {"value": 2180, "unit": "cm", "type": "height"}, "category": "commas", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
+{"id": "commas-phase-2-space", "input": "phase-2, 180 cm", "expected": {"value": 180, "unit": "cm", "type": "height"}, "category": "commas", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
+{"id": "commas-phase2", "input": "phase2,180 cm", "expected": {"value": 180, "unit": "cm", "type": "height"}, "category": "commas", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
+{"id": "commas-trailing", "input": "1,000, kg", "expected": {"value": 1000, "unit": "kg", "type": "weight"}, "category": "commas", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
+{"id": "commas-malformed-groups", "input": "12,34,567 kg", "expected": null, "category": "commas", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
+{"id": "commas-malformed-1234", "input": "1234,567 kg", "expected": null, "category": "commas", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
 {"id": "commas-gewicht", "input": "Gewicht: 82,3 kg", "expected": {"value": 82.3, "unit": "kg", "type": "weight"}, "category": "commas", "source": "handwritten"}
 {"id": "commas-groesse", "input": "Größe: 1,78m", "expected": {"value": 1.78, "unit": "m", "type": "height"}, "category": "commas", "source": "handwritten"}
 {"id": "commas-75-5kg", "input": "75,5kg", "expected": {"value": 75.5, "unit": "kg", "type": "weight"}, "category": "commas", "source": "handwritten"}
 {"id": "commas-68-25-kg", "input": "68,25 kg", "expected": {"value": 68.25, "unit": "kg", "type": "weight"}, "category": "commas", "source": "handwritten"}
 {"id": "commas-decimal-lbs", "input": "165,5 lbs", "expected": {"value": 165.5, "unit": "lb", "type": "weight"}, "category": "commas", "source": "handwritten"}
 {"id": "commas-poids", "input": "poids : 64,5 kg", "expected": {"value": 64.5, "unit": "kg", "type": "weight"}, "category": "commas", "source": "handwritten"}
-{"id": "commas-thousands-and-decimal", "input": "1,234,56 kg", "expected": {"value": 1234.56, "unit": "kg", "type": "weight"}, "category": "commas", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "commas-decimal-range", "input": "72,5-80,5 kg", "expected": null, "category": "commas", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "commas-thousands-range", "input": "1,250-1,500 lbs", "expected": null, "category": "commas", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "commas-shorthand-inches", "input": "5-11,5", "options": {"type": "height"}, "expected": {"value": 71.5, "unit": "in", "type": "height"}, "category": "commas", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
+{"id": "commas-thousands-and-decimal", "input": "1,234,56 kg", "expected": {"value": 1234.56, "unit": "kg", "type": "weight"}, "category": "commas", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
+{"id": "commas-decimal-range", "input": "72,5-80,5 kg", "expected": null, "category": "commas", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
+{"id": "commas-thousands-range", "input": "1,250-1,500 lbs", "expected": null, "category": "commas", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
+{"id": "commas-shorthand-inches", "input": "5-11,5", "options": {"type": "height"}, "expected": {"value": 71.5, "unit": "in", "type": "height"}, "category": "commas", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
 {"id": "commas-1-80-m", "input": "1,80 m", "expected": {"value": 1.8, "unit": "m", "type": "height"}, "category": "commas", "source": "handwritten"}
 {"id": "hyphens-bare-shorthand", "input": "5-11", "options": {"type": "height"}, "expected": {"value": 71, "unit": "in", "type": "height"}, "category": "hyphens", "source": "AFA-14"}
 {"id": "hyphens-foot-hyphen", "input": "5-foot-11", "expected": {"value": 71, "unit": "in", "type": "height"}, "category": "hyphens", "source": "AFA-14"}
-{"id": "hyphens-ft-hyphen", "input": "5 ft-11", "expected": {"value": 71, "unit": "in", "type": "height"}, "category": "hyphens", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "hyphens-quote-hyphen", "input": "5'-11\"", "expected": {"value": 71, "unit": "in", "type": "height"}, "category": "hyphens", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "hyphens-zero-foot", "input": "0-foot-11", "expected": {"value": 11, "unit": "in", "type": "height"}, "category": "hyphens", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "hyphens-zero-inches", "input": "5-foot-0-inches", "expected": {"value": 60, "unit": "in", "type": "height"}, "category": "hyphens", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "hyphens-dot-half", "input": "5-.5", "options": {"type": "height"}, "expected": {"value": 60.5, "unit": "in", "type": "height"}, "category": "hyphens", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "hyphens-no-type", "input": "5-11", "expected": null, "category": "hyphens", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md", "note": "The README requires an explicit height type for bare N-M."}
-{"id": "hyphens-12-inches", "input": "5-12", "options": {"type": "height"}, "expected": null, "category": "hyphens", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
+{"id": "hyphens-ft-hyphen", "input": "5 ft-11", "expected": {"value": 71, "unit": "in", "type": "height"}, "category": "hyphens", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
+{"id": "hyphens-quote-hyphen", "input": "5'-11\"", "expected": {"value": 71, "unit": "in", "type": "height"}, "category": "hyphens", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
+{"id": "hyphens-zero-foot", "input": "0-foot-11", "expected": {"value": 11, "unit": "in", "type": "height"}, "category": "hyphens", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
+{"id": "hyphens-zero-inches", "input": "5-foot-0-inches", "expected": {"value": 60, "unit": "in", "type": "height"}, "category": "hyphens", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
+{"id": "hyphens-dot-half", "input": "5-.5", "options": {"type": "height"}, "expected": {"value": 60.5, "unit": "in", "type": "height"}, "category": "hyphens", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
+{"id": "hyphens-no-type", "input": "5-11", "expected": null, "category": "hyphens", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md", "note": "PARSING.md requires an explicit height type for bare N-M."}
+{"id": "hyphens-12-inches", "input": "5-12", "options": {"type": "height"}, "expected": null, "category": "hyphens", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
 {"id": "hyphens-range-lbs", "input": "150-180 lbs", "expected": null, "category": "hyphens", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "hyphens-range-after-unit", "input": "kg 50-70", "expected": null, "category": "hyphens", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "hyphens-negative-after-unit", "input": "kg-70.5", "expected": null, "category": "hyphens", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "hyphens-ft-m-disagree", "input": "5 ft-1 m", "options": {"normalizedUnit": "m"}, "expected": null, "category": "hyphens", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
+{"id": "hyphens-range-after-unit", "input": "kg 50-70", "expected": null, "category": "hyphens", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
+{"id": "hyphens-negative-after-unit", "input": "kg-70.5", "expected": null, "category": "hyphens", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
+{"id": "hyphens-ft-m-disagree", "input": "5 ft-1 m", "options": {"normalizedUnit": "m"}, "expected": null, "category": "hyphens", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
 {"id": "hyphens-six-foot-two", "input": "six-foot-two", "expected": {"value": 74, "unit": "in", "type": "height"}, "category": "hyphens", "source": "handwritten"}
 {"id": "hyphens-5-foot-10", "input": "5-foot-10", "expected": {"value": 70, "unit": "in", "type": "height"}, "category": "hyphens", "source": "handwritten"}
 {"id": "hyphens-6-2", "input": "6-2", "options": {"type": "height"}, "expected": {"value": 74, "unit": "in", "type": "height"}, "category": "hyphens", "source": "handwritten"}
@@ -151,7 +151,7 @@
 {"id": "hyphens-180-cm", "input": "180-cm", "expected": {"value": 180, "unit": "cm", "type": "height"}, "category": "hyphens", "source": "handwritten"}
 {"id": "hyphens-75-kg", "input": "75-kg", "expected": {"value": 75, "unit": "kg", "type": "weight"}, "category": "hyphens", "source": "handwritten"}
 {"id": "hyphens-5-6", "input": "5-6", "options": {"type": "height"}, "expected": {"value": 66, "unit": "in", "type": "height"}, "category": "hyphens", "source": "handwritten"}
-{"id": "hyphens-range-repeated-unit", "input": "150 lbs - 180 lbs", "expected": null, "category": "hyphens", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
+{"id": "hyphens-range-repeated-unit", "input": "150 lbs - 180 lbs", "expected": null, "category": "hyphens", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
 {"id": "hyphens-ft-in-hyphen", "input": "5-ft-11-in", "expected": {"value": 71, "unit": "in", "type": "height"}, "category": "hyphens", "source": "handwritten"}
 {"id": "hyphens-negative-feet", "input": "-5 feet", "expected": null, "category": "hyphens", "source": "handwritten"}
 {"id": "hyphens-weight-type", "input": "5-11", "options": {"type": "weight"}, "expected": null, "category": "hyphens", "source": "handwritten"}
@@ -188,8 +188,8 @@
 {"id": "unicode-nbsp-lbs", "input": "180\u00a0lbs", "expected": {"value": 180, "unit": "lb", "type": "weight"}, "category": "unicode", "source": "handwritten"}
 {"id": "unicode-nbsp-kg", "input": "70\u00a0kg", "expected": {"value": 70, "unit": "kg", "type": "weight"}, "category": "unicode", "source": "handwritten"}
 {"id": "unicode-narrow-nbsp-cm", "input": "180\u202fcm", "expected": {"value": 180, "unit": "cm", "type": "height"}, "category": "unicode", "source": "handwritten"}
-{"id": "unicode-en-dash-range", "input": "150 – 180 lbs", "expected": null, "category": "unicode", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "unicode-en-dash-shorthand", "input": "5–11", "options": {"type": "height"}, "expected": [{"value": 71, "unit": "in", "type": "height"}, null], "category": "unicode", "source": "handwritten", "note": "The README reads Unicode dashes as ranges, so null is also accepted."}
+{"id": "unicode-en-dash-range", "input": "150 – 180 lbs", "expected": null, "category": "unicode", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
+{"id": "unicode-en-dash-shorthand", "input": "5–11", "options": {"type": "height"}, "expected": [{"value": 71, "unit": "in", "type": "height"}, null], "category": "unicode", "source": "handwritten", "note": "PARSING.md reads Unicode dashes as ranges, so null is also accepted."}
 {"id": "unicode-acute-accents", "input": "5´11´´", "expected": {"value": 71, "unit": "in", "type": "height"}, "category": "unicode", "source": "handwritten", "note": "Some keyboards type acute accents for feet and inches."}
 {"id": "unicode-fullwidth", "input": "１８０ｃｍ", "expected": {"value": 180, "unit": "cm", "type": "height"}, "category": "unicode", "source": "handwritten", "note": "Fullwidth digits and letters from East Asian keyboards."}
 {"id": "unicode-square-cm", "input": "180 ㎝", "expected": {"value": 180, "unit": "cm", "type": "height"}, "category": "unicode", "source": "handwritten", "note": "U+339D SQUARE CM."}
@@ -203,7 +203,7 @@
 {"id": "unicode-nbsp-label", "input": "Height:\u00a0180\u00a0cm", "expected": {"value": 180, "unit": "cm", "type": "height"}, "category": "unicode", "source": "handwritten"}
 {"id": "unicode-thin-spaces", "input": "5\u2009ft\u200911\u2009in", "expected": {"value": 71, "unit": "in", "type": "height"}, "category": "unicode", "source": "handwritten"}
 {"id": "unicode-nbsp-decimal-comma", "input": "72,5\u00a0kg", "expected": {"value": 72.5, "unit": "kg", "type": "weight"}, "category": "unicode", "source": "handwritten"}
-{"id": "unicode-em-dash-range", "input": "150—180 lbs", "expected": null, "category": "unicode", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
+{"id": "unicode-em-dash-range", "input": "150—180 lbs", "expected": null, "category": "unicode", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
 {"id": "unicode-minus-sign", "input": "\u22125 ft", "expected": null, "category": "unicode", "source": "handwritten", "note": "U+2212 MINUS SIGN: a negative height."}
 {"id": "unicode-hyphen-shorthand", "input": "5\u201011", "options": {"type": "height"}, "expected": [{"value": 71, "unit": "in", "type": "height"}, null], "category": "unicode", "source": "handwritten", "note": "U+2010 HYPHEN. Null is also accepted, as for other Unicode dashes."}
 {"id": "unicode-curly-two-singles", "input": "5’11’’", "expected": {"value": 71, "unit": "in", "type": "height"}, "category": "unicode", "source": "handwritten"}
@@ -214,7 +214,7 @@
 {"id": "typos-kilogams", "input": "75 kilogams", "options": {"fuzziness": 1}, "expected": {"value": 75, "unit": "kg", "type": "weight"}, "category": "typos", "source": "handwritten"}
 {"id": "typos-foots-inc-readme", "input": "5 foots 10 inc", "options": {"fuzziness": 2}, "expected": {"value": 70, "unit": "in", "type": "height"}, "category": "typos", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
 {"id": "typos-foot-inc", "input": "5 foot 11 inc", "options": {"fuzziness": 1}, "expected": {"value": 71, "unit": "in", "type": "height"}, "category": "typos", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "typos-foot-inches-readme", "input": "5 foot 10 inches", "options": {"fuzziness": 1}, "expected": {"value": 70, "unit": "in", "type": "height"}, "category": "typos", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
+{"id": "typos-foot-inches-readme", "input": "5 foot 10 inches", "options": {"fuzziness": 1}, "expected": {"value": 70, "unit": "in", "type": "height"}, "category": "typos", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
 {"id": "typos-fet-only", "input": "6 fet", "options": {"fuzziness": 1}, "expected": {"value": 6, "unit": "ft", "type": "height"}, "category": "typos", "source": "handwritten"}
 {"id": "typos-punds", "input": "180 punds", "options": {"fuzziness": 1}, "expected": {"value": 180, "unit": "lb", "type": "weight"}, "category": "typos", "source": "handwritten"}
 {"id": "typos-centimeteres", "input": "170 centimeteres", "options": {"fuzziness": 1}, "expected": {"value": 170, "unit": "cm", "type": "height"}, "category": "typos", "source": "handwritten"}
@@ -222,7 +222,7 @@
 {"id": "typos-feett", "input": "5 feett 11", "options": {"fuzziness": 1}, "expected": {"value": 71, "unit": "in", "type": "height"}, "category": "typos", "source": "handwritten"}
 {"id": "typos-fot", "input": "5 fot 9 in", "options": {"fuzziness": 1}, "expected": {"value": 69, "unit": "in", "type": "height"}, "category": "typos", "source": "handwritten"}
 {"id": "typos-killo", "input": "80 killo", "options": {"fuzziness": 1}, "expected": {"value": 80, "unit": "kg", "type": "weight"}, "category": "typos", "source": "handwritten"}
-{"id": "typos-no-fuzziness", "input": "5 foots 10 inc", "expected": null, "category": "typos", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md", "note": "The README says this returns null without fuzzy matching."}
+{"id": "typos-no-fuzziness", "input": "5 foots 10 inc", "expected": null, "category": "typos", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md", "note": "PARSING.md says this returns null without fuzzy matching."}
 {"id": "typos-was", "input": "i was 180", "options": {"fuzziness": 2}, "expected": null, "category": "typos", "source": "AFA-16"}
 {"id": "typos-food", "input": "I ate 5 food", "options": {"fuzziness": 1}, "expected": null, "category": "typos", "source": "AFA-16"}
 {"id": "typos-abs", "input": "6 abs", "options": {"fuzziness": 1}, "expected": null, "category": "typos", "source": "AFA-16"}
@@ -242,19 +242,19 @@
 {"id": "surrounding-about", "input": "I'm about 5'11\"", "expected": {"value": 71, "unit": "in", "type": "height"}, "category": "surrounding-text", "source": "handwritten"}
 {"id": "surrounding-height-label", "input": "Height: 180 cm", "expected": {"value": 180, "unit": "cm", "type": "height"}, "category": "surrounding-text", "source": "handwritten"}
 {"id": "surrounding-weight-sentence", "input": "My weight is 72 kg.", "expected": {"value": 72, "unit": "kg", "type": "weight"}, "category": "surrounding-text", "source": "handwritten"}
-{"id": "surrounding-weighed-in-2020", "input": "weighed 70 kg in 2020", "expected": {"value": 70, "unit": "kg", "type": "weight"}, "category": "surrounding-text", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "surrounding-weigh-in-label", "input": "Weigh in: 180 lbs", "expected": {"value": 180, "unit": "lb", "type": "weight"}, "category": "surrounding-text", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
+{"id": "surrounding-weighed-in-2020", "input": "weighed 70 kg in 2020", "expected": {"value": 70, "unit": "kg", "type": "weight"}, "category": "surrounding-text", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
+{"id": "surrounding-weigh-in-label", "input": "Weigh in: 180 lbs", "expected": {"value": 180, "unit": "lb", "type": "weight"}, "category": "surrounding-text", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
 {"id": "surrounding-tall", "input": "I'm 6 ft tall", "expected": {"value": 6, "unit": "ft", "type": "height"}, "category": "surrounding-text", "source": "handwritten"}
 {"id": "surrounding-give-or-take", "input": "around 165 lbs give or take", "expected": {"value": 165, "unit": "lb", "type": "weight"}, "category": "surrounding-text", "source": "handwritten"}
-{"id": "surrounding-height-in-label", "input": "Height (in): 72", "expected": {"value": 72, "unit": "in", "type": "height"}, "category": "surrounding-text", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "surrounding-m-label", "input": "m: 1.8", "expected": {"value": 1.8, "unit": "m", "type": "height"}, "category": "surrounding-text", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "surrounding-in-equals", "input": "in = 72", "expected": {"value": 72, "unit": "in", "type": "height"}, "category": "surrounding-text", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "surrounding-in-dot", "input": "in. 5", "expected": {"value": 5, "unit": "in", "type": "height"}, "category": "surrounding-text", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "surrounding-age-kg", "input": "age=28, kg=72", "expected": {"value": 72, "unit": "kg", "type": "weight"}, "category": "surrounding-text", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "surrounding-age-ft", "input": "age: 28, ft: 6", "expected": {"value": 6, "unit": "ft", "type": "height"}, "category": "surrounding-text", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "surrounding-kg-label-lbs", "input": "age=28, kg=72 lbs", "expected": {"value": 72, "unit": "lb", "type": "weight"}, "category": "surrounding-text", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "surrounding-in-field-name", "input": "72 in: 180 lbs", "expected": {"value": 180, "unit": "lb", "type": "weight"}, "category": "surrounding-text", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "surrounding-in-field-height", "input": "72 in: height", "expected": {"value": 72, "unit": "in", "type": "height"}, "category": "surrounding-text", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
+{"id": "surrounding-height-in-label", "input": "Height (in): 72", "expected": {"value": 72, "unit": "in", "type": "height"}, "category": "surrounding-text", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
+{"id": "surrounding-m-label", "input": "m: 1.8", "expected": {"value": 1.8, "unit": "m", "type": "height"}, "category": "surrounding-text", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
+{"id": "surrounding-in-equals", "input": "in = 72", "expected": {"value": 72, "unit": "in", "type": "height"}, "category": "surrounding-text", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
+{"id": "surrounding-in-dot", "input": "in. 5", "expected": {"value": 5, "unit": "in", "type": "height"}, "category": "surrounding-text", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
+{"id": "surrounding-age-kg", "input": "age=28, kg=72", "expected": {"value": 72, "unit": "kg", "type": "weight"}, "category": "surrounding-text", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
+{"id": "surrounding-age-ft", "input": "age: 28, ft: 6", "expected": {"value": 6, "unit": "ft", "type": "height"}, "category": "surrounding-text", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
+{"id": "surrounding-kg-label-lbs", "input": "age=28, kg=72 lbs", "expected": {"value": 72, "unit": "lb", "type": "weight"}, "category": "surrounding-text", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
+{"id": "surrounding-in-field-name", "input": "72 in: 180 lbs", "expected": {"value": 180, "unit": "lb", "type": "weight"}, "category": "surrounding-text", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
+{"id": "surrounding-in-field-height", "input": "72 in: height", "expected": {"value": 72, "unit": "in", "type": "height"}, "category": "surrounding-text", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
 {"id": "surrounding-age-and-weight", "input": "I'm 28 and weigh 160 pounds", "expected": {"value": 160, "unit": "lb", "type": "weight"}, "category": "surrounding-text", "source": "handwritten"}
 {"id": "surrounding-sitting-at", "input": "currently sitting at 92kg", "expected": {"value": 92, "unit": "kg", "type": "weight"}, "category": "surrounding-text", "source": "handwritten"}
 {"id": "surrounding-patient", "input": "Patient is 5 feet 4 inches tall", "expected": {"value": 64, "unit": "in", "type": "height"}, "category": "surrounding-text", "source": "handwritten"}
@@ -270,8 +270,8 @@
 {"id": "surrounding-born-in", "input": "born in 1990, 180 cm", "expected": {"value": 180, "unit": "cm", "type": "height"}, "category": "surrounding-text", "source": "handwritten"}
 {"id": "multiple-kg-with-lbs", "input": "70 kg (154 lbs)", "expected": [{"value": 70, "unit": "kg", "type": "weight"}, null], "category": "multiple-measurements", "source": "AFA-41", "note": "AFA-41 accepts 70 kg or null, but not the sum 139.85 kg."}
 {"id": "multiple-before-after", "input": "M/28/5'11\" [210lbs > 180lbs]", "options": {"type": "weight"}, "expected": null, "category": "multiple-measurements", "source": "AFA-41", "note": "Before and after weights disagree, so the README rule gives null."}
-{"id": "multiple-cm-with-ft-in", "input": "180 cm (5'11\")", "expected": {"value": 180, "unit": "cm", "type": "height"}, "category": "multiple-measurements", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "multiple-ft-with-in", "input": "6 ft (72 in)", "expected": {"value": 6, "unit": "ft", "type": "height"}, "category": "multiple-measurements", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
+{"id": "multiple-cm-with-ft-in", "input": "180 cm (5'11\")", "expected": {"value": 180, "unit": "cm", "type": "height"}, "category": "multiple-measurements", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
+{"id": "multiple-ft-with-in", "input": "6 ft (72 in)", "expected": {"value": 6, "unit": "ft", "type": "height"}, "category": "multiple-measurements", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
 {"id": "multiple-to", "input": "210 lbs to 180 lbs", "expected": null, "category": "multiple-measurements", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
 {"id": "multiple-height-weight-type-weight", "input": "5'11\", 180 lbs", "options": {"type": "weight"}, "expected": {"value": 180, "unit": "lb", "type": "weight"}, "category": "multiple-measurements", "source": "handwritten"}
 {"id": "multiple-height-weight-type-height", "input": "5'11\", 180 lbs", "options": {"type": "height"}, "expected": {"value": 71, "unit": "in", "type": "height"}, "category": "multiple-measurements", "source": "handwritten"}
@@ -279,7 +279,7 @@
 {"id": "multiple-6-2-200-height", "input": "6'2\" 200lbs", "options": {"type": "height"}, "expected": {"value": 74, "unit": "in", "type": "height"}, "category": "multiple-measurements", "source": "handwritten"}
 {"id": "multiple-6-2-200-weight", "input": "6'2\" 200lbs", "options": {"type": "weight"}, "expected": {"value": 200, "unit": "lb", "type": "weight"}, "category": "multiple-measurements", "source": "handwritten"}
 {"id": "multiple-6-1-190-no-type", "input": "6'1\" 190lbs", "expected": [{"value": 73, "unit": "in", "type": "height"}, {"value": 190, "unit": "lb", "type": "weight"}, null], "category": "multiple-measurements", "source": "handwritten", "note": "Without a type, the height, the weight or null is accepted."}
-{"id": "multiple-lbs-equals-kg", "input": "180 lbs = 82 kg", "expected": {"value": 180, "unit": "lb", "type": "weight"}, "category": "multiple-measurements", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
+{"id": "multiple-lbs-equals-kg", "input": "180 lbs = 82 kg", "expected": {"value": 180, "unit": "lb", "type": "weight"}, "category": "multiple-measurements", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
 {"id": "multiple-lbs-with-kg", "input": "154 lbs (70 kg)", "expected": {"value": 154, "unit": "lb", "type": "weight"}, "category": "multiple-measurements", "source": "handwritten"}
 {"id": "multiple-cm-slash-ft-in", "input": "175 cm / 5'9\"", "options": {"type": "height"}, "expected": {"value": 175, "unit": "cm", "type": "height"}, "category": "multiple-measurements", "source": "handwritten"}
 {"id": "multiple-kg-slash-lbs", "input": "80 kg / 176 lbs", "expected": {"value": 80, "unit": "kg", "type": "weight"}, "category": "multiple-measurements", "source": "handwritten"}
@@ -324,7 +324,7 @@
 {"id": "conversion-lbs-to-kg", "input": "150 lbs", "options": {"type": "weight", "normalizedUnit": "kg"}, "expected": {"value": 68.0388555, "unit": "kg", "type": "weight"}, "category": "conversion", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
 {"id": "conversion-ft-in-to-cm", "input": "5' 11\"", "options": {"type": "height", "normalizedUnit": "cm"}, "expected": {"value": 180.34, "unit": "cm", "type": "height"}, "category": "conversion", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
 {"id": "conversion-ft-in-to-in", "input": "5 feet 11 inches", "options": {"type": "height", "normalizedUnit": "in"}, "expected": {"value": 71, "unit": "in", "type": "height"}, "category": "conversion", "source": "handwritten"}
-{"id": "conversion-shorthand-to-m", "input": "5-11", "options": {"type": "height", "normalizedUnit": "m"}, "expected": {"value": 1.8034, "unit": "m", "type": "height"}, "category": "conversion", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
+{"id": "conversion-shorthand-to-m", "input": "5-11", "options": {"type": "height", "normalizedUnit": "m"}, "expected": {"value": 1.8034, "unit": "m", "type": "height"}, "category": "conversion", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
 {"id": "conversion-shorthand-to-ft", "input": "5-11", "options": {"type": "height", "normalizedUnit": "ft"}, "expected": {"value": 5.916666666666667, "unit": "ft", "type": "height"}, "category": "conversion", "source": "handwritten"}
 {"id": "conversion-thousands-to-kg", "input": "1,000 lbs", "options": {"normalizedUnit": "kg"}, "expected": {"value": 453.59237, "unit": "kg", "type": "weight"}, "category": "conversion", "source": "handwritten"}
 {"id": "conversion-kg-to-lb", "input": "70 kg", "options": {"normalizedUnit": "lb"}, "expected": {"value": 154.3235835294143, "unit": "lb", "type": "weight"}, "category": "conversion", "source": "handwritten"}
@@ -350,16 +350,16 @@
 {"id": "conversion-decimal-comma-to-lb", "input": "72,5 kg", "options": {"normalizedUnit": "lb"}, "expected": {"value": 159.83514008403625, "unit": "lb", "type": "weight"}, "category": "conversion", "source": "handwritten"}
 {"id": "conversion-cm-label-to-in", "input": "Height: 175 cm", "options": {"normalizedUnit": "in"}, "expected": {"value": 68.89763779527559, "unit": "in", "type": "height"}, "category": "conversion", "source": "handwritten"}
 {"id": "unsupported-stone-pounds", "input": "12st 4lb", "expected": null, "category": "unsupported", "source": "AFA-41", "note": "The README returns null for a weight with a stone part."}
-{"id": "unsupported-lb-oz", "input": "7 lb 8 oz", "expected": null, "category": "unsupported", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
+{"id": "unsupported-lb-oz", "input": "7 lb 8 oz", "expected": null, "category": "unsupported", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
 {"id": "unsupported-stone", "input": "12 stone", "expected": null, "category": "unsupported", "source": "handwritten"}
 {"id": "unsupported-st", "input": "12 st", "expected": null, "category": "unsupported", "source": "handwritten"}
 {"id": "unsupported-11st-7lb", "input": "11st 7lb", "expected": null, "category": "unsupported", "source": "handwritten"}
 {"id": "unsupported-kg-g", "input": "3 kg 400 g", "expected": null, "category": "unsupported", "source": "handwritten"}
-{"id": "unsupported-stone-first", "input": "stone 12, 4 lb", "expected": null, "category": "unsupported", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "unsupported-kg-first-g", "input": "kg 3, 400 g", "expected": null, "category": "unsupported", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "unsupported-oz-before", "input": "I drink 8 oz of water, weight 180 lbs", "expected": {"value": 180, "unit": "lb", "type": "weight"}, "category": "unsupported", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "unsupported-main-st", "input": "Main St 12, 180 lbs", "expected": {"value": 180, "unit": "lb", "type": "weight"}, "category": "unsupported", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "unsupported-5g-phone", "input": "5G phone, 180 lbs", "expected": {"value": 180, "unit": "lb", "type": "weight"}, "category": "unsupported", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
+{"id": "unsupported-stone-first", "input": "stone 12, 4 lb", "expected": null, "category": "unsupported", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
+{"id": "unsupported-kg-first-g", "input": "kg 3, 400 g", "expected": null, "category": "unsupported", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
+{"id": "unsupported-oz-before", "input": "I drink 8 oz of water, weight 180 lbs", "expected": {"value": 180, "unit": "lb", "type": "weight"}, "category": "unsupported", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
+{"id": "unsupported-main-st", "input": "Main St 12, 180 lbs", "expected": {"value": 180, "unit": "lb", "type": "weight"}, "category": "unsupported", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
+{"id": "unsupported-5g-phone", "input": "5G phone, 180 lbs", "expected": {"value": 180, "unit": "lb", "type": "weight"}, "category": "unsupported", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
 {"id": "unsupported-grams-only", "input": "70000 g", "expected": null, "category": "unsupported", "source": "handwritten"}
 {"id": "unsupported-lbs-oz", "input": "154 lbs 4 oz", "expected": null, "category": "unsupported", "source": "handwritten"}
 {"id": "unsupported-stone-weight-type", "input": "13 stone", "options": {"type": "weight"}, "expected": null, "category": "unsupported", "source": "handwritten"}
@@ -385,14 +385,14 @@
 {"id": "prose-times", "input": "I went running 5 times this week", "expected": null, "category": "prose", "source": "handwritten"}
 {"id": "prose-room", "input": "Room 101", "expected": null, "category": "prose", "source": "handwritten"}
 {"id": "prose-born", "input": "born in 1990", "expected": null, "category": "prose", "source": "handwritten"}
-{"id": "prose-check-in", "input": "check-in: 5", "expected": null, "category": "prose", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
-{"id": "prose-m-28", "input": "M 28", "expected": null, "category": "prose", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
+{"id": "prose-check-in", "input": "check-in: 5", "expected": null, "category": "prose", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
+{"id": "prose-m-28", "input": "M 28", "expected": null, "category": "prose", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
 {"id": "prose-top-10-in", "input": "Top 10 in the class", "expected": {"value": 10, "unit": "in", "type": "height"}, "category": "prose", "source": "handwritten", "note": "\"in\" after a number means inches (README, AFA-67)."}
 {"id": "prose-ranked-3-in", "input": "ranked 3 in the state", "expected": {"value": 3, "unit": "in", "type": "height"}, "category": "prose", "source": "AFA-67", "note": "\"in\" after a number means inches (README, AFA-67)."}
 {"id": "prose-2-in-a-row", "input": "2 in a row", "expected": {"value": 2, "unit": "in", "type": "height"}, "category": "prose", "source": "AFA-67", "note": "\"in\" after a number means inches (README, AFA-67)."}
 {"id": "prose-5-in-total", "input": "5 in total", "expected": {"value": 5, "unit": "in", "type": "height"}, "category": "prose", "source": "AFA-67", "note": "\"in\" after a number means inches (README, AFA-67)."}
 {"id": "prose-kids-cats", "input": "I have 2 kids and 3 cats", "expected": null, "category": "prose", "source": "handwritten"}
-{"id": "prose-5g", "input": "5G", "expected": null, "category": "prose", "source": "https://github.com/afahy/fluent-measures/blob/main/README.md"}
+{"id": "prose-5g", "input": "5G", "expected": null, "category": "prose", "source": "https://github.com/afahy/fluent-measures/blob/main/PARSING.md"}
 {"id": "prose-age", "input": "I'm 30 years old", "expected": null, "category": "prose", "source": "handwritten"}
 {"id": "prose-shoe-size", "input": "size 10 shoes", "expected": null, "category": "prose", "source": "handwritten"}
 {"id": "prose-stars", "input": "5 stars, would buy again", "expected": null, "category": "prose", "source": "handwritten"}
