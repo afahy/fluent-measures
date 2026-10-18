@@ -35,10 +35,9 @@ jobs:
         with:
           node-version: 22
 
-      # An edit to the PR body can't change the sizes, so it skips this step, and that summary has
-      # no sizes.
+      # An edit to the PR body measures the sizes again too, because it cancels a run that is still
+      # measuring them, and only the last run's summary counts.
       - name: Measure the bundle sizes on the base branch and in the PR
-        if: github.event.action != 'edited'
         run: |
           if git diff --quiet HEAD^1 HEAD -- src/ package.json pnpm-lock.yaml tsup.config.ts; then
             echo "The PR doesn't change the package files."

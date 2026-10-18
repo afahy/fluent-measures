@@ -336,9 +336,9 @@ report.
 On each pull request, `.github/workflows/evidence.yml` writes a summary on the run's page. It lists
 each result that changes in `tests/__snapshots__/resultSnapshot.txt` and each corpus entry whose
 outcome changes. It also lists the changed examples in the README and `PARSING.md`, a change to
-`api-report.d.ts`, and the bundle sizes before and after. An edit to only the PR body doesn't build
-the package again, so that summary has no sizes. When results change, the check fails until the PR
-body has a "Changed results" line or heading.
+`api-report.d.ts`, and the bundle sizes before and after. When results change, the check fails until
+the PR body has a "Changed results" line, list item or heading. A corpus entry that the PR edits
+doesn't count as a changed result, because the edit, not the parser, can change its outcome.
 
 The summary also rates the risk as low, medium or high, for the maintainer's review. No label or
 merge rule uses the rating. A high risk is a change that the maintainer decides on:
@@ -355,8 +355,8 @@ merge rule uses the rating. A high risk is a change that the maintainer decides 
 
 A medium risk changes code that runs or a result, or removes `expect` calls from the tests. A
 comment that turns off a mutation or coverage check, such as `// Stryker disable`, is also a
-medium risk. A low risk changes none of these. The script from the base branch rates the PR, so a change to the script
-doesn't rate its own PR.
+medium risk. A low risk changes none of these. The script from the base branch rates the PR, so a
+change to the script doesn't rate its own PR.
 
 ## Documentation
 

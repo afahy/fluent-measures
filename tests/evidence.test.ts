@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   addedIgnores,
   assessRisk,
+  changedResults,
   consumerFieldChanges,
   corpusChanges,
   deletedTests,
@@ -411,10 +412,37 @@ describe('listsChangedResults', () => {
     ['a heading', '## Description\n\n### Changed results\n\n- a', true],
     ['a line', 'Changed results: only the ones that AFA-1 asks for.', true],
     ['a bold line', '**Changed results**\n- a', true],
+    ['a list item', '- Changed results: only what AFA-1 asks for', true],
+    ['a bold list item', '- **Changed results:** none beyond AFA-1', true],
+    ['a list item with a star', '* Changed results', true],
+    ['a numbered item', '1. Changed results', true],
+    ['an underscored line', '__Changed results__', true],
+    ['an italic line', '*Changed results:* none', true],
     ['no list', 'This changes some results.', false],
+    ['words in a sentence', 'It lists the changed results below.', false],
     ['an empty body', '', false],
   ])('finds %s', (_, body, found) => {
     expect(listsChangedResults(body)).toBe(found);
+  });
+});
+
+describe('changedResults', () => {
+  const outcome = (id: string) => ({ id, before: 'wrong: 5.11 ft (height)', after: 'agree' });
+
+  it('counts the changed snapshot lines and the outcomes of entries that the PR keeps', () => {
+    const changed = [{ input: '5 ft', options: '-', before: '5 ft height', after: '60 in height' }];
+    const corpus = { ...facts().corpus, outcomes: [outcome('a'), outcome('b')] };
+    expect(changedResults(facts({ results: { changed, added: 0, removed: 0 }, corpus }))).toBe(3);
+  });
+
+  it("doesn't count the outcome of an entry that the PR edits", () => {
+    // Adding a second expected output to decimals-5-11-ft changes its outcome, not a result.
+    const corpus = {
+      ...facts().corpus,
+      outcomes: [outcome('decimals-5-11-ft')],
+      edited: ['decimals-5-11-ft'],
+    };
+    expect(changedResults(facts({ corpus }))).toBe(0);
   });
 });
 

@@ -80,6 +80,7 @@ export function nameStatus(output: string): { kind: string; path: string; to?: s
 export function scriptsRun(workflows: string[], read: (path: string) => string | null): Set<string>;
 export function testLimits(stryker: string | null, vitest: string | null): Map<string, number>;
 export function listsChangedResults(body: string): boolean;
+export function changedResults(facts: Facts): number;
 export function assessRisk(facts: Facts): { level: 'low' | 'medium' | 'high'; reasons: string[] };
 export function summary(facts: Facts, risk: { level: string; reasons: string[] }): string;
 export function sizes(base: string | null, head: string | null): Size[];

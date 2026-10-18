@@ -405,14 +405,30 @@ export function scriptsRun(workflows, read) {
 }
 
 /**
- * Whether the PR body lists the changed results, under a heading or a line that starts with
- * "Changed results".
+ * Whether the PR body lists the changed results, under a heading, a line or a list item that
+ * starts with "Changed results". The words can be bold or in italics.
  *
  * @param {string} body
  * @returns {boolean}
  */
 export function listsChangedResults(body) {
-  return /^[ \t]*(?:#{1,6}[ \t]*)?(?:\*\*)?Changed results\b/im.test(body);
+  // Not \b after "results": "_" is a word character, so it fails in "__Changed results__".
+  const heading = /^[ \t]*(?:#{1,6}[ \t]*|[-*+][ \t]+|\d+[.)][ \t]+)?(?:\*\*|__|\*|_)?/;
+  return new RegExp(`${heading.source}Changed results(?![a-z])`, 'im').test(body);
+}
+
+/**
+ * The number of results that the PR changes: the changed lines of the result snapshot, and the
+ * corpus entries whose outcome changes although the PR doesn't edit them. An edited entry's
+ * outcome can change with no change to a result, as when the PR adds an expected output.
+ *
+ * @param {import('./evidence.d.mts').Facts} facts
+ * @returns {number}
+ */
+export function changedResults(facts) {
+  const edited = new Set(facts.corpus.edited);
+  const outcomes = facts.corpus.outcomes.filter(({ id }) => !edited.has(id));
+  return facts.results.changed.length + outcomes.length;
 }
 
 /**
@@ -467,7 +483,7 @@ export function assessRisk(facts) {
       `It adds ${facts.ignores.length} comments that turn off a mutation or coverage check.`
     );
   }
-  const results = facts.results.changed.length + facts.corpus.outcomes.length;
+  const results = changedResults(facts);
   if (results > 0) medium.push(`It changes ${results} results.`);
   if (facts.codeChanged.length > 0) {
     medium.push(`It changes code that runs: ${facts.codeChanged.join(', ')}.`);
@@ -786,7 +802,7 @@ function main() {
   console.log(text);
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, text);
 
-  const results = facts.results.changed.length + facts.corpus.outcomes.length;
+  const results = changedResults(facts);
   if (results > 0 && !listsChangedResults(process.env.PR_BODY ?? '')) {
     console.log(
       `::error::${escapeData(
