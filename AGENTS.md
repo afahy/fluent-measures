@@ -39,8 +39,11 @@ ticket ID and text. Don't open a PR without a ticket ID.
 4. Add a changeset for any change to `src/` or to `package.json` fields that affect
    consumers. `pnpm changeset` asks questions that you can't answer, so write the file
    yourself: `.changeset/<short-name>.md`, with `'@afahy/fluent-measures': patch` between two
-   `---` lines, and then a summary of the change for users. Don't change the version in
-   `package.json`. Changesets sets it at release time.
+   `---` lines, and then a summary of the change for users. Use `minor` in place of `patch`
+   when the PR changes a result that `main` returns and that isn't `null` (decision rule 3).
+   While the version is below 1.0.0, a minor bump marks a change that can break users. Never
+   use `major`. Don't change the version in `package.json`. Changesets sets it at release
+   time.
 5. Commit messages and PR titles follow Conventional Commits, as configured in
    `commitlint.config.js`. CI checks both, and checks titles against
    `commitlint.pr-title.config.js` as well. Write PR titles as `type: summary`, for example
