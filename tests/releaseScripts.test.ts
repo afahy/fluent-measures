@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync, type SpawnSyncReturns } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { devNull, tmpdir } from 'node:os';
 import { delimiter, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -37,10 +37,13 @@ function git(cwd: string, ...args: string[]): string {
  * repository has a release commit that `origin` doesn't have yet, as after `changeset version`.
  * Stand-ins for `pnpm` and `changeset` come first on PATH. `changeset publish` tags a release
  * with `git tag <tag> -m <tag>` (`tag` in @changesets/git), so the stand-in does the same and
- * publishes nothing. It fails if `origin` doesn't have HEAD yet, and it writes a `published` file.
+ * publishes nothing. The real tool doesn't check the remote, but the stand-in fails if `origin`
+ * doesn't have HEAD yet, which shows whether the first push ran before the publish. It also
+ * writes a `published` file.
  */
 function runReleasePublish({ prePushHook }: { prePushHook?: string } = {}): {
   remote: string;
+  repository: string;
   result: SpawnSyncReturns<string>;
 } {
   const remote = createDirectory('fluent-measures-remote-');
@@ -77,7 +80,7 @@ function runReleasePublish({ prePushHook }: { prePushHook?: string } = {}): {
     env: { ...env, PATH: `${bin}${delimiter}${env.PATH}` },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
-  return { remote, result };
+  return { remote, repository, result };
 }
 
 afterEach(() => {
@@ -87,7 +90,7 @@ afterEach(() => {
 });
 
 describe('release:publish', () => {
-  // Changesets tags HEAD after the publish, and it expects HEAD on the remote by then.
+  // The release commit must be on the remote before the package that it builds reaches npm.
   it('pushes the release commit before changeset publish runs', () => {
     const { result } = runReleasePublish();
 
@@ -103,8 +106,20 @@ describe('release:publish', () => {
     expect(git(remote, 'tag', '--list')).toBe('v9.9.9\n');
   });
 
-  // The pre-push hook runs the tests, the build and the size check. The first push ran it on the
-  // same commit. If it ran again and failed after the publish, the tag would stay local.
+  // The pre-push hook runs the tests, the build and the size check, so a release that fails them
+  // must stop before anything reaches npm.
+  it('stops before changeset publish when the pre-push hook fails', () => {
+    const { remote, repository, result } = runReleasePublish({
+      prePushHook: '#!/bin/sh\nexit 1\n',
+    });
+
+    expect(result.status).not.toBe(0);
+    expect(existsSync(resolve(repository, 'published'))).toBe(false);
+    expect(git(remote, 'tag', '--list')).toBe('');
+  });
+
+  // The first push ran the pre-push hook on the same commit. If the hook ran again and failed
+  // after the publish, the tag would stay local.
   it('pushes the tag when the pre-push hook would fail after the publish', () => {
     const { remote, result } = runReleasePublish({
       prePushHook: '#!/bin/sh\n[ ! -e published ]\n',
