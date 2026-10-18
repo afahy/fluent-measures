@@ -72,6 +72,21 @@ for (const name of unreadable) {
   );
 }
 if (unreadable.length > 0) process.exit(1);
+// Git stores a symbolic link with mode 120000 and diffs only the path that it holds, but Stryker
+// mutates the files that the link points to, whether a file or a folder. So the changed lines and
+// the mutants' lines don't match. Git's mode counts, not the checkout, which may hold a plain file.
+const changedNames = new Set(names);
+const linked = execFileSync('git', ['ls-tree', '-r', '-z', 'HEAD', '--', 'src/'], gitOptions)
+  .toString('utf8')
+  .split('\0')
+  .map(entry => /^120000 blob \w+\t(.*)$/s.exec(entry)?.[1])
+  .filter(file => file !== undefined && changedNames.has(file));
+for (const file of linked) {
+  console.error(
+    `::error file=${escapeProperty(file)}::Replace ${escapeData(file)} with the file or folder that it links to. It's a symbolic link, and Stryker mutates what it points to, so this check can't match its changed lines.`
+  );
+}
+if (linked.length > 0) process.exit(1);
 // Stryker's config says which files it mutates, so a changed test file under src/ isn't checked.
 // A config without `mutate` leaves every changed source file in.
 const { $schema: _schema, ...config } = JSON.parse(readFileSync('stryker.config.json', 'utf8'));
@@ -136,18 +151,6 @@ for (const file of backslashed) {
   );
 }
 if (backslashed.length > 0) process.exit(1);
-
-// Git diffs a symbolic link's target path, but Stryker mutates the file that the link points to.
-// So the changed lines and the mutants' lines don't match.
-const linked = [...changed.keys()].filter(file =>
-  lstatSync(file, { throwIfNoEntry: false })?.isSymbolicLink()
-);
-for (const file of linked) {
-  console.error(
-    `::error file=${escapeProperty(file)}::Replace ${escapeData(file)} with the file that it links to. It's a symbolic link, and Stryker mutates the file that it points to, so this check can't match its changed lines.`
-  );
-}
-if (linked.length > 0) process.exit(1);
 
 // Mutate the whole of each changed file, so a mutant whose code spans more lines than the change
 // is still made. Only the mutants that overlap a changed line count. Use the project's Stryker

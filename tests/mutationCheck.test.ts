@@ -160,6 +160,48 @@ describe('mutation-check.mjs', () => {
     expect(check.stdout).not.toContain('Tests kill every mutant');
   });
 
+  // Stryker follows a link to a folder too, and a link of any name is one change to git.
+  it.each([
+    ['a folder', 'src/extra', '../lib'],
+    ['a .mts file', 'src/units.mts', '../lib/impl.mts'],
+  ])('fails for a changed symbolic link to %s', (_kind, link, target) => {
+    const repository = createRepository();
+    const base = commitFiles(repository, {
+      'stryker.config.json': '{}\n',
+      'lib/impl.ts': 'export const a = 1;\n',
+      'lib/impl.mts': 'export const b = 1;\n',
+    });
+    mkdirSync(resolve(repository, 'src'));
+    symlinkSync(target, resolve(repository, link));
+    commitFiles(repository, { 'src/index.ts': 'export const c = 1 > 0;\n' });
+    addStrykerStub(repository);
+
+    const check = runCheck(repository, base);
+
+    expect(check.status).toBe(1);
+    expect(check.stderr).toContain(`::error file=${link}::Replace ${link}`);
+  });
+
+  // With core.symlinks=false, git checks a link out as a plain file that holds its target path.
+  it('fails for a symbolic link that the checkout holds as a plain file', () => {
+    const repository = createRepository();
+    const base = commitFiles(repository, {
+      'stryker.config.json': '{}\n',
+      'lib/impl.ts': 'export const a = 1;\n',
+    });
+    mkdirSync(resolve(repository, 'src'));
+    symlinkSync('../lib/impl.ts', resolve(repository, 'src/units.ts'));
+    commitFiles(repository, { 'lib/impl.ts': 'export const a = 1 > 0;\n' });
+    rmSync(resolve(repository, 'src/units.ts'));
+    writeFileSync(resolve(repository, 'src/units.ts'), '../lib/impl.ts');
+    addStrykerStub(repository);
+
+    const check = runCheck(repository, base);
+
+    expect(check.status).toBe(1);
+    expect(check.stderr).toContain('::error file=src/units.ts::Replace src/units.ts');
+  });
+
   // AFA-85: the check gives Stryker only `.ts` files, but tsc, Vitest and tsup also use these, so a
   // change to one would pass with no check.
   it.each([
