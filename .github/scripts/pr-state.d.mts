@@ -101,17 +101,7 @@ export interface CiSummary {
 }
 
 export interface BotState {
-  state:
-    | 'done'
-    | 'running'
-    | 'pending'
-    | 'requested'
-    | 'rate-limited'
-    | 'refused'
-    | 'failed'
-    | 'not-requested'
-    | 'gave-up'
-    | 'skipped';
+  state: 'done' | 'running' | 'pending' | 'requested' | 'not-requested' | 'gave-up' | 'skipped';
   detail: string;
   until?: string;
   action?: string;
@@ -133,11 +123,10 @@ export interface PrStatus {
   waits: string[];
   ci: CiSummary;
   codex: BotState;
-  coderabbit: BotState;
 }
 
 export const CODEX: string;
-export const CODERABBIT: string;
+export const CLAUDE: string;
 export const OWN_STATUS: string;
 export const OWN_CHECK: string;
 export const BOT_START_WAIT: number;
@@ -153,7 +142,6 @@ export function codexSummaryRows(
   body: string
 ): { review: string; status: string; commit: string | null }[];
 export function codexState(snapshot: Snapshot, now: number): BotState;
-export function coderabbitState(snapshot: Snapshot): BotState;
 export function unansweredBotThreads(comments: ReviewComment[]): ReviewComment[];
 export function botFollowUps(comments: ReviewComment[]): ReviewComment[];
 export function unansweredReviewBodies(snapshot: Snapshot): Review[];

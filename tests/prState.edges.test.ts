@@ -7,7 +7,6 @@ import {
   ciSummary,
   classify,
   clockStart,
-  coderabbitState,
   codexState,
   codexSummaryRows,
   collect,
@@ -37,7 +36,7 @@ function fixture(name: string): Snapshot {
 const at = (time: string): number => Date.parse(time);
 const human = { login: 'afahy', type: 'User' };
 const codexBot = { login: 'chatgpt-codex-connector[bot]', type: 'Bot' };
-const rabbit = { login: 'coderabbitai[bot]', type: 'Bot' };
+const claude = { login: 'claude[bot]', type: 'Bot' };
 const pull67 = 'https://github.com/afahy/fluent-measures/pull/67';
 const head67 = '318c1b7f27c418c6a53ecf1c3de26c32ea207cb0';
 
@@ -83,18 +82,6 @@ function review(
     submitted_at: time,
     html_url: `${pull67}#pullrequestreview-${id}`,
   };
-}
-
-/** #67 with CodeRabbit's status changed to a completed review, so only one thing differs. */
-function reviewed67(): Snapshot {
-  const snapshot = fixture('pr-67');
-  snapshot.statuses.push({
-    context: 'CodeRabbit',
-    state: 'success',
-    description: 'Review completed',
-    created_at: '2026-10-07T15:55:00Z',
-  });
-  return snapshot;
 }
 
 describe('pushedAt and clockStart', () => {
@@ -204,9 +191,9 @@ describe('codexSummaryRows edges', () => {
 });
 
 describe('bot threads', () => {
-  it('counts only Codex and CodeRabbit threads, and only replies from people as answers', () => {
+  it('counts only Codex and Claude threads, and only replies from people as answers', () => {
     const comments = [
-      threadComment(5, rabbit, '2026-10-07T10:05:00Z'),
+      threadComment(5, claude, '2026-10-07T10:05:00Z'),
       // A [bot] login without a type is still a bot, so its reply isn't an answer.
       threadComment(6, { login: 'some-app[bot]' }, '2026-10-07T10:06:00Z', 5),
       threadComment(1, { login: 'chatgpt-codex-connector[bot]' }, '2026-10-07T10:01:00Z'),
@@ -224,7 +211,7 @@ describe('bot threads', () => {
 
   it("doesn't count a bot's reply as an answer", () => {
     const comments = [
-      threadComment(1, rabbit, '2026-10-07T10:00:00Z'),
+      threadComment(1, claude, '2026-10-07T10:00:00Z'),
       threadComment(2, codexBot, '2026-10-07T10:01:00Z', 1),
     ];
     expect(unansweredBotThreads(comments).map(c => c.id)).toEqual([1]);
@@ -233,13 +220,13 @@ describe('bot threads', () => {
 
   it('orders replies by time, and lists follow-ups by time', () => {
     const comments = [
-      threadComment(10, rabbit, '2026-10-07T10:00:00Z'),
-      threadComment(12, rabbit, '2026-10-07T10:02:00Z', 10),
+      threadComment(10, claude, '2026-10-07T10:00:00Z'),
+      threadComment(12, claude, '2026-10-07T10:02:00Z', 10),
       threadComment(11, human, '2026-10-07T10:01:00Z', 10),
-      threadComment(20, rabbit, '2026-10-07T09:00:00Z'),
+      threadComment(20, claude, '2026-10-07T09:00:00Z'),
       // In thread 20, a person replied last, after the bot's follow-up.
       threadComment(22, human, '2026-10-07T09:02:00Z', 20),
-      threadComment(21, rabbit, '2026-10-07T09:01:00Z', 20),
+      threadComment(21, claude, '2026-10-07T09:01:00Z', 20),
       threadComment(30, codexBot, '2026-10-07T08:00:00Z'),
       threadComment(31, human, '2026-10-07T08:01:00Z', 30),
       threadComment(32, codexBot, '2026-10-07T08:02:00Z', 30),
@@ -391,177 +378,18 @@ describe('codexState edges', () => {
   });
 });
 
-describe('coderabbitState edges', () => {
-  it("is running while its newest status is pending, and ignores other contexts' statuses", () => {
-    const snapshot = fixture('pr-67');
-    snapshot.statuses.push(
-      {
-        context: 'CodeRabbit',
-        state: 'pending',
-        description: 'Review in progress',
-        created_at: '2026-10-07T15:50:00Z',
-      },
-      {
-        context: 'deploy',
-        state: 'success',
-        description: 'Review completed',
-        created_at: '2026-10-07T15:51:00Z',
-      }
-    );
-    expect(coderabbitState(snapshot)).toEqual({
-      state: 'running',
-      detail: 'CodeRabbit is reviewing 318c1b7',
-    });
-  });
-
-  it('counts a review whose range ends at the head, but not one that ends elsewhere', () => {
-    const snapshot = fixture('pr-67');
-    snapshot.statuses = [];
-    snapshot.reviews.push(
-      review(
-        1,
-        rabbit,
-        'COMMENTED',
-        'between f5f23c3f06b08cb0f649017a729fe82c415aed90 and 91a5d29c8f62b5cbdececfcdb0a60e77d8209fc6.',
-        '2026-10-07T15:00:00Z'
-      )
-    );
-    expect(coderabbitState(snapshot).state).toBe('pending');
-    snapshot.reviews.push(
-      review(2, human, 'COMMENTED', `between f5f23c3 and ${head67}`, '2026-10-07T15:01:00Z')
-    );
-    expect(coderabbitState(snapshot).state).toBe('pending');
-    snapshot.reviews.push(
-      review(
-        3,
-        rabbit,
-        'COMMENTED',
-        `between f5f23c3 and 91a5d29, then between 91a5d29 and ${head67}.`,
-        '2026-10-07T15:02:00Z'
-      )
-    );
-    expect(coderabbitState(snapshot)).toEqual({
-      state: 'done',
-      detail: 'CodeRabbit reviewed 318c1b7',
-    });
-  });
-
-  it('follows its answer to a request: triggered, finished or not completed', () => {
-    const snapshot = fixture('pr-67');
-    const answer = (text: string, time: string): IssueComment =>
-      comment(
-        2,
-        rabbit,
-        `<!-- This is an auto-generated reply by CodeRabbit -->\n<details>\n<summary>${text}</details>`,
-        time
-      );
-    snapshot.issueComments.push(
-      comment(1, human, '@coderabbitai review', '2026-10-07T15:50:00Z'),
-      answer('✅ Action performed</summary>\n\nReview triggered.\n', '2026-10-07T15:50:08Z')
-    );
-    expect(coderabbitState(snapshot)).toEqual({
-      state: 'requested',
-      detail: 'CodeRabbit was asked at 2026-10-07T15:50:00Z for a review of 318c1b7',
-    });
-    snapshot.issueComments.push(
-      answer('✅ Action performed</summary>\n\nReview finished.\n', '2026-10-07T15:50:09Z')
-    );
-    expect(coderabbitState(snapshot).state).toBe('done');
-    snapshot.issueComments.push(
-      answer('⚠️ Action not completed</summary>', '2026-10-07T15:50:10Z')
-    );
-    expect(coderabbitState(snapshot)).toEqual({
-      state: 'refused',
-      detail: 'CodeRabbit refused the review request',
-    });
-  });
-
-  it('ignores an answer from before the last request, or from someone else', () => {
-    const snapshot = fixture('pr-67');
-    snapshot.issueComments.push(
-      comment(1, human, '@coderabbitai review', '2026-10-07T15:50:00Z'),
-      comment(2, rabbit, 'Action not completed', '2026-10-07T15:49:00Z'),
-      comment(3, human, 'Action not completed', '2026-10-07T15:51:00Z')
-    );
-    expect(coderabbitState(snapshot).state).toBe('requested');
-  });
-
-  it('accepts a skipped review, and names a failed one as failed', () => {
-    const snapshot = fixture('pr-67');
-    snapshot.statuses = [
-      {
-        context: 'CodeRabbit',
-        state: 'success',
-        description: 'Review skipped',
-        created_at: '2026-10-07T14:52:00Z',
-      },
-    ];
-    expect(coderabbitState(snapshot)).toEqual({
-      state: 'done',
-      detail: 'CodeRabbit: Review skipped',
-    });
-    snapshot.statuses[0] = {
-      ...snapshot.statuses[0],
-      state: 'failure',
-      description: 'Review failed',
-    };
-    expect(coderabbitState(snapshot)).toEqual({
-      state: 'failed',
-      detail: 'CodeRabbit\'s review of 318c1b7 ended with "Review failed"',
-    });
-  });
-
-  it("notes that CodeRabbit skips a PR on another PR's branch, and follows a request", () => {
-    // CodeRabbit's real status on #71 and #73, whose base is another PR's branch. Its note says
-    // that `@coderabbitai review` starts a review anyway.
-    const snapshot = fixture('pr-67');
-    snapshot.statuses = [
-      {
-        context: 'CodeRabbit',
-        state: 'success',
-        description: 'Review skipped: reviews are disabled for this base branch',
-        created_at: '2026-10-07T14:52:00Z',
-      },
-    ];
-    expect(coderabbitState(snapshot)).toEqual({
-      state: 'skipped',
-      detail: "CodeRabbit doesn't review PRs on this base branch",
-    });
-    // The note still says so, so the agent lists the gap.
-    expect(classify(snapshot, at('2026-10-07T15:00:00Z')).notes).toEqual([
-      "CodeRabbit doesn't review PRs on this base branch",
-    ]);
-    snapshot.issueComments.push(comment(90, human, '@coderabbitai review', '2026-10-07T15:01:00Z'));
-    expect(coderabbitState(snapshot).state).toBe('requested');
-  });
-
-  // AFA-138: pr:status never asks CodeRabbit, however long it takes to start.
-  it("notes that CodeRabbit hasn't reviewed the head, and never asks it", () => {
-    const snapshot = fixture('pr-67');
-    snapshot.statuses = [];
-    expect(coderabbitState(snapshot)).toEqual({
-      state: 'pending',
-      detail: "CodeRabbit hasn't reviewed 318c1b7",
-    });
-    const status = classify(snapshot, at('2026-10-07T17:00:00Z'));
-    expect(status.state).toBe('ready');
-    expect(status.actions).toEqual([]);
-    expect(status.notes).toEqual(["CodeRabbit hasn't reviewed 318c1b7"]);
-  });
-});
-
 describe('unansweredReviewBodies edges', () => {
   const outside = '<summary>⚠️ Outside diff range comments (12)</summary>';
 
   it('counts bot reviews from the push on, until a person answers them later', () => {
     const snapshot = fixture('pr-67');
     snapshot.reviews.push(
-      review(1, rabbit, 'COMMENTED', outside, '2026-10-07T14:43:10Z'),
-      review(2, rabbit, 'COMMENTED', outside, '2026-10-07T14:43:09Z'),
+      review(1, claude, 'COMMENTED', outside, '2026-10-07T14:43:10Z'),
+      review(2, claude, 'COMMENTED', outside, '2026-10-07T14:43:09Z'),
       // A person's review at the same second neither counts nor answers.
       review(3, human, 'COMMENTED', outside, '2026-10-07T14:43:10Z'),
-      review(4, rabbit, 'COMMENTED', outside, null),
-      // Only Codex and CodeRabbit count.
+      review(4, claude, 'COMMENTED', outside, null),
+      // Only Codex and Claude count.
       review(
         8,
         { login: 'github-advanced-security[bot]', type: 'Bot' },
@@ -573,7 +401,7 @@ describe('unansweredReviewBodies edges', () => {
     expect(unansweredReviewBodies(snapshot).map(r => r.id)).toEqual([1]);
     snapshot.reviews.push(review(5, codexBot, 'COMMENTED', '', '2026-10-07T15:00:00Z'));
     snapshot.issueComments.push(
-      comment(6, rabbit, 'thanks', '2026-10-07T15:01:00Z'),
+      comment(6, claude, 'thanks', '2026-10-07T15:01:00Z'),
       // A request to a bot isn't an answer.
       comment(7, human, 'Agent: @codex review', '2026-10-07T15:01:30Z')
     );
@@ -589,7 +417,7 @@ describe('unansweredReviewBodies edges', () => {
 
   it('counts a later comment that says more than a bot command as an answer', () => {
     const snapshot = fixture('pr-67');
-    snapshot.reviews.push(review(1, rabbit, 'COMMENTED', outside, '2026-10-07T15:00:00Z'));
+    snapshot.reviews.push(review(1, claude, 'COMMENTED', outside, '2026-10-07T15:00:00Z'));
     snapshot.issueComments.push(
       comment(
         2,
@@ -609,10 +437,10 @@ describe('answers to a bot review', () => {
   const unanswered = (answer: (snapshot: Snapshot) => void): number[] => {
     const snapshot = fixture('pr-67');
     snapshot.reviews.push(
-      review(1, rabbit, 'COMMENTED', outside, '2026-10-07T15:00:00Z'),
+      review(1, claude, 'COMMENTED', outside, '2026-10-07T15:00:00Z'),
       review(
         12,
-        rabbit,
+        claude,
         'CHANGES_REQUESTED',
         'Actionable comments posted: 1',
         '2026-10-07T15:00:00Z'
@@ -667,7 +495,7 @@ describe('answers to a bot review', () => {
     const answered = unanswered(snapshot =>
       snapshot.issueComments.push(
         comment(2, human, `See ${pull67}#pullrequestreview-1`, '2026-10-07T14:59:00Z'),
-        comment(3, rabbit, `See ${pull67}#pullrequestreview-12`, '2026-10-07T15:01:00Z')
+        comment(3, claude, `See ${pull67}#pullrequestreview-12`, '2026-10-07T15:01:00Z')
       )
     );
     expect(answered).toEqual([1, 12]);
@@ -678,7 +506,7 @@ describe('answers to a bot review', () => {
       (review: number): ((snapshot: Snapshot) => void) =>
       (snapshot: Snapshot): void => {
         snapshot.reviewComments.push(
-          { ...threadComment(20, rabbit, '2026-10-07T15:00:00Z'), pull_request_review_id: review },
+          { ...threadComment(20, claude, '2026-10-07T15:00:00Z'), pull_request_review_id: review },
           threadComment(21, human, '2026-10-07T15:01:00Z', 20)
         );
       };
@@ -689,40 +517,25 @@ describe('answers to a bot review', () => {
 });
 
 describe('botOutputSincePush', () => {
-  it("lists nitpick sections and Codex's and CodeRabbit's other comments since the push", () => {
+  it("lists the Claude review's summary and Codex's and Claude's other comments since the push", () => {
     const snapshot = fixture('pr-67');
-    snapshot.reviews.push(
-      review(
-        1,
-        rabbit,
-        'COMMENTED',
-        '<summary>🧹 Nitpick comments (3)</summary>',
-        '2026-10-07T15:00:00Z'
-      ),
-      review(
-        2,
-        rabbit,
-        'COMMENTED',
-        '<summary>🧹 Nitpick comments (4)</summary>',
-        '2026-10-07T14:43:09Z'
-      ),
-      review(3, human, 'COMMENTED', 'Nitpick comments (5)', '2026-10-07T15:00:00Z')
-    );
+    const actions = { login: 'github-actions[bot]', type: 'Bot' };
     snapshot.issueComments.push(
       comment(4, codexBot, "Codex Review: Didn't find any major issues.", '2026-10-07T15:10:00Z'),
-      comment(
-        5,
-        rabbit,
-        '<!-- This is an auto-generated reply by CodeRabbit --> done',
-        '2026-10-07T15:11:00Z'
-      ),
-      comment(6, rabbit, 'An old comment', '2026-10-07T14:43:09Z'),
-      comment(7, { login: 'vercel[bot]', type: 'Bot' }, 'Deployed', '2026-10-07T15:12:00Z')
+      comment(5, claude, 'A comment', '2026-10-07T15:11:00Z'),
+      comment(6, claude, 'An old comment', '2026-10-07T14:43:09Z'),
+      comment(7, { login: 'vercel[bot]', type: 'Bot' }, 'Deployed', '2026-10-07T15:12:00Z'),
+      comment(8, actions, 'I found nothing that fails.', '2026-10-07T15:13:00Z'),
+      comment(9, actions, 'An old summary', '2026-10-07T14:43:09Z'),
+      // A person's comment isn't bot output.
+      comment(10, human, 'The Claude review commented.', '2026-10-07T15:14:00Z')
     );
-    // The fixture's own comments are CodeRabbit's rate-limit note and Codex's summary.
+    // The fixture's own comments are Codex's summary and CodeRabbit's rate-limit note. CodeRabbit
+    // isn't a review bot.
     expect(botOutputSincePush(snapshot)).toEqual([
-      `coderabbitai[bot] left 3 nitpick comments in ${pull67}#pullrequestreview-1`,
       `chatgpt-codex-connector[bot] commented: ${pull67}#issuecomment-4`,
+      `claude[bot] commented: ${pull67}#issuecomment-5`,
+      `The Claude review commented: ${pull67}#issuecomment-8`,
     ]);
   });
 });
@@ -734,7 +547,6 @@ describe('classify edges', () => {
     const status = classify(snapshot, at('2026-10-07T15:00:00Z'));
     expect(status.state).toBe('closed');
     expect(status.codex).toEqual({ state: 'skipped', detail: 'The PR is closed' });
-    expect(status.coderabbit).toEqual({ state: 'skipped', detail: 'The PR is closed' });
   });
 
   it('reports a PR with only merged_at as merged', () => {
@@ -748,7 +560,7 @@ describe('classify edges', () => {
   });
 
   it('lists every failed and running check, and gives no missing-CI reason when checks exist', () => {
-    const snapshot = reviewed67();
+    const snapshot = fixture('pr-67');
     const named = (name: string): CheckRun => snapshot.checkRuns.find(r => r.name === name)!;
     snapshot.checkRuns = [
       { ...named('test (24)'), conclusion: 'failure' },
@@ -761,24 +573,16 @@ describe('classify edges', () => {
     expect(status.waits).toEqual(['CI is running: package (22), package (24)']);
   });
 
-  it("lists a Codex that it gave up on, and CodeRabbit's state, in the notes", () => {
+  it('lists a Codex that it gave up on in the notes', () => {
     const status = classify(fixture('pr-66'), at('2026-10-07T17:01:00Z'));
     expect(status.notes).toEqual([
-      'coderabbitai[bot] replied after your reply: https://github.com/afahy/fluent-measures/pull/66#discussion_r4208534586',
       "Codex hasn't reviewed c7ad2f4 in the 2 hours it has had; its last review was of 91a5d29",
-      'CodeRabbit was rate limited on c7ad2f4',
     ]);
   });
 
   it('lists a waiting Codex under waits, and says when GitHub has no merge state yet', () => {
     const snapshot = fixture('pr-67');
     snapshot.pull.mergeable_state = null;
-    snapshot.statuses.push({
-      context: 'CodeRabbit',
-      state: 'pending',
-      description: 'Review in progress',
-      created_at: '2026-10-07T15:50:00Z',
-    });
     snapshot.issueComments = [comment(1, human, '@codex review', '2026-10-07T15:00:00Z')];
     snapshot.reactions = [];
     const status = classify(snapshot, at('2026-10-07T15:51:00Z'));
@@ -787,17 +591,15 @@ describe('classify edges', () => {
       'Asked at 2026-10-07T15:00:00Z for a review of 318c1b7 (until 2026-10-07T16:51:34.000Z)',
       'GitHub is still working out whether the PR can merge',
     ]);
-    // AFA-138: a running CodeRabbit review is a note, not a wait.
-    expect(status.notes).toEqual(['CodeRabbit is reviewing 318c1b7']);
   });
 
   it('names the person in a reason, and says so for a deleted account', () => {
-    const snapshot = reviewed67();
+    const snapshot = fixture('pr-67');
     snapshot.reviews.push(
       review(1, null, 'CHANGES_REQUESTED', null, '2026-10-07T15:56:00Z'),
-      review(2, rabbit, 'CHANGES_REQUESTED', null, '2026-10-07T15:56:00Z'),
+      review(2, claude, 'CHANGES_REQUESTED', null, '2026-10-07T15:56:00Z'),
       review(3, human, 'CHANGES_REQUESTED', null, '2026-10-07T15:56:00Z'),
-      // AFA-144: the person's later review links CodeRabbit's, so it answers it.
+      // AFA-144: the person's later review links Claude's, so it answers it.
       review(
         4,
         human,
@@ -824,7 +626,7 @@ describe('mostUrgent and digest', () => {
     const status = classify(fixture('pr-66'), at('2026-10-07T15:20:00Z'));
     const same = digest(status);
     expect(digest({ ...status, waits: [] })).toBe(same);
-    expect(digest({ ...status, notes: [] })).not.toBe(same);
+    expect(digest({ ...status, notes: ['x'] })).not.toBe(same);
     expect(digest({ ...status, reasons: ['x'] })).not.toBe(same);
     expect(digest({ ...status, actions: ['x'] })).not.toBe(same);
     expect(digest({ ...status, state: 'ready' })).not.toBe(same);
@@ -834,29 +636,8 @@ describe('mostUrgent and digest', () => {
       head: 'c7ad2f4b90595f059840e8a95dfa50f82b9a0593',
       reasons: [],
       actions: [],
-      notes: [
-        'coderabbitai[bot] replied after your reply: https://github.com/afahy/fluent-measures/pull/66#discussion_r4208534586',
-      ],
+      notes: [],
     });
-  });
-
-  // AFA-138 review: CodeRabbit's progress needs no action, so --wait doesn't wake for it, even on
-  // a PR that waits for the maintainer.
-  it("leaves CodeRabbit's state note out, so its progress isn't news", () => {
-    const snapshot = fixture('pr-67');
-    snapshot.pull.mergeable_state = 'blocked';
-    const before = classify(snapshot, at('2026-10-07T15:51:00Z'));
-    snapshot.statuses.push({
-      context: 'CodeRabbit',
-      state: 'pending',
-      description: 'Review in progress',
-      created_at: '2026-10-07T15:50:30Z',
-    });
-    const after = classify(snapshot, at('2026-10-07T15:51:00Z'));
-    expect(before.state).toBe('waiting-human');
-    expect(after.state).toBe('waiting-human');
-    expect(after.notes).toEqual(['CodeRabbit is reviewing 318c1b7']);
-    expect(digest(after)).toBe(digest(before));
   });
 });
 
@@ -1060,192 +841,38 @@ describe('pr-state.mjs details', () => {
     });
   });
 
-  it('reads a CodeRabbit request with extra spaces, and an answer at the same second', () => {
-    const snapshot = fixture('pr-67');
-    snapshot.issueComments.push(
-      comment(1, human, '@coderabbitai  review', '2026-10-07T15:50:00Z'),
-      comment(
-        2,
-        rabbit,
-        '<summary>⚠️ Action not completed</summary>\n\nReviews are paused.',
-        '2026-10-07T15:50:00Z'
-      )
-    );
-    expect(coderabbitState(snapshot)).toEqual({
-      state: 'refused',
-      detail: 'CodeRabbit refused the review request: Reviews are paused.',
-    });
-  });
-
-  it('names the rate limit when CodeRabbit refuses a request because of it', () => {
-    const snapshot = fixture('pr-67');
-    snapshot.issueComments.push(
-      comment(1, human, '@coderabbitai review', '2026-10-07T15:50:00Z'),
-      comment(
-        2,
-        rabbit,
-        '<summary>⚠️ Action not completed</summary>\n\nReview rate limited.',
-        '2026-10-07T15:50:05Z'
-      )
-    );
-    expect(coderabbitState(snapshot)).toEqual({
-      state: 'rate-limited',
-      detail: 'CodeRabbit was rate limited on 318c1b7',
-    });
-  });
-
-  it('follows a review that starts after a rate-limited refusal', () => {
-    const snapshot = fixture('pr-67');
-    snapshot.issueComments.push(
-      comment(1, human, '@coderabbitai review', '2026-10-07T15:50:00Z'),
-      comment(
-        2,
-        rabbit,
-        '<summary>⚠️ Action not completed</summary>\n\nReview rate limited.',
-        '2026-10-07T15:50:05Z'
-      )
-    );
-    snapshot.statuses.push({
-      context: 'CodeRabbit',
-      state: 'pending',
-      description: 'Review in progress',
-      created_at: '2026-10-07T15:55:00Z',
-    });
-    expect(coderabbitState(snapshot).state).toBe('running');
-  });
-
-  // AFA-137: on #70, CodeRabbit created its reply at 18:13:07, set a pending status at 18:13:10
-  // and edited the refusal into the reply at 18:13:16. The edit is after the status.
-  it('counts a rate-limited refusal that CodeRabbit edits in after a pending status', () => {
-    const snapshot = fixture('pr-67');
-    snapshot.statuses = [
-      {
-        context: 'CodeRabbit',
-        state: 'pending',
-        description: 'Review in progress',
-        created_at: '2026-10-07T15:50:10Z',
-      },
-    ];
-    snapshot.issueComments.push(comment(1, human, '@coderabbitai review', '2026-10-07T15:50:00Z'), {
-      ...comment(
-        2,
-        rabbit,
-        '<summary>⚠️ Action not completed</summary>\n\nReview rate limited.',
-        '2026-10-07T15:50:07Z'
-      ),
-      updated_at: '2026-10-07T15:50:16Z',
-    });
-    expect(coderabbitState(snapshot)).toEqual({
-      state: 'rate-limited',
-      detail: 'CodeRabbit was rate limited on 318c1b7',
-    });
-  });
-
-  it('lets a status after a rate-limited refusal win over the refusal', () => {
-    const snapshot = fixture('pr-67');
-    snapshot.issueComments.push(
-      comment(1, human, '@coderabbitai review', '2026-10-07T15:50:00Z'),
-      comment(
-        2,
-        rabbit,
-        '<summary>⚠️ Action not completed</summary>\n\nReview rate limited.',
-        '2026-10-07T15:50:05Z'
-      )
-    );
-    snapshot.statuses.push({
-      context: 'CodeRabbit',
-      state: 'failure',
-      description: 'Review failed',
-      created_at: '2026-10-07T15:55:00Z',
-    });
-    // CodeRabbit tried a review after the refusal, so it isn't only rate limited.
-    expect(coderabbitState(snapshot)).toEqual({
-      state: 'refused',
-      detail: 'CodeRabbit refused the review request: Review rate limited.',
-    });
-  });
-
-  it('notes a failed review as failed, even when its status names a rate limit', () => {
-    const snapshot = fixture('pr-67');
-    snapshot.statuses.push({
-      context: 'CodeRabbit',
-      state: 'failure',
-      description: 'Review failed: rate limit exceeded',
-      created_at: '2026-10-07T14:55:00Z',
-    });
-    expect(coderabbitState(snapshot)).toEqual({
-      state: 'failed',
-      detail: 'CodeRabbit\'s review of 318c1b7 ended with "Review failed: rate limit exceeded"',
-    });
-  });
-
-  it('notes a request made after the rate limit, and a limit set after the request', () => {
-    const snapshot = fixture('pr-67');
-    // #67's rate-limit status is from 14:51:46, before this request.
-    snapshot.issueComments.push(comment(1, human, '@coderabbitai review', '2026-10-07T15:50:00Z'));
-    expect(coderabbitState(snapshot).state).toBe('requested');
-    snapshot.statuses.push({
-      context: 'CodeRabbit',
-      state: 'success',
-      description: 'Review rate limited',
-      created_at: '2026-10-07T15:50:30Z',
-    });
-    expect(coderabbitState(snapshot).state).toBe('rate-limited');
-  });
-
-  it('names the rate limit when CodeRabbit was rate limited', () => {
-    expect(coderabbitState(fixture('pr-67'))).toEqual({
-      state: 'rate-limited',
-      detail: 'CodeRabbit was rate limited on 318c1b7',
-    });
-  });
-
-  it('says CodeRabbit reviewed the head when its status says so', () => {
-    expect(coderabbitState(reviewed67())).toEqual({
-      state: 'done',
-      detail: 'CodeRabbit reviewed 318c1b7',
-    });
-  });
-
   it('treats only a comment that is nothing but a bot command as no answer', () => {
     const outside = '<summary>⚠️ Outside diff range comments (1)</summary>';
     const answered = (body: string): boolean => {
       const snapshot = fixture('pr-67');
-      snapshot.reviews.push(review(1, rabbit, 'COMMENTED', outside, '2026-10-07T15:00:00Z'));
+      snapshot.reviews.push(review(1, claude, 'COMMENTED', outside, '2026-10-07T15:00:00Z'));
       snapshot.issueComments.push(comment(2, human, body, '2026-10-07T15:01:00Z'));
       return unansweredReviewBodies(snapshot).length === 0;
     };
     expect(answered('@codex review')).toBe(false);
     expect(answered('Agent: @codex review.')).toBe(false);
-    expect(answered('agent:@coderabbitai  review')).toBe(false);
+    expect(answered('agent:@codex  review')).toBe(false);
     expect(answered('Thanks for #pullrequestreview-1. @codex review')).toBe(true);
     expect(answered('x@codex review #pullrequestreview-1')).toBe(true);
     // AFA-144: a comment that doesn't name the review doesn't answer it.
     expect(answered('Thanks. @codex review')).toBe(false);
   });
 
-  it('lists a nitpick section with a two-digit count, and bot output at the second of the push', () => {
+  it('lists bot output at the second of the push', () => {
     const snapshot = fixture('pr-67');
-    snapshot.reviews.push(
-      review(
-        1,
-        rabbit,
-        'COMMENTED',
-        '<summary>🧹 Nitpick comments (12)</summary>',
-        '2026-10-07T14:43:10Z'
-      )
+    snapshot.issueComments.push(
+      comment(2, codexBot, 'A finding', '2026-10-07T14:43:10Z'),
+      comment(3, { login: 'github-actions[bot]', type: 'Bot' }, 'A summary', '2026-10-07T14:43:10Z')
     );
-    snapshot.issueComments.push(comment(2, codexBot, 'A finding', '2026-10-07T14:43:10Z'));
     const status = classify(snapshot, at('2026-10-07T15:00:00Z'));
     expect(status.notes).toEqual([
-      `coderabbitai[bot] left 12 nitpick comments in ${pull67}#pullrequestreview-1`,
       `chatgpt-codex-connector[bot] commented: ${pull67}#issuecomment-2`,
-      'CodeRabbit was rate limited on 318c1b7',
+      `The Claude review commented: ${pull67}#issuecomment-3`,
     ]);
   });
 
   it("uses a person's latest decision whatever order the reviews come in", () => {
-    const snapshot = reviewed67();
+    const snapshot = fixture('pr-67');
     snapshot.reviews.push(
       review(1, human, 'CHANGES_REQUESTED', null, '2026-10-07T15:57:00Z'),
       review(2, human, 'APPROVED', null, '2026-10-07T15:56:00Z')
@@ -1277,7 +904,7 @@ describe('files that CODEOWNERS covers', () => {
   it('lets an agent merge a PR that changes them when nothing else holds it', () => {
     // A PR's changed files and the CODEOWNERS text don't affect its state, even when they
     // show that the PR changes AGENTS.md, .github/ and .size-limit.cjs.
-    const snapshot = Object.assign(reviewed67(), {
+    const snapshot = Object.assign(fixture('pr-67'), {
       files: ['AGENTS.md', '.github/workflows/ci.yml', '.size-limit.cjs'],
       codeowners: '.github/** @afahy\nAGENTS.md @afahy\n.size-limit.cjs @afahy\n',
     });

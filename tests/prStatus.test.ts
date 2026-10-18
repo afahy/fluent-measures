@@ -95,7 +95,7 @@ function run(
   });
 }
 
-/** #43 at 18:10 on 2026-10-05, with both bot threads answered, so only the merge is left. */
+/** #43 at 18:10 on 2026-10-05, with its two threads answered, so only the merge is left. */
 function answered(): Snapshot {
   const snapshot = fixture('pr-43-at-1810');
   for (const id of [4187121862, 4187191635]) {
@@ -118,7 +118,8 @@ describe('pr-status.mjs', () => {
     expect(result.stdout).toContain('#43 needs-agent: fix: read the number after any unit label');
     expect(result.stdout).toContain('  Head 333a541, pushed 2026-10-05T17:51:02Z');
     expect(result.stdout).toContain('  GitHub merge state: clean');
-    expect(result.stdout).toContain('  CI: 11 passed');
+    // 11 checks, and CodeRabbit's commit status.
+    expect(result.stdout).toContain('  CI: 12 passed');
     expect(result.stdout).toContain(
       `    - chatgpt-codex-connector[bot] left a thread with no reply: https://github.com/${repo}/pull/43#discussion_r4187121862`
     );
@@ -127,7 +128,7 @@ describe('pr-status.mjs', () => {
   it('prints JSON with --json', async () => {
     const api = await serve([answered()]);
     const result = await run(api.url, ['#43', '--json']);
-    // Both bots reviewed 333a541 and CI passed, so nothing is left for the agent.
+    // Codex reviewed 333a541 and CI passed, so nothing is left for the agent.
     expect(result.code).toBe(0);
     expect(JSON.parse(result.stdout)).toEqual([
       expect.objectContaining({

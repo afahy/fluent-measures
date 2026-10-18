@@ -27,7 +27,7 @@
 //
 // --no-requests is for after the third review round, when AGENTS.md says not to ask Codex
 // again: a Codex that hasn't reviewed is waited for until its 2 hours are up, not asked.
-// CodeRabbit is never waited for or asked (AFA-138).
+// Claude is never asked to review, and it is waited for only as the `Claude review` check.
 //
 // The token comes from GH_TOKEN, GITHUB_TOKEN or `gh auth token`. The repository comes from
 // --repo, GITHUB_REPOSITORY or the origin remote.
@@ -111,7 +111,6 @@ function describe(status) {
   if (failed.length) ci.push(`${failed.length} failed (${failed.join(', ')})`);
   lines.push(`  CI: ${ci.join(', ')}`);
   lines.push(`  Codex: ${status.codex.state}. ${status.codex.detail}`);
-  lines.push(`  CodeRabbit: ${status.coderabbit.state}. ${status.coderabbit.detail}`);
   for (const [title, items] of /** @type {const} */ ([
     ['Why', status.reasons],
     ['Do', status.actions],
