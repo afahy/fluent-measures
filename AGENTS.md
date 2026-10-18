@@ -120,7 +120,7 @@ answer:
 - Open PRs, post `Agent:` comments and Codex review requests, reply to and resolve threads,
   and convert a PR to a draft.
 - Re-run CI jobs that no runner picked up, or that an Actions incident stopped.
-- Merge a PR with `gh pr merge <number> --squash`.
+- Merge a PR with `gh pr merge <number> --squash` when "Merge your own PR" allows it.
 - Pull `main` after a merge, and remove the merged PR's worktree and local branch.
 - Raise a limit in `.size-limit.cjs` by 0.5 kB.
 - Start subagents that build a ticket in its own worktree, review a branch or watch PRs.
