@@ -46,11 +46,11 @@ const HASHES: Record<string, string> = {
  * and a newline ends a string that has no closing quote. It doesn't read nested rules, so a parse
  * error throws, and a rule that it can't read fails the check. Tailwind writes a "\" before a
  * symbol in a class name, as in ".sm\:flex", and a first digit as a hex code point, as in
- * ".\32 xl\:text-lg". With `ownRule`, a class counts only where the rule is about it: in the last
- * part of the selector that names a class, between combinators, and not inside a pseudo-class
- * such as :not(). :is() and :where() match the element itself, so their classes count in their
- * part. So ".a .b" is about "b", ".a :is(.b)" too, and ".space-y-2 > :not([hidden])" is about
- * "space-y-2".
+ * ".\32 xl\:text-lg". A class counts where a selector requires it of an element: not inside a
+ * pseudo-class such as :not(). :is() and :where() match the element itself, so the classes that
+ * their selectors require count too. With `ownRule`, a class counts only where the rule is about
+ * it: in the last part of the selector that names a class, between combinators. So ".a .b" is
+ * about "b", ".a :is(.b)" too, and ".space-y-2 > :not([hidden])" is about "space-y-2".
  */
 function cssClasses(css: string, { ownRule = false } = {}): Set<string> {
   const names: string[] = [];
@@ -65,31 +65,29 @@ function cssClasses(css: string, { ownRule = false } = {}): Set<string> {
     visit: 'Rule',
     enter(rule) {
       if (rule.prelude.type !== 'SelectorList') return;
-      rule.prelude.children.forEach(selector => {
-        if (!ownRule) {
-          walk(selector, { visit: 'ClassSelector', enter: node => names.push(node.name) });
-          return;
-        }
-        const parts: CssNode[][] = [[]];
-        for (const node of selector.type === 'Selector' ? selector.children.toArray() : []) {
-          if (node.type === 'Combinator') parts.push([]);
-          else parts[parts.length - 1].push(node);
-        }
-        const classesIn = (part: CssNode[]): string[] =>
-          part.flatMap(node => {
-            if (node.type === 'ClassSelector') return [node.name];
-            if (node.type !== 'PseudoClassSelector' || !/^(?:is|where)$/i.test(node.name))
-              return [];
-            const inner: string[] = [];
-            walk(node, { visit: 'ClassSelector', enter: found => inner.push(found.name) });
-            return inner;
-          });
-        const last = [...parts].reverse().find(part => classesIn(part).length > 0);
-        names.push(...classesIn(last ?? []));
-      });
+      rule.prelude.children.forEach(selector => names.push(...selectorClasses(selector, ownRule)));
     },
   });
   return new Set(names.map(name => ident.decode(name)));
+}
+
+/** The classes that a selector requires, escaped, as `cssClasses` describes. */
+function selectorClasses(selector: CssNode, ownRule: boolean): string[] {
+  const parts: CssNode[][] = [[]];
+  for (const node of selector.type === 'Selector' ? selector.children.toArray() : []) {
+    if (node.type === 'Combinator') parts.push([]);
+    else parts[parts.length - 1].push(node);
+  }
+  const classesIn = (part: CssNode[]): string[] =>
+    part.flatMap(node => {
+      if (node.type === 'ClassSelector') return [node.name];
+      if (node.type !== 'PseudoClassSelector' || !/^(?:is|where)$/i.test(node.name)) return [];
+      return (node.children?.toArray() ?? [])
+        .flatMap(child => (child.type === 'SelectorList' ? child.children.toArray() : [child]))
+        .flatMap(inner => selectorClasses(inner, ownRule));
+    });
+  if (!ownRule) return parts.flatMap(classesIn);
+  return classesIn([...parts].reverse().find(part => classesIn(part).length > 0) ?? []);
 }
 
 /**
@@ -106,16 +104,16 @@ function missingClasses(html: string, css: string): string[] {
   const other = new Set(['', 'copy-button', 'text-link']);
   // Tailwind's "group" and the script's "copied" mark an element for a rule on another element,
   // as in ".group.copied .group-\[\.copied\]\:block", so they have no rule of their own. A selector
-  // must still name them.
+  // must still require them, not only name them, as ":not(.group)" does.
   const context = new Set(['group', 'copied']);
   const own = cssClasses(css, { ownRule: true });
-  const all = cssClasses(css);
+  const required = cssClasses(css);
   return [...new Set(used)].filter(
     name =>
       !other.has(name) &&
       !name.startsWith('language-') &&
       !own.has(name) &&
-      !(context.has(name) && all.has(name))
+      !(context.has(name) && required.has(name))
   );
 }
 
@@ -299,6 +297,13 @@ describe('the docs page', () => {
     ['foo', ':where(.x, .foo) { }', []],
     ['ancestor', '.ancestor :is(.foo) { }', ['ancestor']],
     ['foo', '.x:not(:is(.foo)) { }', ['foo']],
+    // Codex on #151: a selector inside :is() keeps its own :not() and combinators, and a context
+    // class needs a selector that requires it.
+    ['foo', ':is(.x:not(.foo)) { }', ['foo']],
+    ['ancestor', ':is(.ancestor .subject) { }', ['ancestor']],
+    ['subject', ':is(.ancestor .subject) { }', []],
+    ['group', '.x:not(.group) { }', ['group']],
+    ['group', ':is(.group) .x { }', []],
   ])('checks the class "%s" against %s', (classes, css, missing) => {
     expect(missingClasses(`<div class="${classes}"></div>`, css)).toEqual(missing);
   });
