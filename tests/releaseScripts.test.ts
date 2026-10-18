@@ -35,16 +35,16 @@ function git(cwd: string, ...args: string[]): string {
 /**
  * Runs `release:publish` in a new repository whose `origin` is a local bare repository. The
  * repository has a release commit that `origin` doesn't have yet, as after `changeset version`.
- * That commit sets the version in package.json to 9.9.9. Stand-ins for `pnpm` and `changeset`
- * come first on PATH. `changeset publish` tags a release with `git tag <tag> -m <tag>` (`tag` in
- * @changesets/git), and names the tag v<version> in a repository with one package. So the
- * stand-in creates v9.9.9 and publishes nothing. With `tag: false`, it creates no tag, as when
- * `git tag` fails and @changesets/git only logs the error. The real tool doesn't check the
- * remote, but the stand-in fails if `origin` doesn't have HEAD yet, which shows whether the first
- * push ran before the publish. It also writes a `published` file. With `mergeDuringPublish`, it
- * then pushes another commit to `main` from a second clone, as when another pull request merges
- * during the release. With `localTag`, the repository also has a lightweight tag of that name
- * that `origin` doesn't have.
+ * That commit sets the version in package.json to 9.9.9. Stand-ins for `pnpm` and `changeset` come
+ * first on PATH. `changeset publish` tags a release with `git tag <tag> -m <tag>` (`tag` in
+ * @changesets/git), and names the tag v<version> in a repository with one package. So the stand-in
+ * creates v9.9.9 and publishes nothing. With `tag: false`, it creates no tag, as when `git tag`
+ * fails: `createGitTags` in @changesets/cli ignores the result of `tag`. The real tool doesn't
+ * check the remote, but the stand-in fails if `origin` doesn't have HEAD yet, which shows whether
+ * the first push ran before the publish. It also writes a `published` file. With
+ * `mergeDuringPublish`, it then pushes another commit to `main` from a second clone, as when
+ * another pull request merges during the release. With `localTag`, the repository also has a
+ * lightweight tag of that name that `origin` doesn't have.
  */
 function runReleasePublish({
   prePushHook,
@@ -87,6 +87,7 @@ function runReleasePublish({
     resolve(bin, 'changeset'),
     [
       '#!/bin/sh',
+      'set -eu',
       '[ "$(git ls-remote origin refs/heads/main | cut -f1)" = "$(git rev-parse HEAD)" ] || exit 1',
       ...(tag ? ['git tag v9.9.9 -m v9.9.9'] : []),
       'touch published',
@@ -151,10 +152,12 @@ describe('release:publish', () => {
   // Another pull request can merge to main while changeset publish runs. Then the release commit
   // is behind main on the remote, and a push of the branch would fail after the publish.
   it('pushes the tag when main moves on during the publish', () => {
-    const { remote, result } = runReleasePublish({ mergeDuringPublish: true });
+    const { remote, repository, result } = runReleasePublish({ mergeDuringPublish: true });
 
     expect(result.status, result.stdout + result.stderr).toBe(0);
     expect(git(remote, 'tag', '--list')).toBe('v9.9.9\n');
+    // The other change reached main, so a push of the release branch would have failed.
+    expect(git(remote, 'rev-parse', 'main')).not.toBe(git(repository, 'rev-parse', 'HEAD'));
   });
 
   // The first push ran the pre-push hook on the same commit. If the hook ran again and failed
@@ -177,8 +180,8 @@ describe('release:publish', () => {
     expect(git(remote, 'tag', '--list')).toBe('v9.9.9\n');
   });
 
-  // AFA-159: when `git tag` fails, changeset publish only logs the error and exits with 0. A push of
-  // every tag then has nothing to send and passes, so the release looks complete with no tag.
+  // AFA-159: when `git tag` fails, changeset publish still reports the tag and exits with 0. A push
+  // of every tag then has nothing to send and passes, so the release looks complete with no tag.
   it('fails when changeset publish creates no release tag', () => {
     const { remote, repository, result } = runReleasePublish({ tag: false });
 
