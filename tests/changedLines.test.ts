@@ -490,12 +490,13 @@ describe('reasonlessDirectives', () => {
   });
 
   // AFA-117: TypeScript gives the end of the file a JSDoc after it as a child, so the walk read no
-  // comment before that JSDoc.
-  it.each([
-    ['x;\n// Stryker disable all\n/** doc */\n', [2]],
-    ['x;\n// Stryker disable all\n', [2]],
-  ])('reads a directive before a JSDoc at the end of the file in %j', (source, expected) => {
-    expect(reasonlessDirectives(source, [[2, 2]])).toEqual(expected);
+  // comment before that JSDoc. It read the same directive with no JSDoc after it.
+  it('reads a directive before a JSDoc at the end of the file', () => {
+    expect(reasonlessDirectives('x;\n// Stryker disable all\n/** doc */\n', [[2, 2]])).toEqual([2]);
+  });
+
+  it('reads a directive at the end of the file', () => {
+    expect(reasonlessDirectives('x;\n// Stryker disable all\n', [[2, 2]])).toEqual([2]);
   });
 });
 

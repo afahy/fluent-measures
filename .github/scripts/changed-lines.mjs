@@ -120,9 +120,9 @@ export function isUnmutatedCode(file) {
  * folder, so this does too: `./src/a.ts`, `../repo/src/a.ts` and an absolute path all name
  * `src/a.ts`. A line range after a pattern, as in `src/a.ts:1-10`, doesn't change which files
  * match. The project's pattern leaves out test files under `src/`: Vitest finds tests only under
- * `tests/`, so their mutants would get no coverage. Stryker reads a glob character in the
- * folder's own path as part of each pattern, so it then matches no file. This function doesn't,
- * so mutation-check.mjs stops first in such a folder.
+ * `tests/`, so their mutants would get no coverage. Stryker can read a glob character in the
+ * folder's own path as part of each pattern, and then match no file. This function doesn't, so
+ * mutation-check.mjs checks the changed files as Stryker does before it runs Stryker.
  *
  * @param {string[]} files
  * @param {string[]} patterns
@@ -342,8 +342,9 @@ export function reasonlessDirectives(source, ranges) {
 }
 
 /**
- * Returns what `reasonlessDirectives` returns, and whether the parser could read the file. The
- * check matches each comment's text with Stryker's pattern. A block comment can span lines. A
+ * Returns what `reasonlessDirectives` returns, and `parsed`. That is false only when the parser
+ * overflowed, so the check couldn't read the comments. The check matches each comment's text with
+ * Stryker's pattern. A block comment can span lines. A
  * directive must start the text, after at most one space or line break. So a block comment's
  * closing `*\/` isn't a reason, and another directive on the same line doesn't give it one. The
  * line of a directive is the line of its "Stryker". It counts lines only at "\n", as git counts the

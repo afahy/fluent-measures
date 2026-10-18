@@ -10,7 +10,7 @@
 import { execFileSync, spawnSync } from 'node:child_process';
 import { lstatSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, matchesGlob, resolve } from 'node:path';
 import {
   backslashPaths,
   controlPaths,
@@ -161,12 +161,12 @@ for (const file of backslashed) {
 }
 if (backslashed.length > 0) process.exit(1);
 
-// Stryker reads a glob character in the project folder's path as part of each pattern, as "[1]"
-// in "/tmp/a[1]/repo". Its patterns then match no file, and its warning would ask to move each
-// changed file.
-if (/[*?[\]{}]|[!+@]\(/.test(process.cwd())) {
+// Stryker resolves each `mutate` pattern from the project folder and matches the result as a
+// glob. So a glob in the folder's own path, as "[1]" in "/tmp/a[1]/repo", can make a pattern match
+// no file, and its warning would ask to move each changed file. Check each file as Stryker does.
+if ([...changed.keys()].some(file => !matchesGlob(resolve(file), resolve(literalGlob(file))))) {
   console.error(
-    `::error::Move the repository to a folder whose path has no glob character. Stryker reads ${escapeData(JSON.stringify(process.cwd()))} as part of each pattern, so it finds no file to mutate.`
+    `::error::Move the repository to another folder. Stryker reads the glob characters in ${escapeData(JSON.stringify(process.cwd()))} as part of each pattern, so it finds no file to mutate.`
   );
   process.exit(1);
 }
@@ -280,7 +280,7 @@ for (const { file, line, parsed } of directives) {
 }
 if (unexplained.length + directives.length > 0) {
   console.error(
-    `${unexplained.length + directives.length} Stryker disable comment(s) or ignored mutant(s) on changed lines have no reason.`
+    `${unexplained.length + directives.length} Stryker disable comment(s) or ignored mutant(s) on changed lines have no reason, or are in a file that this check can't parse.`
   );
 }
 if (unkilled.length > 0 || unexplained.length > 0 || directives.length > 0) process.exit(1);

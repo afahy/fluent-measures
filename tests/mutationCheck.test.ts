@@ -25,9 +25,12 @@ afterEach(() => {
   }
 });
 
-function createRepository(): string {
-  const repository = mkdtempSync(resolve(tmpdir(), 'fluent-measures-mutation-'));
-  directories.push(repository);
+/** Creates a repository in a new temporary folder, or in a folder of that name inside it. */
+function createRepository(folder?: string): string {
+  const parent = mkdtempSync(resolve(tmpdir(), 'fluent-measures-mutation-'));
+  directories.push(parent);
+  const repository = folder === undefined ? parent : resolve(parent, folder);
+  mkdirSync(repository, { recursive: true });
   git(repository, 'init', '--initial-branch', 'main');
   git(repository, 'config', 'user.email', 'test@example.com');
   git(repository, 'config', 'user.name', 'Test');
@@ -682,26 +685,24 @@ describe('mutation-check.mjs', () => {
     expect(check.stderr).toContain('::error::Remove stryker.log, or make it a regular file.');
   });
 
-  // AFA-117: Stryker reads a glob character in the repository's path as part of each pattern, so
-  // it finds no file. The check says so, and doesn't ask to move each changed file.
-  it('fails in a folder whose path has a glob character', () => {
-    const parent = mkdtempSync(resolve(tmpdir(), 'fluent-measures-mutation-'));
-    directories.push(parent);
-    const repository = resolve(parent, 'a[1]');
-    mkdirSync(repository);
-    git(repository, 'init', '--initial-branch', 'main');
-    git(repository, 'config', 'user.email', 'test@example.com');
-    git(repository, 'config', 'user.name', 'Test');
-    git(repository, 'config', 'commit.gpgsign', 'false');
+  // AFA-117: Stryker reads some glob characters in the repository's path as part of each pattern,
+  // so it finds no file. The check says so, and doesn't ask to move each changed file. A glob
+  // character that leaves the pattern matching, as "*" does, changes nothing.
+  it.each([
+    ['a[1]', 1],
+    ['{a,b}', 1],
+    ['a*b', 0],
+  ])('checks a repository in the folder %s', (folder, status) => {
+    const repository = createRepository(folder);
     const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
     commitFiles(repository, { 'src/units.ts': 'export const a = 1 > 0;\n' });
     addStrykerStub(repository);
 
     const check = runCheck(repository, base);
 
-    expect(check.status).toBe(1);
-    expect(check.stderr).toContain(
-      '::error::Move the repository to a folder whose path has no glob character.'
+    expect(check.status).toBe(status);
+    expect(check.stderr.includes('::error::Move the repository to another folder.')).toBe(
+      status === 1
     );
   });
 
