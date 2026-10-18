@@ -134,10 +134,9 @@ pnpm docs
 
 ### Automated Reviews
 
-Codex reviews each push to a pull request, and CodeRabbit reviews when its rate limit allows.
-`.github/workflows/claude-review.yml` asks Claude for one review when a pull request opens or
-becomes ready for review. The review posts comments only and blocks no merge. Claude posts its
-inline comments, and `github-actions` posts its summary.
+Codex reviews each push to a pull request. Claude reviews once, when a pull request opens or
+becomes ready for review (`.github/workflows/claude-review.yml`). The Claude review posts comments
+only and blocks no merge. Claude posts its inline comments, and `github-actions` posts its summary.
 
 The Claude review doesn't run on a pull request that changes `claude-review.yml`, because the
 action stops when that file differs from the one on `main`. The check stays green. Put a change to
