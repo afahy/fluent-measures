@@ -94,7 +94,7 @@ Use Node.js 22.22.1 or later in 22.x, 24.11 or later in 24.x, or 26 or later. Us
 - lint-staged 17, which the pre-commit hook runs: Node.js `>=22.22.1` and Git 2.32.0 or later.
 
 ```bash
-# Clone the repository
+# Clone your fork of the repository
 git clone https://github.com/your-username/fluent-measures.git
 
 # Install dependencies
@@ -104,7 +104,7 @@ pnpm install
 pnpm test
 
 # Run tests with coverage report
-pnpm test:coverage
+pnpm test:unit:coverage
 
 # Type checking
 pnpm test:types
@@ -120,9 +120,6 @@ pnpm lint
 
 # Format code
 pnpm lint:format:fix
-
-# Generate documentation
-pnpm docs
 ```
 
 ## Pull Request Process
@@ -182,10 +179,10 @@ Tests can be run with:
 pnpm test
 
 # Run tests in watch mode during development
-pnpm test:watch
+pnpm test:unit:watch
 
 # Generate test coverage report
-pnpm test:coverage
+pnpm test:unit:coverage
 
 # Run mutation testing
 pnpm test:mutation
@@ -291,7 +288,7 @@ isn't in the list, or an expected unit doesn't belong to its type.
 
 ## Documentation
 
-We use TypeDoc to generate API documentation. Please add proper JSDoc comments to all public functions and types:
+Add JSDoc comments to all public functions and types:
 
 ````typescript
 /**
@@ -310,12 +307,6 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   // ...
 }
 ````
-
-You can generate the documentation locally with:
-
-```bash
-pnpm docs
-```
 
 ## Performance Considerations
 
