@@ -42,9 +42,10 @@ const HASHES: Record<string, string> = {
 
 /**
  * The class names in a style sheet's selectors, unescaped (AFA-121). css-tree reads CSS tokens as
- * a browser does, so a comment, a quoted string, a url() or an at-rule's prelude holds no class,
- * and a newline ends a string that has no closing quote. It doesn't read nested rules, so a parse
- * error throws, and a rule that it can't read fails the check. Tailwind writes a "\" before a
+ * a browser does. So a comment, a quoted string, a url() or an at-rule's prelude holds no class.
+ * A newline ends a string that has no closing quote. css-tree reads a nested rule that starts with
+ * "&", but nesting without "&", as in ".a { .b { } }", is a parse error. A parse error throws, so
+ * a rule that css-tree can't read fails the check. Tailwind writes a "\" before a
  * symbol in a class name, as in ".sm\:flex", and a first digit as a hex code point, as in
  * ".\32 xl\:text-lg". A class counts where a selector requires it of an element: not inside a
  * pseudo-class such as :not(). :is() and :where() match the element itself, so the classes that
@@ -102,8 +103,8 @@ function missingClasses(html: string, css: string): string[] {
     ),
   ];
   const other = new Set(['', 'copy-button', 'text-link']);
-  // Tailwind's "group" and the script's "copied" mark an element for a rule on another element,
-  // as in ".group.copied .group-\[\.copied\]\:block", so they have no rule of their own. A selector
+  // Tailwind's "group" and the script's "copied" mark an element for a rule on another element, as
+  // in ".group.copied .group-\[\.copied\]\:block". So they have no rule of their own. A selector
   // must still require them, not only name them, as ":not(.group)" does.
   const context = new Set(['group', 'copied']);
   const own = cssClasses(css, { ownRule: true });
@@ -223,9 +224,16 @@ describe('the docs page', () => {
     ]);
   });
 
-  // css-tree doesn't read a nested rule, so the check throws, not passes with the rule lost.
+  // css-tree doesn't read nesting without "&", so the check throws css-tree's parse error, not
+  // passes with the rule lost (AFA-169). Another error, such as a TypeError, is a bug in the check.
   it('throws for a style sheet that css-tree cannot read', () => {
-    expect(() => cssClasses('.a { .b { } }')).toThrow();
+    expect(() => cssClasses('.a { .b { } }')).toThrow(SyntaxError);
+    expect(() => cssClasses('.a { .b { } }')).toThrow('Identifier is expected');
+  });
+
+  // css-tree reads nesting that starts with "&", so both rules' classes count.
+  it.each(['.a { &.b { } }', '.a { & .b { } }'])('reads the nested rule in %s', css => {
+    expect(cssClasses(css)).toEqual(new Set(['a', 'b']));
   });
 
   // AFA-121 item 1: Tailwind writes "2xl:text-lg" as ".\32 xl\:text-lg", so the class has a rule.
