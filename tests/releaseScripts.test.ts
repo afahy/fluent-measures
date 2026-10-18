@@ -39,9 +39,13 @@ function git(cwd: string, ...args: string[]): string {
  * with `git tag <tag> -m <tag>` (`tag` in @changesets/git), so the stand-in does the same and
  * publishes nothing. The real tool doesn't check the remote, but the stand-in fails if `origin`
  * doesn't have HEAD yet, which shows whether the first push ran before the publish. It also
- * writes a `published` file.
+ * writes a `published` file. With `mergeDuringPublish`, it then pushes another commit to `main`
+ * from a second clone, as when another pull request merges during the release.
  */
-function runReleasePublish({ prePushHook }: { prePushHook?: string } = {}): {
+function runReleasePublish({
+  prePushHook,
+  mergeDuringPublish = false,
+}: { prePushHook?: string; mergeDuringPublish?: boolean } = {}): {
   remote: string;
   repository: string;
   result: SpawnSyncReturns<string>;
@@ -56,6 +60,10 @@ function runReleasePublish({ prePushHook }: { prePushHook?: string } = {}): {
   git(repository, 'remote', 'add', 'origin', remote);
   git(repository, 'push', '--set-upstream', 'origin', 'main');
   git(repository, 'commit', '--allow-empty', '-m', 'chore: release');
+  const other = createDirectory('fluent-measures-other-');
+  git(other, 'clone', '--quiet', remote, '.');
+  git(other, 'config', 'user.name', 'Other Test');
+  git(other, 'config', 'user.email', 'other-test@example.invalid');
   if (prePushHook) {
     writeFileSync(resolve(repository, '.git/hooks/pre-push'), prePushHook, { mode: 0o755 });
   }
@@ -68,6 +76,14 @@ function runReleasePublish({ prePushHook }: { prePushHook?: string } = {}): {
       '[ "$(git ls-remote origin refs/heads/main | cut -f1)" = "$(git rev-parse HEAD)" ] || exit 1',
       'git tag v9.9.9 -m v9.9.9',
       'touch published',
+      ...(mergeDuringPublish
+        ? [
+            `cd '${other}'`,
+            'git pull --quiet origin main',
+            "git commit --quiet --allow-empty -m 'feat: another change'",
+            'git push --quiet origin main',
+          ]
+        : []),
       '',
     ].join('\n'),
     { mode: 0o755 }
@@ -116,6 +132,15 @@ describe('release:publish', () => {
     expect(result.status).not.toBe(0);
     expect(existsSync(resolve(repository, 'published'))).toBe(false);
     expect(git(remote, 'tag', '--list')).toBe('');
+  });
+
+  // Another pull request can merge to main while changeset publish runs. Then the release commit
+  // is behind main on the remote, and a push of the branch would fail after the publish.
+  it('pushes the tag when main moves on during the publish', () => {
+    const { remote, result } = runReleasePublish({ mergeDuringPublish: true });
+
+    expect(result.status, result.stdout + result.stderr).toBe(0);
+    expect(git(remote, 'tag', '--list')).toBe('v9.9.9\n');
   });
 
   // The first push ran the pre-push hook on the same commit. If the hook ran again and failed
