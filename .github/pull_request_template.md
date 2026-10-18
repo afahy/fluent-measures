@@ -4,7 +4,7 @@
 
 Fixes #
 
-<!-- On the line above, name the GitHub issue or the Linear ticket. If the PR covers only part of a Linear ticket, write "Part of" in place of "Fixes", so that the ticket stays open. -->
+<!-- On the line above, name the GitHub issue as "Fixes #n", or the Linear ticket as "Fixes AFA-n" with no "#". If the PR covers only part of a Linear ticket, write "Part of AFA-n", so that the ticket stays open. -->
 
 ## Type of change
 

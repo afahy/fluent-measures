@@ -40,9 +40,9 @@ ticket ID and text. Don't open a PR without a ticket ID.
    consumers. `pnpm changeset` asks questions that you can't answer, so write the file
    yourself: `.changeset/<short-name>.md`, with `'@afahy/fluent-measures': patch` between two
    `---` lines, and then a summary of the change for users. Use `minor` in place of `patch`
-   when the PR changes a result that `main` returns and that isn't `null` (decision rule 3),
-   or changes a type that `src/index.ts` exports. While the version is below 1.0.0, a minor
-   bump marks a change that can break users. Never use `major`. Don't change the version in
+   when the PR changes a result that `main` returns and that isn't `null`. Use `minor` also
+   when the PR changes a type that `src/index.ts` exports. While the version is below 1.0.0,
+   a minor bump marks a change that can break users. Never use `major`. Don't change the version in
    `package.json`. Changesets sets it at release time.
 5. Commit messages and PR titles follow Conventional Commits, as configured in
    `commitlint.config.js`. CI checks both, and checks titles against
@@ -306,4 +306,4 @@ approves it. When you file such a ticket, label it `needs-decision`. Change the 
 To ask, write the question, the options and your recommendation in a comment on the Linear
 ticket, and label the ticket `needs-decision`. If the ticket has an open PR, push your work,
 convert the PR to a draft and link it in the comment. Don't wait for the answer: continue with
-other work, or end your turn if none is left.
+other work, and watch the draft PR as the steward skill says.
