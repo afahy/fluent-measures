@@ -38,17 +38,33 @@ export default [
   },
   {
     files: [JS_TESTS],
-    languageOptions: { parserOptions: { ecmaFeatures: { jsx: true } } },
     rules: {
       'no-unused-vars': ['error', UNUSED],
       'no-console': CONSOLE,
     },
   },
+  // `console` is a global wherever this code runs, so `no-console` decides which calls are allowed:
+  // it warns about each call other than warn and error.
+  {
+    files: ['src/**/*.ts', TS_TESTS, JS_TESTS],
+    languageOptions: { globals: { console: 'readonly' } },
+  },
+  // Vite reads JSX only in .jsx and .tsx files, so only a .jsx test may hold it.
+  {
+    files: ['tests/**/*.jsx'],
+    languageOptions: { parserOptions: { ecmaFeatures: { jsx: true } } },
+  },
   // A .cjs test can't import Vitest, which is ESM only, so it uses the globals that
-  // vitest.config.ts turns on.
+  // vitest.config.ts turns on. Node gives a CommonJS module its file and folder names too.
   {
     files: ['tests/**/*.cjs'],
-    languageOptions: { globals: vitest.environments.env.globals },
+    languageOptions: {
+      globals: {
+        ...vitest.environments.env.globals,
+        __filename: 'readonly',
+        __dirname: 'readonly',
+      },
+    },
   },
   // Every test must be able to fail (AGENTS.md rule 10): it must reach an expect, and no expect
   // may sit in a branch that can be skipped.
