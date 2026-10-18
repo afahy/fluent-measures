@@ -428,7 +428,8 @@ export function listsChangedResults(body) {
     if (!match) return false;
     if (/[a-z0-9]/i.test(match[1])) return true;
     const next = section.slice(index + 1).find(text => text.trim() !== '');
-    return next !== undefined && /^[ \t]*(?:[-*+]|\d+[.)])[ \t]+\S/.test(next);
+    // A list item or a Markdown table row, such as a copy of the summary's own table.
+    return next !== undefined && /^[ \t]*(?:(?:[-*+]|\d+[.)])[ \t]+\S|\|)/.test(next);
   });
 }
 
@@ -814,8 +815,10 @@ function main() {
   const facts = collect();
   const risk = assessRisk(facts);
   const text = summary(facts, risk);
-  console.log(text);
+  // The summary has text from the PR, such as file names, so it doesn't go to the log, where a
+  // line could act as a workflow command (AFA-79). A local run prints it.
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, text);
+  else console.log(text);
 
   const results = changedResults(facts);
   if (results > 0 && !listsChangedResults(process.env.PR_BODY ?? '')) {

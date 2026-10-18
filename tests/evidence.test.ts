@@ -437,6 +437,11 @@ describe('listsChangedResults', () => {
     ['a line with CRLF', '# Description\r\n\r\nChanged results: none beyond AFA-1\r\n', true],
     ['a heading with CRLF', '## Changed results\r\n\r\n- a\r\n', true],
     ['a bold list item with CRLF', '- **Changed results:** none\r\n', true],
+    [
+      'a table under a heading',
+      '### Changed results\n\n| Input | main | This PR |\n| --- | --- | --- |\n| `5 ft` | a | b |\n',
+      true,
+    ],
   ])('finds %s', (_, body, found) => {
     expect(listsChangedResults(body)).toBe(found);
   });
