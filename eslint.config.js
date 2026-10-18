@@ -12,9 +12,14 @@ const JS_TESTS = 'tests/**/*.{js,mjs,cjs,jsx}';
 const UNUSED = { argsIgnorePattern: '^_', varsIgnorePattern: '^_' };
 const CONSOLE = ['warn', { allow: ['warn', 'error'] }];
 // Vitest's test and suite functions, and a call to one of them. The call can be on a chain such
-// as test.concurrent, or after a call such as it.each(cases).
+// as test.concurrent, or after a call such as it.each(cases) or it.concurrent.each(cases).
 const TEST_NAMES = '/^(it|test|describe|suite)$/';
-const TEST_CALL = `CallExpression:matches([callee.name=${TEST_NAMES}], [callee.object.name=${TEST_NAMES}], [callee.callee.object.name=${TEST_NAMES}])`;
+const TEST_CALL = `CallExpression:matches(${[
+  `[callee.name=${TEST_NAMES}]`,
+  `[callee.object.name=${TEST_NAMES}]`,
+  `[callee.callee.object.name=${TEST_NAMES}]`,
+  `[callee.callee.object.object.name=${TEST_NAMES}]`,
+].join(', ')})`;
 
 export default [
   eslint.configs.recommended,
@@ -114,19 +119,25 @@ export default [
           message: 'A constant condition always skips the test or always runs it. Use a real one.',
         },
         {
-          // A call to a .fails or .todo, or to its .each or .for, matches by name. So does .fails
-          // or .todo on a test function, also in an alias or a chain such as it.fails.concurrent.
-          // A field such as result.todo doesn't match, and neither does { todo: false }.
+          // A call to a .fails or .todo, or to its .each or .for, matches by name. So does each
+          // use of .fails or .todo on a test function, as in const t = it.fails or
+          // it.fails.concurrent. A field of another object, such as result.todo, doesn't match.
+          // Neither do rarer forms, such as it['fails'] or const { todo } = it. The fails and todo
+          // options of a test call match, but not { todo: false }.
           selector: [
             'CallExpression > MemberExpression.callee[property.name=/^(fails|todo)$/]',
             'MemberExpression[property.name=/^(each|for)$/] > MemberExpression.object[property.name=/^(fails|todo)$/]',
             `MemberExpression[property.name=/^(fails|todo)$/]:matches([object.name=${TEST_NAMES}], [object.object.name=${TEST_NAMES}])`,
-            `${TEST_CALL} > ObjectExpression.arguments > Property[key.name=/^(fails|todo)$/]:not([value.value=false])`,
+            `${TEST_CALL} > ObjectExpression.arguments > Property:matches([key.name=/^(fails|todo)$/], [key.value=/^(fails|todo)$/]):not([value.raw='false'])`,
           ].join(', '),
           message: "Don't mark a test as expected to fail or as a todo (AGENTS.md rule 3).",
         },
         {
-          selector: `${TEST_CALL} > :function.arguments > ObjectPattern.params > Property[key.name='skip']`,
+          // The test's context is the first parameter of a call to it or test, also on a chain
+          // such as it.concurrent. In .each and .for, the first parameter is a case, which can
+          // have its own skip field.
+          selector:
+            "CallExpression:matches([callee.name=/^(it|test)$/], [callee.object.name=/^(it|test)$/][callee.property.name!=/^(each|for)$/]) > :function.arguments > ObjectPattern.params:first-child > Property[key.name='skip']",
           message: "Don't skip a test (AGENTS.md rule 3).",
         },
         {
