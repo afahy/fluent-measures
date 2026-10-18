@@ -35,17 +35,28 @@ function git(cwd: string, ...args: string[]): string {
 /**
  * Runs `release:publish` in a new repository whose `origin` is a local bare repository. The
  * repository has a release commit that `origin` doesn't have yet, as after `changeset version`.
- * Stand-ins for `pnpm` and `changeset` come first on PATH. `changeset publish` tags a release
- * with `git tag <tag> -m <tag>` (`tag` in @changesets/git), so the stand-in does the same and
- * publishes nothing. The real tool doesn't check the remote, but the stand-in fails if `origin`
- * doesn't have HEAD yet, which shows whether the first push ran before the publish. It also
- * writes a `published` file. With `mergeDuringPublish`, it then pushes another commit to `main`
- * from a second clone, as when another pull request merges during the release.
+ * That commit sets the version in package.json to 9.9.9. Stand-ins for `pnpm` and `changeset`
+ * come first on PATH. `changeset publish` tags a release with `git tag <tag> -m <tag>` (`tag` in
+ * @changesets/git), and names the tag v<version> in a repository with one package. So the
+ * stand-in creates v9.9.9 and publishes nothing. With `tag: false`, it creates no tag, as when
+ * `git tag` fails and @changesets/git only logs the error. The real tool doesn't check the
+ * remote, but the stand-in fails if `origin` doesn't have HEAD yet, which shows whether the first
+ * push ran before the publish. It also writes a `published` file. With `mergeDuringPublish`, it
+ * then pushes another commit to `main` from a second clone, as when another pull request merges
+ * during the release. With `localTag`, the repository also has a lightweight tag of that name
+ * that `origin` doesn't have.
  */
 function runReleasePublish({
   prePushHook,
   mergeDuringPublish = false,
-}: { prePushHook?: string; mergeDuringPublish?: boolean } = {}): {
+  tag = true,
+  localTag,
+}: {
+  prePushHook?: string;
+  mergeDuringPublish?: boolean;
+  tag?: boolean;
+  localTag?: string;
+} = {}): {
   remote: string;
   repository: string;
   result: SpawnSyncReturns<string>;
@@ -59,7 +70,10 @@ function runReleasePublish({
   git(repository, 'commit', '--allow-empty', '-m', 'chore: start');
   git(repository, 'remote', 'add', 'origin', remote);
   git(repository, 'push', '--set-upstream', 'origin', 'main');
-  git(repository, 'commit', '--allow-empty', '-m', 'chore: release');
+  writeFileSync(resolve(repository, 'package.json'), '{ "version": "9.9.9" }\n');
+  git(repository, 'add', 'package.json');
+  git(repository, 'commit', '-m', 'chore: release');
+  if (localTag) git(repository, 'tag', localTag);
   const other = createDirectory('fluent-measures-other-');
   git(other, 'clone', '--quiet', remote, '.');
   git(other, 'config', 'user.name', 'Other Test');
@@ -74,7 +88,7 @@ function runReleasePublish({
     [
       '#!/bin/sh',
       '[ "$(git ls-remote origin refs/heads/main | cut -f1)" = "$(git rev-parse HEAD)" ] || exit 1',
-      'git tag v9.9.9 -m v9.9.9',
+      ...(tag ? ['git tag v9.9.9 -m v9.9.9'] : []),
       'touch published',
       ...(mergeDuringPublish
         ? [
@@ -152,5 +166,24 @@ describe('release:publish', () => {
 
     expect(result.status, result.stdout + result.stderr).toBe(0);
     expect(git(remote, 'tag', '--list')).toBe('v9.9.9\n');
+  });
+
+  // AFA-159: a push of every local tag would also publish a tag that was only for local use. If
+  // such a tag conflicts with one on the remote, the release fails after the publish.
+  it("doesn't push a local tag other than the release tag", () => {
+    const { remote, result } = runReleasePublish({ localTag: 'experiment' });
+
+    expect(result.status, result.stdout + result.stderr).toBe(0);
+    expect(git(remote, 'tag', '--list')).toBe('v9.9.9\n');
+  });
+
+  // AFA-159: when `git tag` fails, changeset publish only logs the error and exits with 0. A push of
+  // every tag then has nothing to send and passes, so the release looks complete with no tag.
+  it('fails when changeset publish creates no release tag', () => {
+    const { remote, repository, result } = runReleasePublish({ tag: false });
+
+    expect(existsSync(resolve(repository, 'published'))).toBe(true);
+    expect(result.status).not.toBe(0);
+    expect(git(remote, 'tag', '--list')).toBe('');
   });
 });
