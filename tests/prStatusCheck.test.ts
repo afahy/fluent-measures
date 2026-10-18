@@ -19,21 +19,20 @@ function fixture(name: string): Snapshot {
 const at = (time: string): number => Date.parse(time);
 const repo = 'afahy/fluent-measures';
 
-/** #67 after CodeRabbit's review completed, which makes it ready. */
-function ready67(): Snapshot {
-  const snapshot = fixture('pr-67');
-  snapshot.statuses.push({
-    context: 'CodeRabbit',
-    state: 'success',
-    description: 'Review completed',
-    created_at: '2026-10-07T15:55:00Z',
-  });
-  return snapshot;
-}
-
 describe('describeStatus', () => {
   it('gives the state and the first reason or wait, without its link, and counts the rest', () => {
-    expect(describeStatus(classify(fixture('pr-43-at-1810'), at('2026-10-05T18:10:00Z')))).toBe(
+    const pr43 = fixture('pr-43-at-1810');
+    expect(describeStatus(classify(pr43, at('2026-10-05T18:10:00Z')))).toBe(
+      'needs-agent: chatgpt-codex-connector[bot] left a thread with no reply'
+    );
+    // A Claude thread after Codex's is a second reason.
+    pr43.reviewComments.push({
+      id: 1,
+      user: { login: 'claude[bot]', type: 'Bot' },
+      created_at: '2026-10-05T18:07:00Z',
+      html_url: 'https://github.com/afahy/fluent-measures/pull/43#discussion_r1',
+    });
+    expect(describeStatus(classify(pr43, at('2026-10-05T18:10:00Z')))).toBe(
       'needs-agent: chatgpt-codex-connector[bot] left a thread with no reply (+1 more)'
     );
     expect(describeStatus(classify(fixture('pr-66'), at('2026-10-07T15:31:00Z')))).toBe(
@@ -45,29 +44,37 @@ describe('describeStatus', () => {
     expect(describeStatus(classify(fixture('pr-66'), at('2026-10-07T17:01:00Z')))).toBe(
       'waiting-human: Codex never reviewed the head commit, so only the maintainer can merge it'
     );
-    expect(describeStatus(classify(ready67(), at('2026-10-07T16:00:00Z')))).toBe(
+    expect(describeStatus(classify(fixture('pr-67'), at('2026-10-07T16:00:00Z')))).toBe(
       'ready: Nothing is left for the agent'
     );
   });
 
-  it('drops a link that follows "in"', () => {
-    const status = classify(ready67(), at('2026-10-07T16:00:00Z'));
-    const outside: PrStatus = {
-      ...status,
-      state: 'needs-agent',
-      reasons: [
-        'coderabbitai[bot] put comments outside the diff in https://github.com/afahy/fluent-measures/pull/67#pullrequestreview-1',
-      ],
-    };
-    expect(describeStatus(outside)).toBe(
-      'needs-agent: coderabbitai[bot] put comments outside the diff'
+  it('drops a link that follows a colon, "in" or a space', () => {
+    // The Claude review's summary on #141.
+    const snapshot = fixture('pr-67');
+    snapshot.issueComments.push({
+      id: 6244919783,
+      user: { login: 'github-actions[bot]', type: 'Bot' },
+      body: 'Review of PR #141, based on the full diff and the PR body.',
+      created_at: '2026-10-07T14:56:00Z',
+      updated_at: '2026-10-07T14:56:00Z',
+      html_url: 'https://github.com/afahy/fluent-measures/pull/141#issuecomment-6244919783',
+    });
+    const status = classify(snapshot, at('2026-10-07T16:00:00Z'));
+    expect(describeStatus(status)).toBe(
+      'needs-agent: The Claude review posted a summary. Answer in a PR comment that links to it'
     );
-    const bare: PrStatus = { ...outside, reasons: ['See https://github.com/afahy'] };
+    const inside: PrStatus = {
+      ...status,
+      reasons: ['A check failed in https://github.com/afahy/fluent-measures/actions/runs/1'],
+    };
+    expect(describeStatus(inside)).toBe('needs-agent: A check failed');
+    const bare: PrStatus = { ...status, reasons: ['See https://github.com/afahy'] };
     expect(describeStatus(bare)).toBe('needs-agent: See');
   });
 
   it('keeps the description to 140 characters', () => {
-    const status = classify(ready67(), at('2026-10-07T16:00:00Z'));
+    const status = classify(fixture('pr-67'), at('2026-10-07T16:00:00Z'));
     const long: PrStatus = { ...status, state: 'waiting-human', reasons: ['x'.repeat(200)] };
     expect(describeStatus(long)).toBe(`waiting-human: ${'x'.repeat(124)}…`);
     // 15 + 125 is exactly 140, so nothing is cut.
@@ -85,11 +92,11 @@ describe('describeStatus', () => {
       created_at: '2026-10-07T15:10:00Z',
     });
     // At 15:20 the first wait was "Codex hasn't started" (above). After the 👀, it is
-    // "Codex is reviewing (👀)". CodeRabbit is rate limited, so it adds no other wait.
+    // "Codex is reviewing (👀)".
     expect(describeStatus(classify(snapshot, at('2026-10-07T15:20:00Z')))).toBe(
       'waiting: Codex is reviewing'
     );
-    const status = classify(ready67(), at('2026-10-07T16:00:00Z'));
+    const status = classify(fixture('pr-67'), at('2026-10-07T16:00:00Z'));
     const emoji: PrStatus = { ...status, state: 'waiting-human', reasons: ['👍'.repeat(200)] };
     expect(describeStatus(emoji)).toBe('waiting-human');
     // The 👍s are dropped before the length check, so 15 + 125 characters fit with no cut.
@@ -101,7 +108,7 @@ describe('describeStatus', () => {
   });
 
   it('leaves no extra spaces, joiners, other brackets or lone surrogates', () => {
-    const status = classify(ready67(), at('2026-10-07T16:00:00Z'));
+    const status = classify(fixture('pr-67'), at('2026-10-07T16:00:00Z'));
     const describe = (reason: string): string =>
       describeStatus({ ...status, state: 'waiting-human', reasons: [reason] });
     expect(describe("Codex's review of abc is 🔄 Running")).toBe(
@@ -120,7 +127,7 @@ describe('describeStatus', () => {
   });
 
   it("says only the state when there's nothing to name", () => {
-    const status = classify(ready67(), at('2026-10-07T16:00:00Z'));
+    const status = classify(fixture('pr-67'), at('2026-10-07T16:00:00Z'));
     expect(describeStatus({ ...status, state: 'needs-agent', reasons: [] })).toBe('needs-agent');
   });
 });
@@ -226,7 +233,13 @@ describe('setStatus', () => {
 
   it('sets the status on the head commit when it has none', async () => {
     const { posts, post } = recorder();
-    const set = await setStatus(fakeApi(ready67()), post, repo, 67, at('2026-10-07T16:00:00Z'));
+    const set = await setStatus(
+      fakeApi(fixture('pr-67')),
+      post,
+      repo,
+      67,
+      at('2026-10-07T16:00:00Z')
+    );
     expect(set).toEqual({ state: 'success', description: 'ready: Nothing is left for the agent' });
     expect(posts).toEqual([
       [
@@ -242,7 +255,7 @@ describe('setStatus', () => {
   });
 
   it("doesn't count its own status as CI, and sets nothing when the newest one is the same", async () => {
-    const snapshot = ready67();
+    const snapshot = fixture('pr-67');
     snapshot.statuses.push(
       {
         context: 'pr-status',
@@ -273,7 +286,7 @@ describe('setStatus', () => {
   });
 
   it("doesn't count its own status or its own workflow's check as CI", () => {
-    const snapshot = ready67();
+    const snapshot = fixture('pr-67');
     snapshot.statuses.push({
       context: 'pr-status',
       state: 'pending',
@@ -305,7 +318,7 @@ describe('setStatus', () => {
   });
 
   it('sets the status again when the state or description changed', async () => {
-    const snapshot = ready67();
+    const snapshot = fixture('pr-67');
     snapshot.statuses.push({
       context: 'pr-status',
       state: 'success',
@@ -331,7 +344,7 @@ describe('setStatus', () => {
       'pr-43-at-1810',
       '2026-10-05T18:10:00Z',
       'failure',
-      'needs-agent: chatgpt-codex-connector[bot] left a thread with no reply (+1 more)',
+      'needs-agent: chatgpt-codex-connector[bot] left a thread with no reply',
     ],
     [
       'pr-66',
@@ -405,7 +418,7 @@ describe('pr-status-check.mjs', () => {
     url: string;
     posts: { path: string; headers: IncomingHttpHeaders; body: unknown }[];
   }> {
-    const snapshot = ready67();
+    const snapshot = fixture('pr-67');
     const sha = snapshot.pull.head.sha;
     const base = `/repos/${repo}`;
     const routes: Record<string, unknown> = {

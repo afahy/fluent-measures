@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
+  BOTS,
   excerpt,
   plainText,
   fileOnGitHub,
@@ -14,6 +15,17 @@ import {
 
 // Real Codex and CodeRabbit comments and reviews from PRs in this repo (#22, #43, #57, #67, #71).
 const bot = JSON.parse(readFileSync('tests/fixtures/late-bot-findings/comments.json', 'utf8'));
+
+const claude = { login: 'claude[bot]', type: 'Bot' };
+/** A review from Claude. Each test sets its body. */
+const claudeReview = {
+  id: 1,
+  user: claude,
+  state: 'COMMENTED',
+  body: '',
+  html_url: 'https://github.com/afahy/fluent-measures/pull/43#pullrequestreview-1',
+  submitted_at: '2026-10-05T20:10:00Z',
+};
 
 // CodeRabbit's collapsed section with a prompt for AI agents, which a record leaves out.
 const PROMPT =
@@ -56,36 +68,41 @@ describe('lateFinding', () => {
     });
   });
 
-  it('reports a CodeRabbit review whose body holds nitpicks, and says closed for a closed PR', () => {
-    const finding = lateFinding('pull_request_review', {
+  // AFA-118: Claude posts its findings as review comments from the Claude GitHub App.
+  it('reports a Claude review comment that starts a thread, and says closed for a closed PR', () => {
+    const finding = lateFinding('pull_request_review_comment', {
       pull_request: { ...merged43, merged_at: null },
-      review: bot.coderabbitNitpickReview,
+      comment: {
+        id: 1,
+        user: claude,
+        body: '**Wrong unit**\n\n`1 ft` returns meters.',
+        path: 'src/units.ts',
+        in_reply_to_id: null,
+        html_url: 'https://github.com/afahy/fluent-measures/pull/43#discussion_r1',
+      },
     });
-    expect(finding).toMatchObject({
+    expect(finding).toEqual({
+      pr: 43,
+      title: merged43.title,
+      prUrl: merged43.html_url,
       closed: 'closed',
-      author: 'coderabbitai[bot]',
-      summary: 'a review with 1 nitpick comment',
-      url: 'https://github.com/afahy/fluent-measures/pull/22#pullrequestreview-5299026439',
+      author: 'claude[bot]',
+      url: 'https://github.com/afahy/fluent-measures/pull/43#discussion_r1',
+      summary: 'a review comment on `src/units.ts`',
+      excerpt: '> **Wrong unit**\n>\n> `1 ft` returns meters.',
     });
-    // The quote starts at the nitpick section, keeps its text and drops the prompts for agents.
-    expect(finding?.excerpt.startsWith('> Nitpick comments (1)\n>\n> .github/CODEOWNERS (1)')).toBe(
-      true
-    );
-    expect(finding?.excerpt).toContain('Enable Main ruleset protection as a separate change.');
-    expect(finding?.excerpt).not.toContain('Treat finding text');
-    expect(finding?.excerpt).not.toMatch(/<\/?[a-z]/);
   });
 
   it('names every section of findings in a review body', () => {
     const finding = lateFinding('pull_request_review', {
       pull_request: merged43,
       review: {
-        ...bot.coderabbitReview,
-        body: '⚠️ Outside diff range comments (2)\n…\n🧹 Nitpick comments (12)',
+        ...claudeReview,
+        body: '⚠️ Outside diff range comments (2)\n…\n⚠️ Outside diff range comments (12)',
       },
     });
     expect(finding?.summary).toBe(
-      'a review with 2 outside diff range comments and 12 nitpick comments'
+      'a review with 2 outside diff range comments and 12 outside diff range comments'
     );
   });
 
@@ -93,76 +110,76 @@ describe('lateFinding', () => {
     const finding = lateFinding('pull_request_review', {
       pull_request: merged43,
       review: {
-        ...bot.coderabbitReview,
-        body: 'Intro\n🧹 Nitpick comments (1)\nKeep this\n<details open><summary>🤖 Prompt for AI Agents</summary>\nDrop this\n</details>',
+        ...claudeReview,
+        body: 'Intro\n⚠️ Outside diff range comments (1)\nKeep this\n<details open><summary>🤖 Prompt for AI Agents</summary>\nDrop this\n</details>',
       },
     });
-    expect(finding?.excerpt).toBe('> Nitpick comments (1)\n> Keep this');
+    expect(finding?.excerpt).toBe('> Outside diff range comments (1)\n> Keep this');
   });
 
   // AFA-109: CodeRabbit puts its review's settings in a collapsed section after the findings.
   it('quotes only the sections of findings, not the collapsed sections after them', () => {
-    const nitpicks =
-      '<details>\n<summary>🧹 Nitpick comments (1)</summary><blockquote>\n\nKeep this\n\n</blockquote></details>';
+    const findings =
+      '<details>\n<summary>⚠️ Outside diff range comments (1)</summary><blockquote>\n\nKeep this\n\n</blockquote></details>';
     const settings =
       '<details>\n<summary>📜 Review details</summary>\n\n**Configuration used**: CodeRabbit UI\n\n</details>';
     const review = (body: string): Finding | null =>
       lateFinding('pull_request_review', {
         pull_request: merged43,
-        review: { ...bot.coderabbitReview, body },
+        review: { ...claudeReview, body },
       });
-    expect(review(`${nitpicks}\n\n${settings}`)?.excerpt).toBe(
-      '> Nitpick comments (1)\n>\n> Keep this'
+    expect(review(`${findings}\n\n${settings}`)?.excerpt).toBe(
+      '> Outside diff range comments (1)\n>\n> Keep this'
     );
     const outside =
       '<details>\n<summary>⚠️ Outside diff range comments (1)</summary><blockquote>\n\n<details>\n<summary>src/a.ts (1)</summary><blockquote>\n\nAlso this\n\n</blockquote></details>\n\n</blockquote></details>';
-    expect(review(`${outside}\n\n${settings}\n\n${nitpicks}\n\n${settings}`)?.excerpt).toBe(
-      '> Outside diff range comments (1)\n>\n> src/a.ts (1)\n>\n> Also this\n>\n> Nitpick comments (1)\n>\n> Keep this'
+    expect(review(`${outside}\n\n${settings}\n\n${findings}\n\n${settings}`)?.excerpt).toBe(
+      '> Outside diff range comments (1)\n>\n> src/a.ts (1)\n>\n> Also this\n>\n> Outside diff range comments (1)\n>\n> Keep this'
     );
   });
 
   it('reads no section tags inside code', () => {
     const body =
-      '<details>\n<summary>🧹 Nitpick comments (1)</summary><blockquote>\n\nThe pattern `<details\\b[^>]*>` misses `<summary>` tags.\n\n</blockquote></details>\n\n<details>\n<summary>📜 Review details</summary>\n\n**Configuration used**: CodeRabbit UI\n\n</details>';
+      '<details>\n<summary>⚠️ Outside diff range comments (1)</summary><blockquote>\n\nThe pattern `<details\\b[^>]*>` misses `<summary>` tags.\n\n</blockquote></details>\n\n<details>\n<summary>📜 Review details</summary>\n\n**Configuration used**: CodeRabbit UI\n\n</details>';
     const finding = lateFinding('pull_request_review', {
       pull_request: merged43,
-      review: { ...bot.coderabbitReview, body },
+      review: { ...claudeReview, body },
     });
     expect(finding?.excerpt).toBe(
-      '> Nitpick comments (1)\n>\n> The pattern `<details\\b[^>]*>` misses `<summary>` tags.'
+      '> Outside diff range comments (1)\n>\n> The pattern `<details\\b[^>]*>` misses `<summary>` tags.'
     );
   });
 
   it('lets no stray backtick hide the end of a section of findings', () => {
     // The stray backtick would pair with the one in the settings, across blank lines.
     const body =
-      '<details>\n<summary>🧹 Nitpick comments (1)</summary><blockquote>\n\nThe foot mark ` is read as an apostrophe.\n\n<details>\n<summary>🤖 Prompt for AI Agents</summary>\n\nagent text\n\n</details>\n\n</blockquote></details>\n\n<details>\n<summary>📜 Review details</summary>\n\n- **Run ID**: `26b2`\n\n</details>';
+      '<details>\n<summary>⚠️ Outside diff range comments (1)</summary><blockquote>\n\nThe foot mark ` is read as an apostrophe.\n\n<details>\n<summary>🤖 Prompt for AI Agents</summary>\n\nagent text\n\n</details>\n\n</blockquote></details>\n\n<details>\n<summary>📜 Review details</summary>\n\n- **Run ID**: `26b2`\n\n</details>';
     const finding = lateFinding('pull_request_review', {
       pull_request: merged43,
-      review: { ...bot.coderabbitReview, body },
+      review: { ...claudeReview, body },
     });
     expect(finding?.excerpt).toBe(
-      '> Nitpick comments (1)\n>\n> The foot mark ` is read as an apostrophe.'
+      '> Outside diff range comments (1)\n>\n> The foot mark ` is read as an apostrophe.'
     );
   });
 
   // AFA-123: a <details> inside an HTML comment counted toward the depth, so the quote ran on
   // into the review's settings.
   it('reads no section tags inside HTML comments', () => {
-    const body = `<details>\n<summary>🧹 Nitpick comments (1)</summary><blockquote>\n\nKeep this\n\n<!-- <details> -->\n\n</blockquote></details>\n\n${SETTINGS}`;
+    const body = `<details>\n<summary>⚠️ Outside diff range comments (1)</summary><blockquote>\n\nKeep this\n\n<!-- <details> -->\n\n</blockquote></details>\n\n${SETTINGS}`;
     const finding = lateFinding('pull_request_review', {
       pull_request: merged43,
-      review: { ...bot.coderabbitReview, body },
+      review: { ...claudeReview, body },
     });
-    expect(finding?.excerpt).toBe('> Nitpick comments (1)\n>\n> Keep this');
+    expect(finding?.excerpt).toBe('> Outside diff range comments (1)\n>\n> Keep this');
   });
 
   // AFA-123: a title in plain bold never closed its section, so the quote ran to the end.
   it('ends a section whose title is not collapsed at the next collapsed section', () => {
-    const body = `**🧹 Nitpick comments (1)**\n\nKeep this\n\n${SETTINGS}`;
+    const body = `**⚠️ Outside diff range comments (1)**\n\nKeep this\n\n${SETTINGS}`;
     const finding = lateFinding('pull_request_review', {
       pull_request: merged43,
-      review: { ...bot.coderabbitReview, body },
+      review: { ...claudeReview, body },
     });
     expect(finding?.excerpt).toContain('Keep this');
     expect(finding?.excerpt).not.toContain('Configuration used');
@@ -176,10 +193,10 @@ describe('lateFinding', () => {
     ],
     ['a prompt', `${PROMPT}\n\nKeep this`],
   ])('keeps %s in the section of a title that is not collapsed', (_name, inside) => {
-    const body = `**🧹 Nitpick comments (1)**\n\n${inside}\n\n${SETTINGS}`;
+    const body = `**⚠️ Outside diff range comments (1)**\n\n${inside}\n\n${SETTINGS}`;
     const finding = lateFinding('pull_request_review', {
       pull_request: merged43,
-      review: { ...bot.coderabbitReview, body },
+      review: { ...claudeReview, body },
     });
     expect(finding?.excerpt).toContain('Keep this');
     expect(finding?.excerpt).not.toContain('agent instructions');
@@ -190,10 +207,10 @@ describe('lateFinding', () => {
   // fence after it isn't closed, so it isn't code, and the next file's section stays.
   it('keeps the sections after a suggestion whose fence closes early', () => {
     const body =
-      "<details>\n<summary>🧹 Nitpick comments (2)</summary><blockquote>\n\n<details>\n<summary>README.md (1)</summary><blockquote>\n\n`10-12`: **Fix the example.**\n\n```diff\n ```js\n-parse('1 m')\n+parseMeasurement('1 m')\n ```\n```\n\n</blockquote></details>\n<details>\n<summary>src/b.ts (1)</summary><blockquote>\n\n`5`: **Finding B**\n\n</blockquote></details>\n\n</blockquote></details>";
+      "<details>\n<summary>⚠️ Outside diff range comments (2)</summary><blockquote>\n\n<details>\n<summary>README.md (1)</summary><blockquote>\n\n`10-12`: **Fix the example.**\n\n```diff\n ```js\n-parse('1 m')\n+parseMeasurement('1 m')\n ```\n```\n\n</blockquote></details>\n<details>\n<summary>src/b.ts (1)</summary><blockquote>\n\n`5`: **Finding B**\n\n</blockquote></details>\n\n</blockquote></details>";
     const finding = lateFinding('pull_request_review', {
       pull_request: merged43,
-      review: { ...bot.coderabbitReview, body },
+      review: { ...claudeReview, body },
     });
     expect(finding?.excerpt).toContain('Finding B');
     expect(finding?.excerpt).not.toContain('</blockquote>');
@@ -210,10 +227,10 @@ describe('lateFinding', () => {
   ])("keeps the prompt's structure after %s", (_name, code) => {
     const prompt =
       '<details>\n<summary>🤖 Prompt for AI Agents</summary>\n\n```\nagent instructions\n```\n\n</details>';
-    const body = `<details>\n<summary>🧹 Nitpick comments (2)</summary><blockquote>\n\n<details>\n<summary>src/a.ts (1)</summary><blockquote>\n\nKeep this\n\n${code}\n\n${prompt}\n\n</blockquote></details>\n<details>\n<summary>src/b.ts (1)</summary><blockquote>\n\nFinding B\n\n</blockquote></details>\n\n</blockquote></details>\n\n${SETTINGS}`;
+    const body = `<details>\n<summary>⚠️ Outside diff range comments (2)</summary><blockquote>\n\n<details>\n<summary>src/a.ts (1)</summary><blockquote>\n\nKeep this\n\n${code}\n\n${prompt}\n\n</blockquote></details>\n<details>\n<summary>src/b.ts (1)</summary><blockquote>\n\nFinding B\n\n</blockquote></details>\n\n</blockquote></details>\n\n${SETTINGS}`;
     const finding = lateFinding('pull_request_review', {
       pull_request: merged43,
-      review: { ...bot.coderabbitReview, body },
+      review: { ...claudeReview, body },
     });
     expect(finding?.excerpt).toContain('Finding B');
     expect(finding?.excerpt).not.toContain('agent instructions');
@@ -229,10 +246,10 @@ describe('lateFinding', () => {
       '<details>\n<summary>More</summary>\n<b>x</b>\n</details>',
     ],
   ])('keeps %s in a closed fence as code', (_name, html) => {
-    const body = `<details>\n<summary>🧹 Nitpick comments (2)</summary><blockquote>\n\n<details>\n<summary>docs/a.html (1)</summary><blockquote>\n\nFinding A\n\n\`\`\`html\n${html}\n\`\`\`\n\n</blockquote></details>\n<details>\n<summary>src/b.ts (1)</summary><blockquote>\n\nFinding B\n\n</blockquote></details>\n\n</blockquote></details>\n\n${SETTINGS}`;
+    const body = `<details>\n<summary>⚠️ Outside diff range comments (2)</summary><blockquote>\n\n<details>\n<summary>docs/a.html (1)</summary><blockquote>\n\nFinding A\n\n\`\`\`html\n${html}\n\`\`\`\n\n</blockquote></details>\n<details>\n<summary>src/b.ts (1)</summary><blockquote>\n\nFinding B\n\n</blockquote></details>\n\n</blockquote></details>\n\n${SETTINGS}`;
     const finding = lateFinding('pull_request_review', {
       pull_request: merged43,
-      review: { ...bot.coderabbitReview, body },
+      review: { ...claudeReview, body },
     });
     expect(finding?.excerpt).toContain(html.split('\n').join('\n> '));
     expect(finding?.excerpt).toContain('Finding B');
@@ -265,10 +282,10 @@ describe('lateFinding', () => {
       '',
     ],
   ])('keeps the next file after %s', (_name, inside, inB) => {
-    const body = `<details>\n<summary>🧹 Nitpick comments (2)</summary><blockquote>\n\n<details>\n<summary>README.md (1)</summary><blockquote>\n\nFinding A\n\n${inside}\n\n</blockquote></details>\n<details>\n<summary>src/b.ts (1)</summary><blockquote>\n\nFinding B${inB}\n\n</blockquote></details>\n\n</blockquote></details>\n\n${SETTINGS}`;
+    const body = `<details>\n<summary>⚠️ Outside diff range comments (2)</summary><blockquote>\n\n<details>\n<summary>README.md (1)</summary><blockquote>\n\nFinding A\n\n${inside}\n\n</blockquote></details>\n<details>\n<summary>src/b.ts (1)</summary><blockquote>\n\nFinding B${inB}\n\n</blockquote></details>\n\n</blockquote></details>\n\n${SETTINGS}`;
     const finding = lateFinding('pull_request_review', {
       pull_request: merged43,
-      review: { ...bot.coderabbitReview, body },
+      review: { ...claudeReview, body },
     });
     expect(finding?.excerpt).toContain('Finding B');
     expect(finding?.excerpt).not.toContain('<summary>');
@@ -279,17 +296,17 @@ describe('lateFinding', () => {
   // line indented four columns is code in the fence, not its closing line, and a line outside the
   // fence's quote ends it.
   it('reads the closing line of a fence with its indent and its quote', () => {
-    const indented = `<details>\n<summary>🧹 Nitpick comments (3)</summary><blockquote>\n\n<details>\n<summary>README.md (2)</summary><blockquote>\n\nFinding A1\n\n\`\`\`js\n\n<details>\n<summary>More</summary>\n\n    \`\`\`\n    x\n    \`\`\`\n\n</details>\n\n---\n\nFinding A2\n\n<details>\n<summary>🔧 Suggested fix</summary>\n\n\`\`\`diff\n-c\n+d\n\`\`\`\n\n</details>\n\n</blockquote></details>\n<details>\n<summary>src/b.ts (1)</summary><blockquote>\n\nFinding B\n\n</blockquote></details>\n\n</blockquote></details>\n\n${SETTINGS}`;
+    const indented = `<details>\n<summary>⚠️ Outside diff range comments (3)</summary><blockquote>\n\n<details>\n<summary>README.md (2)</summary><blockquote>\n\nFinding A1\n\n\`\`\`js\n\n<details>\n<summary>More</summary>\n\n    \`\`\`\n    x\n    \`\`\`\n\n</details>\n\n---\n\nFinding A2\n\n<details>\n<summary>🔧 Suggested fix</summary>\n\n\`\`\`diff\n-c\n+d\n\`\`\`\n\n</details>\n\n</blockquote></details>\n<details>\n<summary>src/b.ts (1)</summary><blockquote>\n\nFinding B\n\n</blockquote></details>\n\n</blockquote></details>\n\n${SETTINGS}`;
     const review = (body: string): Finding | null =>
       lateFinding('pull_request_review', {
         pull_request: merged43,
-        review: { ...bot.coderabbitReview, body },
+        review: { ...claudeReview, body },
       });
     expect(review(indented)?.excerpt).toContain('Finding B');
-    const quoted = `> <details>\n> <summary>⚠️ Outside diff range comments (1)</summary><blockquote>\n>\n> Finding O\n>\n> \`\`\`js\n>\n> </blockquote></details>\n\n**🧹 Nitpick comments (1)**\n\nFinding N\n\n\`\`\`\ncode\n\`\`\`\n\n${SETTINGS}`;
+    const quoted = `> <details>\n> <summary>⚠️ Outside diff range comments (1)</summary><blockquote>\n>\n> Finding O\n>\n> \`\`\`js\n>\n> </blockquote></details>\n\n**⚠️ Outside diff range comments (1)**\n\nFinding N\n\n\`\`\`\ncode\n\`\`\`\n\n${SETTINGS}`;
     const finding = review(quoted);
     expect(finding?.summary).toBe(
-      'a review with 1 outside diff range comment and 1 nitpick comment'
+      'a review with 1 outside diff range comment and 1 outside diff range comment'
     );
     expect(finding?.excerpt).not.toContain('Configuration used');
   });
@@ -297,10 +314,10 @@ describe('lateFinding', () => {
   // AFA-145 review: only a file's section belongs to a bold title's section. The bots' other
   // sections with a count, such as "🔇 Additional comments (3)", end it.
   it("ends a bold title's section at another section with a count", () => {
-    const body = `**🧹 Nitpick comments (1)**\n\n<details>\n<summary>src/a.ts (1)</summary><blockquote>\n\nKeep this\n\n</blockquote></details>\n\n<details>\n<summary>🔇 Additional comments (3)</summary><blockquote>\n\nLGTM stuff\n\n</blockquote></details>\n\n${SETTINGS}`;
+    const body = `**⚠️ Outside diff range comments (1)**\n\n<details>\n<summary>src/a.ts (1)</summary><blockquote>\n\nKeep this\n\n</blockquote></details>\n\n<details>\n<summary>🔇 Additional comments (3)</summary><blockquote>\n\nLGTM stuff\n\n</blockquote></details>\n\n${SETTINGS}`;
     const finding = lateFinding('pull_request_review', {
       pull_request: merged43,
-      review: { ...bot.coderabbitReview, body },
+      review: { ...claudeReview, body },
     });
     expect(finding?.excerpt).toContain('Keep this');
     expect(finding?.excerpt).not.toContain('LGTM stuff');
@@ -311,20 +328,20 @@ describe('lateFinding', () => {
   it.each([
     [
       'in a Markdown quote',
-      '> **🧹 Nitpick comments (1)**\n>\n> <details>\n> <summary>src/a.ts (1)</summary>\n>\n> Finding A\n>\n> </details>',
+      '> **⚠️ Outside diff range comments (1)**\n>\n> <details>\n> <summary>src/a.ts (1)</summary>\n>\n> Finding A\n>\n> </details>',
     ],
     [
       'whose path is one character',
-      '**🧹 Nitpick comments (1)**\n\n<details>\n<summary>a (1)</summary><blockquote>\n\nFinding A\n\n</blockquote></details>',
+      '**⚠️ Outside diff range comments (1)**\n\n<details>\n<summary>a (1)</summary><blockquote>\n\nFinding A\n\n</blockquote></details>',
     ],
     [
       'whose path has a space',
-      '**🧹 Nitpick comments (1)**\n\n<details>\n<summary>docs/API Guide.md (1)</summary><blockquote>\n\nFinding A\n\n</blockquote></details>',
+      '**⚠️ Outside diff range comments (1)**\n\n<details>\n<summary>docs/API Guide.md (1)</summary><blockquote>\n\nFinding A\n\n</blockquote></details>',
     ],
   ])("keeps a file's section %s after a bold title", (_name, section) => {
     const finding = lateFinding('pull_request_review', {
       pull_request: merged43,
-      review: { ...bot.coderabbitReview, body: `${section}\n\n${SETTINGS}` },
+      review: { ...claudeReview, body: `${section}\n\n${SETTINGS}` },
     });
     expect(finding?.excerpt).toContain('Finding A');
     expect(finding?.excerpt).not.toContain('Configuration used');
@@ -334,45 +351,47 @@ describe('lateFinding', () => {
   // finding between them.
   it("removes HTML comments before a prompt's tag can pair with a real end tag", () => {
     const body =
-      '<details>\n<summary>🧹 Nitpick comments (1)</summary>\n<details>\n<summary>src/a.ts (1)</summary>\n<!-- <details><summary>Prompt for AI Agents</summary> -->\nKeep this\n</details>\n</details>';
+      '<details>\n<summary>⚠️ Outside diff range comments (1)</summary>\n<details>\n<summary>src/a.ts (1)</summary>\n<!-- <details><summary>Prompt for AI Agents</summary> -->\nKeep this\n</details>\n</details>';
     const finding = lateFinding('pull_request_review', {
       pull_request: merged43,
-      review: { ...bot.coderabbitReview, body },
+      review: { ...claudeReview, body },
     });
     expect(finding?.excerpt).toContain('Keep this');
   });
 
   // AFA-123: a title that doesn't start its line is text that a finding quotes, not a section.
   it('counts a title that is not collapsed only at the start of its line', () => {
-    const body = `**🧹 Nitpick comments (1)**\n\nThe title Nitpick comments (1) here\n\n${SETTINGS}`;
+    const body = `**⚠️ Outside diff range comments (1)**\n\nThe title Outside diff range comments (1) here\n\n${SETTINGS}`;
     const finding = lateFinding('pull_request_review', {
       pull_request: merged43,
-      review: { ...bot.coderabbitReview, body },
+      review: { ...claudeReview, body },
     });
-    expect(finding?.summary).toBe('a review with 1 nitpick comment');
-    expect(finding?.excerpt).toContain('The title Nitpick comments (1) here');
+    expect(finding?.summary).toBe('a review with 1 outside diff range comment');
+    expect(finding?.excerpt).toContain('The title Outside diff range comments (1) here');
   });
 
   // AFA-123: a title in a tag inside its <summary> is still collapsed, so its section keeps the
   // collapsed sections of files inside it.
   it('reads a title in a tag inside its summary as collapsed', () => {
-    const body = `<details>\n<summary><b>🧹 Nitpick comments (1)</b></summary><blockquote>\n\n<details>\n<summary>src/a.ts (1)</summary><blockquote>\n\nKeep this\n\n</blockquote></details>\n\n</blockquote></details>\n\n${SETTINGS}`;
+    const body = `<details>\n<summary><b>⚠️ Outside diff range comments (1)</b></summary><blockquote>\n\n<details>\n<summary>src/a.ts (1)</summary><blockquote>\n\nKeep this\n\n</blockquote></details>\n\n</blockquote></details>\n\n${SETTINGS}`;
     const finding = lateFinding('pull_request_review', {
       pull_request: merged43,
-      review: { ...bot.coderabbitReview, body },
+      review: { ...claudeReview, body },
     });
-    expect(finding?.excerpt).toBe('> Nitpick comments (1)\n>\n> src/a.ts (1)\n>\n> Keep this');
+    expect(finding?.excerpt).toBe(
+      '> Outside diff range comments (1)\n>\n> src/a.ts (1)\n>\n> Keep this'
+    );
   });
 
-  // AFA-123: the summary counted a title that a nitpick quotes.
+  // AFA-123: the summary counted a title that a finding quotes.
   it('counts only the titles of the sections that it quotes', () => {
     const body =
-      '<details>\n<summary>🧹 Nitpick comments (2)</summary><blockquote>\n\nThe title Nitpick comments (2) is counted twice.\n\n</blockquote></details>';
+      '<details>\n<summary>⚠️ Outside diff range comments (2)</summary><blockquote>\n\nThe title Outside diff range comments (2) is counted twice.\n\n</blockquote></details>';
     const finding = lateFinding('pull_request_review', {
       pull_request: merged43,
-      review: { ...bot.coderabbitReview, body },
+      review: { ...claudeReview, body },
     });
-    expect(finding?.summary).toBe('a review with 2 nitpick comments');
+    expect(finding?.summary).toBe('a review with 2 outside diff range comments');
   });
 
   // AFA-123: CodeRabbit can write a section in a Markdown quote, with `> ` before each line.
@@ -381,7 +400,7 @@ describe('lateFinding', () => {
       '> <details>\n> <summary>⚠️ Outside diff range comments (1)</summary>\n> \n> Keep this\n> \n> <details>\n> <summary>🤖 Prompt for AI Agents</summary>\n> \n> agent instructions\n> \n> </details>\n> \n> </details>';
     const finding = lateFinding('pull_request_review', {
       pull_request: merged43,
-      review: { ...bot.coderabbitReview, body },
+      review: { ...claudeReview, body },
     });
     expect(finding?.summary).toBe('a review with 1 outside diff range comment');
     expect(finding?.excerpt).toContain('Keep this');
@@ -414,10 +433,7 @@ describe('lateFinding', () => {
   });
 
   it.each([
-    ['a summary', 'coderabbitSummary'],
     ["Codex's summary", 'codexSummary'],
-    ['a reply to a review request', 'coderabbitRefusal'],
-    ['a rate-limit note', 'coderabbitRateLimitNote'],
     ["Codex's no-findings comment", 'codexNoFindings'],
     ["Codex's reply to a task (AFA-109)", 'codexTaskReply'],
   ])('skips %s', (_, name) => {
@@ -434,10 +450,9 @@ describe('lateFinding', () => {
   });
 
   it('skips a task reply only from Codex', () => {
-    const coderabbit = { login: 'coderabbitai[bot]', type: 'Bot' };
     const finding = lateFinding('issue_comment', {
       issue: mergedIssue43,
-      comment: { ...bot.codexTaskReply, user: coderabbit },
+      comment: { ...bot.codexTaskReply, user: claude },
     });
     expect(finding?.summary).toBe('a comment');
   });
@@ -447,10 +462,12 @@ describe('lateFinding', () => {
     expect(
       lateFinding('pull_request_review_comment', {
         pull_request: merged43,
-        comment: bot.coderabbitThreadReply,
+        comment: { ...bot.coderabbitThreadReply, user: claude },
       })
     ).toBeNull();
-    for (const review of [bot.coderabbitReview, bot.codexReview]) {
+    // Real review bodies with no section of findings: CodeRabbit's, with Claude's login, and
+    // Codex's.
+    for (const review of [{ ...bot.coderabbitReview, user: claude }, bot.codexReview]) {
       expect(lateFinding('pull_request_review', { pull_request: merged43, review })).toBeNull();
     }
   });
@@ -715,7 +732,7 @@ describe('records', () => {
     title: 'fix: a title',
     prUrl: 'https://github.com/afahy/fluent-measures/pull/43',
     closed: 'merged',
-    author: 'coderabbitai[bot]',
+    author: 'claude[bot]',
     url: 'https://github.com/afahy/fluent-measures/pull/43#discussion_r1',
     summary: 'a review comment on `README.md`',
     excerpt: '> Check this.',
@@ -724,10 +741,10 @@ describe('records', () => {
   it('titles a record by PR and describes each finding with its link and quote', () => {
     expect(recordTitle(finding)).toBe('Bot findings after #43 merged');
     expect(recordEntry(finding)).toBe(
-      'coderabbitai[bot] left a review comment on `README.md` on [#43](https://github.com/afahy/fluent-measures/pull/43) after it merged: https://github.com/afahy/fluent-measures/pull/43#discussion_r1\n\n> Check this.'
+      'claude[bot] left a review comment on `README.md` on [#43](https://github.com/afahy/fluent-measures/pull/43) after it merged: https://github.com/afahy/fluent-measures/pull/43#discussion_r1\n\n> Check this.'
     );
     expect(recordBody(finding)).toBe(
-      'Codex or CodeRabbit posted findings on [#43](https://github.com/afahy/fluent-measures/pull/43) (fix: a title) after it merged, so no agent was watching. Judge each one as AGENTS.md "Handle findings and CI" says.\n\n' +
+      'Codex or Claude posted findings on [#43](https://github.com/afahy/fluent-measures/pull/43) (fix: a title) after it merged, so no agent was watching. Judge each one as AGENTS.md "Handle findings and CI" says.\n\n' +
         recordEntry(finding)
     );
   });
@@ -988,5 +1005,18 @@ describe('records', () => {
     await expect(
       fileOnLinear(finding, { apiKey: 'k', teamId: 't', projectId: 'p', fetch })
     ).rejects.toThrow('Linear: Authentication required');
+  });
+});
+
+// AFA-118: the workflow and the script file a record for the same bots, Codex and Claude.
+describe('late-bot-findings workflow', () => {
+  it('runs only for the bots whose findings the script files', () => {
+    const workflow = readFileSync('.github/workflows/late-bot-findings.yml', 'utf8');
+    const senders = /contains\(fromJSON\('(\[[^']*\])'\), github\.event\.sender\.login\)/.exec(
+      workflow
+    )?.[1];
+    const bots = ['chatgpt-codex-connector[bot]', 'claude[bot]'];
+    expect(JSON.parse(senders ?? '[]')).toEqual(bots);
+    expect([...BOTS]).toEqual(bots);
   });
 });

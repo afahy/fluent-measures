@@ -1,5 +1,5 @@
-// Files a record when Codex or CodeRabbit posts a finding on a pull request that has already
-// merged or closed, because no agent watches a closed PR (AFA-101). Used by
+// Files a record when Codex or Claude posts a finding on a pull request that has already merged
+// or closed, because no agent watches a closed PR (AFA-101). Used by
 // .github/workflows/late-bot-findings.yml.
 //
 // It reads the event from GITHUB_EVENT_PATH. With LINEAR_API_KEY set, it files a Linear issue
@@ -16,22 +16,21 @@
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
-export const BOTS = new Set(['chatgpt-codex-connector[bot]', 'coderabbitai[bot]']);
+export const BOTS = new Set(['chatgpt-codex-connector[bot]', 'claude[bot]']);
 export const LABEL = 'late-bot-finding';
 
 /**
- * Bot comments that hold no finding, by how they start: CodeRabbit's summaries, rate-limit notes
- * and replies to requests, which open with a marker; Codex's summary; and Codex's notes that it
+ * Codex comments that hold no finding, by how they start: its summary, and its notes that it
  * found nothing or ran out of reviews. A finding that only mentions these words still counts.
  */
 const ROUTINE =
-  /^\s*(?:<!-- (?:This is an auto-generated (?:comment: (?:summarize|rate limited) by coderabbit\.ai|reply by CodeRabbit)|codex-pull-request-review-summary) -->|Codex Review: Didn't find any major issues|You have reached your Codex usage limits)/i;
+  /^\s*(?:<!-- codex-pull-request-review-summary -->|Codex Review: Didn't find any major issues|You have reached your Codex usage limits)/i;
 
 /** Codex's reply when it finishes a task that someone asked it for: a summary and a link. */
 const CODEX_TASK = /^\s*### Summary\b[\s\S]*\[View task →\]\(https:\/\/chatgpt\.com\/[^\s)]*\)\s*$/;
 
-/** Sections of a CodeRabbit review body that hold findings outside its review threads. */
-const BODY_FINDINGS = /(outside diff range|nitpick) comments \((\d+)\)/gi;
+/** Sections of a review body that hold findings outside its review threads. */
+const BODY_FINDINGS = /(outside diff range) comments \((\d+)\)/gi;
 
 /** How much of a bot's text a record quotes. */
 const EXCERPT_LENGTH = 600;
@@ -381,8 +380,8 @@ function parts(name, event) {
 }
 
 /**
- * The finding in an event, or null if the event isn't a Codex or CodeRabbit finding on a
- * closed PR.
+ * The finding in an event, or null if the event isn't a Codex or Claude finding on a closed
+ * PR.
  *
  * @param {string} name
  * @param {any} event
@@ -404,8 +403,8 @@ export function lateFinding(name, event) {
     if (item.in_reply_to_id) return null;
     summary = `a review comment on \`${item.path}\``;
   } else if (kind === 'review') {
-    // The findings in a review's threads arrive as their own events. Only CodeRabbit puts
-    // findings in the review body, inside collapsed sections.
+    // The findings in a review's threads arrive as their own events. A review body can also hold
+    // findings outside the diff, inside collapsed sections.
     const sections = findingSections(body);
     if (sections.titles.length === 0) return null;
     const names = sections.titles.map(
@@ -580,7 +579,7 @@ export function recordEntry(finding) {
  */
 export function recordBody(finding) {
   return [
-    `Codex or CodeRabbit posted findings on [#${finding.pr}](${finding.prUrl}) (${finding.title}) after it ${finding.closed}, so no agent was watching. Judge each one as AGENTS.md "Handle findings and CI" says.`,
+    `Codex or Claude posted findings on [#${finding.pr}](${finding.prUrl}) (${finding.title}) after it ${finding.closed}, so no agent was watching. Judge each one as AGENTS.md "Handle findings and CI" says.`,
     '',
     recordEntry(finding),
   ].join('\n');
@@ -659,7 +658,7 @@ export async function fileOnGitHub(
       body: JSON.stringify({
         name: LABEL,
         color: 'f9d0c4',
-        description: 'Codex or CodeRabbit posted findings after the PR closed',
+        description: 'Codex or Claude posted findings after the PR closed',
       }),
     },
     [422]
@@ -775,7 +774,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   const event = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH ?? '', 'utf8'));
   const finding = lateFinding(process.env.GITHUB_EVENT_NAME ?? '', event);
   if (!finding) {
-    console.log('No finding from Codex or CodeRabbit on a closed PR.');
+    console.log('No finding from Codex or Claude on a closed PR.');
     process.exit(0);
   }
   const { LINEAR_API_KEY, LINEAR_TEAM_ID, LINEAR_PROJECT_ID, GITHUB_TOKEN, GITHUB_REPOSITORY } =
