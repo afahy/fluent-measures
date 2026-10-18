@@ -337,8 +337,9 @@ On each pull request, `.github/workflows/evidence.yml` writes a summary on the r
 each result that changes in `tests/__snapshots__/resultSnapshot.txt` and each corpus entry whose
 outcome changes. It also lists the changed examples in the README and `PARSING.md`, a change to
 `api-report.d.ts`, and the bundle sizes before and after. When results change, the check fails until
-the PR body has a "Changed results" line, list item or heading. A corpus entry that the PR edits
-doesn't count as a changed result, because the edit, not the parser, can change its outcome.
+the PR body has a "Changed results" line, list item or heading under "Description". Text must
+follow it on the same line, or a list must follow it. A corpus entry that the PR edits doesn't
+count as a changed result, because the edit, not the parser, can change its outcome.
 
 The summary also rates the risk as low, medium or high, for the maintainer's review. No label or
 merge rule uses the rating. A high risk is a change that the maintainer decides on:

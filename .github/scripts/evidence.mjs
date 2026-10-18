@@ -405,16 +405,30 @@ export function scriptsRun(workflows, read) {
 }
 
 /**
- * Whether the PR body lists the changed results, under a heading, a line or a list item that
- * starts with "Changed results". The words can be bold or in italics.
+ * Whether the PR body lists the changed results: a heading, a line or a list item that starts
+ * with "Changed results", with text after it on the same line or a list item below it. The words
+ * can be bold or in italics. When the body has the template's "Description" heading, the list
+ * must be in that section, before "Type of change".
  *
  * @param {string} body
  * @returns {boolean}
  */
 export function listsChangedResults(body) {
+  const lines = body.split('\n');
+  const start = lines.findIndex(line => /^#{1,6}[ \t]*Description\b/i.test(line));
+  const after = lines.slice(start + 1);
+  const end = after.findIndex(line => /^#{1,6}[ \t]*Type of change\b/i.test(line));
+  const section = start === -1 ? lines : end === -1 ? after : after.slice(0, end);
   // Not \b after "results": "_" is a word character, so it fails in "__Changed results__".
-  const heading = /^[ \t]*(?:#{1,6}[ \t]*|[-*+][ \t]+|\d+[.)][ \t]+)?(?:\*\*|__|\*|_)?/;
-  return new RegExp(`${heading.source}Changed results(?![a-z])`, 'im').test(body);
+  const marker =
+    /^[ \t]*(?:#{1,6}[ \t]*|[-*+][ \t]+|\d+[.)][ \t]+)?(?:\*\*|__|\*|_)?Changed results(?![a-z])(.*)$/i;
+  return section.some((line, index) => {
+    const match = marker.exec(line);
+    if (!match) return false;
+    if (/[a-z0-9]/i.test(match[1])) return true;
+    const next = section.slice(index + 1).find(text => text.trim() !== '');
+    return next !== undefined && /^[ \t]*(?:[-*+]|\d+[.)])[ \t]+\S/.test(next);
+  });
 }
 
 /**

@@ -414,13 +414,25 @@ describe('listsChangedResults', () => {
     ['a bold line', '**Changed results**\n- a', true],
     ['a list item', '- Changed results: only what AFA-1 asks for', true],
     ['a bold list item', '- **Changed results:** none beyond AFA-1', true],
-    ['a list item with a star', '* Changed results', true],
-    ['a numbered item', '1. Changed results', true],
-    ['an underscored line', '__Changed results__', true],
+    ['a list item with a star', '* Changed results\n  - a', true],
+    ['a numbered item', '1. Changed results: none beyond AFA-1', true],
+    ['an underscored line', '__Changed results__\n\n1. a', true],
     ['an italic line', '*Changed results:* none', true],
     ['no list', 'This changes some results.', false],
     ['words in a sentence', 'It lists the changed results below.', false],
     ['an empty body', '', false],
+    ['an empty heading', '# Description\n\n### Changed results\n\n## Type of change\n', false],
+    ['a marker with only a colon', '**Changed results:**\n\nSee the tests.', false],
+    [
+      'a list after "Type of change"',
+      '# Description\n\nText.\n\n## Type of change\n\nChanged results: a',
+      false,
+    ],
+    [
+      'the template with a list',
+      '# Description\n\nText.\n\nChanged results:\n\n- a\n\nFixes AFA-1\n\n## Type of change\n',
+      true,
+    ],
   ])('finds %s', (_, body, found) => {
     expect(listsChangedResults(body)).toBe(found);
   });
