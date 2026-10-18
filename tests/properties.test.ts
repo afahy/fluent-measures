@@ -269,8 +269,8 @@ describe('generated single measurements', () => {
         letter: fc.constantFrom(...'abcdefghijklmnopqrstuvwxyz'),
       })
       .map(({ found, edit, at, letter }) => {
-        // The first letter stays the same.
-        const position = 1 + (at % (found.name.length - 1));
+        // The first letter stays the same. An added letter can also go after the last one.
+        const position = 1 + (at % (found.name.length - (edit === 'add' ? 0 : 1)));
         const before = found.name.slice(0, position);
         const after = found.name.slice(position);
         const word =
@@ -332,8 +332,9 @@ describe('generated pairs of measurements', () => {
         fc.boolean(),
         (value, [first, second], percent, higher) => {
           const factor = higher ? 1 + percent / 100 : 1 - percent / 100;
-          // Rounding to two decimal places moves the value by at most 0.15%, so it still
-          // disagrees by more than 1.8%.
+          // Rounding to two decimal places moves `other` by at most 0.005. The converted value is
+          // at least 3.94 (10 cm in inches), so that is at most 0.13% of it, and the two still
+          // disagree by more than 1.8%.
           const other = Math.round(convert(value, first, second) * factor * 100) / 100;
           expect(parseMeasurement(`${value} ${first} (${other} ${second})`)).toBeNull();
         }

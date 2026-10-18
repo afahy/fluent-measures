@@ -2,6 +2,9 @@
 // stays in the parser's score. Run it from the repository root on a pull request merge commit.
 // Used by .github/workflows/regression-test.yml.
 //
+// Only a fix to the parser needs an entry. A fix to a package.json script, the build config, an
+// exported type or the exports has no measurement input, as in #143.
+//
 // Reads PR_BODY, the PR's description. When it names a Linear ticket on its `Fixes` or `Part of`
 // line, an added entry must have that ticket as its source. When it doesn't, as for a GitHub
 // issue, the source can be any ticket ID or the issue's URL, but not "handwritten".
@@ -13,6 +16,18 @@ import { escapeData } from './workflow-commands.mjs';
 // HEAD is the merge of the PR into the base branch, so its first parent is the base branch.
 const BASE = 'HEAD^1';
 const CORPUS = 'tests/corpus/measurements.jsonl';
+// The files under src/ that hold no parsing code.
+const NOT_PARSER = ['src/index.ts', 'src/types.ts'];
+
+/**
+ * Whether the PR changes the parser: a file under src/ other than the exports and the types.
+ *
+ * @param {string[]} files The paths that the PR changes.
+ * @returns {boolean}
+ */
+export function changesParser(files) {
+  return files.some(file => file.startsWith('src/') && !NOT_PARSER.includes(file));
+}
 
 /**
  * The entries that a diff of the corpus adds. A line that isn't JSON counts as no entry, because
@@ -60,6 +75,13 @@ export function hasTicketEntry(entries, ticket) {
 }
 
 function main() {
+  const files = execFileSync('git', ['diff', '--name-only', '-z', BASE, 'HEAD'], {
+    encoding: 'utf8',
+  });
+  if (!changesParser(files.split('\0'))) {
+    console.log("The PR doesn't change the parser in src/, so it needs no corpus entry.");
+    return;
+  }
   const diff = execFileSync('git', ['diff', '--unified=0', BASE, 'HEAD', '--', CORPUS], {
     encoding: 'utf8',
   });

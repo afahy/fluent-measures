@@ -274,7 +274,8 @@ To add an entry:
    `PARSING.md` when they cover the input. If they leave the choice between a value and `null`
    open, accept both.
 3. Write exact values. Don't round them. Use 1 lb = 0.45359237 kg, 1 in = 2.54 cm and 1 ft = 12 in.
-4. Don't add an input if its correct output depends on an open ticket.
+4. Don't add an input if its correct output depends on an open ticket. The ticket that your pull
+   request fixes is the exception.
 5. Run `pnpm test:unit -u` to update the snapshot.
 6. Read the snapshot diff. It must show only your new entries.
 
@@ -292,8 +293,9 @@ find the cause before you update it.
 The corpus test also fails when a line isn't valid JSON, two entries have the same `id`, a category
 isn't in the list, or an expected unit doesn't belong to its type.
 
-A pull request with the `fix` type that changes the package adds at least one entry built from the
-ticket's failure inputs. Its `source` is the ticket ID on the PR's `Fixes` or `Part of` line, or,
+A pull request with the `fix` type that changes the parser adds at least one entry built from the
+ticket's failure inputs. The parser is each file under `src/` other than `src/index.ts` and
+`src/types.ts`. Its `source` is the ticket ID on the PR's `Fixes` or `Part of` line, or,
 without a Linear ticket, the URL of the issue. The "Regression test fails without the fix" check
 fails without one. So each fixed bug stays in the score, and a later change can't bring it back
 without a change to the snapshot.

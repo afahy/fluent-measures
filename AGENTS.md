@@ -36,9 +36,9 @@ ticket ID and text. Don't open a PR without a ticket ID.
    in the PR title.
 2. Every bug fix must add a regression test built from the ticket's failure inputs. Confirm
    that the test fails on `main` and passes with the fix, and say that you checked this in
-   the PR body. Also add the failure inputs to the corpus, with the ticket ID as `source`, as
-   "Measurement corpus" in `CONTRIBUTING.md` says. The regression test check fails without
-   such an entry.
+   the PR body. When the fix changes the parser in `src/`, also add the failure inputs to the
+   corpus, with the ticket ID as `source`, as "Measurement corpus" in `CONTRIBUTING.md` says.
+   The regression test check fails without such an entry.
 3. Never skip, delete, loosen, or mark an existing test as expected to fail just to make CI
    pass.
 4. Add a changeset for any change to `src/` or to `package.json` fields that affect

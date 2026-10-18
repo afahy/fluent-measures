@@ -1,7 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { addedEntries, hasTicketEntry, ticketOf } from '../.github/scripts/corpus-entry-check.mjs';
+import {
+  addedEntries,
+  changesParser,
+  hasTicketEntry,
+  ticketOf,
+} from '../.github/scripts/corpus-entry-check.mjs';
 
 describe('the corpus entry check for fix PRs', () => {
+  // #143 (AFA-84) fixed the release:publish script. It had no measurement input to add.
+  it.each([
+    [['package.json', 'tests/releaseScripts.test.ts'], false],
+    [['tsup.config.ts'], false],
+    [['src/types.ts', 'src/index.ts'], false],
+    [['.github/scripts/pr-state.mjs', 'tests/prState.test.ts'], false],
+    [['src/parseMeasurement.ts', 'tests/parseMeasurement.test.ts'], true],
+    [['package.json', 'src/tokenize.ts'], true],
+  ])('needs an entry for the files %j: %s', (files, expected) => {
+    expect(changesParser(files)).toBe(expected);
+  });
+
   it('reads the entries that the diff adds, and skips other lines', () => {
     const diff = [
       'diff --git a/tests/corpus/measurements.jsonl b/tests/corpus/measurements.jsonl',

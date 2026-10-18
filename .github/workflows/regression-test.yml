@@ -71,9 +71,11 @@ jobs:
           exit 1
 
       # Each fixed bug stays in the corpus score, so a later change can't bring it back unseen. It
-      # runs after the regression steps, also when they fail, so one push shows both results.
+      # runs after the regression steps, also when they fail, so one push shows both results. A
+      # change to only comments or formatting fixes nothing, so it needs no entry. The script
+      # skips a PR that doesn't change the parser.
       - name: Require a corpus entry from the ticket
-        if: ${{ !cancelled() && steps.changes.outputs.changed }}
+        if: ${{ !cancelled() && steps.changes.outputs.changed && steps.node22.outputs.result != 'unchanged' }}
         env:
           # The body goes in through the environment, so that its text can't change the script.
           PR_BODY: ${{ github.event.pull_request.body }}
