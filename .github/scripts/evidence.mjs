@@ -414,7 +414,8 @@ export function scriptsRun(workflows, read) {
  * @returns {boolean}
  */
 export function listsChangedResults(body) {
-  const lines = body.split('\n');
+  // A body that someone edits on github.com has CRLF line endings.
+  const lines = body.split(/\r?\n/);
   const start = lines.findIndex(line => /^#{1,6}[ \t]*Description\b/i.test(line));
   const after = lines.slice(start + 1);
   const end = after.findIndex(line => /^#{1,6}[ \t]*Type of change\b/i.test(line));

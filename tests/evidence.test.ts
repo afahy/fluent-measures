@@ -433,6 +433,10 @@ describe('listsChangedResults', () => {
       '# Description\n\nText.\n\nChanged results:\n\n- a\n\nFixes AFA-1\n\n## Type of change\n',
       true,
     ],
+    // github.com saves an edited body with CRLF line endings.
+    ['a line with CRLF', '# Description\r\n\r\nChanged results: none beyond AFA-1\r\n', true],
+    ['a heading with CRLF', '## Changed results\r\n\r\n- a\r\n', true],
+    ['a bold list item with CRLF', '- **Changed results:** none\r\n', true],
   ])('finds %s', (_, body, found) => {
     expect(listsChangedResults(body)).toBe(found);
   });
