@@ -1,12 +1,14 @@
 # Description
 
-Please include a summary of the change and which issue is fixed. Please also include relevant motivation and context.
+<!-- Summarize the change, the reason for it and each decision that you made. -->
 
-Fixes # (GitHub issue or Linear ticket, for example `Fixes AFA-22`)
+Fixes #
+
+<!-- On the line above, name the GitHub issue or the Linear ticket. If the PR covers only part of a Linear ticket, write "Part of" in place of "Fixes", so that the ticket stays open. -->
 
 ## Type of change
 
-Please delete options that are not relevant.
+<!-- Delete the options that don't apply. -->
 
 - [ ] Bug fix (non-breaking change which fixes an issue)
 - [ ] New feature (non-breaking change which adds functionality)
@@ -15,10 +17,9 @@ Please delete options that are not relevant.
 
 ## How Has This Been Tested?
 
-Please describe the tests that you ran to verify your changes. Provide instructions so we can reproduce.
+<!-- List the commands that you ran, so that a reviewer can run them again. For a bug fix, say that the new regression test fails on `main` and passes with the fix. -->
 
-- [ ] Test A
-- [ ] Test B
+-
 
 ## Checklist:
 
@@ -30,5 +31,4 @@ Please describe the tests that you ran to verify your changes. Provide instructi
 - [ ] My changes generate no new warnings
 - [ ] I have added tests that prove my fix is effective or that my feature works
 - [ ] New and existing unit tests pass locally with my changes
-- [ ] I have added an entry to the changelog using `pnpm changeset`
-- [ ] I have updated the version number (if applicable)
+- [ ] I have added a changeset with `pnpm changeset`, or as a file in `.changeset/`

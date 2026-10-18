@@ -37,14 +37,14 @@ each Codex gap in your report.
 
 `pr:status` doesn't post anything. When "Do" lists `Post @codex review`, post that comment
 yourself, as `Agent: @codex review`. Codex acts on a request with the `Agent:` prefix. Don't
-offer to post it. `pr:status` lists each request once per commit, as AGENTS.md says, and stops
-waiting for Codex 2 hours after it could start. A PR that Codex never reviewed then waits on the
-maintainer. Say so in your report.
+offer to post it. `pr:status` lists a request when Codex hasn't started 30 minutes after it
+could, once for each commit. It stops waiting for Codex 2 hours after it could start. A PR that
+Codex never reviewed then waits on the maintainer. Say so in your report.
 
-`pr:status` never waits for CodeRabbit and never asks it to review (AFA-138). Its threads, its
-comments outside the diff and its requested changes still make a PR `needs-agent`. When it
-hasn't reviewed the head commit, a note says so. Its review is optional, so that gap needs no
-mention in your report.
+The Claude review runs once, when a PR opens or becomes ready for review. Its `Claude review`
+check counts as CI, and `pr:status` never asks it to review. It posts inline comments as
+`claude[bot]` and a summary comment as `github-actions[bot]`. Read both, and handle each finding
+as AGENTS.md says.
 
 ## Waiting
 
