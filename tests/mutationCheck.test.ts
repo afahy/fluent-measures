@@ -182,6 +182,30 @@ describe('mutation-check.mjs', () => {
     expect(check.stderr).toContain(`::error file=${link}::Replace ${link}`);
   });
 
+  // A link to a file counts only where the file would: the config leaves out a test file, and
+  // Stryker never mutates a file that isn't code.
+  it.each([
+    ['a test file', 'src/units.test.ts', '../lib/impl.ts'],
+    ['a file that is not code', 'src/data.json', '../lib/data.json'],
+  ])('passes a changed symbolic link to %s', (_kind, link, target) => {
+    const repository = createRepository();
+    const base = commitFiles(repository, {
+      'stryker.config.json': '{ "mutate": ["src/**/!(*.spec|*.test).ts"] }\n',
+      'lib/impl.ts': 'export const a = 1;\n',
+      'lib/data.json': '{}\n',
+    });
+    mkdirSync(resolve(repository, 'src'));
+    symlinkSync(target, resolve(repository, link));
+    commitFiles(repository, { 'lib/impl.ts': 'export const a = 1 > 0;\n' });
+
+    const check = runCheck(repository, base);
+
+    expect(check.stdout).toContain(
+      'No added or changed line under src/ is in a file that Stryker mutates'
+    );
+    expect(check.status).toBe(0);
+  });
+
   // With core.symlinks=false, git checks a link out as a plain file that holds its target path.
   it('fails for a symbolic link that the checkout holds as a plain file', () => {
     const repository = createRepository();
