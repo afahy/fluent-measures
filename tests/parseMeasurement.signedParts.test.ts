@@ -192,9 +192,10 @@ describe('signed parts', () => {
   });
 
   // Each signed label value is read without its sign in place, not in a copy of the tokens. Here,
-  // with 20,000 signed labels, a copy took 10.7 s, and the current code takes 70 ms, or 160 ms with
-  // coverage. In CI's coverage run it took up to 630 ms, so the 4 s limit of CPU time leaves about 6
-  // times that (AFA-95). The test skips itself under Stryker.
+  // with 20,000 signed labels, a copy took 10.7 s of clock time. The current code takes up to
+  // 140 ms of CPU time, or 240 ms with coverage. In CI's coverage run it took up to 630 ms of clock
+  // time, so the 4 s limit of CPU time leaves about 6 times that (AFA-95). The test skips itself
+  // under Stryker.
   it.skipIf(underStryker)('reads many signed label values quickly', () => {
     expect(parseWithin('kg: -5 '.repeat(20_000), 4000)).toBeNull();
   });
