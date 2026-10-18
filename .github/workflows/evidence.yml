@@ -1,0 +1,68 @@
+name: Evidence
+
+# Summarizes what a PR changes in parseMeasurement's results and rates its risk, so that the
+# maintainer can judge the PR from its evidence (.github/scripts/evidence.mjs). The summary is on
+# the run's page. The risk rating is information for the maintainer. No label or merge rule uses
+# it (AFA-164).
+on:
+  pull_request:
+    branches: [main]
+    # edited: the check reads the PR body, so it runs again when the body changes.
+    types: [opened, synchronize, reopened, edited, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  evidence:
+    name: Evidence of changed results
+    # Edits to closed pull requests also send `edited`.
+    if: github.event.pull_request.state == 'open'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The pull request's merge commit and its parents. HEAD^1 is the base branch.
+          fetch-depth: 2
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+        with:
+          node-version: 22
+
+      - name: Measure the bundle sizes on the base branch and in the PR
+        run: |
+          if git diff --quiet HEAD^1 HEAD -- src/ package.json tsup.config.ts; then
+            echo "The PR doesn't change the package files."
+            exit 0
+          fi
+          # A build over its budget still prints its sizes. CI's own job fails for it.
+          pnpm build && pnpm exec size-limit --json > "$RUNNER_TEMP/size-head.json" || true
+          git restore --source=HEAD^1 --worktree -- src/ tsup.config.ts
+          pnpm build && pnpm exec size-limit --json > "$RUNNER_TEMP/size-base.json" || true
+          git restore --source=HEAD --worktree -- src/ tsup.config.ts
+
+      - name: Summarize the changed results and rate the risk
+        env:
+          # The body goes in through the environment, so that its text can't change the script.
+          PR_BODY: ${{ github.event.pull_request.body }}
+          SIZE_BASE: ${{ runner.temp }}/size-base.json
+          SIZE_HEAD: ${{ runner.temp }}/size-head.json
+        # The script from the base branch rates the PR, so a change to the script doesn't rate its
+        # own PR. This workflow file still comes from the PR, so the script rates a change to it
+        # high. A base branch without the script uses the PR's.
+        run: |
+          script=.github/scripts/evidence.mjs
+          if git cat-file -e "HEAD^1:$script" 2> /dev/null; then
+            mkdir "$RUNNER_TEMP/base-scripts"
+            for file in evidence.mjs workflow-commands.mjs; do
+              git show "HEAD^1:.github/scripts/$file" > "$RUNNER_TEMP/base-scripts/$file"
+            done
+            script="$RUNNER_TEMP/base-scripts/evidence.mjs"
+          fi
+          node "$script"
