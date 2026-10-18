@@ -89,7 +89,7 @@ const changedRanges = file =>
 // doesn't.
 const unmutated = names
   .filter(isUnmutatedCode)
-  .filter(file => mutated([file.replace(/\.[cm]?[jt]sx?$/, '.ts')]).length > 0)
+  .filter(file => mutated([file.replace(/\.[^./]+$/, '.ts')]).length > 0)
   .filter(file => changedRanges(file).length > 0);
 for (const file of unmutated) {
   console.error(

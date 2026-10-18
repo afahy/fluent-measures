@@ -108,7 +108,9 @@ export function isSourceFile(file) {
  * @returns {boolean}
  */
 export function isUnmutatedCode(file) {
-  return /\.[cm]?[jt]sx?$/.test(file) && !isSourceFile(file) && !/\.d\.[cm]?ts$/.test(file);
+  return (
+    /\.(?:[cm]?[jt]s|[jt]sx)$/.test(file) && !isSourceFile(file) && !/\.d\.[cm]?ts$/.test(file)
+  );
 }
 
 /**

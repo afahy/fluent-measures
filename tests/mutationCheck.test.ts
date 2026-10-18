@@ -235,6 +235,23 @@ describe('mutation-check.mjs', () => {
     }
   );
 
+  // These extensions aren't code that tsc, Vitest or tsup reads, so they stay as on `main`.
+  it.each(['src/template.mtsx', 'src/template.ctsx', 'src/template.mjsx', 'src/template.cjsx'])(
+    'says that %s is not a file that Stryker mutates',
+    file => {
+      const repository = createRepository();
+      const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
+      commitFiles(repository, { [file]: 'export const a = 1 > 0;\n' });
+
+      const check = runCheck(repository, base);
+
+      expect(check.stdout).toContain(
+        'No added or changed line under src/ is in a file that Stryker mutates'
+      );
+      expect(check.status).toBe(0);
+    }
+  );
+
   // Git reads a pathspec as a glob unless it's literal: `\b` matches `b`, and `[u]` matches `u`.
   it('gives each changed file only its own changed lines', () => {
     const repository = createRepository();
