@@ -39,26 +39,23 @@ Run these commands from the repository root:
 7. The examples in the README and in `PARSING.md` are the public specification. When code
    and an example disagree, follow the ticket's direction about which one changes. If the
    ticket does not say, ask on the ticket.
-8. Files that match a pattern in `.github/CODEOWNERS` follow the same rules as every other
-   file. You may change them, and you may merge a PR that changes them when "Merge your own
-   PR" allows it.
-9. Never use a branch-protection bypass, and don't enable auto-merge until AFA-29 is
+8. Never use a branch-protection bypass, and don't enable auto-merge until AFA-29 is
    complete. Merge a PR only when "Merge your own PR" allows it. Agents open PRs from the
    maintainer's GitHub account, so each merge is recorded as the maintainer's.
-10. Write every PR description from `.github/pull_request_template.md`. Keep all of its
-    headings in the same order and fill in each section; don't replace it with your own
-    format. Fill in the `Fixes` line as rule 1 says. Under "Type of change", delete the
-    options that don't apply. Under "How Has This Been Tested?", replace `Test A` and
-    `Test B` with the commands you ran and, for a bug fix, the check from rule 2. Tick only
-    the checklist items that are true. Don't change the version in `package.json`;
-    changesets sets it at release time.
-11. Every test must be able to fail. Take each expected value from the ticket, an example in
+9. Write every PR description from `.github/pull_request_template.md`. Keep all of its
+   headings in the same order and fill in each section; don't replace it with your own
+   format. Fill in the `Fixes` line as rule 1 says. Under "Type of change", delete the
+   options that don't apply. Under "How Has This Been Tested?", replace `Test A` and
+   `Test B` with the commands you ran and, for a bug fix, the check from rule 2. Tick only
+   the checklist items that are true. Don't change the version in `package.json`;
+   changesets sets it at release time.
+10. Every test must be able to fail. Take each expected value from the ticket, an example in
     the README or `PARSING.md`, or a hand calculation. Don't copy the code's current output
     into a test unless one of those sources confirms it. Never compute an expected value
     with the code under test. Each test must reach at least one `expect`. After you add
     tests, run mutation testing. If a mutant survives in code that a new test covers, make
     the test catch it. If the mutant can't change behavior, say so in the PR.
-12. A new or changed timing test checks a limit of CPU time with `parseWithin` from
+11. A new or changed timing test checks a limit of CPU time with `parseWithin` from
     `tests/timing.ts`. It skips itself under Stryker with `it.skipIf(underStryker)`. Set
     each limit from CI, not from a local run. CI's `test` jobs run with coverage, and in
     AFA-95 they took 3 to 8 times as long as a local run. Their logs show the clock time of
@@ -101,8 +98,7 @@ answer:
 - Open PRs, post `Agent:` comments and Codex review requests, reply to and resolve threads,
   and convert a PR to a draft as "Stop and ask" says.
 - Re-run CI jobs that no runner picked up, or that an Actions incident stopped.
-- Merge a PR with `gh pr merge <number> --squash` when "Merge your own PR" allows it. This
-  includes a PR that changes a file that `.github/CODEOWNERS` names.
+- Merge a PR with `gh pr merge <number> --squash` when "Merge your own PR" allows it.
 - Raise a limit in `.size-limit.cjs` by 0.5 kB, as "Build the PR" says.
 - Start subagents that build a ticket in its own worktree, review a branch or watch PRs.
 

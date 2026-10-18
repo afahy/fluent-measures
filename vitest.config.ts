@@ -5,7 +5,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['tests/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
-    // A test that runs no expect fails (AGENTS.md rule 11), also when its expects are in a loop
+    // A test that runs no expect fails (AGENTS.md rule 10), also when its expects are in a loop
     // that runs zero times and that the lint doesn't see (AFA-70).
     expect: { requireAssertions: true },
     coverage: {

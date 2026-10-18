@@ -50,14 +50,14 @@ export default [
     files: ['tests/**/*.cjs'],
     languageOptions: { globals: vitest.environments.env.globals },
   },
-  // Every test must be able to fail (AGENTS.md rule 11): it must reach an expect, and no expect
+  // Every test must be able to fail (AGENTS.md rule 10): it must reach an expect, and no expect
   // may sit in a branch that can be skipped.
   {
     files: [TS_TESTS, JS_TESTS],
     plugins: { vitest },
     rules: {
       ...vitest.configs.recommended.rules,
-      // The preset sets these too. They're repeated so rule 11's checks stay errors if the preset
+      // The preset sets these too. They're repeated so rule 10's checks stay errors if the preset
       // changes. Only expect counts as an assertion, not assert (AFA-70).
       'vitest/expect-expect': ['error', { assertFunctionNames: ['expect'] }],
       'vitest/no-conditional-expect': 'error',
@@ -95,7 +95,7 @@ export default [
         {
           selector:
             "CallExpression[callee.object.name='expect'][callee.property.name='assertions'][arguments.0.value=0]",
-          message: 'A test must reach an expect (AGENTS.md rule 11).',
+          message: 'A test must reach an expect (AGENTS.md rule 10).',
         },
       ],
       // Vitest's expect takes an optional message as its second argument.
