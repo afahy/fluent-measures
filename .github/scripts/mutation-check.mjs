@@ -163,8 +163,12 @@ if (backslashed.length > 0) process.exit(1);
 
 // Stryker resolves each `mutate` pattern from the project folder and matches the result as a
 // glob. So a glob in the folder's own path, as "[1]" in "/tmp/a[1]/repo", can make a pattern match
-// no file, and its warning would ask to move each changed file. Check each file as Stryker does.
-if ([...changed.keys()].some(file => !matchesGlob(resolve(file), resolve(literalGlob(file))))) {
+// no file, and its warning would ask to move each changed file. Check each file as Stryker's
+// `FileMatcher` does: it writes each "\" in both paths as "/" first.
+const strykerPath = (/** @type {string} */ path) => resolve(path).replace(/\\/g, '/');
+if (
+  [...changed.keys()].some(file => !matchesGlob(strykerPath(file), strykerPath(literalGlob(file))))
+) {
   console.error(
     `::error::Move the repository to another folder. Stryker reads the glob characters in ${escapeData(JSON.stringify(process.cwd()))} as part of each pattern, so it finds no file to mutate.`
   );

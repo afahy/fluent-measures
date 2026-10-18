@@ -687,11 +687,13 @@ describe('mutation-check.mjs', () => {
 
   // AFA-117: Stryker reads some glob characters in the repository's path as part of each pattern,
   // so it finds no file. The check says so, and doesn't ask to move each changed file. A glob
-  // character that leaves the pattern matching, as "*" does, changes nothing.
+  // character that leaves the pattern matching, as "*" does, changes nothing. Stryker writes a "\"
+  // as "/" in both paths, so a "\" in the folder's name changes nothing either.
   it.each([
     ['a[1]', 1],
     ['{a,b}', 1],
     ['a*b', 0],
+    ['a\\b', 0],
   ])('checks a repository in the folder %s', (folder, status) => {
     const repository = createRepository(folder);
     const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
