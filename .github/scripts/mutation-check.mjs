@@ -8,7 +8,7 @@
 // Stryker then gives it the status Ignored, so this check doesn't count it. The reason is required.
 
 import { execFileSync, spawnSync } from 'node:child_process';
-import { lstatSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { lstatSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -18,6 +18,7 @@ import {
   gitEnvironment,
   hunkRanges,
   isSourceFile,
+  isUnmutatedCode,
   literalGlob,
   mutatedFiles,
   reasonlessDirectives,
@@ -74,17 +75,56 @@ if (unreadable.length > 0) process.exit(1);
 // Stryker's config says which files it mutates, so a changed test file under src/ isn't checked.
 // A config without `mutate` leaves every changed source file in.
 const { $schema: _schema, ...config } = JSON.parse(readFileSync('stryker.config.json', 'utf8'));
-const sourceFiles = names.filter(isSourceFile);
-const files = config.mutate ? mutatedFiles(sourceFiles, config.mutate) : sourceFiles;
+const mutated = files => (config.mutate ? mutatedFiles(files, config.mutate) : files);
+/** Whether the config would mutate `file` if it were a `.ts` file. */
+const mutatedAsTs = file => mutated([file.replace(/\.[^./]+$/, '.ts')]).length > 0;
+// Git stores a symbolic link with mode 120000 and diffs only the path that it holds, but Stryker
+// mutates the files that the link points to. So the changed lines and the mutants' lines don't
+// match. Git's mode counts, not the checkout, which may hold a plain file. Stryker's patterns
+// follow a link to a folder, so such a link always counts. A link to a file counts where the file
+// would.
+const changedNames = new Set(names);
+const linked = execFileSync('git', ['ls-tree', '-r', '-z', 'HEAD', '--', 'src/'], gitOptions)
+  .toString('utf8')
+  .split('\0')
+  .map(entry => /^120000 blob \w+\t(.*)$/s.exec(entry)?.[1])
+  .filter(file => file !== undefined && changedNames.has(file))
+  .filter(
+    file =>
+      statSync(file, { throwIfNoEntry: false })?.isDirectory() ||
+      ((isSourceFile(file) || isUnmutatedCode(file)) && mutatedAsTs(file))
+  );
+for (const file of linked) {
+  console.error(
+    `::error file=${escapeProperty(file)}::Replace ${escapeData(file)} with the file or folder that it links to. It's a symbolic link, and Stryker mutates what it points to, so this check can't match its changed lines.`
+  );
+}
+if (linked.length > 0) process.exit(1);
+/** @param {string} file */
+const changedRanges = file =>
+  hunkRanges(
+    execFileSync('git', [...gitDiff, '--unified=0', ...range, '--', `:(literal)${file}`], {
+      ...gitOptions,
+      encoding: 'utf8',
+    })
+  );
+// This check gives Stryker only `.ts` files, so it would pass added lines in other code with no
+// check. A file counts when the config would mutate it as a `.ts` file, so a test file still
+// doesn't.
+const unmutated = names
+  .filter(isUnmutatedCode)
+  .filter(mutatedAsTs)
+  .filter(file => changedRanges(file).length > 0);
+for (const file of unmutated) {
+  console.error(
+    `::error file=${escapeProperty(file)}::Use a .ts file in place of ${escapeData(file)}. This check gives Stryker only .ts files, so it can't find the file's mutants.`
+  );
+}
+if (unmutated.length > 0) process.exit(1);
 /** @type {Map<string, Array<[number, number]>>} */
 const changed = new Map();
-for (const file of files) {
-  const diff = execFileSync(
-    'git',
-    [...gitDiff, '--unified=0', ...range, '--', `:(literal)${file}`],
-    { ...gitOptions, encoding: 'utf8' }
-  );
-  const ranges = hunkRanges(diff);
+for (const file of mutated(names.filter(isSourceFile))) {
+  const ranges = changedRanges(file);
   if (ranges.length > 0) changed.set(file, ranges);
 }
 if (changed.size === 0) {

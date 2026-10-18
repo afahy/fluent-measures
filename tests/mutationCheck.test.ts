@@ -139,6 +139,185 @@ describe('mutation-check.mjs', () => {
     expect(check.stderr).not.toContain('Stryker exited');
   });
 
+  // AFA-85: git diffs only the link's target path, but Stryker mutates the file that the link
+  // points to, so the changed lines and the mutants' lines don't match. The check stops before it
+  // runs Stryker.
+  it('fails for a changed source file that is a symbolic link', () => {
+    const repository = createRepository();
+    const base = commitFiles(repository, {
+      'stryker.config.json': '{}\n',
+      'lib/impl.ts': 'export const a = 1;\n',
+    });
+    mkdirSync(resolve(repository, 'src'));
+    symlinkSync('../lib/impl.ts', resolve(repository, 'src/units.ts'));
+    commitFiles(repository, { 'lib/impl.ts': 'export const a = 1 > 0;\n' });
+    addStrykerStub(repository);
+
+    const check = runCheck(repository, base);
+
+    expect(check.status).toBe(1);
+    expect(check.stderr).toContain('::error file=src/units.ts::Replace src/units.ts');
+    expect(check.stdout).not.toContain('Tests kill every mutant');
+  });
+
+  // Stryker follows a link to a folder too, and a link of any name is one change to git.
+  it.each([
+    ['a folder', 'src/extra', '../lib'],
+    ['a .mts file', 'src/units.mts', '../lib/impl.mts'],
+  ])('fails for a changed symbolic link to %s', (_kind, link, target) => {
+    const repository = createRepository();
+    const base = commitFiles(repository, {
+      'stryker.config.json': '{}\n',
+      'lib/impl.ts': 'export const a = 1;\n',
+      'lib/impl.mts': 'export const b = 1;\n',
+    });
+    mkdirSync(resolve(repository, 'src'));
+    symlinkSync(target, resolve(repository, link));
+    commitFiles(repository, { 'src/index.ts': 'export const c = 1 > 0;\n' });
+    addStrykerStub(repository);
+
+    const check = runCheck(repository, base);
+
+    expect(check.status).toBe(1);
+    expect(check.stderr).toContain(`::error file=${link}::Replace ${link}`);
+  });
+
+  // A link to a file counts only where the file would: the config leaves out a test file, and
+  // Stryker never mutates a file that isn't code.
+  it.each([
+    ['a test file', 'src/units.test.ts', '../lib/impl.ts'],
+    ['a file that is not code', 'src/data.json', '../lib/data.json'],
+  ])('passes a changed symbolic link to %s', (_kind, link, target) => {
+    const repository = createRepository();
+    const base = commitFiles(repository, {
+      'stryker.config.json': '{ "mutate": ["src/**/!(*.spec|*.test).ts"] }\n',
+      'lib/impl.ts': 'export const a = 1;\n',
+      'lib/data.json': '{}\n',
+    });
+    mkdirSync(resolve(repository, 'src'));
+    symlinkSync(target, resolve(repository, link));
+    commitFiles(repository, { 'lib/impl.ts': 'export const a = 1 > 0;\n' });
+
+    const check = runCheck(repository, base);
+
+    expect(check.stdout).toContain(
+      'No added or changed line under src/ is in a file that Stryker mutates'
+    );
+    expect(check.status).toBe(0);
+  });
+
+  // With core.symlinks=false, git checks a link out as a plain file that holds its target path.
+  it('fails for a symbolic link that the checkout holds as a plain file', () => {
+    const repository = createRepository();
+    const base = commitFiles(repository, {
+      'stryker.config.json': '{}\n',
+      'lib/impl.ts': 'export const a = 1;\n',
+    });
+    mkdirSync(resolve(repository, 'src'));
+    symlinkSync('../lib/impl.ts', resolve(repository, 'src/units.ts'));
+    commitFiles(repository, { 'lib/impl.ts': 'export const a = 1 > 0;\n' });
+    rmSync(resolve(repository, 'src/units.ts'));
+    writeFileSync(resolve(repository, 'src/units.ts'), '../lib/impl.ts');
+    addStrykerStub(repository);
+
+    const check = runCheck(repository, base);
+
+    expect(check.status).toBe(1);
+    expect(check.stderr).toContain('::error file=src/units.ts::Replace src/units.ts');
+  });
+
+  // AFA-85: the check gives Stryker only `.ts` files, but tsc, Vitest and tsup also use these, so a
+  // change to one would pass with no check.
+  it.each([
+    'src/units.mts',
+    'src/units.cts',
+    'src/units.js',
+    'src/units.mjs',
+    'src/units.cjs',
+    'src/units.jsx',
+    'src/units.tsx',
+  ])('fails for a changed code file that Stryker never mutates: %s', file => {
+    const repository = createRepository();
+    const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
+    commitFiles(repository, {
+      [file]: 'export const a = 1 > 0;\n',
+      'src/index.ts': "export { a } from './units';\n",
+    });
+    addStrykerStub(repository);
+
+    const check = runCheck(repository, base);
+
+    expect(check.status).toBe(1);
+    expect(check.stderr).toContain(`::error file=${file}::Use a .ts file in place of ${file}.`);
+  });
+
+  // The config leaves out a test file under src/, whatever its extension, as it does for `.ts`.
+  it('says that a test file with another code extension is not a file that Stryker mutates', () => {
+    const repository = createRepository();
+    const base = commitFiles(repository, {
+      'stryker.config.json': '{ "mutate": ["src/**/!(*.spec|*.test).ts"] }\n',
+    });
+    commitFiles(repository, { 'src/units.test.mts': 'export const x = 1;\n' });
+
+    const check = runCheck(repository, base);
+
+    expect(check.stdout).toContain(
+      'No added or changed line under src/ is in a file that Stryker mutates'
+    );
+    expect(check.status).toBe(0);
+  });
+
+  // Only added or changed lines have mutants to check, as for a `.ts` file.
+  it('passes a code file with another extension that only loses lines', () => {
+    const repository = createRepository();
+    const base = commitFiles(repository, {
+      'stryker.config.json': '{}\n',
+      'src/units.mts': 'export const a = 1;\nexport const b = 2;\n',
+    });
+    commitFiles(repository, { 'src/units.mts': 'export const a = 1;\n' });
+
+    const check = runCheck(repository, base);
+
+    expect(check.stdout).toContain(
+      'No added or changed line under src/ is in a file that Stryker mutates'
+    );
+    expect(check.status).toBe(0);
+  });
+
+  // A declaration file has no code to mutate, whatever its extension.
+  it.each(['src/types.d.mts', 'src/types.d.cts'])(
+    'says that %s is not a file that Stryker mutates',
+    file => {
+      const repository = createRepository();
+      const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
+      commitFiles(repository, { [file]: 'export type Unit = string;\n' });
+
+      const check = runCheck(repository, base);
+
+      expect(check.stdout).toContain(
+        'No added or changed line under src/ is in a file that Stryker mutates'
+      );
+      expect(check.status).toBe(0);
+    }
+  );
+
+  // These extensions aren't code that tsc, Vitest or tsup reads, so they stay as on `main`.
+  it.each(['src/template.mtsx', 'src/template.ctsx', 'src/template.mjsx', 'src/template.cjsx'])(
+    'says that %s is not a file that Stryker mutates',
+    file => {
+      const repository = createRepository();
+      const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
+      commitFiles(repository, { [file]: 'export const a = 1 > 0;\n' });
+
+      const check = runCheck(repository, base);
+
+      expect(check.stdout).toContain(
+        'No added or changed line under src/ is in a file that Stryker mutates'
+      );
+      expect(check.status).toBe(0);
+    }
+  );
+
   // Git reads a pathspec as a glob unless it's literal: `\b` matches `b`, and `[u]` matches `u`.
   it('gives each changed file only its own changed lines', () => {
     const repository = createRepository();

@@ -100,6 +100,20 @@ export function isSourceFile(file) {
 }
 
 /**
+ * Returns whether `file` is code that `isSourceFile` leaves out, such as `.mts`, `.cts`, `.js` or
+ * `.tsx`, so the check never gives it to Stryker. `tsc`, Vitest and tsup still use such a file. A
+ * declaration file has no code.
+ *
+ * @param {string} file
+ * @returns {boolean}
+ */
+export function isUnmutatedCode(file) {
+  return (
+    /\.(?:[cm]?[jt]s|[jt]sx)$/.test(file) && !isSourceFile(file) && !/\.d\.[cm]?ts$/.test(file)
+  );
+}
+
+/**
  * Returns the files that the `mutate` patterns in the Stryker config cover. As in Stryker, the
  * patterns apply in order: a pattern that starts with "!" leaves files out, and a later pattern
  * can put them back. Stryker's `FileMatcher` resolves each pattern and each file from the project

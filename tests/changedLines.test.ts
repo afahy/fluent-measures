@@ -9,6 +9,7 @@ import {
   gitEnvironment,
   hunkRanges,
   isSourceFile,
+  isUnmutatedCode,
   literalGlob,
   mutatedFiles,
   reasonlessDirectives,
@@ -82,6 +83,28 @@ describe('isSourceFile', () => {
     ['src/data.json', false],
   ])('returns %s → %s', (file, expected) => {
     expect(isSourceFile(file)).toBe(expected);
+  });
+});
+
+// AFA-85: other code that tsc, Vitest and tsup read, but that the check never gives to Stryker.
+describe('isUnmutatedCode', () => {
+  it.each([
+    ['src/units.mts', true],
+    ['src/units.cts', true],
+    ['src/units.js', true],
+    ['src/units.mjs', true],
+    ['src/units.cjs', true],
+    ['src/units.jsx', true],
+    ['src/units.tsx', true],
+    ['src/units.ts', false],
+    ['src/types.d.ts', false],
+    ['src/types.d.mts', false],
+    ['src/types.d.cts', false],
+    ['src/template.mtsx', false],
+    ['src/template.cjsx', false],
+    ['src/data.json', false],
+  ])('returns %s → %s', (file, expected) => {
+    expect(isUnmutatedCode(file)).toBe(expected);
   });
 });
 
