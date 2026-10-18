@@ -112,6 +112,12 @@ pnpm test:types
 # Build the project
 pnpm build
 
+# Check the exported types against api-report.d.ts, after the build
+pnpm check:api
+
+# Run the tests of results against the build, through import and require
+pnpm test:package
+
 # Run in development mode (watch for changes)
 pnpm dev
 
@@ -285,6 +291,39 @@ find the cause before you update it.
 
 The corpus test also fails when a line isn't valid JSON, two entries have the same `id`, a category
 isn't in the list, or an expected unit doesn't belong to its type.
+
+A pull request with the `fix` type that changes the package adds at least one entry built from the
+ticket's failure inputs. Its `source` is the ticket ID on the PR's `Fixes` or `Part of` line, or,
+without a Linear ticket, the URL of the issue. The "Regression test fails without the fix" check
+fails without one. So each fixed bug stays in the score, and a later change can't bring it back
+without a change to the snapshot.
+
+### Property tests
+
+`tests/properties.test.ts` makes each measurement first, for example 5 ft and 11 in. It writes the
+measurement in each form that the README or `PARSING.md` shows, such as `5'11"`, `5-foot-11` and
+`five feet eleven inches`, and checks that `parseMeasurement` gives the measurement back. So the
+expected value is a hand calculation from the generated parts, as pull request rule 10 in
+`AGENTS.md` asks. `tests/invariants.test.ts` checks a rule for every input: no throw, and a
+positive value in a unit of the result's type.
+
+A property that fails prints the smallest input that fails. Check that input against the README,
+`PARSING.md` and the existing tests before you change the code or the property. A property must
+not cover an input that an existing test reads in a different way.
+
+### Tests against the package
+
+`pnpm test:package` runs the tests of results against the built package, once through `import` and
+once through `require` (`vitest.package.config.ts`). An alias gives the tests the package in place
+of `src/`. Run `pnpm build` first. In CI, the `package` job runs them against the packed tarball,
+installed in an empty project.
+
+### Exported types
+
+`api-report.d.ts` holds the types that the package exports, from the build, without comments.
+`pnpm check:api` fails when the build's types differ from it. A change to an exported type needs
+the maintainer's approval. When the ticket has it, run `pnpm check:api --update` and commit the
+report.
 
 ## Documentation
 
