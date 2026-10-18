@@ -42,8 +42,8 @@ ticket ID and text. Don't open a PR without a ticket ID.
    `---` lines, and then a summary of the change for users. Use `minor` in place of `patch`
    when the PR changes a result that `main` returns and that isn't `null` (decision rule 3),
    or changes a type that `src/index.ts` exports. While the version is below 1.0.0, a minor
-   bump marks a change that can break users. Never use `major`. Don't change the version in `package.json`. Changesets sets it at release
-   time.
+   bump marks a change that can break users. Never use `major`. Don't change the version in
+   `package.json`. Changesets sets it at release time.
 5. Commit messages and PR titles follow Conventional Commits, as configured in
    `commitlint.config.js`. CI checks both, and checks titles against
    `commitlint.pr-title.config.js` as well. Write PR titles as `type: summary`, for example
@@ -56,16 +56,13 @@ ticket ID and text. Don't open a PR without a ticket ID.
 7. The examples in the README and in `PARSING.md` are the public specification. When code
    and an example disagree, follow the ticket's direction about which one changes. If the
    ticket does not say, ask on the ticket.
-8. Files that match a pattern in `.github/CODEOWNERS` follow the same rules as every other
-   file. You may change them, and you may merge a PR that changes them when "Merge your own
-   PR" allows it.
-9. Never use a branch-protection bypass, and don't enable auto-merge until AFA-29 is
+8. Never use a branch-protection bypass, and don't enable auto-merge until AFA-29 is
    complete. Agents open PRs from the maintainer's GitHub account, so each merge is recorded
    as the maintainer's.
-10. Write every PR description from `.github/pull_request_template.md`. Keep all of its
-    headings in the same order, fill in each section as its comments say, and don't replace
-    it with your own format. Tick only the checklist items that are true.
-11. Every test must be able to fail. Take each expected value from the ticket, an example in
+9. Write every PR description from `.github/pull_request_template.md`. Keep all of its
+   headings in the same order, fill in each section as its comments say, and don't replace
+   it with your own format. Tick only the checklist items that are true.
+10. Every test must be able to fail. Take each expected value from the ticket, an example in
     the README or `PARSING.md`, or a hand calculation. Don't copy the code's current output
     into a test unless one of those sources confirms it. Never compute an expected value
     with the code under test. Each test must reach at least one `expect`. After you add
