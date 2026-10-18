@@ -240,6 +240,10 @@ const cases: ReadmeCase[] = [
   { section: 'Ranges', input: '72,5-80,5 kg', expected: null },
   { section: 'Ranges', input: '1,250-1,500 lbs', expected: null },
   { section: 'Ranges', input: 'kg-70.5', expected: null },
+  // AFA-136: a range is a boundary, so neither a number nor a unit joins across it.
+  { section: 'Ranges', input: '6 1-2 ft', expected: null },
+  { section: 'Ranges', input: 'ft 1-2 6', expected: null },
+  { section: 'Ranges', input: '6ft1-2in', expected: { value: 6, unit: 'ft' } },
   {
     section: 'More Than One Measurement',
     input: '70 kg (154 lbs)',

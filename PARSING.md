@@ -129,8 +129,17 @@ parseMeasurement('kg-70.5'); // null: a hyphen directly after a unit is a minus 
 A range with its unit at each end, such as `150 lbs - 180 lbs`, also returns `null`. Its two
 ends are separate measurements that disagree.
 
-Text with a range and a separate measurement isn't supported. The parser can attach the unit of
-the range to a later number, as in `50-70 kg, 180 lbs`.
+A range is a boundary. Its unit belongs to the range, so a number next to the range doesn't take
+that unit, and no number joins another across the range:
+
+```typescript
+parseMeasurement('6 1-2 ft'); // null: "ft" belongs to the range, so 6 has no unit
+parseMeasurement('ft 1-2 6'); // null: "ft" belongs to the range, so 6 has no unit
+parseMeasurement('6ft1-2in'); // { value: 6, unit: 'ft', ... }: the range "1-2in" is left out
+```
+
+Other text with a range and a separate measurement isn't supported. The parser can attach the unit
+of the range to a later number, as in `50-70 kg, 180 lbs`.
 
 ## More Than One Measurement
 
