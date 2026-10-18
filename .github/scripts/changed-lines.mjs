@@ -100,8 +100,9 @@ export function isSourceFile(file) {
 }
 
 /**
- * Returns whether `file` is code that Stryker never mutates, such as `.mts`, `.cts`, `.js` or
- * `.tsx`. `tsc`, Vitest and tsup still use such a file. A declaration file has no code.
+ * Returns whether `file` is code that `isSourceFile` leaves out, such as `.mts`, `.cts`, `.js` or
+ * `.tsx`, so the check never gives it to Stryker. `tsc`, Vitest and tsup still use such a file. A
+ * declaration file has no code.
  *
  * @param {string} file
  * @returns {boolean}

@@ -72,28 +72,35 @@ for (const name of unreadable) {
   );
 }
 if (unreadable.length > 0) process.exit(1);
-// Stryker mutates only `.ts` files, so this check would pass a change to other code with no check.
-const unmutated = names.filter(isUnmutatedCode);
-for (const file of unmutated) {
-  console.error(
-    `::error file=${escapeProperty(file)}::Use a .ts file in place of ${escapeData(file)}. Stryker mutates only .ts files, so this check can't find the file's mutants.`
-  );
-}
-if (unmutated.length > 0) process.exit(1);
 // Stryker's config says which files it mutates, so a changed test file under src/ isn't checked.
 // A config without `mutate` leaves every changed source file in.
 const { $schema: _schema, ...config } = JSON.parse(readFileSync('stryker.config.json', 'utf8'));
-const sourceFiles = names.filter(isSourceFile);
-const files = config.mutate ? mutatedFiles(sourceFiles, config.mutate) : sourceFiles;
+const mutated = files => (config.mutate ? mutatedFiles(files, config.mutate) : files);
+/** @param {string} file */
+const changedRanges = file =>
+  hunkRanges(
+    execFileSync('git', [...gitDiff, '--unified=0', ...range, '--', `:(literal)${file}`], {
+      ...gitOptions,
+      encoding: 'utf8',
+    })
+  );
+// This check gives Stryker only `.ts` files, so it would pass added lines in other code with no
+// check. A file counts when the config would mutate it as a `.ts` file, so a test file still
+// doesn't.
+const unmutated = names
+  .filter(isUnmutatedCode)
+  .filter(file => mutated([file.replace(/\.[cm]?[jt]sx?$/, '.ts')]).length > 0)
+  .filter(file => changedRanges(file).length > 0);
+for (const file of unmutated) {
+  console.error(
+    `::error file=${escapeProperty(file)}::Use a .ts file in place of ${escapeData(file)}. This check gives Stryker only .ts files, so it can't find the file's mutants.`
+  );
+}
+if (unmutated.length > 0) process.exit(1);
 /** @type {Map<string, Array<[number, number]>>} */
 const changed = new Map();
-for (const file of files) {
-  const diff = execFileSync(
-    'git',
-    [...gitDiff, '--unified=0', ...range, '--', `:(literal)${file}`],
-    { ...gitOptions, encoding: 'utf8' }
-  );
-  const ranges = hunkRanges(diff);
+for (const file of mutated(names.filter(isSourceFile))) {
+  const ranges = changedRanges(file);
   if (ranges.length > 0) changed.set(file, ranges);
 }
 if (changed.size === 0) {

@@ -160,25 +160,63 @@ describe('mutation-check.mjs', () => {
     expect(check.stdout).not.toContain('Tests kill every mutant');
   });
 
-  // AFA-85: Stryker mutates only `.ts` files, but tsc, Vitest and tsup also use these, so a change
-  // to one would pass with no check.
-  it.each(['src/units.mts', 'src/units.cts', 'src/units.js', 'src/units.tsx'])(
-    'fails for a changed code file that Stryker never mutates: %s',
-    file => {
-      const repository = createRepository();
-      const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
-      commitFiles(repository, {
-        [file]: 'export const a = 1 > 0;\n',
-        'src/index.ts': "export { a } from './units';\n",
-      });
-      addStrykerStub(repository);
+  // AFA-85: the check gives Stryker only `.ts` files, but tsc, Vitest and tsup also use these, so a
+  // change to one would pass with no check.
+  it.each([
+    'src/units.mts',
+    'src/units.cts',
+    'src/units.js',
+    'src/units.mjs',
+    'src/units.cjs',
+    'src/units.jsx',
+    'src/units.tsx',
+  ])('fails for a changed code file that Stryker never mutates: %s', file => {
+    const repository = createRepository();
+    const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
+    commitFiles(repository, {
+      [file]: 'export const a = 1 > 0;\n',
+      'src/index.ts': "export { a } from './units';\n",
+    });
+    addStrykerStub(repository);
 
-      const check = runCheck(repository, base);
+    const check = runCheck(repository, base);
 
-      expect(check.status).toBe(1);
-      expect(check.stderr).toContain(`::error file=${file}::Use a .ts file in place of ${file}.`);
-    }
-  );
+    expect(check.status).toBe(1);
+    expect(check.stderr).toContain(`::error file=${file}::Use a .ts file in place of ${file}.`);
+  });
+
+  // The config leaves out a test file under src/, whatever its extension, as it does for `.ts`.
+  it('says that a test file with another code extension is not a file that Stryker mutates', () => {
+    const repository = createRepository();
+    const base = commitFiles(repository, {
+      'stryker.config.json': '{ "mutate": ["src/**/!(*.spec|*.test).ts"] }\n',
+    });
+    commitFiles(repository, { 'src/units.test.mts': 'export const x = 1;\n' });
+
+    const check = runCheck(repository, base);
+
+    expect(check.stdout).toContain(
+      'No added or changed line under src/ is in a file that Stryker mutates'
+    );
+    expect(check.status).toBe(0);
+  });
+
+  // Only added or changed lines have mutants to check, as for a `.ts` file.
+  it('passes a code file with another extension that only loses lines', () => {
+    const repository = createRepository();
+    const base = commitFiles(repository, {
+      'stryker.config.json': '{}\n',
+      'src/units.mts': 'export const a = 1;\nexport const b = 2;\n',
+    });
+    commitFiles(repository, { 'src/units.mts': 'export const a = 1;\n' });
+
+    const check = runCheck(repository, base);
+
+    expect(check.stdout).toContain(
+      'No added or changed line under src/ is in a file that Stryker mutates'
+    );
+    expect(check.status).toBe(0);
+  });
 
   // A declaration file has no code to mutate, whatever its extension.
   it.each(['src/types.d.mts', 'src/types.d.cts'])(
