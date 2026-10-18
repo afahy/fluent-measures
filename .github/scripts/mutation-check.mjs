@@ -18,6 +18,7 @@ import {
   gitEnvironment,
   hunkRanges,
   isSourceFile,
+  isUnmutatedCode,
   literalGlob,
   mutatedFiles,
   reasonlessDirectives,
@@ -71,6 +72,14 @@ for (const name of unreadable) {
   );
 }
 if (unreadable.length > 0) process.exit(1);
+// Stryker mutates only `.ts` files, so this check would pass a change to other code with no check.
+const unmutated = names.filter(isUnmutatedCode);
+for (const file of unmutated) {
+  console.error(
+    `::error file=${escapeProperty(file)}::Use a .ts file in place of ${escapeData(file)}. Stryker mutates only .ts files, so this check can't find the file's mutants.`
+  );
+}
+if (unmutated.length > 0) process.exit(1);
 // Stryker's config says which files it mutates, so a changed test file under src/ isn't checked.
 // A config without `mutate` leaves every changed source file in.
 const { $schema: _schema, ...config } = JSON.parse(readFileSync('stryker.config.json', 'utf8'));
@@ -120,6 +129,18 @@ for (const file of backslashed) {
   );
 }
 if (backslashed.length > 0) process.exit(1);
+
+// Git diffs a symbolic link's target path, but Stryker mutates the file that the link points to.
+// So the changed lines and the mutants' lines don't match.
+const linked = [...changed.keys()].filter(file =>
+  lstatSync(file, { throwIfNoEntry: false })?.isSymbolicLink()
+);
+for (const file of linked) {
+  console.error(
+    `::error file=${escapeProperty(file)}::Replace ${escapeData(file)} with the file that it links to. It's a symbolic link, and Stryker mutates the file that it points to, so this check can't match its changed lines.`
+  );
+}
+if (linked.length > 0) process.exit(1);
 
 // Mutate the whole of each changed file, so a mutant whose code spans more lines than the change
 // is still made. Only the mutants that overlap a changed line count. Use the project's Stryker
