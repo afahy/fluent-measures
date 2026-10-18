@@ -48,7 +48,9 @@ const HASHES: Record<string, string> = {
  * symbol in a class name, as in ".sm\:flex", and a first digit as a hex code point, as in
  * ".\32 xl\:text-lg". With `ownRule`, a class counts only where the rule is about it: in the last
  * part of the selector that names a class, between combinators, and not inside a pseudo-class
- * such as :not(). So ".a .b" is about "b", and ".space-y-2 > :not([hidden])" is about "space-y-2".
+ * such as :not(). :is() and :where() match the element itself, so their classes count in their
+ * part. So ".a .b" is about "b", ".a :is(.b)" too, and ".space-y-2 > :not([hidden])" is about
+ * "space-y-2".
  */
 function cssClasses(css: string, { ownRule = false } = {}): Set<string> {
   const names: string[] = [];
@@ -73,8 +75,17 @@ function cssClasses(css: string, { ownRule = false } = {}): Set<string> {
           if (node.type === 'Combinator') parts.push([]);
           else parts[parts.length - 1].push(node);
         }
-        const last = [...parts].reverse().find(part => part.some(n => n.type === 'ClassSelector'));
-        for (const node of last ?? []) if (node.type === 'ClassSelector') names.push(node.name);
+        const classesIn = (part: CssNode[]): string[] =>
+          part.flatMap(node => {
+            if (node.type === 'ClassSelector') return [node.name];
+            if (node.type !== 'PseudoClassSelector' || !/^(?:is|where)$/i.test(node.name))
+              return [];
+            const inner: string[] = [];
+            walk(node, { visit: 'ClassSelector', enter: found => inner.push(found.name) });
+            return inner;
+          });
+        const last = [...parts].reverse().find(part => classesIn(part).length > 0);
+        names.push(...classesIn(last ?? []));
       });
     },
   });
@@ -283,6 +294,11 @@ describe('the docs page', () => {
     ['space-y-2', '.space-y-2 > :not([hidden]) ~ :not([hidden]) { }', []],
     ['group copied', '.group.copied .group-\\[\\.copied\\]\\:block { }', []],
     ['group', '.other { }', ['group']],
+    // Codex on #151: :is() and :where() match the element itself, but :not() doesn't.
+    ['foo', ':is(.foo) { }', []],
+    ['foo', ':where(.x, .foo) { }', []],
+    ['ancestor', '.ancestor :is(.foo) { }', ['ancestor']],
+    ['foo', '.x:not(:is(.foo)) { }', ['foo']],
   ])('checks the class "%s" against %s', (classes, css, missing) => {
     expect(missingClasses(`<div class="${classes}"></div>`, css)).toEqual(missing);
   });
