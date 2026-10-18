@@ -38,8 +38,9 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     expect: { requireAssertions: true },
-    // A changed result must fail here, and never update a snapshot.
-    update: false,
+    // A changed result must fail here, and never update a snapshot. Outside CI, Vitest reads
+    // `false` as 'new' and writes a missing snapshot, so this is 'none'.
+    update: 'none',
     projects: [
       {
         extends: true,

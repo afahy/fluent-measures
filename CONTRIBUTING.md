@@ -293,10 +293,11 @@ find the cause before you update it.
 The corpus test also fails when a line isn't valid JSON, two entries have the same `id`, a category
 isn't in the list, or an expected unit doesn't belong to its type.
 
-A pull request with the `fix` type that changes the parser adds at least one entry built from the
-ticket's failure inputs. The parser is each file under `src/` other than `src/index.ts` and
-`src/types.ts`. Its `source` is the ticket ID on the PR's `Fixes` or `Part of` line, or,
-without a Linear ticket, the URL of the issue. The "Regression test fails without the fix" check
+A pull request with the `fix` type that changes the parser's code adds at least one new entry built
+from the ticket's failure inputs. The parser is each file under `src/` other than `src/index.ts`
+and `src/types.ts`, and a change to only comments or formatting doesn't count. An edited entry
+isn't a new one. Its `source` is the ticket ID on the PR's `Fixes` or `Part of` line, or, without a
+Linear ticket, the URL of the issue. The "Regression test fails without the fix" check
 fails without one. So each fixed bug stays in the score, and a later change can't bring it back
 without a change to the snapshot.
 

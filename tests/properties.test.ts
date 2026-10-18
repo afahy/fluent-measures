@@ -89,9 +89,11 @@ const amount = fc.integer({ min: 1, max: 9999 }).map(tenths => tenths / 10);
 
 describe('generated feet and inches', () => {
   // README: "A height in feet and inches gives the total in inches". PARSING.md, "More Than One
-  // Measurement": the feet are a whole number and the inches are less than 12. Inches with no
-  // unit after them start at 1, because tests/parseMeasurement.bareInches.test.ts reads "5 ft 0"
-  // as 5 ft.
+  // Measurement": the feet are a whole number and the inches are less than 12. The second column
+  // is the smallest inches value. Inches with no unit after them, after a feet word, start at 1,
+  // because tests/parseMeasurement.bareInches.test.ts reads "5 ft 0" as 5 ft. The shorthand has
+  // no unit at all and starts at 0, because tests/parseMeasurement.hyphens.test.ts reads "5-0" as
+  // 60 in.
   const forms: readonly (readonly [string, number, (feet: number, inches: number) => string])[] = [
     ['marks', 0, (feet, inches): string => `${feet}'${inches}"`],
     ['marks with a space', 0, (feet, inches): string => `${feet}' ${inches}"`],
