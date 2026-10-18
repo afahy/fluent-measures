@@ -76,8 +76,6 @@ describe('the lint config for each test format', () => {
     format === 'cjs'
       ? "const { env } = require('node:process');"
       : `import { env } from 'node:process';\nimport { ${vitestNames} } from 'vitest';`;
-  const configFor = async (file: string): Promise<{ globals?: Record<string, unknown> }> =>
-    ((await eslint.calculateConfigForFile(file)) as { languageOptions: object }).languageOptions;
 
   it.each(jsFormats)('lints a .%s test that runs', async format => {
     const code = `${imports(format, 'expect, it')}\nit('reads X', () => {\n  expect(env.X ?? 'x').toBe('x');\n});\n`;
@@ -101,12 +99,17 @@ describe('the lint config for each test format', () => {
     ]);
   });
 
-  // TypeScript's parser lints only a file in the TypeScript project, so text is linted under the
-  // name of a file that exists. No test file has another TypeScript format, so those formats get a
-  // check of their config.
-  it('warns only about console.log in a TypeScript test', async () => {
+  // With type information, TypeScript's parser lints only a file in the TypeScript project, and
+  // with CI=true it reads that file from disk, not the text. No rule in the config uses type
+  // information, so TypeScript text is linted without it.
+  const untyped = new ESLint({
+    cwd: root,
+    overrideConfig: { languageOptions: { parserOptions: { project: false } } },
+  });
+
+  it.each(tsFormats)('warns only about console.log in a .%s test', async format => {
     const code = `import { expect, it } from 'vitest';\nit('warns', () => {\n  console.warn('w');\n  console.log('l');\n  expect(1).toBe(1);\n});\n`;
-    const [result] = await eslint.lintText(code, { filePath: 'tests/lintFormats.test.ts' });
+    const [result] = await untyped.lintText(code, { filePath: `tests/a/x.test.${format}` });
     expect(result.messages.map(({ ruleId, severity }) => [ruleId, severity])).toEqual([
       ['no-console', 1],
     ]);
@@ -114,18 +117,11 @@ describe('the lint config for each test format', () => {
 
   it('warns only about console.log in src/', async () => {
     const code = `export const report = (): void => {\n  console.warn('w');\n  console.log('l');\n};\n`;
-    const [result] = await eslint.lintText(code, { filePath: 'src/index.ts' });
+    const [result] = await untyped.lintText(code, { filePath: 'src/x.ts' });
     expect(result.messages.map(({ ruleId, severity }) => [ruleId, severity])).toEqual([
       ['no-console', 1],
     ]);
   });
-
-  it.each(tsFormats.map(format => `tests/a/x.test.${format}`))(
-    'declares console as a global for %s',
-    async file => {
-      expect((await configFor(file)).globals?.console).toBe('readonly');
-    }
-  );
 
   // Node gives a CommonJS module its file and folder names.
   it('reads __filename and __dirname in a .cjs test', async () => {
