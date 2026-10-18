@@ -134,7 +134,7 @@ jobs:
       # run, or from main's.
       - name: Hash the inputs that Stryker doesn't compare
         id: inputs
-        run: echo "hash=${{ hashFiles('package.json', 'pnpm-lock.yaml', 'tsconfig.json', 'stryker.config.json', 'vitest.config.ts', '.github/workflows/ci.yml', '.github/actions/setup/action.yml', 'README.md', 'docs/index.html', 'tests/**', '!tests/**/*.test.ts') }}" >> "$GITHUB_OUTPUT"
+        run: echo "hash=${{ hashFiles('package.json', 'pnpm-lock.yaml', 'tsconfig.json', 'stryker.config.json', 'vitest.config.ts', '.github/workflows/ci.yml', '.github/actions/setup/action.yml', 'README.md', 'PARSING.md', 'docs/index.html', 'tests/**', '!tests/**/*.test.ts') }}" >> "$GITHUB_OUTPUT"
 
       # A change to one source file can change how the tests treat a mutant in another, which
       # incremental mode doesn't check. So a push to main starts from no results and runs every

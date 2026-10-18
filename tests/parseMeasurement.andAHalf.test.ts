@@ -17,7 +17,7 @@ describe('and a half', () => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });
 
-  // "Must not change" in AFA-63, from the README and the corpus.
+  // "Must not change" in AFA-63, from PARSING.md and the corpus.
   it.each([
     ['one hundred and 50 pounds', 150, 'lb'],
     ['5 foot 10 inches', 70, 'in'],
@@ -49,7 +49,7 @@ describe('and a half', () => {
     ['two and a half thousand pounds', 2500, 'lb'],
     ['2 and a half thousand lbs', 2500, 'lb'],
     ['five and a half hundred pounds', 550, 'lb'],
-    // A semicolon can come between a number and its unit, as in "180;lbs" (README).
+    // A semicolon can come between a number and its unit, as in "180;lbs" (PARSING.md).
     ['two and a half thousand; lbs', 2500, 'lb'],
     // AFA-63's results don't change: a multiplier that starts the next number isn't the half's.
     // 5 × 12 + 10.5 = 70.5.
@@ -79,7 +79,7 @@ describe('and a half', () => {
     'two and a half thousand hundred lbs',
     '1.5 and a half thousand lbs',
     '-2 and a half thousand lbs',
-    // A semicolon can come between a number and the next word (README: "180;lbs").
+    // A semicolon can come between a number and the next word (PARSING.md: "180;lbs").
     '-2; and a half thousand lbs',
   ])('returns null for %s', raw => {
     expect(parseMeasurement(raw)).toBeNull();
@@ -96,7 +96,7 @@ describe('and a half', () => {
   });
 
   // "1.5 and a half thousand" isn't a number, so "ft" has no number before it, and it takes the
-  // number after it, as a unit before its number does (README: "record 0; kg 70" → 70 kg).
+  // number after it, as a unit before its number does (PARSING.md: "record 0; kg 70" → 70 kg).
   it('reads 1.5 and a half thousand ft 4 as 4 ft', () => {
     expect(parseMeasurement('1.5 and a half thousand ft 4')).toMatchObject({
       value: 4,
@@ -106,7 +106,7 @@ describe('and a half', () => {
 
   // A read forward stops before a multiplier after "and a half", as "pounds: two and a half
   // thousand" (2.5 lb) shows. So stone has its own number, 2.5, and "thousand lb" is another part,
-  // which gives null, as "stone 12, 4 lb" does in the README.
+  // which gives null, as "stone 12, 4 lb" does in PARSING.md.
   it('returns null for a stone amount before another weight part', () => {
     expect(parseMeasurement('stone two and a half thousand lb')).toBeNull();
   });

@@ -95,11 +95,13 @@ jobs:
             - The PR body has exactly one line `Fixes AFA-n` or `Part of AFA-n`, and the change
               stays within what the PR body says that the ticket asks for.
             - A bug fix adds a test with the failure inputs that the PR body names, and each
-              expected result comes from the ticket, the README or a hand calculation.
+              expected result comes from the ticket, the README, `PARSING.md` or a hand
+              calculation.
             - No existing test is skipped, deleted or loosened.
-            - A result that a README example documents changes only when the PR body says that
-              the ticket asks for that change, and then the README changes with it. The README
-              is the public specification, so flag any other change to such a result as a bug.
+            - A result that an example in the README or `PARSING.md` documents changes only when
+              the PR body says that the ticket asks for that change, and then the example changes
+              with it. These examples are the public specification, so flag any other change to
+              such a result as a bug.
             - A change under `src/`, or to a `package.json` field that reaches consumers, adds a
               changeset under `.changeset/`.
             - The changed code has no bug: no wrong result, no throw and no security problem.

@@ -2,15 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
 
 // AFA-130: after a number, "in" means inches, also in ordinary text (README, AFA-67). These pin
-// what such inches do next to another measurement. Each reason is a README rule or option, or the
-// ticket's row.
+// what such inches do next to another measurement. Each reason is a rule or an option in the
+// README or PARSING.md, or the ticket's row.
 describe('"N in" in ordinary text next to another measurement', () => {
   it.each([
-    // Separate Measurements: feet then inches, which are the next smaller unit, form one height.
-    // 6 × 12 + 3 = 75.
+    // More Than One Measurement (PARSING.md): feet then inches, which are the next smaller unit,
+    // form one height. 6 × 12 + 3 = 75.
     ['6 ft and ranked 3 in the state', 75, 6, 3],
-    // The same join with a comma between the parts. The README's Weight section says that
-    // commas don't separate parts. 6 × 12 + 10 = 82.
+    // The same join with a comma between the parts. PARSING.md says that a comma doesn't
+    // separate the parts of a measurement. 6 × 12 + 10 = 82.
     ['6 ft, top 10 in the class', 82, 6, 10],
   ] as const)('joins the feet and the inches in %s: %s in', (raw, value, feet, inches) => {
     expect(parseMeasurement(raw)).toMatchObject({
@@ -51,8 +51,8 @@ describe('"N in" in ordinary text next to another measurement', () => {
     });
   });
 
-  // Separate Measurements: inches before feet aren't parts of one height, so they are two
-  // measurements. When they agree, the first is returned: 72 in is 6 ft.
+  // More Than One Measurement (PARSING.md): inches before feet aren't parts of one height, so they
+  // are two measurements. When they agree, the first is returned: 72 in is 6 ft.
   it('reads ranked 72 in the state and 6 ft as 72 in', () => {
     expect(parseMeasurement('ranked 72 in the state and 6 ft')).toMatchObject({
       value: 72,
@@ -62,7 +62,8 @@ describe('"N in" in ordinary text next to another measurement', () => {
   });
 
   it.each([
-    // Separate Measurements: 3 in and 6 ft (72 in) are two measurements that disagree.
+    // More Than One Measurement (PARSING.md): 3 in and 6 ft (72 in) are two measurements that
+    // disagree.
     'ranked 3 in the state and 6 ft',
     // The ticket's row: "in.the" is one word, not "in" after a number, so 10 has no unit.
     'Top 10 in.the class',
