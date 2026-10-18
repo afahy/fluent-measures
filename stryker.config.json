@@ -5,5 +5,5 @@
   "mutate": ["src/**/!(*.spec|*.test).ts"],
   "reporters": ["clear-text", "progress"],
   "coverageAnalysis": "perTest",
-  "thresholds": { "high": 80, "low": 70, "break": 70 }
+  "thresholds": { "high": 99, "low": 98, "break": 98 }
 }

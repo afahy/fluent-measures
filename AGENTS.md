@@ -12,15 +12,16 @@ Run these commands from the repository root:
 - `pnpm lint` runs ESLint, Prettier checks, and the spell checker. `pnpm lint:eslint:fix` and
   `pnpm lint:format:fix` fix what they can.
 - `pnpm test` runs the unit tests and TypeScript (`tsc`) checks.
-- `pnpm test:unit:coverage` runs the unit tests with coverage.
+- `pnpm test:unit:coverage` runs the unit tests with coverage. It fails when the tests cover less
+  than 100% of `src/`.
 - `pnpm test:mutation` runs mutation testing with Stryker. CI fails if the mutation score is
   below the `break` threshold in `stryker.config.json`.
 - `pnpm build` builds the package, and `pnpm check:size` checks the build against the limits in
   `.size-limit.cjs`.
 - After the build, `pnpm check:api` compares the build's exported types with `api-report.d.ts`,
   and `pnpm test:package` runs the tests of results against the build.
-- `pnpm check` runs lint, the tests, mutation testing, the build, the size check, `check:api`
-  and `test:package`.
+- `pnpm check` runs lint, the unit tests with coverage, `tsc`, mutation testing, the build, the
+  size check, `check:api` and `test:package`.
 - `pnpm pr:status <pr>...` reports what a PR is waiting on, and `--wait` waits for a change.
   `.claude/skills/steward/SKILL.md` says how to watch PRs with it.
 

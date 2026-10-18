@@ -30,7 +30,7 @@
   "scripts": {
     "build": "tsup",
     "check:api": "node .github/scripts/api-report.mjs",
-    "check": "pnpm lint && pnpm test && pnpm test:mutation && pnpm build && pnpm check:size && pnpm check:api && pnpm test:package",
+    "check": "pnpm lint && pnpm test:unit:coverage && pnpm test:types && pnpm test:mutation && pnpm build && pnpm check:size && pnpm check:api && pnpm test:package",
     "check:size": "size-limit",
     "check:size:why": "size-limit --why",
     "ci": "pnpm clean && pnpm install && pnpm check",

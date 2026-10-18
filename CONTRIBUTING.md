@@ -8,7 +8,7 @@ We love your input! We want to make contributing to fluent-measures as easy and 
 2. Install dependencies with `pnpm install`
 3. Make your changes
 4. Add tests if applicable
-5. Run tests with `pnpm test`
+5. Run tests with `pnpm test`, and check coverage with `pnpm test:unit:coverage`
 6. Make sure your code lints with `pnpm lint`
 7. Format your code with `pnpm lint:format:fix`
 8. Create a changeset using `pnpm changeset`
@@ -132,7 +132,8 @@ pnpm lint:format:fix
 
 1. If a change affects users, update `README.md` or `PARSING.md`
 2. Add tests for any new functionality
-3. Make sure all tests pass (`pnpm test`) and types check (`pnpm test:types`)
+3. Make sure all tests pass (`pnpm test`), coverage stays at 100% (`pnpm test:unit:coverage`)
+   and types check (`pnpm test:types`)
 4. Run linting and formatting (`pnpm lint` and `pnpm lint:format:fix`)
 5. Create a changeset describing your changes (`pnpm changeset`)
 6. Fill in every section of the pull request template (`.github/pull_request_template.md`), including the related issue or Linear ticket and the tests you ran. Don't replace the template with a different format
@@ -176,7 +177,9 @@ Provides fuzzy string matching capabilities using Levenshtein distance algorithm
 
 ## Testing
 
-We aim to maintain 100% test coverage. Each module should have a corresponding test file in the `tests/` directory. When adding new features or fixing bugs, please include tests that cover your changes.
+CI fails when the tests cover less than 100% of the lines, branches, functions or statements in
+`src/`. Each module should have a corresponding test file in the `tests/` directory. When adding
+new features or fixing bugs, please include tests that cover your changes.
 
 Tests can be run with:
 
@@ -198,7 +201,7 @@ CI also runs mutation testing with Stryker on pull requests to `main` and on pus
 Stryker makes small changes to the code in `src/`, such as flipping a condition or deleting a
 statement, and runs the tests against each one. The mutation score is the percentage of these
 changes that the tests catch. The job fails when the score is below the `break` threshold in
-`stryker.config.json` (currently 70). The job output lists each change the tests missed. A
+`stryker.config.json` (currently 98). The job output lists each change the tests missed. A
 `Survived` entry means tests ran and still passed; a `NoCoverage` entry means no test runs that
 code. Add tests that catch either kind.
 
