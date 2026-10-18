@@ -38,12 +38,12 @@ ticket ID and text. Don't open a PR without a ticket ID.
    pass.
 4. Add a changeset for any change to `src/` or to `package.json` fields that affect
    consumers. `pnpm changeset` asks questions that you can't answer, so write the file
-   yourself: `.changeset/<short-name>.md`, with `'@afahy/fluent-measures': patch` between two
-   `---` lines, and then a summary of the change for users. Use `minor` in place of `patch`
-   when the PR changes a result that `main` returns and that isn't `null`. Use `minor` also
-   when the PR changes a type that `src/index.ts` exports. While the version is below 1.0.0,
-   a minor bump marks a change that can break users. Never use `major`. Don't change the version in
-   `package.json`. Changesets sets it at release time.
+   yourself. Name it `.changeset/<short-name>.md`. Put `'@afahy/fluent-measures': patch`
+   between two `---` lines, and then a summary of the change for users. Use `minor` in
+   place of `patch` when the PR changes a result that `main` returns and that isn't `null`.
+   Use `minor` also when the PR changes a type that `src/index.ts` exports. While the
+   version is below 1.0.0, a minor bump marks a change that can break users. Never use
+   `major`. Don't change the version in `package.json`. Changesets sets it at release time.
 5. Commit messages and PR titles follow Conventional Commits, as configured in
    `commitlint.config.js`. CI checks both, and checks titles against
    `commitlint.pr-title.config.js` as well. Write PR titles as `type: summary`, for example
@@ -52,7 +52,8 @@ ticket ID and text. Don't open a PR without a ticket ID.
    scope is optional, and the only allowed scopes are `core`, `docs`, `deps`, `ci` and
    `config`. Keep titles to 65 characters or fewer: squash merging appends ` (#NN)`, and
    the commit on `main` must fit in 72.
-6. A new or changed timing test follows the comment on `parseWithin` in `tests/timing.ts`.
+6. A new or changed timing test checks a limit of CPU time with `parseWithin` from
+   `tests/timing.ts`. Set the limit as the comment on `parseWithin` says.
 7. The examples in the README and in `PARSING.md` are the public specification. When code
    and an example disagree, follow the ticket's direction about which one changes. If the
    ticket does not say, ask on the ticket.
@@ -73,8 +74,8 @@ ticket ID and text. Don't open a PR without a ticket ID.
 
 When you review a pull request, report each of these problems:
 
-- The PR body doesn't have exactly one `Fixes AFA-n` or `Part of AFA-n` line, or the change
-  goes beyond what the PR body says that the ticket asks for.
+- The PR body doesn't have exactly one `Fixes AFA-n` or `Part of AFA-n` line.
+- The change goes beyond what the PR body says that the ticket asks for.
 - A result that an example in the README or `PARSING.md` documents changes, and the PR body
   doesn't say that the ticket asks for the change. When the ticket asks for it, the example
   must change too.
@@ -189,8 +190,8 @@ and continue with other work. Don't look for another way around the check.
 - After each push, watch CI and the bot reviews as `.claude/skills/steward/SKILL.md` says.
   Don't ask whether to watch. Post each Codex review request that `pnpm pr:status` lists, and
   note each Codex gap in your report.
-- The Claude review runs once, when a PR opens or becomes ready for review. Don't ask it to
-  review again.
+- The Claude review runs when a PR opens and each time it becomes ready for review. Don't ask
+  it to review again.
 - If a CI job fails because no runner picked it up, re-run the failed jobs. If GitHub
   reports an Actions incident, re-run them when it ends. Fix all other CI failures on the
   branch.

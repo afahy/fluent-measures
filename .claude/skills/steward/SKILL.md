@@ -41,10 +41,10 @@ offer to post it. `pr:status` lists a request when Codex hasn't started 30 minut
 could, once for each commit. It stops waiting for Codex 2 hours after it could start. A PR that
 Codex never reviewed then waits on the maintainer. Say so in your report.
 
-The Claude review runs once, when a PR opens or becomes ready for review. Its `Claude review`
-check counts as CI, and `pr:status` never asks it to review. It posts inline comments as
-`claude[bot]` and a summary comment as `github-actions[bot]`. Read both, and handle each finding
-as AGENTS.md says.
+The Claude review runs when a PR opens and each time it becomes ready for review. Its
+`Claude review` check counts as CI, and `pr:status` never asks it to review. It posts inline
+comments as `claude[bot]` and a summary comment as `github-actions[bot]`. Read both, and handle
+each finding as AGENTS.md says.
 
 ## Waiting
 
