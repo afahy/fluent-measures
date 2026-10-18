@@ -29,7 +29,8 @@
   "sideEffects": false,
   "scripts": {
     "build": "tsup",
-    "check": "pnpm lint && pnpm test && pnpm test:mutation && pnpm build && pnpm check:size",
+    "check:api": "node .github/scripts/api-report.mjs",
+    "check": "pnpm lint && pnpm test && pnpm test:mutation && pnpm build && pnpm check:size && pnpm check:api && pnpm test:package",
     "check:size": "size-limit",
     "check:size:why": "size-limit --why",
     "ci": "pnpm clean && pnpm install && pnpm check",
@@ -60,7 +61,8 @@
     "test:unit": "vitest run",
     "test:unit:coverage": "vitest run --coverage",
     "test:unit:watch": "vitest watch",
-    "test:mutation": "stryker run"
+    "test:mutation": "stryker run",
+    "test:package": "vitest run --config vitest.package.config.ts"
   },
   "keywords": [
     "measurements",
