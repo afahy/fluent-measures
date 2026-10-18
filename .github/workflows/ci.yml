@@ -148,6 +148,7 @@ jobs:
       - name: Hash the inputs that Stryker doesn't compare
         id: inputs
         run: |
+          set -euo pipefail
           echo "hash=${{ hashFiles('package.json', 'pnpm-lock.yaml', 'tsconfig.json', 'stryker.config.json', 'vitest.config.ts', '.github/workflows/ci.yml', '.github/actions/setup/action.yml', 'README.md', 'PARSING.md', 'docs/index.html', 'tests/**', '!tests/**/*.test.ts') }}" >> "$GITHUB_OUTPUT"
           echo "tools=${{ hashFiles('package.json', 'pnpm-lock.yaml', 'tsconfig.json', 'stryker.config.json', 'vitest.config.ts') }}" >> "$GITHUB_OUTPUT"
 
@@ -166,7 +167,8 @@ jobs:
 
       # Each run on main also saves its results under a key that ends in "-stopped" when `timeout`
       # stopped it, or in "-ended" (AFA-139). A push to main restores the newest of these entries,
-      # also when the run before it hasn't saved yet.
+      # also when the run before it hasn't saved yet. The newest entry is the one saved last. So
+      # when runs overlap, it can come from an older commit than the last run that ended.
       - id: main
         uses: actions/cache/restore@v4
         if: github.event_name == 'push' && github.run_attempt == 1
@@ -190,6 +192,7 @@ jobs:
       - name: Mutation tests
         id: mutation
         run: |
+          set -euo pipefail
           status=0
           timeout --signal=INT 27m pnpm test:mutation --incremental || status=$?
           if [ "$status" -eq 124 ]; then echo "stopped=true" >> "$GITHUB_OUTPUT"; fi

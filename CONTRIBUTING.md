@@ -212,14 +212,17 @@ differ from a full run. A change to the packages, or to a file that tests read, 
 Such files are `README.md`, `PARSING.md` and the corpus.
 
 A push to `main` starts from no results and runs every mutant, except as the next paragraph says.
-It saves the results that pull requests reuse. A re-run of the job also runs every mutant. For a full run on a pull request,
-re-run this job or all jobs. "Re-run failed jobs" doesn't run this job again when it passed.
+It saves the results that pull requests reuse. A re-run of the job also runs every mutant. For a
+full run on a pull request, re-run this job or all jobs. "Re-run failed jobs" doesn't run this job
+again when it passed.
 
 A run that takes more than 27 minutes stops and fails, but it saves its results so far. On a pull
 request, the next push goes on from them. On `main`, each push looks at the newest results that a
 run on `main` saved. If that run stopped, the push goes on from its results and runs the mutants
-that it didn't reach. These results come from an earlier commit, so they aren't exact. So a run
-that goes on from them doesn't save its results for pull requests.
+that it didn't reach. These results come from an earlier commit, and a change to a file that tests
+read doesn't reset them. So they aren't exact, and a run that goes on from them doesn't save its
+results for pull requests. When runs on `main` overlap, the newest results can come from an older
+commit than the last run that ended.
 
 A second job, "Mutants on changed lines are killed", runs Stryker on the files that a pull
 request changes under `src/`. It fails when a mutant whose code overlaps a line that the pull
