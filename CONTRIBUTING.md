@@ -170,7 +170,8 @@ Provides fuzzy string matching capabilities using Levenshtein distance algorithm
 
 ## Testing
 
-We aim to maintain 100% test coverage. Each module should have a corresponding test file in the `tests/` directory. When adding new features or fixing bugs, please include tests that cover your changes.
+CI fails when the tests cover less than 100% of the lines, branches, functions or statements in
+`src/`. Each module should have a corresponding test file in the `tests/` directory. When adding new features or fixing bugs, please include tests that cover your changes.
 
 Tests can be run with:
 
@@ -192,7 +193,7 @@ CI also runs mutation testing with Stryker on pull requests to `main` and on pus
 Stryker makes small changes to the code in `src/`, such as flipping a condition or deleting a
 statement, and runs the tests against each one. The mutation score is the percentage of these
 changes that the tests catch. The job fails when the score is below the `break` threshold in
-`stryker.config.json` (currently 70). The job output lists each change the tests missed. A
+`stryker.config.json` (currently 98). The job output lists each change the tests missed. A
 `Survived` entry means tests ran and still passed; a `NoCoverage` entry means no test runs that
 code. Add tests that catch either kind.
 
