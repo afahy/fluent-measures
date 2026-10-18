@@ -1,11 +1,14 @@
 import { Buffer } from 'node:buffer';
+import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { execPath } from 'node:process';
 import { describe, expect, it } from 'vitest';
 import {
   backslashPaths,
   controlPaths,
   decodeNames,
+  directiveLines,
   gitEnvironment,
   hunkRanges,
   isSourceFile,
@@ -484,5 +487,57 @@ describe('reasonlessDirectives', () => {
     expect(reasonlessDirectives(`${code}\n// Stryker disable next-line all\nx;`, [[2, 2]])).toEqual(
       [2]
     );
+  });
+
+  // AFA-117: TypeScript gives the end of the file a JSDoc after it as a child, so the walk read no
+  // comment before that JSDoc.
+  it.each([
+    ['x;\n// Stryker disable all\n/** doc */\n', [2]],
+    ['x;\n// Stryker disable all\n', [2]],
+  ])('reads a directive before a JSDoc at the end of the file in %j', (source, expected) => {
+    expect(reasonlessDirectives(source, [[2, 2]])).toEqual(expected);
+  });
+});
+
+// AFA-117: the check says whether it could parse the file, so its message can say why it flags a
+// line. A file it can't parse fails safe, as `reasonlessDirectives` does.
+describe('directiveLines', () => {
+  it.each([
+    ['x;', true],
+    [`const x = ${'('.repeat(5000)}1${')'.repeat(5000)};`, false],
+  ])('says whether it parsed the file after %#', (code, parsed) => {
+    const comment = '// Stryker disable next-line all: a reason';
+    expect(directiveLines(`${code}\n${comment}\nx;`, [[2, 2]])).toEqual({
+      lines: parsed ? [] : [2],
+      parsed,
+    });
+  });
+});
+
+// AFA-117: no directive can be on a changed line that has no "Stryker", so the check reads such a
+// file without TypeScript, which is 9 MB, and the other helpers never load it. A process of its own
+// shows which modules this module loads.
+describe('loading TypeScript', () => {
+  const loads = (call: string): boolean => {
+    const script = `
+      import { createRequire } from 'node:module';
+      import { sep } from 'node:path';
+      const { reasonlessDirectives } = await import(${JSON.stringify(resolve('.github/scripts/changed-lines.mjs'))});
+      ${call};
+      const cache = Object.keys(createRequire(import.meta.url).cache);
+      console.log(cache.some(file => file.endsWith(['', 'typescript', 'lib', 'typescript.js'].join(sep))));
+    `;
+    return (
+      execFileSync(execPath, ['--input-type=module', '-e', script], { encoding: 'utf8' }).trim() ===
+      'true'
+    );
+  };
+
+  it('doesn\'t load TypeScript when no changed line holds "Stryker"', () => {
+    expect(loads("reasonlessDirectives('x;\\n// Stryker disable all\\ny;', [[3, 3]])")).toBe(false);
+  });
+
+  it('loads TypeScript to read a changed line with "Stryker"', () => {
+    expect(loads("reasonlessDirectives('x;\\n// Stryker disable all\\ny;', [[2, 2]])")).toBe(true);
   });
 });

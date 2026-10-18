@@ -682,6 +682,48 @@ describe('mutation-check.mjs', () => {
     expect(check.stderr).toContain('::error::Remove stryker.log, or make it a regular file.');
   });
 
+  // AFA-117: Stryker reads a glob character in the repository's path as part of each pattern, so
+  // it finds no file. The check says so, and doesn't ask to move each changed file.
+  it('fails in a folder whose path has a glob character', () => {
+    const parent = mkdtempSync(resolve(tmpdir(), 'fluent-measures-mutation-'));
+    directories.push(parent);
+    const repository = resolve(parent, 'a[1]');
+    mkdirSync(repository);
+    git(repository, 'init', '--initial-branch', 'main');
+    git(repository, 'config', 'user.email', 'test@example.com');
+    git(repository, 'config', 'user.name', 'Test');
+    git(repository, 'config', 'commit.gpgsign', 'false');
+    const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
+    commitFiles(repository, { 'src/units.ts': 'export const a = 1 > 0;\n' });
+    addStrykerStub(repository);
+
+    const check = runCheck(repository, base);
+
+    expect(check.status).toBe(1);
+    expect(check.stderr).toContain(
+      '::error::Move the repository to a folder whose path has no glob character.'
+    );
+  });
+
+  // AFA-117: on code nested too deeply to parse, the check flags each changed line with "Stryker
+  // disable", and it says why, not that the comment has no reason.
+  it('says why it flags a directive in a file that it cannot parse', () => {
+    const repository = createRepository();
+    const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
+    commitFiles(repository, {
+      'src/units.ts': `export const x = ${'('.repeat(5000)}1${')'.repeat(5000)};\n// Stryker disable next-line all: a reason\nexport const y = 1;\n`,
+    });
+    addStrykerStub(repository);
+
+    const check = runCheck(repository, base);
+
+    expect(check.status).toBe(1);
+    expect(check.stderr).toContain(
+      "::error file=src/units.ts,line=2::This check can't read the comments in this file"
+    );
+    expect(check.stderr).not.toContain('has no reason. Add');
+  });
+
   // The check depends on three things in the installed Stryker: the warning's text, the log's name
   // and that Stryker adds to the log. If an update changes one, this test fails.
   it('matches the warning, the log file, its write mode and its option in the installed Stryker', () => {
