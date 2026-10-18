@@ -1,5 +1,6 @@
 {
   "*.{js,jsx,ts,tsx}": ["prettier --write", "eslint --fix"],
+  "{src,tests}/**/*.{mjs,cjs,mts,cts}": ["prettier --write", "eslint --fix"],
   "*.{json,yml,yaml}": ["prettier --write"],
   "*.md": ["prettier --write", "cspell --no-must-find-files"],
   "*.github/**/*.md": ["prettier --write", "cspell --no-must-find-files"],
