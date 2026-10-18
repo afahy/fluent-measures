@@ -5,7 +5,9 @@
 ## What it does
 
 The user gets the value and the unit of a height or a weight, from a short or a long unit name,
-or from a mark such as `#` for pounds. Stone, ounces and grams give `null`.
+or from a mark such as `#` for pounds. A weight with a part in stone, ounces or grams gives
+`null`, as in `12st 4lb`. An amount in these units in another part of the text doesn't count, as
+in `I drink 8 oz of water, weight 180 lbs`, which gives 180 lb.
 
 ## How a user reaches it
 

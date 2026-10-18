@@ -30,6 +30,6 @@ fractions, decimal commas and thousands groups.
   `tests/parseMeasurement.fractions.test.ts`, `tests/parseMeasurement.numberWords.test.ts`,
   `tests/parseMeasurement.signedParts.test.ts`, `tests/parseMeasurement.spokenNumbers.test.ts`,
   `tests/parseMeasurement.unicodeMinus.test.ts`, `tests/parseMeasurement.zeroBeforeUnit.test.ts`,
-  `tests/wordsToNumber.test.ts`
+  `tests/wordsToNumber.test.ts`, `tests/normalizeForms.test.ts`, `tests/normalizeFractions.test.ts`
 - Properties: "generated single measurements" in `tests/properties.test.ts`
 - Corpus categories: `words`, `mixed-numbers`, `decimals`, `commas`

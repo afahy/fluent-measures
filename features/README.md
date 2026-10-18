@@ -18,9 +18,9 @@ Use the map before you change a result:
 - `pnpm test:package` runs the tests of results against the build, through `import` and through
   `require`. Run it after `pnpm build`.
 - Add each new test file and each new way to reach a feature to its file in the same PR.
-  `tests/featureMap.test.ts` fails when a `tests/parseMeasurement*.test.ts` file, a corpus
-  category or a `PARSING.md` section isn't in the map, or when the map names a file that doesn't
-  exist.
+- `tests/featureMap.test.ts` fails when a `tests/parseMeasurement*.test.ts` file isn't in the map.
+  It also fails for a corpus category or a `PARSING.md` section that isn't in the map, and for a
+  file that the map names but that doesn't exist.
 
 These tests check every feature, so no feature file lists them: `tests/corpus.test.ts`,
 `tests/readme.test.ts`, `tests/docsExamples.test.ts`, `tests/resultSnapshot.test.ts` and

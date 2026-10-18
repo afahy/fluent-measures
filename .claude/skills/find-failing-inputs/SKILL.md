@@ -1,6 +1,6 @@
 ---
 name: find-failing-inputs
-description: Look for parseMeasurement inputs that a branch gets wrong. Use in a new subagent for each PR that changes src/, with only the branch name and the ticket ID. It writes the expected result of each input before it runs it, runs the inputs through the corpus test on the branch and on main, and reports each input whose result disagrees with the README, PARSING.md or a hand calculation.
+description: Look for parseMeasurement inputs that a branch gets wrong. Use it in a new subagent for each PR that changes src/, with only the branch name and the ticket ID. It writes the expected result of each input first. Then it runs the inputs on the branch and on main, and reports each input whose result disagrees with the specification.
 ---
 
 # Find failing inputs
@@ -18,9 +18,9 @@ reviews, so that you don't share their assumptions.
 1. Read the ticket.
 2. Run `git diff origin/main...<branch> -- src/`. Use the local branch, which can be ahead of its
    push, or not pushed yet.
-3. Open each file in `features/` whose "Source" line names a changed file. Read its "How a user
-   reaches it" and "Where the rules are" sections, and the README and `PARSING.md` sections that
-   they name.
+3. Open each file in `features/` whose "Source" line names a changed file.
+4. Read its "How a user reaches it" and "Where the rules are" sections.
+5. Read the README and `PARSING.md` sections that those sections name.
 
 ## 2. Write the inputs and their expected results
 
@@ -43,15 +43,23 @@ Write the lines in a file in your scratchpad.
 
 ## 3. Run the inputs on the branch and on main
 
-Do this in worktrees of your own, never in the PR's worktree. Put each one in a new temporary
-directory, so that two runs at the same time can't use the same path:
+Do this in worktrees of your own, never in the PR's worktree. Each shell command runs in a new
+shell, so a shell variable doesn't last to the next command. Use the paths that the commands
+print.
 
-```bash
-probe_branch="$(mktemp -d)/branch"
-probe_main="$(mktemp -d)/main"
-git worktree add --detach "$probe_branch" <branch>
-git worktree add --detach "$probe_main" origin/main
-```
+1. Make a new temporary directory, so that two runs at the same time can't use the same path:
+
+   ```bash
+   mktemp -d
+   ```
+
+2. Write down the path that it prints. Use it in place of `<dir>` in each command below.
+3. Add the two worktrees:
+
+   ```bash
+   git worktree add --detach <dir>/branch <branch>
+   git worktree add --detach <dir>/main origin/main
+   ```
 
 In each worktree:
 
@@ -62,8 +70,13 @@ In each worktree:
    "wrong", "missed" or "throws" disagrees, with its actual output. An entry that it doesn't list
    agrees.
 
-Then remove your two worktrees, and only those, with `git worktree remove --force "$probe_branch"`
-and `git worktree remove --force "$probe_main"`.
+Then remove your two worktrees, and only those. Then remove the temporary directory:
+
+```bash
+git worktree remove --force <dir>/branch
+git worktree remove --force <dir>/main
+rmdir <dir>
+```
 
 ## 4. Report
 
