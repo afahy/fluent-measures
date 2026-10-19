@@ -168,7 +168,15 @@ describe('the lint config for each test format', () => {
     expect(result.messages.map(message => message.ruleId)).toEqual(['no-undef']);
   });
 
-  // TypeScript allows overloads, and tsc reports a real redeclaration.
+  // TypeScript allows overloads. A repeated var is still an error, because tsc accepts it.
+  it('finds a repeated var in src/', async () => {
+    const code = `export function f(a: number): number {\n  var x: number = a;\n  var x: number;\n  return x;\n}\n`;
+    const [result] = await eslint.lintText(code, { filePath: 'src/x.ts' });
+    expect(result.messages.map(message => message.ruleId)).toEqual([
+      '@typescript-eslint/no-redeclare',
+    ]);
+  });
+
   it('reads overloads in src/', async () => {
     const code = `export function h(a: string): string;\nexport function h(a: number): number;\nexport function h(a: string | number): string | number {\n  return a;\n}\n`;
     const [result] = await eslint.lintText(code, { filePath: 'src/x.ts' });

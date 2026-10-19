@@ -47,9 +47,11 @@ export default [
       '@typescript-eslint/no-unused-vars': ['error', UNUSED],
       '@typescript-eslint/no-explicit-any': 'error',
       'no-console': CONSOLE,
-      // TypeScript allows overloads and a type and a value with the same name, and tsc reports a
-      // real redeclaration (AFA-127).
+      // TypeScript allows overloads and a type and a value with the same name. typescript-eslint's
+      // version of the rule allows them too, and still finds a repeated var, which tsc accepts
+      // (AFA-127).
       'no-redeclare': 'off',
+      '@typescript-eslint/no-redeclare': 'error',
     },
   },
   // In a TypeScript test, tsc checks each name, also the Node globals such as process, so
