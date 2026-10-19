@@ -11,7 +11,9 @@ export function matchUnit(word: string, type: MeasurementType, fuzziness?: numbe
   for (const aliases of UNIT_ALIASES[type]) {
     for (const alias of aliases) {
       if (word === alias) return aliases[0];
-      // Exclude common prose near foot/feet and kilo/kilos.
+      // Exclude common prose near foot/feet and kilo/kilos. Without the ^, a word with letters
+      // before these, such as "centimetfeel", is excluded too. But only a fuzziness of 3 could
+      // match such a word to a unit, and fuzziness is 0 to 2 (AFA-165).
       if (!fuzziness || /^(f(oo|ee)[dl]|kills?)$/.test(word)) continue;
       // British spellings match only exactly, so they add no fuzzy matches for prose such as "mere".
       if (EXACT_ALIASES.has(alias)) continue;

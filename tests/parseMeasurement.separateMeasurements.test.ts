@@ -140,3 +140,15 @@ describe('separate measurements in one input', () => {
     }
   );
 });
+
+// AFA-165: 0 ft 0 in is one measurement of zero, which doesn't count, as in PARSING.md's
+// `0 feet; actual 1.8 meters` (1.8 m). So the result is 5 in, and its matches hold only that part.
+describe('a zero measurement before another one', () => {
+  it('leaves the zero parts out of matches', () => {
+    expect(parseMeasurement('0 ft 0 in, 5 in')).toMatchObject({
+      value: 5,
+      unit: 'in',
+      matches: [{ value: 5, unit: 'in' }],
+    });
+  });
+});

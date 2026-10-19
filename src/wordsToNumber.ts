@@ -1,4 +1,5 @@
-// Values advance by one through nineteen, then by ten from twenty through ninety.
+// Values advance by one through nineteen, then by ten from twenty through ninety. "twenty" is 20
+// by either formula (AFA-165).
 export const NUMBER_WORDS = new Map(
   'zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty thirty forty fifty sixty seventy eighty ninety'
     .split(' ')
