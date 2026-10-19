@@ -114,9 +114,9 @@ export default [
       // Other ways to skip a test or to mark it as expected to fail, which rule 3 forbids too
       // (AFA-70, AFA-150). no-disabled-tests finds .skip on an alias or a chain such as
       // test.concurrent.skip, and ctx.skip() in the first parameter. The local rule follows each
-      // Vitest chain to its import, and finds .fails, .todo, their options, a skip from the test's
-      // context and a constant condition (AFA-172). A skipIf with a real condition stays allowed,
-      // such as the one for Stryker in AFA-95.
+      // Vitest chain to its import (AFA-172). It finds .fails, .todo, their options, a skip from
+      // the test's context and a constant condition. A skipIf with a real condition stays
+      // allowed, such as the one for Stryker in AFA-95.
       'local/vitest-chains': 'error',
       // A count of 0 assertions.
       'no-restricted-syntax': [

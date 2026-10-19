@@ -87,6 +87,23 @@ describe('the lint for tests that skip or are expected to fail', () => {
     [`it.runIf(NaN)('x', ${pass});`, constant],
     [`it.skipIf(\`\${1}\`)('x', ${pass});`, constant],
     [`it.skipIf(1 === 1)('x', ${pass});`, constant],
+    [`it('x', ({ skip }) => {\n  skip();\n  expect(1).toBe(1);\n}, 1000);`, skip],
+    [`it('x', ({ skip } = {}) => {\n  skip();\n  expect(1).toBe(1);\n});`, skip],
+    [
+      `const f = it.for;\nf([1])('x', (n, { skip }) => {\n  skip();\n  expect(n).toBe(1);\n});`,
+      skip,
+    ],
+    [
+      `import { expect, it as describe } from 'vitest';\n\ndescribe('x', ({ skip }) => {\n  skip();\n  expect(1).toBe(1);\n});`,
+      skip,
+    ],
+    [`import * as v from 'vitest';\n\nv.it.fails('x', () => {\n  v.expect(1).toBe(1);\n});`, fails],
+    [
+      `import { expect, test } from './fixtures';\n\ntest.fails('x', () => {\n  expect(1).toBe(1);\n});`,
+      fails,
+    ],
+    [`it('x', { fails: !NaN }, ${pass});`, fails],
+    [`it('x', { fails: !(1 - 1) }, ${pass});`, fails],
   ])('rejects %s', async (body, problem) => {
     expect(await problems(body)).toContain(problem);
   });
@@ -117,7 +134,22 @@ describe('the lint for tests that skip or are expected to fail', () => {
     `it('x', { todo: undefined }, ${pass});`,
     `it('x', { fails: !1 }, ${pass});`,
     `it.for([1])('x', (n, ctx) => {\n  expect(ctx.task.name).toBe('x');\n  expect(n).toBe(1);\n});`,
+    // A real condition, also with typeof or an array, isn't constant.
+    `it.skipIf(typeof window !== 'undefined')('x', ${pass});`,
+    `it.skipIf(+[process.env.N])('x', ${pass});`,
+    // An alias of .each passes a case, not the context.
+    // The Vitest plugin doesn't see the alias as a test, so this body has no expect.
+    `const e = it.each;\ne([{ skip: 1 }])('x', ({ skip }) => {\n  void skip;\n});`,
+    `it('x', { todo: \`\` }, ${pass});`,
   ])('allows %s', async body => {
     expect(await problems(body)).toEqual([]);
+  });
+
+  // vitest/no-disabled-tests reports ctx.skip() on the first parameter, so the local rule doesn't
+  // report it a second time.
+  it('reports ctx.skip() once', async () => {
+    expect(await problems(`it('x', ctx => {\n  ctx.skip();\n  expect(1).toBe(1);\n});`)).toEqual([
+      'vitest/no-disabled-tests',
+    ]);
   });
 });
