@@ -11,10 +11,13 @@ async function problems(body: string): Promise<string[]> {
   const names = ['describe', 'expect', 'it', 'test'].filter(name =>
     new RegExp(`\\b${name}\\b`).test(body)
   );
-  const code = `import { ${names.join(', ')} } from 'vitest';\n\n${body}\n`;
+  // A body that starts with its own import gets no other.
+  const code = body.startsWith('import ')
+    ? `${body}\n`
+    : `import { ${names.join(', ')} } from 'vitest';\n\n${body}\n`;
   const [result] = await eslint.lintText(code, { filePath: 'tests/a/x.test.ts' });
   return result.messages.map(({ ruleId, message }) =>
-    ruleId === 'no-restricted-syntax' ? message : String(ruleId)
+    ruleId === 'no-restricted-syntax' || ruleId === 'local/vitest-chains' ? message : String(ruleId)
   );
 }
 
@@ -63,6 +66,27 @@ describe('the lint for tests that skip or are expected to fail', () => {
     [`it.runIf(void 0)('x', ${pass});`, constant],
     [`it.skipIf(!0)('x', ${pass});`, constant],
     [`it.skipIf(\`x\`)('x', ${pass});`, constant],
+    // AFA-172: the local rule follows each chain to its Vitest import, at any depth.
+    [
+      `it.skipIf(Date.now() < 0).concurrent.each([1])('x', { todo: true }, n => {\n  expect(n).toBe(1);\n});`,
+      fails,
+    ],
+    [
+      `it.skipIf(Date.now() < 0).concurrent.for([1])('x', (n, { skip }) => {\n  skip();\n  expect(n).toBe(1);\n});`,
+      skip,
+    ],
+    [`it.sequential.concurrent('x', ({ skip }) => {\n  skip();\n  expect(1).toBe(1);\n});`, skip],
+    [`it.for([1])('x', (n, ctx) => {\n  ctx.skip();\n  expect(n).toBe(1);\n});`, skip],
+    [`it('x', async ctx => {\n  const { skip } = ctx;\n  skip();\n  expect(1).toBe(1);\n});`, skip],
+    [`const myTest = test.extend({ a: 1 });\nmyTest('x', { fails: true }, ${pass});`, fails],
+    [`it['fails']('x', ${pass});`, fails],
+    [`const { todo } = it;\ntodo('x');`, fails],
+    [`it.skipIf(() => Date.now() < 0)('x', ${pass});`, constant],
+    [`it.skipIf({})('x', ${pass});`, constant],
+    [`it.skipIf(!!1)('x', ${pass});`, constant],
+    [`it.runIf(NaN)('x', ${pass});`, constant],
+    [`it.skipIf(\`\${1}\`)('x', ${pass});`, constant],
+    [`it.skipIf(1 === 1)('x', ${pass});`, constant],
   ])('rejects %s', async (body, problem) => {
     expect(await problems(body)).toContain(problem);
   });
@@ -83,6 +107,16 @@ describe('the lint for tests that skip or are expected to fail', () => {
     'export const custom = test.extend({ todo: true });',
     `const service = { runIf: (value: unknown): unknown => value };\nit('x', () => {\n  expect(service.runIf(undefined)).toBeUndefined();\n});`,
     `describe.each([{ skip: false }])('x', ({ skip }) => {\n  it('y', () => {\n    expect(skip).toBe(false);\n  });\n});`,
+    // AFA-172: a local name that shadows Vitest's isn't a test function.
+    `it.each([{ todo: true }])('x', it => {\n  expect(it.todo).toBe(true);\n});`,
+    `import { expect, it } from 'vitest';\n\nit('x', () => {\n  const test = { todo: true };\n  expect(test.todo).toBe(true);\n});`,
+    // Fixtures and options whose value is false.
+    'export const custom = test.override({ todo: 2 });',
+    'export const custom = test.extend({ a: 1 }).extend({ todo: 2 });',
+    `it('x', { fails: 0 }, ${pass});`,
+    `it('x', { todo: undefined }, ${pass});`,
+    `it('x', { fails: !1 }, ${pass});`,
+    `it.for([1])('x', (n, ctx) => {\n  expect(ctx.task.name).toBe('x');\n  expect(n).toBe(1);\n});`,
   ])('allows %s', async body => {
     expect(await problems(body)).toEqual([]);
   });
