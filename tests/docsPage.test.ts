@@ -44,8 +44,8 @@ const HASHES: Record<string, string> = {
  * The class names in a style sheet's selectors, unescaped (AFA-121). css-tree reads CSS tokens as
  * a browser does. So a comment, a quoted string, a url() or an at-rule's prelude holds no class.
  * A newline ends a string that has no closing quote. css-tree reads a nested rule whose selector
- * list starts with "&". Other nesting, as in ".a { .b { } }" or ".a { .b & { } }", is a parse
- * error. A parse error throws, so a rule that css-tree can't read fails the check. Tailwind writes
+ * list starts with "&". Another nested rule, as in ".a { .b { } }" or ".a { .b & { } }", is a
+ * parse error. A parse error throws, so a rule that css-tree can't read fails the check. Tailwind writes
  * a "\" before a symbol in a class name, as in ".sm\:flex". It writes a first digit as a hex code
  * point, as in ".\32 xl\:text-lg". A class counts where a selector requires it of an element: not
  * inside a pseudo-class such as :not(). :is() and :where() match the element itself, so the
@@ -224,8 +224,8 @@ describe('the docs page', () => {
     ]);
   });
 
-  // css-tree doesn't read nesting without "&", so the check throws css-tree's parse error, not
-  // passes with the rule lost (AFA-169). Another error, such as a TypeError, is a bug in the check.
+  // css-tree reads a nested rule only when its selector list starts with "&". So the check throws
+  // css-tree's parse error, not passes with the rule lost (AFA-169). Another error, such as a TypeError, is a bug in the check.
   it('throws for a style sheet that css-tree cannot read', () => {
     expect(() => cssClasses('.a { .b { } }')).toThrow(SyntaxError);
     expect(() => cssClasses('.a { .b { } }')).toThrow('Identifier is expected');
