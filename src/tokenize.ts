@@ -175,7 +175,8 @@ export function normalizeNumericCommas(input: string): string {
       return number.replace(/,(?=\d{1,2}$)/, '.').replace(/,/g, '');
     }
   );
-  // Reject the whole input so a malformed component or range cannot leak a value.
+  // Reject the whole input so a malformed component or range cannot leak a value. Another string
+  // here changes a result only for contradicting options, which AFA-178 asks about.
   return valid ? normalized : '';
 }
 

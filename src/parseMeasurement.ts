@@ -318,7 +318,9 @@ function combineParts(
 export function parseMeasurement(input: string, options: ParseOptions = {}): ParsedValue | null {
   // Stryker disable next-line StringLiteral: the replacement "Stryker was here!" also returns null.
   const trimmed = normalize(input?.trim() || '');
-  // Stryker disable next-line ConditionalExpression,BlockStatement: "false" and an empty block go on with empty text, which gives no tokens, so the steps below return null too. The tests kill "true" (AFA-165).
+  // "false" and an empty block go on with empty text, which gives no tokens, so the steps below
+  // return null too. The tests kill "true" (AFA-165).
+  // Stryker disable next-line ConditionalExpression,BlockStatement: empty text returns null either way.
   if (!trimmed) {
     return null;
   }
@@ -410,7 +412,10 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       // and the match starts at the unit.
       let [num, end, signed]: [number | null, number, boolean] =
         valueFollows || startsField ? [null, i, false] : readSignedPhrase(remaining, i - 1, -1);
-      // Stryker disable next-line ConditionalExpression: "false" gives end + 1 also with no number, and then the code below sets matchStart or skips the match before it reads it. A signed phrase reads only its field, which is the same for end and end + 1. The tests kill "true", which changes a number's match (AFA-165).
+      // "false" gives end + 1 also with no number. Then the code below sets matchStart or skips
+      // the match before it reads it, and a signed phrase reads only its field, which is the same
+      // for end and end + 1. The tests kill "true", which changes a number's match (AFA-165).
+      // Stryker disable next-line ConditionalExpression: with no number, end + 1 gives the same result.
       let matchStart = num === null ? end : end + 1;
       let matchEnd = i + 1;
 
