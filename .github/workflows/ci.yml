@@ -194,6 +194,7 @@ jobs:
         id: mutation
         run: |
           set -euo pipefail
+          command -v timeout pgrep seq > /dev/null
           status=0
           timeout --signal=INT 27m pnpm test:mutation --incremental || status=$?
           if [ "$status" -eq 124 ]; then
