@@ -52,3 +52,8 @@ export function unexplainedIgnores(
 ): Array<{ file: string; line: number; column: number; mutator: string }>;
 
 export function reasonlessDirectives(source: string, ranges: Array<[number, number]>): number[];
+
+export function directiveLines(
+  source: string,
+  ranges: Array<[number, number]>
+): { lines: number[]; parsed: boolean };
