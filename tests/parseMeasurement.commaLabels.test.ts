@@ -66,7 +66,7 @@ describe('commas separating labels from measurements', () => {
 
 // AFA-165: a tens word takes only one to nine after it, so "twenty ten" isn't one number. The
 // label then ends at "twenty", and the result is 10 cm, as PARSING.md's `phase-2, 180 cm` is
-// 180 cm.
+// 180 cm. With one to nine after the comma, the words still join (AFA-179).
 describe('a label that ends in a number word', () => {
   it('reads the measurement after the comma', () => {
     expect(parseMeasurement('phase twenty, 10 cm')).toMatchObject({ value: 10, unit: 'cm' });

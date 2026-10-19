@@ -150,7 +150,8 @@ function total(parts: QualifiedMatch[], targetUnit: Unit): number {
   let sum = 0;
   for (const { value, unit } of parts) {
     // A zero part adds nothing, because each converter multiplies or divides by a constant. So
-    // this skip changes no result for a normalizedUnit of the same type (AFA-165).
+    // this skip changes no result for a normalizedUnit that is a Unit. AFA-178 asks about one
+    // that isn't.
     if (!value) continue;
     if (unit === targetUnit) {
       sum += value;
@@ -317,8 +318,7 @@ function combineParts(
 export function parseMeasurement(input: string, options: ParseOptions = {}): ParsedValue | null {
   // Stryker disable next-line StringLiteral: the replacement "Stryker was here!" also returns null.
   const trimmed = normalize(input?.trim() || '');
-  // Empty text gives no tokens, so the steps below return null too. This return only skips them
-  // (AFA-165).
+  // Stryker disable next-line ConditionalExpression,BlockStatement: empty text gives no tokens, so the steps below return null too (AFA-165).
   if (!trimmed) {
     return null;
   }
@@ -410,9 +410,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       // and the match starts at the unit.
       let [num, end, signed]: [number | null, number, boolean] =
         valueFollows || startsField ? [null, i, false] : readSignedPhrase(remaining, i - 1, -1);
-      // With no number, the code below sets matchStart, or skips the match, before it reads it. A
-      // signed phrase reads only matchStart's field, which is the same for end and end + 1. So
-      // end + 1 there gives the same result (AFA-165).
+      // Stryker disable next-line ConditionalExpression: with no number, the code below sets matchStart or skips the match before it reads it, and a signed phrase reads only its field, which is the same for end and end + 1 (AFA-165).
       let matchStart = num === null ? end : end + 1;
       let matchEnd = i + 1;
 

@@ -169,7 +169,7 @@ export function normalizeNumericCommas(input: string): string {
       if (label || !/,\d{1,3}(?!\d)/.test(number)) return number;
       if (!/^(?:\d{1,3}(?:,\d{3})+|\d*)(?:,\d{1,2}|\.\d*)?$/.test(number)) {
         valid = false;
-        // This value is never used: valid is false, so the function returns '' (AFA-165).
+        // Stryker disable next-line StringLiteral: valid is false, so the function returns '' and never uses this value (AFA-165).
         return '';
       }
       return number.replace(/,(?=\d{1,2}$)/, '.').replace(/,/g, '');
