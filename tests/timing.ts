@@ -17,9 +17,10 @@ export const underStryker = '__stryker__' in globalThis || '__stryker2__' in glo
  * In a plain or coverage run, and in the package tests (`pnpm test:package`), Vitest's default
  * `forks` pool runs each test file in its own process. So other files don't count. Stryker's Vitest
  * runner uses the `threads` pool, so there CPU time also counts the threads of Vitest and Stryker
- * in the runner's process. Only the two 500 ms tests of long runs of periods call this function
- * under Stryker. Their inputs take about 5 ms of CPU time, and Stryker's instrumented code runs 6
- * to 9 times slower. So the other threads can't make them fail.
+ * in the runner's process. Only tests with small inputs call this function under Stryker: the two
+ * 500 ms tests of long runs of periods, and the test of this function in `tests/timing.test.ts`.
+ * Their inputs take about 5 ms of CPU time, and Stryker's instrumented code runs 6 to 9 times
+ * slower. So the other threads can't make them fail.
  *
  * Set each limit from CI, not from a local run. CI's `test` jobs run with coverage, so they are
  * several times slower than a local run. This function prints the CPU time of each parse, so CI's

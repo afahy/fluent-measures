@@ -29,7 +29,7 @@ describe('long runs of periods and semicolons', () => {
   // doesn't end that text, and a regex tried a match at each semicolon. PARSING.md gives null for
   // "kg-70.5": a unit prefix without a number before it keeps the minus sign. With 200,000
   // semicolons, the code before #62 took 11.2 s of clock time here. The current code takes about
-  // 130 ms of CPU time, or 300 ms with coverage. In CI's coverage runs it took 540 to 690 ms of CPU
+  // 130 ms of CPU time, or 300 ms with coverage. In CI's coverage runs it took 540 to 740 ms of CPU
   // time (AFA-171), so the 4 s limit is more than 5 times that.
   it.skipIf(underStryker)('returns null for a long run of semicolons before x kg-70.5', () => {
     expect(parseWithin(`${';'.repeat(200_000)}x kg-70.5`, 4000)).toBeNull();
