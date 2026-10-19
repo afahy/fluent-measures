@@ -41,17 +41,17 @@ const HASHES: Record<string, string> = {
 };
 
 /**
- * The class names in a style sheet's selectors, unescaped (AFA-121). css-tree reads CSS tokens as
- * a browser does. So a comment, a quoted string, a url() or an at-rule's prelude holds no class.
- * A newline ends a string that has no closing quote. css-tree reads a nested rule whose selector
- * list starts with "&". Another nested rule, as in ".a { .b { } }" or ".a { .b & { } }", is a
- * parse error. A parse error throws, so a rule that css-tree can't read fails the check. Tailwind writes
+ * The class names in a style sheet's selectors, unescaped (AFA-121). css-tree reads CSS tokens as a
+ * browser does. So a comment, a quoted string, a url() or an at-rule's prelude holds no class. A
+ * newline ends a string that has no closing quote. css-tree reads a nested rule whose selector list
+ * starts with "&". Another nested rule, as in ".a { .b { } }" or ".a { .b & { } }", is a parse
+ * error. A parse error throws, so a rule that css-tree can't read fails the check. Tailwind writes
  * a "\" before a symbol in a class name, as in ".sm\:flex". It writes a first digit as a hex code
  * point, as in ".\32 xl\:text-lg". A class counts where a selector requires it of an element: not
- * inside a pseudo-class such as :not(). :is() and :where() match the element itself, so the
- * classes that their selectors require count too. With `ownRule`, a class counts only where the
- * rule is about it: in the last part of the selector that names a class, between combinators. So
- * ".a .b" is about "b", ".a :is(.b)" too, and ".space-y-2 > :not([hidden])" is about "space-y-2".
+ * inside a pseudo-class such as :not(). :is() and :where() match the element itself, so the classes
+ * that their selectors require count too. With `ownRule`, a class counts only where the rule is
+ * about it: in the last part of the selector that names a class, between combinators. So ".a .b" is
+ * about "b", ".a :is(.b)" too, and ".space-y-2 > :not([hidden])" is about "space-y-2".
  */
 function cssClasses(css: string, { ownRule = false } = {}): Set<string> {
   const names: string[] = [];
