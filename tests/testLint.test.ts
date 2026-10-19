@@ -140,6 +140,19 @@ describe('the lint for tests that skip or are expected to fail', () => {
       skip,
     ],
     [`it('x', { fails: +1n }, ${pass});`, fails],
+    // Codex on #168: a name destructured from a namespace, an alias of the context, and .skip or
+    // the skip option on an alias, which vitest/no-disabled-tests doesn't read.
+    [
+      `import * as v from 'vitest';\n\nconst { it, expect } = v;\nit.fails('x', () => {\n  expect(1).toBe(1);\n});`,
+      fails,
+    ],
+    [`const v = require('vitest');\nv.it.fails('x', ${pass});`, fails],
+    [
+      `it.concurrent('x', ctx => {\n  const other = ctx;\n  other.skip();\n  expect(1).toBe(1);\n});`,
+      skip,
+    ],
+    [`const t = it;\nt.skip('x', ${pass});`, skip],
+    [`const t = it;\nt('x', { skip: true }, ${pass});`, skip],
     // TypeScript's import-equals form is a namespace import.
     [
       `import vitest = require('vitest');\n\nvitest.it.fails('x', () => {\n  vitest.expect(1).toBe(1);\n});`,
@@ -188,6 +201,15 @@ describe('the lint for tests that skip or are expected to fail', () => {
   ])('allows %s', async body => {
     expect(await problems(body)).toEqual([]);
   });
+
+  // vitest/no-disabled-tests reads .skip and the skip option on it or test by name, so the local
+  // rule doesn't report them a second time.
+  it.each([`it.skip('x', ${pass});`, `it('x', { skip: true }, ${pass});`])(
+    'reports %s once',
+    async body => {
+      expect(await problems(body)).toEqual(['vitest/no-disabled-tests']);
+    }
+  );
 
   // vitest/no-disabled-tests reports ctx.skip() on the first parameter, so the local rule doesn't
   // report it a second time.

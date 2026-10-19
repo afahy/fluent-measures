@@ -88,6 +88,37 @@ function destructuredKey(pattern, name) {
   return undefined;
 }
 
+/** Whether a call is require('vitest'). */
+function isRequireVitest(node) {
+  return (
+    node.type === 'CallExpression' &&
+    node.callee.type === 'Identifier' &&
+    node.callee.name === 'require' &&
+    node.arguments[0]?.value === 'vitest'
+  );
+}
+
+/** Whether a name holds all of vitest: a namespace import, an import-equals or a require. */
+function isVitestNamespace(node, scope) {
+  if (node.type !== 'Identifier') return false;
+  const definition = findVariable(scope, node.name)?.defs[0];
+  if (definition?.type === 'ImportBinding') {
+    if (definition.node.type === 'TSImportEqualsDeclaration') {
+      return definition.node.moduleReference.expression?.value === 'vitest';
+    }
+    return (
+      definition.node.type === 'ImportNamespaceSpecifier' &&
+      definition.parent.source?.value === 'vitest'
+    );
+  }
+  return (
+    definition?.type === 'Variable' &&
+    definition.node.id.type === 'Identifier' &&
+    Boolean(definition.node.init) &&
+    isRequireVitest(definition.node.init)
+  );
+}
+
 /**
  * Where a chain starts. A Vitest chain gives { fn, names }: the test or suite function and the
  * member names after it. The root is an import from vitest, or from a local module such as a
@@ -135,12 +166,8 @@ function resolveChain(node, scope, seen = new Set()) {
     if (!init) return unknown;
     if (id.type === 'ObjectPattern') {
       const key = destructuredKey(id, root.name);
-      if (
-        init.type === 'CallExpression' &&
-        init.callee.type === 'Identifier' &&
-        init.callee.name === 'require' &&
-        init.arguments[0]?.value === 'vitest'
-      ) {
+      // const { it } = require('vitest'), or const { it } = v for a namespace v.
+      if (isRequireVitest(init) || isVitestNamespace(init, variable.scope)) {
         return TEST_FUNCTIONS.has(key) ? { fn: key, names } : undefined;
       }
       const base = resolveChain(init, variable.scope, seen);
@@ -150,6 +177,10 @@ function resolveChain(node, scope, seen = new Set()) {
         : base && unknown;
     }
     if (id.type !== 'Identifier') return unknown;
+    // const v = require('vitest') is a namespace.
+    if (isRequireVitest(init)) {
+      return TEST_FUNCTIONS.has(names[0]) ? { fn: names[0], names: names.slice(1) } : undefined;
+    }
     const base = resolveChain(init, variable.scope, seen);
     if (base?.unknown) return unknown;
     return base && { fn: base.fn, names: [...base.names, ...names] };
@@ -308,10 +339,38 @@ export default {
         : result;
 
     /**
-     * Reports each use of the context's skip in a test function. vitest/no-disabled-tests already
-     * reports ctx.skip() on the first parameter of a bare it or test call, so that call isn't
-     * reported twice.
+     * Reports each use of a context variable's skip, also through an alias such as
+     * const other = ctx. vitest/no-disabled-tests already reports ctx.skip() on the first
+     * parameter of a bare it or test call, so that call isn't reported twice.
      */
+    const checkContextVariable = (variable, pluginReportsCall, seen = new Set()) => {
+      if (!variable || seen.has(variable)) return;
+      seen.add(variable);
+      for (const reference of variable.references) {
+        const { parent } = reference.identifier;
+        const called = parent.parent?.type === 'CallExpression' && parent.parent.callee === parent;
+        if (
+          parent.type === 'MemberExpression' &&
+          parent.object === reference.identifier &&
+          propertyName(parent) === 'skip' &&
+          !(pluginReportsCall && called)
+        ) {
+          context.report({ node: parent, messageId: 'skip' });
+        }
+        if (parent.type === 'VariableDeclarator' && parent.init === reference.identifier) {
+          if (parent.id.type === 'ObjectPattern') {
+            if (parent.id.properties.some(p => p.type === 'Property' && keyName(p) === 'skip')) {
+              context.report({ node: parent.id, messageId: 'skip' });
+            }
+          } else if (parent.id.type === 'Identifier') {
+            const [alias] = sourceCode.getDeclaredVariables(parent);
+            checkContextVariable(alias, false, seen);
+          }
+        }
+      }
+    };
+
+    /** Reports each use of the context's skip in a test function. */
     const checkContext = (fn, index, pluginReportsCall) => {
       let param = fn.params[index];
       if (param?.type === 'AssignmentPattern') param = param.left;
@@ -326,33 +385,32 @@ export default {
       }
       if (param.type !== 'Identifier') return;
       const variable = sourceCode.getDeclaredVariables(fn).find(v => v.name === param.name);
-      for (const reference of variable?.references ?? []) {
-        const { parent } = reference.identifier;
-        const called = parent.parent?.type === 'CallExpression' && parent.parent.callee === parent;
-        if (
-          parent.type === 'MemberExpression' &&
-          parent.object === reference.identifier &&
-          propertyName(parent) === 'skip' &&
-          !(pluginReportsCall && called)
-        ) {
-          context.report({ node: parent, messageId: 'skip' });
-        }
-        if (
-          parent.type === 'VariableDeclarator' &&
-          parent.init === reference.identifier &&
-          parent.id.type === 'ObjectPattern' &&
-          parent.id.properties.some(p => p.type === 'Property' && keyName(p) === 'skip')
-        ) {
-          context.report({ node: parent.id, messageId: 'skip' });
-        }
-      }
+      checkContextVariable(variable, pluginReportsCall);
+    };
+
+    /**
+     * Whether vitest/no-disabled-tests reads a chain itself: one that starts at it, test,
+     * describe or suite by that name. It doesn't read an alias or a namespace.
+     */
+    const pluginReads = node => {
+      const { root } = chainOf(node);
+      return root.type === 'Identifier' && TEST_FUNCTIONS.has(root.name);
     };
 
     return {
       // .fails or .todo on a chain from a test function, also in an alias. On a root that can't
       // be resolved, only a call counts, as in t.fails(...) or t.todo.each(...).
       MemberExpression(node) {
-        if (!MARKS.has(propertyName(node))) return;
+        const name = propertyName(node);
+        // .skip on an alias or a namespace, as in const t = it; t.skip(...).
+        if (name === 'skip') {
+          const result = resolve(node.object, node);
+          if (result && !result.unknown && !pluginReads(node.object)) {
+            context.report({ node: node.property, messageId: 'skip' });
+          }
+          return;
+        }
+        if (!MARKS.has(name)) return;
         const result = resolve(node.object, node);
         const { parent } = node;
         const called =
@@ -400,12 +458,13 @@ export default {
         for (const argument of node.arguments) {
           if (argument.type !== 'ObjectExpression') continue;
           for (const property of argument.properties) {
-            if (
-              property.type === 'Property' &&
-              MARKS.has(keyName(property)) &&
-              truthiness(property.value) !== false
-            ) {
+            if (property.type !== 'Property' || truthiness(property.value) === false) continue;
+            if (MARKS.has(keyName(property))) {
               context.report({ node: property, messageId: 'mark' });
+            }
+            // The skip option on an alias or a namespace, which vitest/no-disabled-tests misses.
+            if (keyName(property) === 'skip' && !pluginReads(callee)) {
+              context.report({ node: property, messageId: 'skip' });
             }
           }
         }
