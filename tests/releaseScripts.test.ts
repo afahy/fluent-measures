@@ -173,7 +173,9 @@ describe('release:publish', () => {
 
   // AFA-159: a push of every local tag would also publish a tag that was only for local use. If
   // such a tag conflicts with one on the remote, the release fails after the publish.
-  it("doesn't push a local tag other than the release tag", () => {
+  // A local annotated tag on the release commit still goes out with the first push, because
+  // --follow-tags sends it. That push doesn't change in AFA-159.
+  it("doesn't push a local lightweight tag other than the release tag", () => {
     const { remote, result } = runReleasePublish({ localTag: 'experiment' });
 
     expect(result.status, result.stdout + result.stderr).toBe(0);
@@ -187,6 +189,8 @@ describe('release:publish', () => {
 
     expect(existsSync(resolve(repository, 'published'))).toBe(true);
     expect(result.status).not.toBe(0);
+    // Git names the missing tag, so the step fails for that reason and not for another one.
+    expect(result.stderr).toContain('refs/tags/v9.9.9');
     expect(git(remote, 'tag', '--list')).toBe('');
   });
 });
