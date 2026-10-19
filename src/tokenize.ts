@@ -169,12 +169,14 @@ export function normalizeNumericCommas(input: string): string {
       if (label || !/,\d{1,3}(?!\d)/.test(number)) return number;
       if (!/^(?:\d{1,3}(?:,\d{3})+|\d*)(?:,\d{1,2}|\.\d*)?$/.test(number)) {
         valid = false;
+        // Stryker disable next-line StringLiteral: valid is false, so the function returns '' and never uses this value (AFA-165).
         return '';
       }
       return number.replace(/,(?=\d{1,2}$)/, '.').replace(/,/g, '');
     }
   );
-  // Reject the whole input so a malformed component or range cannot leak a value.
+  // Reject the whole input so a malformed component or range cannot leak a value. Another string
+  // here changes a result only for contradicting options, which AFA-178 asks about.
   return valid ? normalized : '';
 }
 

@@ -147,3 +147,11 @@ describe('unsupported weight units', () => {
     expect(parseMeasurement(raw)).toBeNull();
   });
 });
+
+// AFA-165: PARSING.md gives null for a weight that has a part in grams or ounces, as in
+// `kg 3, 400 g`. A half in the first part doesn't change that.
+describe('a weight with a half before a part in an unsupported unit', () => {
+  it.each(['kg 3 and a half, 400 g', 'lb 7 and a half, 8 oz'])('returns null for %s', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
+});

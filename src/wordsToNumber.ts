@@ -1,8 +1,10 @@
-// Values advance by one through nineteen, then by ten from twenty through ninety.
+// Values advance by one through nineteen, then by ten from twenty through ninety. The condition is
+// <= 19, not < 20: "twenty" is 20 by either formula, so "< 20" had a mutant that no test can kill
+// (AFA-165).
 export const NUMBER_WORDS = new Map(
   'zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty thirty forty fifty sixty seventy eighty ninety'
     .split(' ')
-    .map((word, index): [string, number] => [word, index < 20 ? index : (index - 18) * 10])
+    .map((word, index): [string, number] => [word, index <= 19 ? index : (index - 18) * 10])
 );
 
 export const MULTIPLIERS = new Map<string, number>([
