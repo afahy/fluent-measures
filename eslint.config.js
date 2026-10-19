@@ -47,10 +47,17 @@ export default [
       '@typescript-eslint/no-unused-vars': ['error', UNUSED],
       '@typescript-eslint/no-explicit-any': 'error',
       'no-console': CONSOLE,
-      // tsc checks each name, also the Node globals such as process, so typescript-eslint
-      // recommends this (AFA-127).
-      'no-undef': 'off',
+      // TypeScript allows overloads and a type and a value with the same name, and tsc reports a
+      // real redeclaration (AFA-127).
+      'no-redeclare': 'off',
     },
+  },
+  // In a TypeScript test, tsc checks each name, also the Node globals such as process, so
+  // typescript-eslint recommends this (AFA-127). src/ keeps no-undef: tsc reads Node's types for
+  // it too, but the package also runs in a browser, so it mustn't use Node's globals.
+  {
+    files: [TS_TESTS],
+    rules: { 'no-undef': 'off' },
   },
   {
     files: [JS_TESTS],
@@ -61,12 +68,13 @@ export default [
   },
   // `console` is a global wherever this code runs, so `no-console` decides which calls are allowed:
   // it warns about each call other than warn and error. A JavaScript test imports its other
-  // globals, so `no-undef` still finds a name that it forgets.
+  // globals, so `no-undef` still finds a name that it forgets, as it does in src/.
   {
-    files: [JS_TESTS],
+    files: ['src/**/*.ts', JS_TESTS],
     languageOptions: { globals: { console: 'readonly' } },
   },
-  // Vite reads JSX only in .jsx and .tsx files, so only a .jsx test may hold it.
+  // Vite reads JSX only in .jsx and .tsx files. TypeScript's parser reads it in a .tsx file, and
+  // ESLint's parser needs this option for a .jsx test.
   {
     files: ['tests/**/*.jsx'],
     languageOptions: { parserOptions: { ecmaFeatures: { jsx: true } } },

@@ -1,7 +1,7 @@
 import tsParser from '@typescript-eslint/parser';
 import { ESLint } from 'eslint';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, matchesGlob, relative } from 'node:path';
@@ -53,7 +53,9 @@ it('lints all of src/ and tests/ in the lint scripts', () => {
 // format staged (AFA-127). The ESLint task records the files that it gets, and runs nothing else.
 it('runs ESLint on every test format in the pre-commit hook', { timeout: 30_000 }, () => {
   const tasks = readJson('.lintstagedrc') as Record<string, string[]>;
-  const scratch = mkdtempSync(join(tmpdir(), 'fluent-measures-lint-staged-'));
+  // lint-staged gives each path under git's top folder, with symbolic links resolved, as on
+  // macOS, where /var links to /private/var.
+  const scratch = realpathSync(mkdtempSync(join(tmpdir(), 'fluent-measures-lint-staged-')));
   try {
     const repository = join(scratch, 'repository');
     const log = join(scratch, 'eslint-files');
@@ -67,7 +69,9 @@ it('runs ESLint on every test format in the pre-commit hook', { timeout: 30_000 
     const eslintGlobs = Object.keys(tasks).filter(glob => tasks[glob].includes('eslint --fix'));
     writeFileSync(
       config,
-      JSON.stringify(Object.fromEntries(eslintGlobs.map(glob => [glob, `node ${recorder}`])))
+      JSON.stringify(
+        Object.fromEntries(eslintGlobs.map(glob => [glob, `"${process.execPath}" "${recorder}"`]))
+      )
     );
 
     mkdirSync(join(repository, 'tests', 'a'), { recursive: true });
@@ -156,6 +160,21 @@ describe('the lint config for each test format', () => {
     ]);
   });
 
+  // The package also runs in a browser, so src/ mustn't use Node's globals, although tsc reads
+  // Node's types for it (AFA-127).
+  it('rejects a Node global in src/', async () => {
+    const code = `export const debug = (): boolean => process.env.DEBUG === '1';\n`;
+    const [result] = await eslint.lintText(code, { filePath: 'src/x.ts' });
+    expect(result.messages.map(message => message.ruleId)).toEqual(['no-undef']);
+  });
+
+  // TypeScript allows overloads, and tsc reports a real redeclaration.
+  it('reads overloads in src/', async () => {
+    const code = `export function h(a: string): string;\nexport function h(a: number): number;\nexport function h(a: string | number): string | number {\n  return a;\n}\n`;
+    const [result] = await eslint.lintText(code, { filePath: 'src/x.ts' });
+    expect(result.messages).toEqual([]);
+  });
+
   it('warns only about console.log in src/', async () => {
     const code = `export const report = (): void => {\n  console.warn('w');\n  console.log('l');\n};\n`;
     const [result] = await eslint.lintText(code, { filePath: 'src/x.ts' });
@@ -189,7 +208,8 @@ describe('the lint config for each test format', () => {
   );
 
   // Lint reads JSX in a .jsx or .tsx test (AFA-127). To run, such a test also needs React, which
-  // this project doesn't install, because Vite compiles JSX to React.createElement.
+  // this project doesn't install, because Vite compiles JSX to React.createElement. tsc also needs
+  // the jsx option in tsconfig.json for a .tsx test.
   it.each(formats.filter(format => format.endsWith('x')))(
     'reads JSX in a .%s test',
     async format => {
