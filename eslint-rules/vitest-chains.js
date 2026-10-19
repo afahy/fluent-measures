@@ -10,6 +10,8 @@ const FIXTURES = new Set(['extend', 'scoped', 'override']);
 const MARKS = new Set(['fails', 'todo']);
 // The value that staticValue gives when it can't know a value.
 const UNKNOWN = Symbol('unknown');
+// A call in a chain's names.
+const CALL = '()';
 
 const MESSAGES = {
   constant: 'A constant condition always skips the test or always runs it. Use a real one.',
@@ -35,7 +37,10 @@ function keyName(property) {
   return undefined;
 }
 
-/** The root of a chain and its member names, from the root out. */
+/**
+ * The root of a chain and its member names, from the root out. CALL marks each call, so the
+ * result of test.extend(...) differs from test.extend itself.
+ */
 function chainOf(node) {
   const names = [];
   let current = node;
@@ -44,8 +49,19 @@ function chainOf(node) {
       names.unshift(propertyName(current));
       current = current.object;
     } else if (current.type === 'CallExpression') {
+      names.unshift(CALL);
       current = current.callee;
-    } else if (current.type === 'ChainExpression' || current.type === 'TSNonNullExpression') {
+    } else if (current.type === 'TaggedTemplateExpression') {
+      // A table, as in it.each`a ${1}`.
+      names.unshift(CALL);
+      current = current.tag;
+    } else if (
+      current.type === 'ChainExpression' ||
+      current.type === 'TSNonNullExpression' ||
+      current.type === 'TSAsExpression' ||
+      current.type === 'TSSatisfiesExpression' ||
+      current.type === 'TSTypeAssertion'
+    ) {
       current = current.expression;
     } else {
       return { root: current, names };
@@ -61,16 +77,30 @@ function findVariable(scope, name) {
   return undefined;
 }
 
+/** The key that a destructuring pattern gives a name, as in const { for: f } = it. */
+function destructuredKey(pattern, name) {
+  for (const property of pattern.properties) {
+    if (property.type !== 'Property') continue;
+    const value =
+      property.value.type === 'AssignmentPattern' ? property.value.left : property.value;
+    if (value.type === 'Identifier' && value.name === name) return keyName(property);
+  }
+  return undefined;
+}
+
 /**
- * The Vitest function at the root of a chain, and the member names after it, or undefined. The
- * root is an import from vitest, or from a local module such as a fixtures file that exports
- * test.extend(...). It can also be a namespace import of vitest, a Vitest global, or a variable
- * that holds such a chain, as in const t = it.fails or const myTest = test.extend({ ... }).
+ * Where a chain starts. A Vitest chain gives { fn, names }: the test or suite function and the
+ * member names after it. The root is an import from vitest, or from a local module such as a
+ * fixtures file that exports test.extend(...). It can also be a namespace import of vitest,
+ * require('vitest'), a Vitest global, or a variable that holds such a chain. A root that can't be
+ * resolved, such as a parameter, gives { unknown: true, name, names }. A known local value that
+ * isn't a test, such as an object, gives undefined.
  */
 function resolveChain(node, scope, seen = new Set()) {
   const { root, names } = chainOf(node);
   if (root.type !== 'Identifier' || seen.has(root)) return undefined;
   seen.add(root);
+  const unknown = { unknown: true, name: root.name, names };
   const variable = findVariable(scope, root.name);
   // A global, as the .cjs tests get from vitest.config.ts.
   if (!variable || variable.defs.length === 0) {
@@ -79,24 +109,57 @@ function resolveChain(node, scope, seen = new Set()) {
   const [definition] = variable.defs;
   if (definition.type === 'ImportBinding') {
     const source = definition.parent.source.value;
+    const local = source.startsWith('.') || source.startsWith('#');
     if (definition.node.type === 'ImportNamespaceSpecifier') {
-      return source === 'vitest' && TEST_FUNCTIONS.has(names[0])
-        ? { fn: names[0], names: names.slice(1) }
-        : undefined;
+      if (source === 'vitest') {
+        return TEST_FUNCTIONS.has(names[0]) ? { fn: names[0], names: names.slice(1) } : undefined;
+      }
+      return local ? unknown : undefined;
     }
     const imported = definition.node.imported?.name ?? definition.node.imported?.value;
-    return (source === 'vitest' || source.startsWith('.')) &&
-      definition.node.type === 'ImportSpecifier' &&
-      TEST_FUNCTIONS.has(imported)
-      ? { fn: imported, names }
-      : undefined;
+    if (definition.node.type === 'ImportSpecifier' && TEST_FUNCTIONS.has(imported)) {
+      if (source === 'vitest' || local) return { fn: imported, names };
+    }
+    // Another export of a local module, such as a fixtures file's myTest, may be a test function.
+    return local ? unknown : undefined;
   }
-  if (definition.type === 'Variable' && definition.node.init) {
-    const alias = resolveChain(definition.node.init, variable.scope, seen);
-    return alias && { fn: alias.fn, names: [...alias.names, ...names] };
+  if (definition.type === 'Variable') {
+    const { id, init } = definition.node;
+    // A variable with no value here, as in let t; t = it, may hold a test function.
+    if (!init) return unknown;
+    if (id.type === 'ObjectPattern') {
+      const key = destructuredKey(id, root.name);
+      if (
+        init.type === 'CallExpression' &&
+        init.callee.type === 'Identifier' &&
+        init.callee.name === 'require' &&
+        init.arguments[0]?.value === 'vitest'
+      ) {
+        return TEST_FUNCTIONS.has(key) ? { fn: key, names } : undefined;
+      }
+      const base = resolveChain(init, variable.scope, seen);
+      if (base?.unknown) return unknown;
+      return base && key !== undefined
+        ? { fn: base.fn, names: [...base.names, key, ...names] }
+        : base && unknown;
+    }
+    if (id.type !== 'Identifier') return unknown;
+    const base = resolveChain(init, variable.scope, seen);
+    if (base?.unknown) return unknown;
+    return base && { fn: base.fn, names: [...base.names, ...names] };
   }
+  // A parameter may hold a test function, as in function run(t) { t.fails(...) }.
+  if (definition.type === 'Parameter') return unknown;
   return undefined;
 }
+
+const UNARY = {
+  '!': value => !value,
+  '-': value => -value,
+  '+': value => +value,
+  '~': value => ~value,
+  typeof: value => typeof value,
+};
 
 const BINARY = {
   '+': (a, b) => a + b,
@@ -148,26 +211,23 @@ function staticValue(node) {
       if (node.operator === 'void') return undefined;
       const value = staticValue(node.argument);
       if (value === UNKNOWN) return UNKNOWN;
-      switch (node.operator) {
-        case '!':
-          return !value;
-        case '-':
-          return -value;
-        case '+':
-          return +value;
-        case '~':
-          return ~value;
-        case 'typeof':
-          return typeof value;
-        default:
-          return UNKNOWN;
+      // A BigInt operand can make an operator throw, as +1n does.
+      try {
+        return UNARY[node.operator] ? UNARY[node.operator](value) : UNKNOWN;
+      } catch {
+        return UNKNOWN;
       }
     }
     case 'BinaryExpression': {
       const left = staticValue(node.left);
       const right = staticValue(node.right);
       if (left === UNKNOWN || right === UNKNOWN || !BINARY[node.operator]) return UNKNOWN;
-      return BINARY[node.operator](left, right);
+      // A BigInt operand can make an operator throw, as 1n + 1 does.
+      try {
+        return BINARY[node.operator](left, right);
+      } catch {
+        return UNKNOWN;
+      }
     }
     case 'LogicalExpression': {
       const left = staticValue(node.left);
@@ -232,9 +292,21 @@ export default {
   create(context) {
     const { sourceCode } = context;
     const resolve = (node, at) => resolveChain(node, sourceCode.getScope(at));
+    // A chain from a test function. A root that can't be resolved counts when it has the name of
+    // one, as before AFA-172.
+    const testChain = result =>
+      result?.unknown
+        ? TEST_FUNCTIONS.has(result.name)
+          ? { fn: result.name, names: result.names }
+          : undefined
+        : result;
 
-    /** Reports each use of the context's skip in a test function. */
-    const checkContext = (fn, index) => {
+    /**
+     * Reports each use of the context's skip in a test function. vitest/no-disabled-tests already
+     * reports ctx.skip() on the first parameter of a bare it or test call, so that call isn't
+     * reported twice.
+     */
+    const checkContext = (fn, index, pluginReportsCall) => {
       let param = fn.params[index];
       if (param?.type === 'AssignmentPattern') param = param.left;
       if (!param) return;
@@ -250,16 +322,12 @@ export default {
       const variable = sourceCode.getDeclaredVariables(fn).find(v => v.name === param.name);
       for (const reference of variable?.references ?? []) {
         const { parent } = reference.identifier;
-        // vitest/no-disabled-tests already reports ctx.skip() on the first parameter.
+        const called = parent.parent?.type === 'CallExpression' && parent.parent.callee === parent;
         if (
           parent.type === 'MemberExpression' &&
           parent.object === reference.identifier &&
           propertyName(parent) === 'skip' &&
-          !(
-            index === 0 &&
-            parent.parent.type === 'CallExpression' &&
-            parent.parent.callee === parent
-          )
+          !(pluginReportsCall && called)
         ) {
           context.report({ node: parent, messageId: 'skip' });
         }
@@ -275,15 +343,26 @@ export default {
     };
 
     return {
-      // .fails or .todo anywhere on a chain from a test function, also in an alias.
+      // .fails or .todo on a chain from a test function, also in an alias. On a root that can't
+      // be resolved, only a call counts, as in t.fails(...) or t.todo.each(...).
       MemberExpression(node) {
-        if (MARKS.has(propertyName(node)) && resolve(node.object, node)) {
+        if (!MARKS.has(propertyName(node))) return;
+        const result = resolve(node.object, node);
+        const { parent } = node;
+        const called =
+          (parent.type === 'CallExpression' && parent.callee === node) ||
+          (parent.type === 'MemberExpression' &&
+            parent.object === node &&
+            ['each', 'for'].includes(propertyName(parent)));
+        if ((result && !result.unknown) || (result?.unknown && called)) {
           context.report({ node: node.property, messageId: 'mark' });
         }
       },
       // const { todo } = it
       VariableDeclarator(node) {
-        if (node.id.type !== 'ObjectPattern' || !node.init || !resolve(node.init, node)) return;
+        if (node.id.type !== 'ObjectPattern' || !node.init) return;
+        const result = resolve(node.init, node);
+        if (!result || result.unknown) return;
         for (const property of node.id.properties) {
           if (property.type === 'Property' && MARKS.has(keyName(property))) {
             context.report({ node: property, messageId: 'mark' });
@@ -300,15 +379,16 @@ export default {
           if (
             condition &&
             (condition.type === 'Literal' ||
-              (resolve(callee.object, node) && truthiness(condition) !== undefined))
+              (testChain(resolve(callee.object, node)) && truthiness(condition) !== undefined))
           ) {
             context.report({ node: condition, messageId: 'constant' });
           }
           return;
         }
 
-        const chain = resolve(callee, node);
-        if (!chain || FIXTURES.has(last)) return;
+        const chain = testChain(resolve(callee, node));
+        // A call to extend, scoped or override takes fixtures, not test options.
+        if (!chain || FIXTURES.has(chain.names.at(-1))) return;
 
         // The fails and todo options, unless their value is always false.
         for (const argument of node.arguments) {
@@ -328,7 +408,9 @@ export default {
         // context, and in .each no parameter is the context.
         if (SUITES.has(chain.fn) || chain.names.includes('each')) return;
         const fn = testFunction(node);
-        if (fn) checkContext(fn, chain.names.includes('for') ? 1 : 0);
+        const bare =
+          callee.type === 'Identifier' && (callee.name === 'it' || callee.name === 'test');
+        if (fn) checkContext(fn, chain.names.includes('for') ? 1 : 0, bare);
       },
     };
   },

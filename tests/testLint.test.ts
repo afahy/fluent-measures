@@ -11,8 +11,8 @@ async function problems(body: string): Promise<string[]> {
   const names = ['describe', 'expect', 'it', 'test'].filter(name =>
     new RegExp(`\\b${name}\\b`).test(body)
   );
-  // A body that starts with its own import gets no other.
-  const code = body.startsWith('import ')
+  // A body that starts with its own import, or that requires vitest, gets no other.
+  const code = /^import |require\('vitest'\)/.test(body)
     ? `${body}\n`
     : `import { ${names.join(', ')} } from 'vitest';\n\n${body}\n`;
   const [result] = await eslint.lintText(code, { filePath: 'tests/a/x.test.ts' });
@@ -104,6 +104,42 @@ describe('the lint for tests that skip or are expected to fail', () => {
     ],
     [`it('x', { fails: !NaN }, ${pass});`, fails],
     [`it('x', { fails: !(1 - 1) }, ${pass});`, fails],
+    // ctx.skip() on a chain or an alias, which vitest/no-disabled-tests doesn't see.
+    [`it.concurrent('x', ctx => {\n  ctx.skip();\n  expect(1).toBe(1);\n});`, skip],
+    [`it.skipIf(Date.now() < 0)('x', ctx => {\n  ctx.skip();\n  expect(1).toBe(1);\n});`, skip],
+    [
+      `import { expect, it as t } from 'vitest';\n\nt('x', ctx => {\n  ctx.skip();\n  expect(1).toBe(1);\n});`,
+      skip,
+    ],
+    [
+      `const myTest = test.extend({ a: 1 });\nmyTest('x', ctx => {\n  ctx.skip();\n  expect(1).toBe(1);\n});`,
+      skip,
+    ],
+    // TypeScript's as and satisfies don't hide the chain.
+    [`(it as typeof it).fails('x', ${pass});`, fails],
+    [`(it satisfies typeof it).todo('x');`, fails],
+    // A root that can't be resolved counts for a call to .fails or .todo, as before AFA-172.
+    [
+      `import { expect } from 'vitest';\nimport { myTest } from './fixtures';\n\nmyTest.fails('x', () => {\n  expect(1).toBe(1);\n});`,
+      fails,
+    ],
+    [
+      `import test from './fixtures';\nimport { expect } from 'vitest';\n\ntest.fails('x', () => {\n  expect(1).toBe(1);\n});`,
+      fails,
+    ],
+    [`function run(t: typeof it): void {\n  t.fails('x', ${pass});\n}\nrun(it);`, fails],
+    [`let t: typeof it;\nt = it;\nt.fails('x', ${pass});`, fails],
+    [`const { it, expect } = require('vitest');\nit.fails('x', ${pass});`, fails],
+    // A table, a destructured alias, and an option that throws when it's evaluated.
+    [
+      `it.each\`\n  a\n  \${1}\n\`('x', { todo: true }, ({ a }) => {\n  expect(a).toBe(1);\n});`,
+      fails,
+    ],
+    [
+      `const { for: f } = it;\nf([1])('x', (n, { skip }) => {\n  skip();\n  expect(n).toBe(1);\n});`,
+      skip,
+    ],
+    [`it('x', { fails: +1n }, ${pass});`, fails],
   ])('rejects %s', async (body, problem) => {
     expect(await problems(body)).toContain(problem);
   });
@@ -141,6 +177,9 @@ describe('the lint for tests that skip or are expected to fail', () => {
     // The Vitest plugin doesn't see the alias as a test, so this body has no expect.
     `const e = it.each;\ne([{ skip: 1 }])('x', ({ skip }) => {\n  void skip;\n});`,
     `it('x', { todo: \`\` }, ${pass});`,
+    // A destructured .each passes a case, and a destructured extend takes fixtures.
+    `const { each: e } = it;\ne([{ skip: 1 }])('x', ({ skip }) => {\n  void skip;\n});`,
+    `const { extend } = test;\nexport const my = extend({ todo: 2 });`,
   ])('allows %s', async body => {
     expect(await problems(body)).toEqual([]);
   });
