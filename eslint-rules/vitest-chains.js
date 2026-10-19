@@ -108,9 +108,15 @@ function resolveChain(node, scope, seen = new Set()) {
   }
   const [definition] = variable.defs;
   if (definition.type === 'ImportBinding') {
-    const source = definition.parent.source.value;
+    // TypeScript's import vitest = require('vitest') has its module in moduleReference, and acts
+    // as a namespace import.
+    const equals = definition.node.type === 'TSImportEqualsDeclaration';
+    const source = equals
+      ? definition.node.moduleReference.expression?.value
+      : definition.parent.source?.value;
+    if (typeof source !== 'string') return undefined;
     const local = source.startsWith('.') || source.startsWith('#');
-    if (definition.node.type === 'ImportNamespaceSpecifier') {
+    if (equals || definition.node.type === 'ImportNamespaceSpecifier') {
       if (source === 'vitest') {
         return TEST_FUNCTIONS.has(names[0]) ? { fn: names[0], names: names.slice(1) } : undefined;
       }

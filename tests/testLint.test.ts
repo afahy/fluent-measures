@@ -140,6 +140,11 @@ describe('the lint for tests that skip or are expected to fail', () => {
       skip,
     ],
     [`it('x', { fails: +1n }, ${pass});`, fails],
+    // TypeScript's import-equals form is a namespace import.
+    [
+      `import vitest = require('vitest');\n\nvitest.it.fails('x', () => {\n  vitest.expect(1).toBe(1);\n});`,
+      fails,
+    ],
   ])('rejects %s', async (body, problem) => {
     expect(await problems(body)).toContain(problem);
   });
