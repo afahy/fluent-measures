@@ -1,9 +1,10 @@
 // Values advance by one through nineteen, then by ten from twenty through ninety.
+// Stryker disable next-line EqualityOperator: index 20 is "twenty", and (20 - 18) * 10 is 20 too, so <= gives the same table (AFA-165).
+const valueAt = (index: number): number => (index < 20 ? index : (index - 18) * 10);
 export const NUMBER_WORDS = new Map(
   'zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty thirty forty fifty sixty seventy eighty ninety'
     .split(' ')
-    // Stryker disable next-line EqualityOperator: index 20 is "twenty", and (20 - 18) * 10 is 20 too, so <= gives the same table (AFA-165).
-    .map((word, index): [string, number] => [word, index < 20 ? index : (index - 18) * 10])
+    .map((word, index): [string, number] => [word, valueAt(index)])
 );
 
 export const MULTIPLIERS = new Map<string, number>([
