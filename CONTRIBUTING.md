@@ -205,15 +205,24 @@ changes that the tests catch. The job fails when the score is below the `break` 
 `Survived` entry means tests ran and still passed; a `NoCoverage` entry means no test runs that
 code. Add tests that catch either kind.
 
-On pull requests, this job runs Stryker in incremental mode. It reuses each result from the pull
-request's last run, or from `main`'s, when the mutant's code and the tests that cover it haven't
-changed. It doesn't check other code that the mutant depends on, so a pull request's score can
-differ from a full run. A change to a file that tests read, such as `README.md`, `PARSING.md` or the
-corpus, or to the packages, starts a full run. Pushes to `main` always run every mutant, and so does
-a re-run of the job. For a full run on a pull request, re-run this job or all jobs. "Re-run failed
-jobs" doesn't run this job again when it passed. A run that takes more than 27 minutes stops and
-fails, but it saves its results so far. On a pull request, the next push goes on from them. A push
-to `main` and a re-run always run every mutant.
+This job runs Stryker in incremental mode. A pull request reuses each result from its own last
+run, or from `main`'s, when the mutant's code and covering tests haven't changed. Stryker doesn't
+check other code that the mutant depends on, also in the same file. So a pull request's score can
+differ from a full run. A change to the packages, or to a file that tests read, starts a full run.
+Such files are `README.md`, `PARSING.md` and the corpus.
+
+A push to `main` starts from no results and runs every mutant, except as the next paragraph says.
+It saves the results that pull requests reuse. A re-run of the job also runs every mutant. For a
+full run on a pull request, re-run this job or all jobs. "Re-run failed jobs" doesn't run this job
+again when it passed.
+
+A run that takes more than 27 minutes stops and fails, but it saves its results so far. On a pull
+request, the next push goes on from them. On `main`, each push looks at the newest results that a
+run on `main` saved. If that run stopped, the push goes on from its results and runs the mutants
+that it didn't reach. These results come from an earlier commit, and a change to a file that tests
+read doesn't reset them. So they aren't exact, and a run that goes on from them doesn't save its
+results for pull requests. When runs on `main` overlap, the newest results can come from an older
+commit than the last run that ended.
 
 A second job, "Mutants on changed lines are killed", runs Stryker on the files that a pull
 request changes under `src/`. It fails when a mutant whose code overlaps a line that the pull
