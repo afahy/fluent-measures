@@ -22,17 +22,29 @@ export const underStryker = '__stryker__' in globalThis || '__stryker2__' in glo
  * to 9 times slower. So the other threads can't make them fail.
  *
  * Set each limit from CI, not from a local run. CI's `test` jobs run with coverage, so they are
- * several times slower than a local run. Their logs show the clock time of each test over 300 ms,
- * but not the CPU time. In full coverage runs here, with all test files at once, clock time was at
- * least the CPU time. So use CI's clock time. Make the limit at least twice the slowest of these
- * times. Locally, the code that the test guards against must take at least twice the limit. If
- * twice the limit is more than Vitest's default timeout of 5 s, give the test a timeout of at least
- * twice its limit. Skip a test with a large input under Stryker with `it.skipIf(underStryker)`.
+ * several times slower than a local run. This function prints the CPU time of a parse of 300 ms or
+ * more, so CI's logs show it under the test's name (AFA-171). Make the limit at least twice the
+ * slowest CPU time in the logs of both `test` jobs. If CI prints no time for the test, its CPU time
+ * was under 300 ms. Don't use the clock time instead. A test that runs alone can take about twice
+ * as much CPU time as clock time, because of the other threads. Locally, the code that the test
+ * guards against must take at least twice the limit. If twice the limit is more than Vitest's
+ * default timeout of 5 s, give the test a timeout of at least twice its limit. Skip a test with a
+ * large input under Stryker with `it.skipIf(underStryker)`.
  */
 export function parseWithin(raw: string, limit: number): ReturnType<typeof parseMeasurement> {
   const start = cpuUsage();
   const result = parseMeasurement(raw);
   const { user, system } = cpuUsage(start);
-  expect((user + system) / 1000).toBeLessThan(limit);
+  const time = (user + system) / 1000;
+  const note = cpuTimeNote(time, limit);
+  if (note) console.warn(note);
+  expect(time).toBeLessThan(limit);
   return result;
+}
+
+/** The line that parseWithin prints for a parse of 300 ms of CPU time or more, as in CI's logs. */
+export function cpuTimeNote(time: number, limit: number): string | undefined {
+  return time >= 300
+    ? `parseWithin: ${Math.round(time)} ms of CPU time, limit ${limit} ms`
+    : undefined;
 }
