@@ -1,11 +1,14 @@
 import tsParser from '@typescript-eslint/parser';
 import { ESLint } from 'eslint';
-import { readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { dirname, join, matchesGlob } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { tmpdir } from 'node:os';
+import { dirname, join, matchesGlob, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import vitestConfig from '../vitest.config';
+import { git, withoutGitRepository } from './gitEnvironment';
 
 type ConfigObject = { files?: string[]; plugins?: Record<string, unknown> };
 
@@ -46,26 +49,58 @@ it('lints all of src/ and tests/ in the lint scripts', () => {
 });
 
 // The pre-commit hook must run ESLint on each test format too, so a test with no expect fails
-// before CI. lint-staged's own matcher reads each pattern as the hook does.
-it('runs ESLint on every test format in the pre-commit hook', async () => {
+// before CI. lint-staged itself reads the patterns, in a scratch repository with a file of each
+// format staged (AFA-127). The ESLint task records the files that it gets, and runs nothing else.
+it('runs ESLint on every test format in the pre-commit hook', { timeout: 30_000 }, () => {
   const tasks = readJson('.lintstagedrc') as Record<string, string[]>;
-  const eslintGlobs = Object.keys(tasks).filter(glob => tasks[glob].includes('eslint --fix'));
-  const lintStaged = dirname(createRequire(import.meta.url).resolve('lint-staged/package.json'));
-  const { matchFiles } = (await import(
-    pathToFileURL(join(lintStaged, 'lib/matchFiles.js')).href
-  )) as {
-    matchFiles: (files: { filepath: string }[], pattern: string) => unknown[];
-  };
-  const files = formats.flatMap(format => [`tests/x.test.${format}`, `tests/a/x.test.${format}`]);
-  const unlinted = files.filter(
-    filepath => !eslintGlobs.some(glob => matchFiles([{ filepath }], glob).length > 0)
-  );
-  expect(unlinted).toEqual([]);
+  const scratch = mkdtempSync(join(tmpdir(), 'fluent-measures-lint-staged-'));
+  try {
+    const repository = join(scratch, 'repository');
+    const log = join(scratch, 'eslint-files');
+    const recorder = join(scratch, 'record.cjs');
+    writeFileSync(
+      recorder,
+      `require('node:fs').appendFileSync(${JSON.stringify(log)}, process.argv.slice(2).join('\\n') + '\\n');\n`
+    );
+    writeFileSync(log, '');
+    const config = join(scratch, 'lint-staged.json');
+    const eslintGlobs = Object.keys(tasks).filter(glob => tasks[glob].includes('eslint --fix'));
+    writeFileSync(
+      config,
+      JSON.stringify(Object.fromEntries(eslintGlobs.map(glob => [glob, `node ${recorder}`])))
+    );
+
+    mkdirSync(join(repository, 'tests', 'a'), { recursive: true });
+    git(repository, 'init', '--quiet', '--initial-branch', 'main');
+    git(repository, 'config', 'user.name', 'Lint Test');
+    git(repository, 'config', 'user.email', 'lint-test@example.invalid');
+    git(repository, 'config', 'commit.gpgsign', 'false');
+    git(repository, 'commit', '--quiet', '--allow-empty', '-m', 'chore: start');
+    const files = formats.flatMap(format => [`tests/x.test.${format}`, `tests/a/x.test.${format}`]);
+    for (const file of files) writeFileSync(join(repository, file), '');
+    git(repository, 'add', '.');
+
+    const lintStaged = dirname(createRequire(import.meta.url).resolve('lint-staged/package.json'));
+    execFileSync(
+      process.execPath,
+      [join(lintStaged, 'bin/lint-staged.js'), '--config', config, '--no-stash', '--quiet'],
+      { cwd: repository, env: withoutGitRepository(), stdio: 'pipe' }
+    );
+    const linted = new Set(
+      readFileSync(log, 'utf8')
+        .split('\n')
+        .filter(Boolean)
+        .map(file => relative(repository, file).replace(/\\/g, '/'))
+    );
+    expect(files.filter(file => !linted.has(file))).toEqual([]);
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
 });
 
-// The final review of #91: each JavaScript format gets the rule-11 checks, and each TypeScript
-// format gets TypeScript's parser. A test imports its globals in every format, as the repo's
-// tests do, so `no-undef` stays on.
+// The final review of #91: each format gets the rule-11 checks, and each TypeScript format gets
+// TypeScript's parser. A JavaScript test imports its globals, so `no-undef` stays on there. In
+// TypeScript, tsc checks each name, so `no-undef` is off (AFA-127).
 describe('the lint config for each test format', () => {
   const eslint = new ESLint({ cwd: root });
   /**
@@ -99,17 +134,23 @@ describe('the lint config for each test format', () => {
     ]);
   });
 
-  // With type information, TypeScript's parser lints only a file in the TypeScript project, and
-  // with CI=true it reads that file from disk, not the text. No rule in the config uses type
-  // information, so TypeScript text is linted without it.
-  const untyped = new ESLint({
-    cwd: root,
-    overrideConfig: { languageOptions: { parserOptions: { project: false } } },
+  // The config doesn't build TypeScript's program, so lint reads TypeScript text as `pnpm lint`
+  // reads a file (AFA-127). A Node global such as process needs no import.
+  it.each(tsFormats)('lints a .%s test that runs', async format => {
+    const code = `import { expect, it } from 'vitest';\nit('reads X', () => {\n  expect(process.env.X ?? 'x').toBe('x');\n});\n`;
+    const [result] = await eslint.lintText(code, { filePath: `tests/a/x.test.${format}` });
+    expect(result.messages).toEqual([]);
+  });
+
+  it.each(tsFormats)('finds a .%s test with no expect', async format => {
+    const code = `import { it } from 'vitest';\nit('does nothing', () => {\n  void process;\n});\n`;
+    const [result] = await eslint.lintText(code, { filePath: `tests/a/x.test.${format}` });
+    expect(result.messages.map(message => message.ruleId)).toEqual(['vitest/expect-expect']);
   });
 
   it.each(tsFormats)('warns only about console.log in a .%s test', async format => {
     const code = `import { expect, it } from 'vitest';\nit('warns', () => {\n  console.warn('w');\n  console.log('l');\n  expect(1).toBe(1);\n});\n`;
-    const [result] = await untyped.lintText(code, { filePath: `tests/a/x.test.${format}` });
+    const [result] = await eslint.lintText(code, { filePath: `tests/a/x.test.${format}` });
     expect(result.messages.map(({ ruleId, severity }) => [ruleId, severity])).toEqual([
       ['no-console', 1],
     ]);
@@ -117,10 +158,17 @@ describe('the lint config for each test format', () => {
 
   it('warns only about console.log in src/', async () => {
     const code = `export const report = (): void => {\n  console.warn('w');\n  console.log('l');\n};\n`;
-    const [result] = await untyped.lintText(code, { filePath: 'src/x.ts' });
+    const [result] = await eslint.lintText(code, { filePath: 'src/x.ts' });
     expect(result.messages.map(({ ruleId, severity }) => [ruleId, severity])).toEqual([
       ['no-console', 1],
     ]);
+  });
+
+  // A .cts test is CommonJS, so it loads a module with require.
+  it('reads require in a .cts test', async () => {
+    const code = `import { expect, it } from 'vitest';\nconst { existsSync } = require('node:fs');\nit('finds the file', () => {\n  expect(existsSync(__filename)).toBe(true);\n});\n`;
+    const [result] = await eslint.lintText(code, { filePath: 'tests/a/x.test.cts' });
+    expect(result.messages).toEqual([]);
   });
 
   // Node gives a CommonJS module its file and folder names.
@@ -131,7 +179,7 @@ describe('the lint config for each test format', () => {
   });
 
   // Vite reads JSX only in a .jsx or .tsx file, so lint must reject JSX in the other formats.
-  it.each(jsFormats.filter(format => !format.endsWith('x')))(
+  it.each(formats.filter(format => !format.endsWith('x')))(
     'rejects JSX in a .%s test',
     async format => {
       const code = `${imports(format, 'expect, it')}\nit('renders', () => {\n  expect(<div id={env.X} />).toBeTruthy();\n});\n`;
@@ -140,9 +188,9 @@ describe('the lint config for each test format', () => {
     }
   );
 
-  // Lint reads JSX in a .jsx test. To run, such a test also needs React, which this project
-  // doesn't install, because Vite compiles JSX to React.createElement.
-  it.each(jsFormats.filter(format => format.endsWith('x')))(
+  // Lint reads JSX in a .jsx or .tsx test (AFA-127). To run, such a test also needs React, which
+  // this project doesn't install, because Vite compiles JSX to React.createElement.
+  it.each(formats.filter(format => format.endsWith('x')))(
     'reads JSX in a .%s test',
     async format => {
       const code = `${imports(format, 'expect, it')}\nit('renders', () => {\n  expect(<div id={env.X} />).toBeTruthy();\n});\n`;
