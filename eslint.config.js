@@ -47,9 +47,9 @@ export default [
       '@typescript-eslint/no-unused-vars': ['error', UNUSED],
       '@typescript-eslint/no-explicit-any': 'error',
       'no-console': CONSOLE,
-      // TypeScript allows overloads and a type and a value with the same name. typescript-eslint's
-      // version of the rule allows them too, and still finds a repeated var, which tsc accepts
-      // (AFA-127).
+      // TypeScript allows overloads and declaration merging, such as two interfaces with the same
+      // name. typescript-eslint's version of the rule allows them, and still finds a repeated var,
+      // which tsc accepts (AFA-127). As on main, it reports a type and a value with the same name.
       'no-redeclare': 'off',
       '@typescript-eslint/no-redeclare': 'error',
     },
