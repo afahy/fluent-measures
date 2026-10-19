@@ -29,7 +29,8 @@ describe('long runs of periods and semicolons', () => {
   // doesn't end that text, and a regex tried a match at each semicolon. PARSING.md gives null for
   // "kg-70.5": a unit prefix without a number before it keeps the minus sign. With 200,000
   // semicolons, the code before #62 took 11.2 s of clock time here. The current code takes about
-  // 130 ms of CPU time, or 300 ms with coverage.
+  // 130 ms of CPU time, or 300 ms with coverage. In CI's coverage runs it took 540 to 740 ms of CPU
+  // time (AFA-171), so the 4 s limit is more than 5 times that.
   it.skipIf(underStryker)('returns null for a long run of semicolons before x kg-70.5', () => {
     expect(parseWithin(`${';'.repeat(200_000)}x kg-70.5`, 4000)).toBeNull();
   });
@@ -54,9 +55,9 @@ describe('long runs of periods and semicolons', () => {
 
   // Here the code before #65 took 25 to 28 s of clock time for 150,000 copies of ";a-1", ".x-1" and
   // "x-1;". It took 33 to 41 s of clock time for 120,000 copies of ";kg-1" and "kg-1;". The current
-  // code takes 0.1 to 0.5 s of CPU time, or 0.3 to 1.1 s with coverage. In CI's coverage run, they
-  // took 0.9 to 5.8 s of clock time. So the limit is 12 s, and these tests get a 30 s timeout, not
-  // Vitest's 5 s.
+  // code takes 0.1 to 0.5 s of CPU time, or 0.3 to 1.1 s with coverage. In CI's coverage runs, they
+  // took 0.9 to 5.8 s of clock time and 0.7 to 3.6 s of CPU time (AFA-171). So the 12 s limit is
+  // more than 3 times the CPU time, and these tests get a 30 s timeout, not Vitest's 5 s.
   it.skipIf(underStryker).each(tokens)(
     'returns null for a long token of %s repeated %i times',
     { timeout: 30_000 },
