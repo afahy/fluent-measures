@@ -3,12 +3,8 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 // AFA-70 and AFA-150: lint fails a test that skips itself, or that is marked as expected to fail or
-// as a todo (AGENTS.md rule 3). These tests lint text in memory, so no such test is committed. A
-// test without type information reads the text, also with CI=true (see lintFormats.test.ts).
-const eslint = new ESLint({
-  cwd: fileURLToPath(new URL('..', import.meta.url)),
-  overrideConfig: { languageOptions: { parserOptions: { project: false } } },
-});
+// as a todo (AGENTS.md rule 3). These tests lint text in memory, so no such test is committed.
+const eslint = new ESLint({ cwd: fileURLToPath(new URL('..', import.meta.url)) });
 
 /** The problems in a test file with this body. Each is a rule, or the message of a syntax rule. */
 async function problems(body: string): Promise<string[]> {

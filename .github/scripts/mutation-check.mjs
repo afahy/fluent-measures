@@ -10,7 +10,7 @@
 import { execFileSync, spawnSync } from 'node:child_process';
 import { lstatSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, matchesGlob, resolve } from 'node:path';
 import {
   backslashPaths,
   controlPaths,
@@ -21,7 +21,7 @@ import {
   isUnmutatedCode,
   literalGlob,
   mutatedFiles,
-  reasonlessDirectives,
+  directiveLines,
   revisions,
   unexplainedIgnores,
   unkilledMutants,
@@ -161,6 +161,20 @@ for (const file of backslashed) {
 }
 if (backslashed.length > 0) process.exit(1);
 
+// Stryker resolves each `mutate` pattern from the project folder and matches the result as a
+// glob. So a glob in the folder's own path, as "[1]" in "/tmp/a[1]/repo", can make a pattern match
+// no file, and its warning would ask to move each changed file. Check each file as Stryker's
+// `FileMatcher` does: it writes each "\" in both paths as "/" first.
+const strykerPath = (/** @type {string} */ path) => resolve(path).replace(/\\/g, '/');
+if (
+  [...changed.keys()].some(file => !matchesGlob(strykerPath(file), strykerPath(literalGlob(file))))
+) {
+  console.error(
+    `::error::Move the repository to another folder. Stryker reads the glob characters in ${escapeData(JSON.stringify(process.cwd()))} as part of each pattern, so it finds no file to mutate.`
+  );
+  process.exit(1);
+}
+
 // Mutate the whole of each changed file, so a mutant whose code spans more lines than the change
 // is still made. Only the mutants that overlap a changed line count. Use the project's Stryker
 // config with a JSON report in a temporary folder and no score threshold: this script decides
@@ -218,9 +232,10 @@ for (const file of unmatched) {
 // Without the file, Stryker may find no tests to run, but the file is the problem to fix.
 if (unmatched.length > 0) process.exit(1);
 // A new directive can ignore a mutant on a line that didn't change, so check the directives too.
-const directives = [...changed].flatMap(([file, ranges]) =>
-  reasonlessDirectives(readFileSync(file, 'utf8'), ranges).map(line => ({ file, line }))
-);
+const directives = [...changed].flatMap(([file, ranges]) => {
+  const { lines, parsed } = directiveLines(readFileSync(file, 'utf8'), ranges);
+  return lines.map(line => ({ file, line, parsed }));
+});
 // Vitest runs only the tests that import a mutated file, and no test imports a file with only
 // types, such as src/types.ts, at runtime. So Stryker stops with "No tests were executed" and
 // writes no report. When the changed files have no mutants, no mutant can fail, so only the
@@ -260,14 +275,16 @@ if (unkilled.length > 0) {
     `${unkilled.length} mutant(s) on changed lines aren't killed. Add or strengthen a test. If a mutant can't change behavior, add "// Stryker disable next-line <mutator>: <reason>" above its line.`
   );
 }
-for (const { file, line } of directives) {
+for (const { file, line, parsed } of directives) {
   console.error(
-    `::error file=${escapeProperty(file)},line=${line}::This Stryker disable comment has no reason. Add ": <why behavior can't change>" after the mutator name.`
+    parsed
+      ? `::error file=${escapeProperty(file)},line=${line}::This Stryker disable comment has no reason. Add ": <why behavior can't change>" after the mutator name.`
+      : `::error file=${escapeProperty(file)},line=${line}::This check can't read the comments in this file, because its code is nested too deeply to parse. So it flags each changed line with "Stryker disable", even one with a reason. Nest the code less deeply.`
   );
 }
 if (unexplained.length + directives.length > 0) {
   console.error(
-    `${unexplained.length + directives.length} Stryker disable comment(s) or ignored mutant(s) on changed lines have no reason.`
+    `${unexplained.length + directives.length} Stryker disable comment(s) or ignored mutant(s) on changed lines have no reason, or are in a file that this check can't parse.`
   );
 }
 if (unkilled.length > 0 || unexplained.length > 0 || directives.length > 0) process.exit(1);

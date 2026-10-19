@@ -4,7 +4,7 @@ import tsParser from '@typescript-eslint/parser';
 import vitest from '@vitest/eslint-plugin';
 
 // The file formats that vitest.config.ts runs as tests (AFA-68), for every file under tests/.
-// TypeScript's project covers the TypeScript formats. The JavaScript formats get ESLint's own
+// TypeScript's parser reads the TypeScript formats. The JavaScript formats get ESLint's own
 // parser, and tests/lintFormats.test.ts checks that the two lists cover Vitest's formats.
 const TS_TESTS = 'tests/**/*.{ts,mts,cts,tsx}';
 const JS_TESTS = 'tests/**/*.{js,mjs,cjs,jsx}';
@@ -29,10 +29,11 @@ export default [
   {
     ignores: ['**/node_modules/**', '**/dist/**'],
     files: ['src/**/*.ts', TS_TESTS],
+    // No rule here uses type information, so the parser doesn't build TypeScript's program
+    // (AFA-127). Then lint reads the same text as tests/lintFormats.test.ts does.
     languageOptions: {
       parser: tsParser,
       parserOptions: {
-        project: './tsconfig.json',
         ecmaVersion: 'latest',
         sourceType: 'module',
       },
@@ -46,7 +47,19 @@ export default [
       '@typescript-eslint/no-unused-vars': ['error', UNUSED],
       '@typescript-eslint/no-explicit-any': 'error',
       'no-console': CONSOLE,
+      // TypeScript allows overloads and declaration merging, such as two interfaces with the same
+      // name. typescript-eslint's version of the rule allows them, and still finds a repeated var,
+      // which tsc accepts (AFA-127). As on main, it reports a type and a value with the same name.
+      'no-redeclare': 'off',
+      '@typescript-eslint/no-redeclare': 'error',
     },
+  },
+  // In a TypeScript test, tsc checks each name, also the Node globals such as process, so
+  // typescript-eslint recommends this (AFA-127). src/ keeps no-undef: tsc reads Node's types for
+  // it too, but the package also runs in a browser, so it mustn't use Node's globals.
+  {
+    files: [TS_TESTS],
+    rules: { 'no-undef': 'off' },
   },
   {
     files: [JS_TESTS],
@@ -56,15 +69,22 @@ export default [
     },
   },
   // `console` is a global wherever this code runs, so `no-console` decides which calls are allowed:
-  // it warns about each call other than warn and error.
+  // it warns about each call other than warn and error. A JavaScript test imports its other
+  // globals, so `no-undef` still finds a name that it forgets, as it does in src/.
   {
-    files: ['src/**/*.ts', TS_TESTS, JS_TESTS],
+    files: ['src/**/*.ts', JS_TESTS],
     languageOptions: { globals: { console: 'readonly' } },
   },
-  // Vite reads JSX only in .jsx and .tsx files, so only a .jsx test may hold it.
+  // Vite reads JSX only in .jsx and .tsx files. TypeScript's parser reads it in a .tsx file, and
+  // ESLint's parser needs this option for a .jsx test.
   {
     files: ['tests/**/*.jsx'],
     languageOptions: { parserOptions: { ecmaFeatures: { jsx: true } } },
+  },
+  // A .cts test is CommonJS, so it loads a module with require (AFA-127).
+  {
+    files: ['tests/**/*.cts'],
+    rules: { '@typescript-eslint/no-require-imports': 'off' },
   },
   // A .cjs test can't import Vitest, which is ESM only, so it uses the globals that
   // vitest.config.ts turns on. Node gives a CommonJS module its file and folder names too.

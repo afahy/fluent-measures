@@ -25,9 +25,12 @@ afterEach(() => {
   }
 });
 
-function createRepository(): string {
-  const repository = mkdtempSync(resolve(tmpdir(), 'fluent-measures-mutation-'));
-  directories.push(repository);
+/** Creates a repository in a new temporary folder, or in a folder of that name inside it. */
+function createRepository(folder?: string): string {
+  const parent = mkdtempSync(resolve(tmpdir(), 'fluent-measures-mutation-'));
+  directories.push(parent);
+  const repository = folder === undefined ? parent : resolve(parent, folder);
+  mkdirSync(repository, { recursive: true });
   git(repository, 'init', '--initial-branch', 'main');
   git(repository, 'config', 'user.email', 'test@example.com');
   git(repository, 'config', 'user.name', 'Test');
@@ -680,6 +683,48 @@ describe('mutation-check.mjs', () => {
 
     expect(check.status).toBe(1);
     expect(check.stderr).toContain('::error::Remove stryker.log, or make it a regular file.');
+  });
+
+  // AFA-117: Stryker reads some glob characters in the repository's path as part of each pattern,
+  // so it finds no file. The check says so, and doesn't ask to move each changed file. A glob
+  // character that leaves the pattern matching, as "*" does, changes nothing. Stryker writes a "\"
+  // as "/" in both paths, so a "\" in the folder's name changes nothing either.
+  it.each([
+    ['a[1]', 1],
+    ['{a,b}', 1],
+    ['a*b', 0],
+    ['a\\b', 0],
+  ])('checks a repository in the folder %s', (folder, status) => {
+    const repository = createRepository(folder);
+    const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
+    commitFiles(repository, { 'src/units.ts': 'export const a = 1 > 0;\n' });
+    addStrykerStub(repository);
+
+    const check = runCheck(repository, base);
+
+    expect(check.status).toBe(status);
+    expect(check.stderr.includes('::error::Move the repository to another folder.')).toBe(
+      status === 1
+    );
+  });
+
+  // AFA-117: on code nested too deeply to parse, the check flags each changed line with "Stryker
+  // disable", and it says why, not that the comment has no reason.
+  it('says why it flags a directive in a file that it cannot parse', () => {
+    const repository = createRepository();
+    const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
+    commitFiles(repository, {
+      'src/units.ts': `export const x = ${'('.repeat(5000)}1${')'.repeat(5000)};\n// Stryker disable next-line all: a reason\nexport const y = 1;\n`,
+    });
+    addStrykerStub(repository);
+
+    const check = runCheck(repository, base);
+
+    expect(check.status).toBe(1);
+    expect(check.stderr).toContain(
+      "::error file=src/units.ts,line=2::This check can't read the comments in this file"
+    );
+    expect(check.stderr).not.toContain('has no reason. Add');
   });
 
   // The check depends on three things in the installed Stryker: the warning's text, the log's name

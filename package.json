@@ -53,7 +53,7 @@
     "release:changeset": "changeset",
     "release:lifecycle:prepack": "pnpm clean && pnpm build",
     "release:lifecycle:prepublish": "pnpm build && pnpm test",
-    "release:publish": "pnpm build && git push --follow-tags && changeset publish && git push --no-verify origin --tags",
+    "release:publish": "pnpm build && git push --follow-tags && changeset publish && node -e \"require('child_process').execFileSync('git', ['push', '--no-verify', 'origin', 'refs/tags/v' + require('./package.json').version], { stdio: 'inherit' })\"",
     "release:validate": "pnpm check",
     "release:version": "changeset version && pnpm install",
     "test": "pnpm test:unit && pnpm test:types",
