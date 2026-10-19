@@ -142,6 +142,12 @@ and continue with other work. Don't look for another way around the check.
 - The Evidence check lists the results that the PR changes. When it lists changed results, put a
   "Changed results" line or heading under "Description" in the PR body. Under it, list each
   result that the ticket doesn't ask for (decision rule 3).
+- Before you change a result, read the file in `features/` for each feature that the change
+  touches. Test each way to reach the feature that the file lists. Add each new test file to
+  its feature file.
+- For a PR that changes `src/`, also start a new subagent that follows
+  `.claude/skills/find-failing-inputs/SKILL.md`. Give it only the branch name and the ticket
+  ID. Handle each input that it reports as a finding, as "Handle findings and CI" says.
 - Use the `fix` type when the PR changes a result that `parseMeasurement` returns. Never
   change a PR's type to skip a CI check.
 - Before you open the PR, review your own diff and fix the findings that are in scope. In
@@ -194,6 +200,8 @@ and continue with other work. Don't look for another way around the check.
   - If not, file a Linear ticket in the current milestone. Give it the failing inputs and a
     "must not change" list, and label it `agent-ready`. If it needs a decision from "Stop
     and ask", label it `needs-decision` instead.
+  - For a bug that reached `main`, name in the ticket the check that should have caught it.
+    The fix PR adds that check or makes it stronger, so that the same kind of bug fails CI.
 - Start each comment that you post with `Agent:`. Reply to each bot thread, and resolve
   each thread that a pushed commit fixes.
 - After each push, watch CI and the bot reviews as `.claude/skills/steward/SKILL.md` says.
