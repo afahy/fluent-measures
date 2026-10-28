@@ -63,8 +63,8 @@ ticket ID and text. Don't open a PR without a ticket ID.
 7. The examples in the README and in `PARSING.md` are the public specification. When code
    and an example disagree, follow the ticket's direction about which one changes. If the
    ticket does not say, ask on the ticket.
-8. Never use a branch-protection bypass, and don't enable auto-merge until AFA-29 is
-   complete. Agents open PRs from the maintainer's GitHub account, so each merge is recorded
+8. Never use a branch-protection bypass. Turn on auto-merge only as "Merge your own PR"
+   says. Agents open PRs from the maintainer's GitHub account, so each merge is recorded
    as the maintainer's.
 9. Write every PR description from `.github/pull_request_template.md`. Keep all of its
    headings in the same order, fill in each section as its comments say, and don't replace
@@ -124,7 +124,8 @@ answer:
 - Open PRs, post `Agent:` comments and Codex review requests, reply to and resolve threads,
   and convert a PR to a draft.
 - Re-run CI jobs that no runner picked up, or that an Actions incident stopped.
-- Merge a PR with `gh pr merge <number> --squash` when "Merge your own PR" allows it.
+- Merge a PR with `gh pr merge <number> --squash`, or turn on its auto-merge, when "Merge your
+  own PR" allows it. Turn auto-merge off again before you push to that PR.
 - Pull `main` after a merge, and remove the merged PR's worktree and local branch.
 - Raise a limit in `.size-limit.cjs` by 0.5 kB.
 - Start subagents that build a ticket in its own worktree, review a branch or watch PRs.
@@ -270,10 +271,30 @@ when all of these are true:
 - The PR body and a ticket comment list each result that it changes from `main` beyond the
   ticket (decision rule 3).
 
-Merge with `gh pr merge <number> --squash`. Never add `--admin` or `--auto`. Then add a
+Merge with `gh pr merge <number> --squash`. Never add `--admin`. Then add a
 ticket comment with the PR link and each decision that the maintainer may want to change. To
 undo a merge, open a revert PR. If a workflow starts to publish the package when `main`
 changes, merges become one-way doors: stop merging, and tell the maintainer.
+
+#### Auto-merge
+
+Auto-merge lets GitHub merge a PR once the checks that `main` requires pass, so the merge
+doesn't wait for you. Those checks are only `ci-ok`, `Validate commits and PR title` and
+`Regression test fails without the fix`. GitHub doesn't wait for Codex, the Claude review or
+`Evidence of changed results`, so check them yourself first. Turn on auto-merge only when all of
+these are true:
+
+- Each condition above is true, except that CI is still running: `pnpm pr:status <pr>` reports
+  `waiting`, and its only wait is "CI is running".
+- `Claude review` and `Evidence of changed results` are among the checks that passed, and
+  Codex has completed a review of the last commit.
+- You have done the last comment check from "Finish the PR".
+
+Turn it on with `gh pr merge <number> --squash --auto`. Auto-merge stays on after a push, so
+turn it off with `gh pr merge <number> --disable-auto` before you push to the PR. Turn it on
+again only when these conditions are true again. If CI fails, GitHub doesn't merge: handle the
+failure as "Handle findings and CI" says. Keep watching the PR as the steward skill says, and do
+the steps after the merge in "Finish the PR" once it shows `merged`.
 
 ### Finish your task
 
