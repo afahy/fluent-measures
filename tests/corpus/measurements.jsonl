@@ -465,7 +465,7 @@
 {"id": "signed-label-comma-grams", "input": "kg: -twenty, 5 grams; actual 70 kg", "expected": null, "category": "unsupported", "source": "AFA-179"}
 {"id": "signed-word-comma-ounces", "input": "lb -one hundred, 5 oz; actual 70 kg", "expected": null, "category": "unsupported", "source": "AFA-179"}
 {"id": "signed-word-comma-semicolon-grams", "input": "kg -twenty, 5; grams; actual 70 kg", "expected": null, "category": "unsupported", "source": "AFA-179"}
-{"id": "signed-phrase-separate-grams", "input": "kg -twenty five 5 grams; actual 70 kg", "expected": null, "category": "unsupported", "source": "AFA-179"}
-{"id": "signed-digits-separate-grams", "input": "kg -20 5 grams; actual 70 kg", "expected": null, "category": "unsupported", "source": "AFA-179"}
-{"id": "signed-phrase-compact-comma-grams", "input": "kg -twenty five,5 grams; actual 70 kg", "expected": null, "category": "unsupported", "source": "AFA-179"}
-{"id": "signed-phrase-semicolon-grams", "input": "kg -twenty five; 5 grams; actual 70 kg", "expected": null, "category": "unsupported", "source": "AFA-179"}
+{"id": "signed-phrase-separate-grams", "input": "kg -twenty five 5 grams; actual 70 kg", "expected": null, "category": "unsupported", "source": "AFA-203", "note": "Pre-existing signed-prefix ownership failure outside the new comma boundary. This PR preserves main at 70 kg; AFA-203 owns the expected null correction."}
+{"id": "signed-digits-separate-grams", "input": "kg -20 5 grams; actual 70 kg", "expected": null, "category": "unsupported", "source": "AFA-203", "note": "Pre-existing signed-prefix ownership failure outside the new comma boundary. This PR preserves main at 70 kg; AFA-203 owns the expected null correction."}
+{"id": "signed-phrase-compact-comma-grams", "input": "kg -twenty five,5 grams; actual 70 kg", "expected": null, "category": "unsupported", "source": "AFA-203", "note": "Pre-existing signed-prefix ownership failure outside the new comma boundary. This PR preserves main at 70 kg; AFA-203 owns the expected null correction."}
+{"id": "signed-phrase-semicolon-grams", "input": "kg -twenty five; 5 grams; actual 70 kg", "expected": null, "category": "unsupported", "source": "AFA-203", "note": "Pre-existing signed-prefix ownership failure outside the new comma boundary. This PR preserves main at 70 kg; AFA-203 owns the expected null correction."}

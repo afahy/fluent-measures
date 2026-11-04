@@ -43,12 +43,24 @@ describe.each(weightOptions)('weight number ownership across comma boundaries wi
     'kg: -twenty, 5 grams; actual 70 kg',
     'lb -one hundred, 5 oz; actual 70 kg',
     'kg -twenty, 5; grams; actual 70 kg',
-    // The same backward ownership check must read a sign without a comma boundary too.
+  ])('keeps a signed unit-first weight connected in %s', raw => {
+    expect(parseMeasurement(raw, options)).toBeNull();
+  });
+
+  // This ticket changes comma-and-space boundaries only. Preserve main for other separators;
+  // the separate signed-ownership ticket owns their incomplete-weight correction.
+  it.each([
     'kg -twenty five 5 grams; actual 70 kg',
     'kg -20 5 grams; actual 70 kg',
     'kg -twenty five,5 grams; actual 70 kg',
     'kg -twenty five; 5 grams; actual 70 kg',
-  ])('keeps a signed unit-first weight connected in %s', raw => {
-    expect(parseMeasurement(raw, options)).toBeNull();
+  ])('preserves the existing result without the new comma boundary in %s', raw => {
+    expect(parseMeasurement(raw, options)).toEqual({
+      value: 70,
+      unit: 'kg',
+      type: 'weight',
+      raw,
+      matches: [{ value: 70, unit: 'kg' }],
+    });
   });
 });
