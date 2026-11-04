@@ -253,9 +253,10 @@ function hasUnsupportedPart(text: Words, remaining: Words, i: number, fuzziness?
   const [after, afterEnd] = readSignedPhrase(text, next);
   const unitAt = skip(afterEnd);
   // A supported part before it can have its unit first, as in "kg 3, 400 g". Earlier
-  // matches use their tokens, so check all the tokens for a unit.
+  // matches use their tokens, so check all the tokens for a unit. Read a leading sign too,
+  // so "kg -twenty, 5 grams" keeps both parts connected.
   const partEndsAt = (end: number): boolean =>
-    isWeightUnit(text(readNumberPhrase(text, skip(end, -1), -1)[1]));
+    isWeightUnit(text(readSignedPhrase(text, skip(end, -1), -1)[1]));
   // With no number before it, the unit can come before its number, as in "stone 12, 4 lb",
   // unless a weight unit after that number takes it, as in "stone, 50 lb bag". A unit with
   // its own number after it doesn't, as in "Stone: 12, lb: 4". Like "in" and "m", "st"

@@ -33,4 +33,22 @@ describe.each(weightOptions)('weight number ownership across comma boundaries wi
   ])('rejects both parts in %s', raw => {
     expect(parseMeasurement(raw, options)).toBeNull();
   });
+
+  // PARSING.md keeps unsupported parts connected across commas. A sign on a supported
+  // unit's number does not detach its following grams or ounces from that weight.
+  it.each([
+    'kg -twenty, 5 grams; actual 70 kg',
+    'kg -twenty five, 5 grams; actual 70 kg',
+    'kg -a hundred, 5 grams; actual 70 kg',
+    'kg: -twenty, 5 grams; actual 70 kg',
+    'lb -one hundred, 5 oz; actual 70 kg',
+    'kg -twenty, 5; grams; actual 70 kg',
+    // The same backward ownership check must read a sign without a comma boundary too.
+    'kg -twenty five 5 grams; actual 70 kg',
+    'kg -20 5 grams; actual 70 kg',
+    'kg -twenty five,5 grams; actual 70 kg',
+    'kg -twenty five; 5 grams; actual 70 kg',
+  ])('keeps a signed unit-first weight connected in %s', raw => {
+    expect(parseMeasurement(raw, options)).toBeNull();
+  });
 });

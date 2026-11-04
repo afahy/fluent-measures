@@ -7,3 +7,6 @@ returns 5 cm and `I am forty, 5 kg overweight` returns 5 kg.
 
 Reject incomplete weights such as `stone twenty, 4 lb` while preserving a later independent
 weight after a signed part, as in `stone -5 lb; actual 70 kg`.
+
+Keep unsupported weight parts connected to a signed unit-first amount, including
+`kg -twenty, 5 grams; actual 70 kg`, so incomplete weights return `null`.

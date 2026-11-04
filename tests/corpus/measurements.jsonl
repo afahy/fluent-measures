@@ -459,3 +459,13 @@
 {"id": "unsupported-word-comma-stone-label", "input": "stone: twenty, 4 lb", "expected": null, "category": "unsupported", "source": "AFA-179"}
 {"id": "unsupported-word-independent-signed-field", "input": "stone -5 lb; actual 70 kg", "expected": {"value": 70, "unit": "kg", "type": "weight"}, "category": "surrounding-text", "source": "AFA-179"}
 {"id": "unicode-minus-after-number-word-label", "input": "phase twenty, −5 cm", "expected": null, "category": "commas", "source": "AFA-202", "note": "Newly recorded pre-existing failure: the Unicode minus after an earlier number is dropped. The separate sign-mapping ticket owns the fix; this comma-boundary change preserves the existing 25 cm result."}
+{"id": "signed-word-comma-grams", "input": "kg -twenty, 5 grams; actual 70 kg", "expected": null, "category": "unsupported", "source": "AFA-179"}
+{"id": "signed-phrase-comma-grams", "input": "kg -twenty five, 5 grams; actual 70 kg", "expected": null, "category": "unsupported", "source": "AFA-179"}
+{"id": "signed-article-comma-grams", "input": "kg -a hundred, 5 grams; actual 70 kg", "expected": null, "category": "unsupported", "source": "AFA-179"}
+{"id": "signed-label-comma-grams", "input": "kg: -twenty, 5 grams; actual 70 kg", "expected": null, "category": "unsupported", "source": "AFA-179"}
+{"id": "signed-word-comma-ounces", "input": "lb -one hundred, 5 oz; actual 70 kg", "expected": null, "category": "unsupported", "source": "AFA-179"}
+{"id": "signed-word-comma-semicolon-grams", "input": "kg -twenty, 5; grams; actual 70 kg", "expected": null, "category": "unsupported", "source": "AFA-179"}
+{"id": "signed-phrase-separate-grams", "input": "kg -twenty five 5 grams; actual 70 kg", "expected": null, "category": "unsupported", "source": "AFA-179"}
+{"id": "signed-digits-separate-grams", "input": "kg -20 5 grams; actual 70 kg", "expected": null, "category": "unsupported", "source": "AFA-179"}
+{"id": "signed-phrase-compact-comma-grams", "input": "kg -twenty five,5 grams; actual 70 kg", "expected": null, "category": "unsupported", "source": "AFA-179"}
+{"id": "signed-phrase-semicolon-grams", "input": "kg -twenty five; 5 grams; actual 70 kg", "expected": null, "category": "unsupported", "source": "AFA-179"}
