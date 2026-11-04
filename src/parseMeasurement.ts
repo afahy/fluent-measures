@@ -233,14 +233,6 @@ function labelHasValue(
  * tokens, which `remaining` reads as "", so the check reads units in `text`, which reads them all.
  */
 function hasUnsupportedPart(text: Words, remaining: Words, i: number, fuzziness?: number): boolean {
-  // A comma separates number phrases, but not a weight's parts. For this check only, read its
-  // boundary as "and", which both number readers skip, so "stone -twenty five, 4 lb" stays null.
-  const acrossComma =
-    (words: Words): Words =>
-    at =>
-      words(at) === 'COMMA' ? 'and' : words(at);
-  text = acrossComma(text);
-  remaining = acrossComma(remaining);
   const word = remaining(i);
   if (!UNSUPPORTED_WEIGHT_UNITS.test(word)) return false;
   // Stryker disable next-line StringLiteral: a missing token and "Stryker was here!" are both no weight unit.
@@ -251,29 +243,28 @@ function hasUnsupportedPart(text: Words, remaining: Words, i: number, fuzziness?
   const [before, beforeEnd] = readSignedPhrase(remaining, i - 1, -1);
   // Reading backward already skips semicolons, so skip them reading forward too, as in
   // "8 oz; 7 lb" and "12 st 4;lb". Commas don't separate parts, so a label that starts a field
-  // can be a part's unit, as in "Stone: 12, lb: 4".
-  const skip = (start: number): number => skipSemicolons(text, start);
+  // can be a part's unit, as in "Stone: 12, lb: 4". Cross a comma only between parts, so the
+  // numbers in "stone twenty, 4 lb" stay separate and "stone" keeps its own number.
+  const skip = (start: number, step = 1): number => {
+    while (text(start) === ';' || text(start) === 'COMMA') start += step;
+    return start;
+  };
   const next = skip(i + 1);
-  const [after, afterEnd, afterSigned] = readSignedPhrase(text, next);
+  const [after, afterEnd] = readSignedPhrase(text, next);
   const unitAt = skip(afterEnd);
   // A supported part before it can have its unit first, as in "kg 3, 400 g". Earlier
   // matches use their tokens, so check all the tokens for a unit.
   const partEndsAt = (end: number): boolean =>
-    isWeightUnit(text(readNumberPhrase(text, end, -1)[1]));
+    isWeightUnit(text(readNumberPhrase(text, skip(end, -1), -1)[1]));
   // With no number before it, the unit can come before its number, as in "stone 12, 4 lb",
   // unless a weight unit after that number takes it, as in "stone, 50 lb bag". A unit with
   // its own number after it doesn't, as in "Stone: 12, lb: 4". Like "in" and "m", "st"
   // and "g" before a number are usually other words, as in "Main St 12".
-  // A signed phrase still invalidates the supported part, as in "stone -a hundred, 4 lb".
   return before === null
     ? after !== null &&
         word !== 'st' &&
         word !== 'g' &&
-        !(
-          !afterSigned &&
-          isWeightUnit(text(unitAt)) &&
-          readNumberPhrase(text, skip(unitAt + 1))[0] === null
-        ) &&
+        !(isWeightUnit(text(unitAt)) && readNumberPhrase(text, skip(unitAt + 1))[0] === null) &&
         (partEndsAt(i - 1) || isWeightUnit(text(skip(readNumberPhrase(text, unitAt)[1]))))
     : isUnsupportedUnit(word, remaining(i - 1)) &&
         (partEndsAt(beforeEnd) || isWeightUnit(text(unitAt)));

@@ -27,6 +27,7 @@ fractions, decimal commas and thousands groups.
 - Source: `src/wordsToNumber.ts`, `src/tokenize.ts`, `src/parseMeasurement.ts`
 - Tests: `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.andAHalf.test.ts`, `tests/parseMeasurement.commaBoundaries.test.ts`,
   `tests/parseMeasurement.numberWordCommas.test.ts`,
+  `tests/parseMeasurement.commaWeightOwnership.test.ts`,
   `tests/parseMeasurement.commaFractions.test.ts`, `tests/parseMeasurement.commaGroups.test.ts`,
   `tests/parseMeasurement.commaSyntax.test.ts`, `tests/parseMeasurement.commas.test.ts`,
   `tests/parseMeasurement.fractions.test.ts`, `tests/parseMeasurement.numberWords.test.ts`,

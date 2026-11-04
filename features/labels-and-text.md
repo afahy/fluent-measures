@@ -25,6 +25,7 @@ don't become units.
 - Source: `src/tokenize.ts`, `src/parseMeasurement.ts`
 - Tests: `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.commaLabels.test.ts`, `tests/parseMeasurement.inPreposition.test.ts`,
   `tests/parseMeasurement.numberWordCommas.test.ts`,
+  `tests/parseMeasurement.commaWeightOwnership.test.ts`,
   `tests/parseMeasurement.labelValues.test.ts`, `tests/parseMeasurement.longRuns.test.ts`,
   `tests/parseMeasurement.unicodeLabels.test.ts`, `tests/parseMeasurement.unitFirstPhrases.test.ts`,
   `tests/parseMeasurement.unitLabels.test.ts`, `tests/tokenize.test.ts`
