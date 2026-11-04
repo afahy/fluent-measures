@@ -93,6 +93,10 @@ Use Node.js 22.22.1 or later in 22.x, 24.11 or later in 24.x, or 26 or later. Us
 - Changesets 3: Node.js `^22.11 || ^24 || >=26`.
 - lint-staged 17, which the pre-commit hook runs: Node.js `>=22.22.1` and Git 2.32.0 or later.
 
+The git hooks run pnpm. When pnpm isn't on PATH, as in some shells that tools start, the hooks
+run `corepack pnpm`, or else `npx pnpm@<version>` with the version in the `packageManager` field
+(`.husky/_pnpm.sh` and `.husky/bin/pnpm`). They print an error only when neither works.
+
 ```bash
 # Clone your fork of the repository
 git clone https://github.com/your-username/fluent-measures.git
