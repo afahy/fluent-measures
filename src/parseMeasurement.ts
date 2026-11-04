@@ -209,6 +209,23 @@ function readValueAfter(
   return [ownUnit ? null : value, end];
 }
 
+/** Whether a label owns the value after it instead of a number before it. */
+function labelHasValue(
+  tokens: Token[],
+  words: Words,
+  at: number,
+  unit: Unit,
+  fuzziness?: number
+): boolean {
+  const kind = tokens[at].label;
+  if (!kind) return false;
+  const valueAt = skipSemicolons(words, at + 1);
+  const signed = readSignedPhrase(words, valueAt)[2];
+  return kind === 'name' && !signed
+    ? readNumberPhrase(words, valueAt)[0] !== null
+    : readValueAfter(tokens, words, at + 1, unit, true, fuzziness)[0] !== null;
+}
+
 /**
  * Whether the token at `i` is a stone, ounce or gram unit whose number stands next to a supported
  * weight part, as in "12st 4lb" or "7 lb 8 oz". That part would leave the weight incomplete. An
@@ -344,15 +361,30 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     const unit = unitAt(at);
     if (!unit || tokens[at].startsField) continue;
     // A label with its own value starts a separate measurement, as in "age=20-30, kg=70".
-    if (
-      tokens[at].label &&
-      readValueAfter(tokens, words, at + 1, unit, true, fuzziness)[0] !== null
-    ) {
+    if (labelHasValue(tokens, words, at, unit, fuzziness)) {
       continue;
     }
-    const [feet] = readNumberPhrase(words, i - 1, -1);
+    const [feet, before] = readNumberPhrase(words, i - 1, -1);
     const [inches, end] = readNumberPhrase(words, skipSemicolons(words, at + 1));
-    const nextUnit = unitAt(skipSemicolons(words, end));
+    const nextAt = skipSemicolons(words, end);
+    const nextUnit = unitAt(nextAt);
+    const nextOwnsValue =
+      nextUnit &&
+      (tokens[nextAt].startsField || labelHasValue(tokens, words, nextAt, nextUnit, fuzziness));
+    const prefix = unitAt(before);
+    const [beforeValue, , beforeSigned] = readSignedPhrase(words, before - 1, -1);
+    // A prefix can own this number, as in "kg 70", or the bare inches after feet, as in
+    // "5 ft 5". A unit with an earlier number normally leaves the following one free. Zero
+    // feet and semicolons keep the same prefix and bare-inch rules as the parser below.
+    const feetOwned =
+      prefix &&
+      !LABEL_ALIASES.has(words(before)) &&
+      (labelHasValue(tokens, words, before, prefix, fuzziness) ||
+        (!beforeSigned &&
+          (beforeValue === null ||
+            (beforeValue === 0 && (prefix !== 'ft' || words(before - 1) === ';')) ||
+            (prefix === 'ft' && words(before + 1) !== ';' && feet! > 0 && feet! < 12)) &&
+          readSignedPhrase(words, skipSemicolons(words, before + 1))[0] !== null));
     // Keep a unit-prefix field after an unrelated range, as in "record 1-2; kg 70". A number
     // with its own unit, or surrounding feet, makes the range-unit attachment unambiguous.
     if (at !== i + 1 && i > 0 && feet === null && !nextUnit) continue;
@@ -360,6 +392,8 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     // valid parts and an explicit inch unit, the unit after the range belongs only to the range.
     if (
       unit === 'ft' &&
+      !feetOwned &&
+      !nextOwnsValue &&
       Number.isInteger(feet) &&
       inches !== null &&
       inches < 12 &&
@@ -442,10 +476,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       const signedValue = label && valueSigned;
       // A field name takes any number after it, but not a signed one with its own unit, as in
       // "72 in: -180 lbs".
-      const valueFollows =
-        kind === 'name' && !signedValue
-          ? readNumberPhrase(remaining, valueAt)[0] !== null
-          : label && readValueAfter(tokens, remaining, i + 1, unit, label, fuzziness)[0] !== null;
+      const valueFollows = labelHasValue(tokens, remaining, i, unit, fuzziness);
       // A sign on the first word of a phrase signs the whole phrase, as in "-twenty five kg" and
       // "-a hundred kg". So those inputs return null, as "-5 feet" does.
       // When the value follows, or the label starts a field, the read before the unit takes nothing,

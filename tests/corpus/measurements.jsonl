@@ -436,3 +436,12 @@
 {"id": "range-label-unsupported-part", "input": "age=20-30, kg=400 g, 80 lb", "expected": null, "category": "surrounding-text", "source": "AFA-170"}
 {"id": "range-surrounding-unit-label", "input": "6 1-2 ft: 3 in", "expected": {"value": 75, "unit": "in", "type": "height"}, "category": "surrounding-text", "source": "AFA-170", "note": "The following 3 has its own inch unit, so the feet label takes the preceding 6 after the range is omitted."}
 {"id": "range-unqualified-number-words", "input": "twenty 1-2 five", "options": {"type": "height", "allowUnqualified": true}, "expected": null, "category": "unqualified", "source": "AFA-170", "note": "The range boundary must not join twenty and five into an inferred value."}
+{"id": "range-owned-prefix-number", "input": "kg 70 1-2 ft 6 in", "expected": {"value": 6, "unit": "in", "type": "height"}, "category": "surrounding-text", "source": "AFA-170"}
+{"id": "range-independent-inch-field", "input": "6 1-2 ft 3, in=72", "expected": {"value": 72, "unit": "in", "type": "height"}, "category": "surrounding-text", "source": "AFA-170"}
+{"id": "range-owned-prefix-number-words", "input": "kilograms seventy 1-2 ft 6 in", "expected": {"value": 6, "unit": "in", "type": "height"}, "category": "surrounding-text", "source": "AFA-170"}
+{"id": "range-owned-bare-inch-part", "input": "5 ft 5 1-2 ft 0 in", "expected": {"value": 65, "unit": "in", "type": "height"}, "category": "surrounding-text", "source": "AFA-170"}
+{"id": "range-owned-prefix-inches", "input": "inches 6 1-2 ft 6 in", "expected": {"value": 6, "unit": "in", "type": "height"}, "category": "surrounding-text", "source": "AFA-170"}
+{"id": "range-independent-inch-field-own-unit", "input": "6 1-2 ft 3 in=72 cm", "expected": {"value": 72, "unit": "cm", "type": "height"}, "category": "surrounding-text", "source": "AFA-170"}
+{"id": "range-owned-prefix-feet", "input": "ft six 1-2 ft 3 in", "expected": {"value": 75, "unit": "in", "type": "height"}, "category": "surrounding-text", "source": "AFA-170"}
+{"id": "range-owned-fuzzy-prefix", "input": "poundz 70 1-2 ft 6 in", "options": {"fuzziness": 1}, "expected": {"value": 6, "unit": "in", "type": "height"}, "category": "surrounding-text", "source": "AFA-170"}
+{"id": "range-independent-empty-inch-field", "input": "6 1-2 ft 3, in: height", "expected": null, "category": "surrounding-text", "source": "AFA-170"}
