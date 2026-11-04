@@ -325,21 +325,9 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     return null;
   }
 
-  // Tokenize the text on each side of a range separately, retaining an identifiable boundary.
-  // Ordinary prose dashes remain ordinary tokens, as in "weight - kg 70".
+  // Retain quote and label context while replacing numeric ranges with distinct boundaries.
   const fuzziness = options.fuzziness;
-  const ranges = new Set<Token>();
-  let tokens = trimmed
-    .split(/((?<![\d.])[\d.]+(?:\s*\p{Dash}\s*[\d.]+)+)/gu)
-    .flatMap<Token>((text, index) => {
-      if (index % 2) {
-        // Stryker disable next-line StringLiteral: an empty token stops number phrases too, so it is the same boundary.
-        const boundary = { text: '-' };
-        ranges.add(boundary);
-        return [boundary];
-      }
-      return tokenizeNormalized(text, fuzziness);
-    });
+  let tokens = tokenizeNormalized(trimmed, fuzziness, true);
 
   const words: Words = at => tokens[at]?.text;
   const unitAt = (at: number): Unit | null => {
@@ -350,25 +338,37 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   };
   // A preceding unit cannot reach across the boundary. If it already owns a number, keep it,
   // as in "6ft1-2in".
-  // Stryker disable next-line EqualityOperator: an extra iteration sees no range and continues without changing any token.
-  for (let i = 0; i < tokens.length; i++) {
-    if (!ranges.has(tokens[i])) continue;
-    if (!unitAt(i + 1)) continue;
+  for (const [i, token] of tokens.entries()) {
+    if (!token.range) continue;
+    const at = skipSemicolons(words, i + 1);
+    const unit = unitAt(at);
+    if (!unit || tokens[at].startsField) continue;
+    // A label with its own value starts a separate measurement, as in "age=20-30, kg=70".
+    if (
+      tokens[at].label &&
+      readValueAfter(tokens, words, at + 1, unit, true, fuzziness)[0] !== null
+    ) {
+      continue;
+    }
     const [feet] = readNumberPhrase(words, i - 1, -1);
-    const [inches, end] = readNumberPhrase(words, i + 2);
+    const [inches, end] = readNumberPhrase(words, skipSemicolons(words, at + 1));
+    const nextUnit = unitAt(skipSemicolons(words, end));
+    // Keep a unit-prefix field after an unrelated range, as in "record 1-2; kg 70". A number
+    // with its own unit, or surrounding feet, makes the range-unit attachment unambiguous.
+    if (at !== i + 1 && i > 0 && feet === null && !nextUnit) continue;
     // Keep the surrounding feet and inches in "6 1-2 ft 3 in" as "6 ft 3 in". Without both
     // valid parts and an explicit inch unit, the unit after the range belongs only to the range.
     if (
-      unitAt(i + 1) === 'ft' &&
+      unit === 'ft' &&
       Number.isInteger(feet) &&
       inches !== null &&
       inches < 12 &&
-      unitAt(end) === 'in'
+      nextUnit === 'in'
     ) {
-      tokens[i].used = true;
+      token.used = true;
     } else {
       // Stryker disable next-line StringLiteral: any non-unit, non-number token is the same boundary as an empty token.
-      tokens[i + 1].text = '';
+      tokens[at].text = '';
     }
   }
   tokens = tokens.filter(token => !token.used);

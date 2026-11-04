@@ -2,7 +2,7 @@
 
 exports[`measurement corpus > matches the committed score 1`] = `
 "Category                 total   agree   wrong  missed  throws
-all                        416     400       4      12       0
+all                        437     421       4      12       0
 
 symbols                     27      27       0       0       0
 words                       30      30       0       0       0
@@ -13,8 +13,8 @@ hyphens                     34      34       0       0       0
 compact                     24      12       0      12       0
 unicode                     29      29       0       0       0
 typos                       32      32       0       0       0
-surrounding-text            29      29       0       0       0
-multiple-measurements       30      30       0       0       0
+surrounding-text            37      37       0       0       0
+multiple-measurements       43      43       0       0       0
 unqualified                 23      23       0       0       0
 conversion                  28      28       0       0       0
 unsupported                 26      26       0       0       0
@@ -122,7 +122,7 @@ compact-ft-in-dots (compact)
 
 Entries with the outcome "throws" (0):
 
-Entries that agree with one of several outputs (8):
+Entries that agree with one of several outputs (17):
 
 unicode-en-dash-shorthand: null
 unicode-hyphen-shorthand: null
@@ -131,5 +131,14 @@ multiple-height-weight-no-type: 71 in (height)
 multiple-6-1-190-no-type: 73 in (height)
 unqualified-1-75-metric-height: 1.75 m (height)
 unqualified-no-infer-unit: 150 lb (weight)
-unqualified-1-8-metric-height: 1.8 m (height)"
+unqualified-1-8-metric-height: 1.8 m (height)
+probe-semicolon-suffix-weight: 70 kg (weight)
+probe-semicolon-suffix-inches: 6 in (height)
+probe-semicolon-both-sides: 6 in (height)
+probe-semicolon-suffix-metric: 180 lb (weight)
+probe-semicolon-multiple: 70 kg (weight)
+probe-semicolon-normalized: 15.24 cm (height)
+probe-semicolon-fuzzy: 70 kg (weight)
+probe-semicolon-other-weight: 70 kg (weight)
+probe-semicolon-unicode-range: 70 kg (weight)"
 `;
