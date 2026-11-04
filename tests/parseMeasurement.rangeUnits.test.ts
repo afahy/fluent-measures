@@ -170,6 +170,21 @@ describe('units next to an omitted numeric range', () => {
     expect(parseMeasurement('1-2; ft 6')).toBeNull();
   });
 
+  it('does not join number words across a range for unqualified inference', () => {
+    expect(
+      parseMeasurement('twenty 1-2 five', {
+        type: 'height',
+        allowUnqualified: true,
+      })
+    ).toBeNull();
+    expect(
+      parseMeasurement('twenty 1-2 five', {
+        type: 'weight',
+        allowUnqualified: true,
+      })
+    ).toBeNull();
+  });
+
   it('removes fuzzy range units when fuzziness is enabled', () => {
     expect(parseMeasurement('150-180 poundz 70 kg', { fuzziness: 1 })).toMatchObject({
       value: 70,

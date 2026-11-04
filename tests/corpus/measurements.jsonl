@@ -435,3 +435,4 @@
 {"id": "range-semicolon-inch-mark", "input": "6 1-2 ft 3;\"", "expected": {"value": 75, "unit": "in", "type": "height"}, "category": "surrounding-text", "source": "AFA-170"}
 {"id": "range-label-unsupported-part", "input": "age=20-30, kg=400 g, 80 lb", "expected": null, "category": "surrounding-text", "source": "AFA-170"}
 {"id": "range-surrounding-unit-label", "input": "6 1-2 ft: 3 in", "expected": {"value": 75, "unit": "in", "type": "height"}, "category": "surrounding-text", "source": "AFA-170", "note": "The following 3 has its own inch unit, so the feet label takes the preceding 6 after the range is omitted."}
+{"id": "range-unqualified-number-words", "input": "twenty 1-2 five", "options": {"type": "height", "allowUnqualified": true}, "expected": null, "category": "unqualified", "source": "AFA-170", "note": "The range boundary must not join twenty and five into an inferred value."}

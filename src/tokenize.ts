@@ -278,7 +278,6 @@ export function tokenizeNormalized(
     else if (text === UNIT_WORD) label = 'unit';
     else {
       if (text === RANGE_WORD) {
-        // Stryker disable next-line StringLiteral: an empty token stops number phrases too, so it is the same range boundary.
         tokens.push({ text: '-', range: true });
       } else tokens.push(label ? { text, label, startsField } : { text });
       startsField = false;
