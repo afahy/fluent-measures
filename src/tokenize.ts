@@ -18,6 +18,8 @@ export interface Token {
    * to the field before it.
    */
   startsField?: boolean;
+  /** Whether this boundary replaces a numeric range. The parser requests these tokens. */
+  range?: boolean;
   /** Whether a measurement has used the token. The parser sets it. */
   used?: boolean;
 }
@@ -28,6 +30,7 @@ export interface Token {
 const NAME_WORD = 'NAME';
 const UNIT_WORD = 'UNIT';
 const FIELD_WORD = 'FIELD';
+const RANGE_WORD = 'RANGE';
 
 // A unit alias in brackets or before a colon or equals sign, as in "(kg)", "m:", "in = 72" and
 // "("):", is a label. So is "in." followed by a space, the usual abbreviation for inches. The alias must
@@ -189,15 +192,22 @@ export function normalize(input: string): string {
 }
 
 /**
- * Normalize text and split it into tokens. The parser does the same, but it also replaces each
- * range with a boundary first, so the tokens of `tokenize('5-11')` are "5" and "11".
+ * Normalize text and split it into tokens. The parser requests boundaries for numeric ranges,
+ * while the tokens of `tokenize('5-11')` are "5" and "11".
  */
 export function tokenize(input: string, fuzziness?: number): Token[] {
   return tokenizeNormalized(normalize(input), fuzziness);
 }
 
-/** Split normalized text while retaining negative signs and compound boundaries. */
-export function tokenizeNormalized(input: string, fuzziness?: number): Token[] {
+/**
+ * Split normalized text while retaining negative signs and compound boundaries. The parser can
+ * request numeric range boundaries without losing the text's quote or label context.
+ */
+export function tokenizeNormalized(
+  input: string,
+  fuzziness?: number,
+  rangeBoundaries = false
+): Token[] {
   const words = (
     input
       // Two apostrophes right after a number are an inch mark, as in "72''" (AFA-106).
@@ -210,6 +220,11 @@ export function tokenizeNormalized(input: string, fuzziness?: number): Token[] {
       // grams, which are written "g". Rename it before case is lost.
       .replace(/(?<=\d)G(?![A-Za-z])/g, 'gen')
       .toLowerCase()
+      // Replace ranges after lowercasing so no input can supply the internal marker. Keep the
+      // whole text together: the quote rules below need opening quotes from before a range.
+      .replace(/(?<![\d.])[\d.]+(?:\s*\p{Dash}\s*[\d.]+)+/gu, range =>
+        rangeBoundaries ? ` ${RANGE_WORD} ` : range
+      )
       // Mark labels before the punctuation that marks them is removed, so the parser knows what
       // kind of label each one is, and spell out the short aliases. A bracket label keeps its
       // opening bracket, and a label after a field separator gets a field word first.
@@ -262,7 +277,9 @@ export function tokenizeNormalized(input: string, fuzziness?: number): Token[] {
     else if (text === NAME_WORD) label = 'name';
     else if (text === UNIT_WORD) label = 'unit';
     else {
-      tokens.push(label ? { text, label, startsField } : { text });
+      if (text === RANGE_WORD) {
+        tokens.push({ text: '-', range: true });
+      } else tokens.push(label ? { text, label, startsField } : { text });
       startsField = false;
       label = undefined;
     }

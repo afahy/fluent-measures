@@ -138,9 +138,11 @@ parseMeasurement('ft 1-2 6'); // null: "ft" doesn't reach 6 across the range
 parseMeasurement('6ft1-2in'); // { value: 6, unit: 'ft', ... }: the range's numbers are left out
 ```
 
-The rest of the text is still parsed, though. The range's own unit can attach to a number after
-it, and measurements on both sides of the range can join, as in `6 ft 1-2 11 in`. So other text
-with a range and a separate measurement isn't supported, as in `50-70 kg, 180 lbs`.
+The rest of the text is still parsed. A unit next to a range is left out too, unless it already
+belongs to a separate measurement. A later number keeps its own unit, so `50-70 kg, 180 lbs`
+returns 180 lb, and `1-2 ft 6` returns `null`. Surrounding feet and inches can keep both parts:
+`6 1-2 ft 3 in` is read as `6 ft 3 in` (75 in), without using the range's endpoints. Measurements
+on both sides of a range can also join, as in `6 ft 1-2 11 in`.
 
 ## More Than One Measurement
 
