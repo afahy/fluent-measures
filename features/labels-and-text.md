@@ -26,4 +26,6 @@ don't become units.
   `tests/parseMeasurement.labelValues.test.ts`, `tests/parseMeasurement.longRuns.test.ts`,
   `tests/parseMeasurement.unicodeLabels.test.ts`, `tests/parseMeasurement.unitFirstPhrases.test.ts`,
   `tests/parseMeasurement.unitLabels.test.ts`, `tests/tokenize.test.ts`
+- Properties: "generated number phrases" in `tests/properties.test.ts`
+- Properties: "generated label ownership" in `tests/properties.test.ts`
 - Corpus categories: `surrounding-text`, `prose`

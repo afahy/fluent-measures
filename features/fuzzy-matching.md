@@ -27,4 +27,5 @@ it, a unit name must be exact.
 - Tests: `tests/parseMeasurement.fuzzyUnits.test.ts`, `tests/matchUnit.closest.test.ts`,
   `tests/levenshtein.test.ts`
 - Properties: "generated single measurements" in `tests/properties.test.ts`
+- Properties: "generated numeric fuzziness boundaries" in `tests/properties.test.ts`
 - Corpus categories: `typos`
