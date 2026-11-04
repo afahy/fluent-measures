@@ -33,4 +33,5 @@ fractions, decimal commas and thousands groups.
   `tests/wordsToNumber.test.ts`, `tests/wordsToNumberTable.test.ts`, `tests/normalizeForms.test.ts`,
   `tests/normalizeFractions.test.ts`
 - Properties: "generated single measurements" in `tests/properties.test.ts`
+- Properties: "generated number phrases" in `tests/properties.test.ts`
 - Corpus categories: `words`, `mixed-numbers`, `decimals`, `commas`

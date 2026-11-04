@@ -23,4 +23,9 @@ measurement type.
 - Source: `src/units.ts`, `src/parseMeasurement.ts`
 - Tests: `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.unitConversions.test.ts`
 - Properties: "generated single measurements" in `tests/properties.test.ts`
+- Properties: "generated number phrases" in `tests/properties.test.ts`
+- Properties: "generated normalized type selection" in `tests/properties.test.ts`
+- Properties: "generated numbers with no unit" in `tests/properties.test.ts`
+- Properties: "generated feet and inches" in `tests/properties.test.ts`
+- Properties: "generated pairs of measurements" in `tests/properties.test.ts`
 - Corpus categories: `conversion`
