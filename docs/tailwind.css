@@ -1205,6 +1205,22 @@ a:hover {
   }
 }
 
+/*
+ * A result too long to share the result column on a narrow phone takes its own line under the
+ * input. In the shared column it would widen every row and push the arrows into the inputs.
+ */
+
+@media (max-width: 399px) {
+  .demo-list > .demo-long dd {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+    margin-top: 4px;
+  }
+}
+
 /* The hero demo's "More" toggle. Without JavaScript all rows show. */
 
 [data-js] .demo-more {
