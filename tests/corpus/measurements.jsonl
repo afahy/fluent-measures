@@ -239,6 +239,8 @@
 {"id": "typos-inces", "input": "72 inces", "options": {"fuzziness": 1}, "expected": {"value": 72, "unit": "in", "type": "height"}, "category": "typos", "source": "handwritten"}
 {"id": "typos-feat", "input": "6 feat", "options": {"fuzziness": 1}, "expected": {"value": 6, "unit": "ft", "type": "height"}, "category": "typos", "source": "handwritten"}
 {"id": "typos-exact-with-fuzziness", "input": "185 lbs", "options": {"fuzziness": 2}, "expected": {"value": 185, "unit": "lb", "type": "weight"}, "category": "typos", "source": "handwritten"}
+{"id": "typos-kilgrm-infinite-fuzziness", "input": "70 kilgrm", "options": {"fuzziness": 1e999}, "expected": null, "category": "typos", "source": "AFA-189", "note": "JSON has no Infinity, and JSON.parse reads 1e999 as Infinity. A fuzziness that isn't finite turns fuzzy matching off (AFA-189)."}
+{"id": "typos-foots-inc-infinite-fuzziness", "input": "5 foots 10 inc", "options": {"fuzziness": 1e999}, "expected": null, "category": "typos", "source": "AFA-189", "note": "JSON has no Infinity, and JSON.parse reads 1e999 as Infinity. A fuzziness that isn't finite turns fuzzy matching off (AFA-189)."}
 {"id": "surrounding-about", "input": "I'm about 5'11\"", "expected": {"value": 71, "unit": "in", "type": "height"}, "category": "surrounding-text", "source": "handwritten"}
 {"id": "surrounding-height-label", "input": "Height: 180 cm", "expected": {"value": 180, "unit": "cm", "type": "height"}, "category": "surrounding-text", "source": "handwritten"}
 {"id": "surrounding-weight-sentence", "input": "My weight is 72 kg.", "expected": {"value": 72, "unit": "kg", "type": "weight"}, "category": "surrounding-text", "source": "handwritten"}
