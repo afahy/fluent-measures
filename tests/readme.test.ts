@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
@@ -756,5 +757,24 @@ describe('documentExamples', () => {
     expect(() => documentExamples(readme, 'README.md')).toThrow(
       "README.md line 4: can't read the parseMeasurement argument input (ReferenceError: input is not defined). Write each argument as a literal."
     );
+  });
+});
+
+// The README and the docs page state the size budget that .size-limit.cjs sets. A change to the
+// budget must change them too, or they claim a size that CI no longer checks.
+describe('the size budget', () => {
+  const budgets = new Set(
+    (createRequire(import.meta.url)('../.size-limit.cjs') as { limit: string }[]).map(
+      ({ limit }) => limit
+    )
+  );
+
+  it.each([
+    ['README.md', README],
+    ['docs/index.html', readFileSync(new URL('../docs/index.html', import.meta.url), 'utf8')],
+  ])('is the only size that %s states', (_file, text) => {
+    const sizes = text.replace(/\s+/g, ' ').match(/\b\d+(?:\.\d+)? kB\b/g) ?? [];
+    expect(sizes.length).toBeGreaterThan(0);
+    expect(new Set(sizes)).toEqual(budgets);
   });
 });

@@ -208,7 +208,7 @@ letters.
 With `allowUnqualified`, a number that has no unit gets its unit from `type` and `inferUnit`. With
 `inferUnit: 'imperial'`, or without `inferUnit`, a height is in inches and a weight is in pounds.
 With `inferUnit: 'metric'`, a weight is in kilograms. A metric height below 3 is in meters,
-because no one is under 3 cm tall. Any other metric height is in centimeters:
+because a person's height in meters is always below 3. Any other metric height is in centimeters:
 
 ```typescript
 parseMeasurement('72', { type: 'height', allowUnqualified: true }); // { value: 72, unit: 'in', ... }

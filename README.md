@@ -21,7 +21,7 @@ two that disagree. Your app can then ask the person again.
 - Reads unit names with spelling errors when you set `fuzziness`, as in `5 foot 11 inc`
 - Converts the result to the unit that you set in `normalizedUnit`
 - Has no dependencies
-- Stays under 5 kB, minified and compressed with Brotli, because CI fails a build that goes over
+- Is at most 5 kB, minified and compressed with Brotli, because CI fails a build that goes over
 - Supports ESM and CommonJS
 
 ## Installation
@@ -82,7 +82,7 @@ parseMeasurement('150 lbs', { type: 'weight', normalizedUnit: 'kg' });
 
 People sometimes type only a number, for example in a field that already names the unit. Set
 `allowUnqualified` to read it, and `type` to say whether it is a height or a weight. Without
-`type`, the call throws an error. `inferUnit` chooses metric or imperial units, and imperial is the
+`type`, the call can throw an error. `inferUnit` chooses metric or imperial units, and imperial is the
 default:
 
 ```typescript
@@ -126,7 +126,7 @@ interface ParseOptions {
   // name must be exact.
   fuzziness?: number;
 
-  // Read a number that has no unit. Without type, parseMeasurement throws an error.
+  // Read a number that has no unit. Without type, parseMeasurement can throw an error.
   allowUnqualified?: boolean;
 
   // The unit system for a number that has no unit. Without it, or with 'imperial', a height is
@@ -196,7 +196,8 @@ parseMeasurement('210 lbs to 180 lbs'); // null: the two weights disagree
 
 When the text has more than one height, or more than one weight, the result is the first one. The
 others must agree with it within 1%. If not, the result is `null`. If the text has both a height
-and a weight, set `type` to choose which one you get.
+and a weight, set `type` to choose which one you get. Without `type`, the result can be either
+one, or `null`.
 
 Fuzzy matching can read an ordinary word as a unit. Even without it, `in` after a number means
 inches, so `Top 10 in the class` returns 10 inches.
