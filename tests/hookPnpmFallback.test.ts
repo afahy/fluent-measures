@@ -1,8 +1,17 @@
 import { spawnSync, type SpawnSyncReturns } from 'node:child_process';
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  cpSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
-import { delimiter, join, resolve } from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { delimiter, resolve } from 'node:path';
+import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { git, withoutGitRepository } from './gitEnvironment';
 
 // The git hooks find pnpm through .husky/_pnpm.sh and .husky/bin/pnpm when pnpm isn't on PATH
@@ -12,11 +21,13 @@ const PACKAGE_MANAGER = `pnpm@${VERSION}+sha512.0123abcd`;
 const directories: string[] = [];
 const env = withoutGitRepository();
 
-// PATH without the folders that hold a real pnpm, corepack or npx, so that only the stubs run.
-const systemPath = (env.PATH ?? '')
-  .split(delimiter)
-  .filter(dir => !['pnpm', 'corepack', 'npx'].some(name => existsSync(join(dir, name))))
-  .join(delimiter);
+// A folder with links to only the commands that the hooks need, so that no real pnpm, corepack or
+// npx runs. A Linux system can have npx in /usr/bin, next to sh and git.
+const tools = mkdtempSync(resolve(tmpdir(), 'fluent-measures-tools-'));
+for (const tool of ['sh', 'git', 'sed', 'dirname', 'grep']) {
+  const found = spawnSync('sh', ['-c', `command -v ${tool}`], { encoding: 'utf8', env });
+  symlinkSync(found.stdout.trim(), resolve(tools, tool));
+}
 
 function createDirectory(prefix: string): string {
   const directory = mkdtempSync(resolve(tmpdir(), prefix));
@@ -66,19 +77,19 @@ function createStubs(stubs: Stubs): { path: string; calls: () => string[] } {
     });
   }
   return {
-    path: `${bin}${delimiter}${systemPath}`,
+    path: `${bin}${delimiter}${tools}`,
     calls: () => (existsSync(log) ? readFileSync(log, 'utf8').split('\n').filter(Boolean) : []),
   };
 }
 
-// Runs a hook the way Husky does, with `sh -e` from the repository root.
+// Runs a hook the way Husky's .husky/_/h does: `sh -e .husky/<hook>` from the repository root.
 function runHook(
   root: string,
   hook: string,
   args: string[],
   path: string
 ): SpawnSyncReturns<string> {
-  return spawnSync('sh', ['-e', resolve(root, '.husky', hook), ...args], {
+  return spawnSync('sh', ['-e', `.husky/${hook}`, ...args], {
     cwd: root,
     encoding: 'utf8',
     env: { ...env, PATH: path },
@@ -90,6 +101,10 @@ afterEach(() => {
   for (const directory of directories.splice(0)) {
     rmSync(directory, { force: true, recursive: true });
   }
+});
+
+afterAll(() => {
+  rmSync(tools, { force: true, recursive: true });
 });
 
 describe('pnpm in the git hooks', () => {
@@ -106,17 +121,24 @@ describe('pnpm in the git hooks', () => {
   });
 
   // Each hook that runs pnpm, with the arguments git passes to it and the pnpm commands it runs.
+  // <first> and <second> stand for the two commits of the repository.
   it.each([
-    ['pre-commit', () => [], ['exec lint-staged']],
-    ['commit-msg', () => ['.git/COMMIT_EDITMSG'], ['exec commitlint --edit .git/COMMIT_EDITMSG']],
-    ['pre-push', () => [], ['test', 'build', 'check:size']],
-    ['post-merge', () => [], ['install']],
-    ['post-checkout', (first: string, second: string) => [first, second, '1'], ['install']],
+    ['pre-commit', [], ['exec lint-staged']],
+    ['commit-msg', ['.git/COMMIT_EDITMSG'], ['exec commitlint --edit .git/COMMIT_EDITMSG']],
+    ['pre-push', [], ['test', 'build', 'check:size']],
+    ['post-merge', [], ['install']],
+    ['post-checkout', ['<first>', '<second>', '1'], ['install']],
   ] as const)('runs corepack pnpm in %s when pnpm is not on PATH', (hook, args, commands) => {
     const { root, first, second } = createRepository();
     const stubs = createStubs({ corepack: 'exit 0' });
+    const commits: Record<string, string> = { '<first>': first, '<second>': second };
 
-    const result = runHook(root, hook, args(first, second), stubs.path);
+    const result = runHook(
+      root,
+      hook,
+      args.map(arg => commits[arg] ?? arg),
+      stubs.path
+    );
 
     expect(result.status).toBe(0);
     expect(stubs.calls()).toEqual(
@@ -134,7 +156,9 @@ describe('pnpm in the git hooks', () => {
     const result = runHook(root, 'pre-commit', [], stubs.path);
 
     expect(result.status).toBe(0);
-    expect(readFileSync(seen, 'utf8')).toBe(`${resolve(root, '.husky/bin/pnpm')} 0\n`);
+    expect(readFileSync(seen, 'utf8')).toBe(
+      `${resolve(realpathSync(root), '.husky/bin/pnpm')} 0\n`
+    );
   });
 
   it('falls back to npx with the packageManager version when corepack does not work', () => {
@@ -164,15 +188,22 @@ describe('pnpm in the git hooks', () => {
     ]);
   });
 
-  it('fails with an error that names the version when neither corepack nor npx works', () => {
+  it('fails with an error that names the version and the causes when neither works', () => {
     const { root } = createRepository();
-    const stubs = createStubs({ corepack: 'exit 1', npx: 'exit 1' });
+    const stubs = createStubs({
+      corepack: 'echo "Error: no network" >&2; exit 1',
+      npx: 'echo "npm error 404" >&2; exit 1',
+    });
 
     const result = runHook(root, 'pre-commit', [], stubs.path);
 
     expect(result.status).toBe(127);
     expect(result.stderr).toBe(
       `husky - pnpm isn't on PATH, and neither 'corepack pnpm' nor 'npx pnpm@${VERSION}' works.\n` +
+        `husky - 'corepack pnpm --version' printed:\n` +
+        `Error: no network\n` +
+        `husky - 'npx --yes pnpm@${VERSION} --version' printed:\n` +
+        `npm error 404\n` +
         `husky - Install pnpm ${VERSION} and put it on PATH: https://pnpm.io/installation\n`
     );
     expect(stubs.calls()).toEqual([
@@ -188,7 +219,10 @@ describe('pnpm in the git hooks', () => {
     const result = runHook(root, 'pre-commit', [], stubs.path);
 
     expect(result.status).toBe(127);
-    expect(result.stderr).toContain("husky - pnpm isn't on PATH");
+    expect(result.stderr).toBe(
+      `husky - pnpm isn't on PATH, and neither 'corepack pnpm' nor 'npx pnpm@${VERSION}' works.\n` +
+        `husky - Install pnpm ${VERSION} and put it on PATH: https://pnpm.io/installation\n`
+    );
   });
 
   it('fails when the command that it runs through corepack fails', () => {
