@@ -106,10 +106,10 @@ argument and defaults to `docs/index.html`. A URL, such as `http://localhost:808
   screenshot is correct. It defaults to 390 by 844px in light, at twice the pixel density, and
   writes `docs-shots/<width>-<scheme>.png`, which git ignores. `--width`, `--height`,
   `--scheme dark` and `--out <file>` change these. `--full` takes the whole page, at the normal
-  density.
+  density, and adds `-full` to the file name.
 
 For example, `pnpm docs:shot --width 1440 --scheme dark --full` takes the whole page at desktop
-width in dark.
+width in dark, and writes `docs-shots/1440-dark-full.png`.
 
 ## Development Setup
 

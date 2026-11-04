@@ -175,17 +175,29 @@ export async function launchChrome(chrome) {
       proc.kill();
       await Promise.race([exited, sleep(5000)]);
     }
-    rmSync(profile, { recursive: true, force: true });
+    try {
+      rmSync(profile, { recursive: true, force: true, maxRetries: 5 });
+    } catch (error) {
+      // A Chrome helper can still hold a file. A profile left in the temp folder isn't a reason
+      // to fail the run.
+      console.warn(`Could not remove ${profile}: ${error.message}`);
+    }
   };
   try {
     const started = new Promise((done, fail) => {
       let output = '';
       proc.once('error', error => fail(new Error(`Could not start Chrome: ${error.message}`)));
       proc.once('exit', code => fail(new Error(`Chrome exited with code ${code}\n${output}`)));
+      // Keep reading stderr after the URL, so that Chrome never blocks on a full pipe. The URL
+      // counts only once its line ends, so a URL split across two chunks is read whole.
       proc.stderr.on('data', chunk => {
+        if (output === null) return;
         output += chunk;
-        const match = output.match(/ws:\/\/\S+/);
-        if (match) done(match[0]);
+        const match = output.match(/(ws:\/\/\S+)\r?\n/);
+        if (match) {
+          output = null;
+          done(match[1]);
+        }
       });
     });
     const browserUrl = await withTimeout(started, 30000, 'Chrome did not start in 30 seconds');
@@ -213,8 +225,16 @@ export async function launchChrome(chrome) {
         listeners.delete(message.method);
       }
     });
+    // If Chrome stops, each command that waits for an answer fails, so the script doesn't hang.
+    let closed = false;
+    socket.addEventListener('close', () => {
+      closed = true;
+      for (const answer of pending.values()) answer({ error: { message: 'Chrome closed' } });
+      pending.clear();
+    });
     const send = (method, params = {}) =>
       new Promise((done, fail) => {
+        if (closed) return fail(new Error(`${method}: Chrome closed`));
         const id = ++lastId;
         pending.set(id, message =>
           message.error
