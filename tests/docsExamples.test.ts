@@ -103,11 +103,11 @@ function heroRows(html: string): ShownCase[] {
   const row =
     /<dt>\s*<span class="demo-input">([^<]*)<\/span>\s*<span class="demo-opts( is-none)?"\s*>([\s\S]*?)<\/span\s*>\s*<\/dt>\s*<dd( class="is-null")?>\s*<svg[\s\S]*?<\/svg>\s*<span>([\s\S]*?)<\/span>\s*<\/dd>/g;
   return [...list.matchAll(row)].map(([, input, none, optionsHtml, isNull, result]) => {
-    // Drop the markup, then any stray angle bracket, so no tag can survive (CodeQL
-    // js/incomplete-multi-character-sanitization). The options text never contains < or >.
+    // Keep the text between the tags. Splitting reads the text out of the markup instead of
+    // sanitizing it, which CodeQL's js/incomplete-multi-character-sanitization flags.
     const keys = optionsHtml
-      .replace(/<[^>]*>/g, '')
-      .replace(/[<>]/g, '')
+      .split(/<[^>]*>/)
+      .join('')
       .replace(/\s+/g, ' ');
     const options = none ? undefined : (new Function(`return ({${keys}});`)() as ParseOptions);
     return shownCase(input, options, shownResult(Boolean(isNull), result));
