@@ -3,6 +3,8 @@
 These rules apply to each task in this repository. To work through `agent-ready` tickets one
 after another, follow `.claude/skills/ticket-loop/SKILL.md`, but only when the maintainer asks
 you to.
+To improve the docs page's design in rounds of AI judging, follow
+`.claude/skills/design-hill-climb/SKILL.md`, but only when the maintainer asks you to.
 
 ## Commands
 
