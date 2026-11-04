@@ -21,6 +21,6 @@ measurement type.
 ## How to verify it
 
 - Source: `src/units.ts`, `src/parseMeasurement.ts`
-- Tests: `tests/parseMeasurement.unitConversions.test.ts`
+- Tests: `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.unitConversions.test.ts`
 - Properties: "generated single measurements" in `tests/properties.test.ts`
 - Corpus categories: `conversion`

@@ -22,7 +22,7 @@ don't become units.
 ## How to verify it
 
 - Source: `src/tokenize.ts`, `src/parseMeasurement.ts`
-- Tests: `tests/parseMeasurement.commaLabels.test.ts`, `tests/parseMeasurement.inPreposition.test.ts`,
+- Tests: `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.commaLabels.test.ts`, `tests/parseMeasurement.inPreposition.test.ts`,
   `tests/parseMeasurement.labelValues.test.ts`, `tests/parseMeasurement.longRuns.test.ts`,
   `tests/parseMeasurement.unicodeLabels.test.ts`, `tests/parseMeasurement.unitFirstPhrases.test.ts`,
   `tests/parseMeasurement.unitLabels.test.ts`, `tests/tokenize.test.ts`

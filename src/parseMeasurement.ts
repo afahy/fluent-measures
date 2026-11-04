@@ -325,13 +325,53 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     return null;
   }
 
-  // Replace whole ranges with a boundary so neither endpoint becomes a measurement.
-  // Preserve semicolon boundaries so independent fields cannot form a compound height.
+  // Tokenize the text on each side of a range separately, retaining an identifiable boundary.
+  // Ordinary prose dashes remain ordinary tokens, as in "weight - kg 70".
   const fuzziness = options.fuzziness;
-  let tokens = tokenizeNormalized(
-    trimmed.replace(/(?<![\d.])[\d.]+(?:\s*\p{Dash}\s*[\d.]+)+/gu, ' - '),
-    fuzziness
-  );
+  const ranges = new Set<Token>();
+  let tokens = trimmed
+    .split(/((?<![\d.])[\d.]+(?:\s*\p{Dash}\s*[\d.]+)+)/gu)
+    .flatMap<Token>((text, index) => {
+      if (index % 2) {
+        // Stryker disable next-line StringLiteral: an empty token stops number phrases too, so it is the same boundary.
+        const boundary = { text: '-' };
+        ranges.add(boundary);
+        return [boundary];
+      }
+      return tokenizeNormalized(text, fuzziness);
+    });
+
+  const words: Words = at => tokens[at]?.text;
+  const unitAt = (at: number): Unit | null => {
+    const word = words(at);
+    return word
+      ? matchUnit(word, 'height', fuzziness) || matchUnit(word, 'weight', fuzziness)
+      : null;
+  };
+  // A preceding unit cannot reach across the boundary. If it already owns a number, keep it,
+  // as in "6ft1-2in".
+  // Stryker disable next-line EqualityOperator: an extra iteration sees no range and continues without changing any token.
+  for (let i = 0; i < tokens.length; i++) {
+    if (!ranges.has(tokens[i])) continue;
+    if (!unitAt(i + 1)) continue;
+    const [feet] = readNumberPhrase(words, i - 1, -1);
+    const [inches, end] = readNumberPhrase(words, i + 2);
+    // Keep the surrounding feet and inches in "6 1-2 ft 3 in" as "6 ft 3 in". Without both
+    // valid parts and an explicit inch unit, the unit after the range belongs only to the range.
+    if (
+      unitAt(i + 1) === 'ft' &&
+      Number.isInteger(feet) &&
+      inches !== null &&
+      inches < 12 &&
+      unitAt(end) === 'in'
+    ) {
+      tokens[i].used = true;
+    } else {
+      // Stryker disable next-line StringLiteral: any non-unit, non-number token is the same boundary as an empty token.
+      tokens[i + 1].text = '';
+    }
+  }
+  tokens = tokens.filter(token => !token.used);
   if (tokens.length && options.allowUnqualified && !options.type) {
     throw new Error('allowUnqualified requires type');
   }

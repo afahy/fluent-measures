@@ -313,6 +313,25 @@ interface ProseCase extends ReadmeCase {
 
 const proseCases: ProseCase[] = [
   {
+    section: 'Ranges',
+    input: '50-70 kg, 180 lbs',
+    expected: { value: 180, unit: 'lb' },
+    statement: 'A later number keeps its own unit, so `50-70 kg, 180 lbs` returns 180 lb',
+  },
+  {
+    section: 'Ranges',
+    input: '1-2 ft 6',
+    expected: null,
+    statement: '`1-2 ft 6` returns `null`',
+  },
+  {
+    section: 'Ranges',
+    input: '6 1-2 ft 3 in',
+    expected: { value: 75, unit: 'in' },
+    statement: '`6 1-2 ft 3 in` is read as `6 ft 3 in` (75 in)',
+  },
+
+  {
     section: 'Limits',
     input: 'Top 10 in the class',
     expected: { value: 10, unit: 'in', type: 'height' },

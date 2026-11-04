@@ -21,7 +21,7 @@ selects the unit system.
 ## How to verify it
 
 - Source: `src/parseMeasurement.ts`
-- Tests: `tests/parseMeasurement.unqualifiedFallback.test.ts`,
+- Tests: `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.unqualifiedFallback.test.ts`,
   `tests/parseMeasurement.unqualifiedMeters.test.ts`,
   `tests/parseMeasurement.unqualifiedNormalization.test.ts`
 - Properties: "generated numbers with no unit" in `tests/properties.test.ts`

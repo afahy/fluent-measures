@@ -409,3 +409,8 @@
 {"id": "prose-came-2nd-in", "input": "came 2nd in 5 races", "expected": null, "category": "prose", "source": "handwritten"}
 {"id": "prose-weight-unknown", "input": "weight unknown", "expected": null, "category": "prose", "source": "handwritten"}
 {"id": "prose-height-tall", "input": "height: tall", "expected": null, "category": "prose", "source": "handwritten"}
+{"id": "range-weight-unit-after", "input": "150-180 lbs 70 kg", "expected": {"value": 70, "unit": "kg", "type": "weight"}, "category": "hyphens", "source": "AFA-170"}
+{"id": "range-inches-after", "input": "1-2 ft 6 in", "expected": {"value": 6, "unit": "in", "type": "height"}, "category": "hyphens", "source": "AFA-170"}
+{"id": "range-surrounding-height", "input": "6 1-2 ft 3 in", "expected": {"value": 75, "unit": "in", "type": "height"}, "category": "hyphens", "source": "AFA-170"}
+{"id": "range-later-weight", "input": "50-70 kg, 180 lbs", "expected": {"value": 180, "unit": "lb", "type": "weight"}, "category": "hyphens", "source": "AFA-170"}
+{"id": "range-unit-unqualified", "input": "1-2 ft 6", "expected": null, "category": "hyphens", "source": "AFA-170"}

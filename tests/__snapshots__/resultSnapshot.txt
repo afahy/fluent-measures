@@ -9312,7 +9312,7 @@ in,12,345 m-seventy,feet	f2	null
 in,12,345 m-seventy,feet	hu	null
 6-72,kg,10/180foot	-	0.05555555555555555 ft height
 6-72,kg,10/180foot	h	0.05555555555555555 ft height
-6-72,kg,10/180foot	w	0.05555555555555555 kg weight
+6-72,kg,10/180foot	w	null
 6-72,kg,10/180foot	cm	1.6933333333333334 cm height = 0.05555555555555555 ft
 6-72,kg,10/180foot	f2	0.05555555555555555 ft height
 6-72,kg,10/180foot	hu	0.05555555555555555 ft height
