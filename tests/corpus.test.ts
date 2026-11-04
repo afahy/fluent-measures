@@ -43,7 +43,9 @@ const UNITS: ReadonlySet<unknown> = new Set(Object.keys(UNIT_TYPES));
 const ENTRY_FIELDS = ['id', 'input', 'options', 'expected', 'category', 'source', 'note'];
 const OPTION_CHECKS: Readonly<Record<keyof ParseOptions, (value: unknown) => boolean>> = {
   type: value => value === 'height' || value === 'weight',
-  fuzziness: value => typeof value === 'number' && Number.isFinite(value) && value >= 0,
+  // The AFA-189 entries need Infinity, written as 1e999. NaN and -Infinity still fail ">= 0", so
+  // Infinity is the only value that the check accepts and Number.isFinite rejected.
+  fuzziness: value => typeof value === 'number' && value >= 0,
   allowUnqualified: value => typeof value === 'boolean',
   inferUnit: value => value === 'metric' || value === 'imperial',
   normalizedUnit: value => UNITS.has(value),

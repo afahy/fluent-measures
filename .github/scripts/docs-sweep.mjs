@@ -3,8 +3,10 @@
 // Loads the docs page in the system Chrome, once in each color scheme, and resizes it through
 // each width from --from to --to (AFA-186). At each width it reports layout problems: the page or
 // a code block that needs a sideways scroll, content that a box clips or that runs off the
-// screen, input chips that run into their results, values that wrap, and navigation that is
-// missing or collides. The page defaults to docs/index.html. --touch emulates a touch screen.
+// screen, input chips that run into their results or the hero demo's arrows, values that wrap,
+// and navigation that is missing or collides. It runs the checks again with the hero demo
+// expanded, and from 1024px it checks that the expanded card keeps its height (AFA-190). The
+// page defaults to docs/index.html. --touch emulates a touch screen.
 //
 // It exits 0 when it finds no problem, 1 when it finds one, and 2 when it can't run. The checks
 // use the class names of docs/index.html, so a change to those names needs a change here.
@@ -96,6 +98,36 @@ function probe() {
       out.push('CHIP-OVER ' + chip.textContent);
     }
   });
+  // Hero demo: an input chip or its options never run into the row's arrow (AFA-190).
+  const demoList = need('.demo-list');
+  if (demoList && !demoList.querySelector(':scope > div')) out.push('MISSING .demo-list > div');
+  document.querySelectorAll('.demo-list > div').forEach(row => {
+    const dt = row.querySelector('dt');
+    const arrow = row.querySelector('.demo-arrow');
+    if (!vis(row)) return;
+    if (!dt || !arrow) {
+      const text = JSON.stringify(row.textContent.trim().replace(/\s+/g, ' ').slice(0, 30));
+      out.push('MISSING dt or .demo-arrow in ' + text);
+      return;
+    }
+    const a = arrow.getBoundingClientRect();
+    // The chip's box and the lines of text. A block's box can span the arrow's column on a line
+    // of its own, so it doesn't count.
+    const rects = [...dt.querySelectorAll('.demo-input')].map(el => el.getBoundingClientRect());
+    const walker = document.createTreeWalker(dt, NodeFilter.SHOW_TEXT);
+    const range = document.createRange();
+    while (walker.nextNode()) {
+      range.selectNodeContents(walker.currentNode);
+      rects.push(...range.getClientRects());
+    }
+    const hits = rects.filter(
+      r => r.width && r.right > a.left && r.left < a.right && r.bottom > a.top && r.top < a.bottom
+    );
+    if (hits.length) {
+      const chip = row.querySelector('.demo-input')?.textContent ?? dt.textContent.trim();
+      out.push('DEMO-HITS-ARROW ' + JSON.stringify(chip));
+    }
+  });
   // Returns rows: values never wrap, no line starts with a separator dot, and notes line up.
   document.querySelectorAll('.summary').forEach(s => {
     if (!vis(s)) return;
@@ -165,6 +197,29 @@ function probe() {
   return [...new Set(out)];
 }
 
+/**
+ * Runs in the page. Presses the hero demo's "More input examples" button and returns the card's
+ * height before and after the press, and whether the card is now expanded. Returns a string that
+ * names the missing element when the page has no card or no button.
+ */
+async function toggleDemo() {
+  const demo = document.querySelector('[data-demo]');
+  if (!demo) return '[data-demo]';
+  const more = demo.querySelector('[data-demo-more]');
+  if (!more) return '[data-demo-more]';
+  const before = demo.getBoundingClientRect().height;
+  more.click();
+  await new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done)));
+  return {
+    expanded: more.getAttribute('aria-expanded') === 'true',
+    before,
+    after: demo.getBoundingClientRect().height,
+  };
+}
+
+/** Beside the hero copy, the expanded card keeps the collapsed card's height (site.css). */
+const SAME_HEIGHT_FROM = 1024;
+
 let options;
 let url;
 try {
@@ -192,7 +247,32 @@ try {
         mobile: width < 600,
       });
       await sleep(60);
-      for (const problem of await browser.evaluate(`(${probe})()`)) {
+      const found = new Set(await browser.evaluate(`(${probe})()`));
+      // The same checks with the hero card expanded. A problem that the collapsed card has too
+      // is listed once, without the tag.
+      const open = await browser.evaluate(`(${toggleDemo})()`);
+      let broken = false;
+      if (typeof open === 'string') {
+        found.add('MISSING ' + open);
+      } else if (!open.expanded) {
+        found.add('DEMO-TOGGLE the "More input examples" button does not expand the card');
+        broken = true;
+      } else {
+        for (const problem of await browser.evaluate(`(${probe})()`)) {
+          if (!found.has(problem)) found.add(problem + ' [expanded]');
+        }
+        if (width >= SAME_HEIGHT_FROM && Math.round(open.after) !== Math.round(open.before)) {
+          found.add('DEMO-HEIGHT the expanded card is not as tall as the collapsed one');
+        }
+        const shut = await browser.evaluate(`(${toggleDemo})()`);
+        if (shut.expanded) {
+          found.add('DEMO-TOGGLE a second press does not collapse the card');
+          broken = true;
+        }
+      }
+      // A card that is stuck open would make the next width's collapsed checks wrong.
+      if (broken) await browser.load(url, { width, height: 900, scale: 1, scheme, touch });
+      for (const problem of found) {
         problems.set(problem, [...(problems.get(problem) ?? []), { scheme, width }]);
       }
     }

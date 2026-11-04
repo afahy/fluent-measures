@@ -95,12 +95,15 @@ argument and defaults to `docs/index.html`. A URL, such as `http://localhost:808
 - `pnpm docs:sweep` loads the page in light and dark, and resizes it through each width from
   320 to 1600px. It reports layout problems at each width: a sideways scroll on the page or in a
   code block, content that a box clips or that runs off the screen, input chips that run into
-  their results, values that wrap, and a header or navigation that is missing, too tall or
-  collides. Each line names a problem and the widths where it appears. The script exits 1 when it
-  finds a problem, and 2 when it can't run. Run it after each change to `docs/` and before you
-  open the PR. `--from`, `--to` and `--step` change the widths, and `--touch` emulates a touch
-  screen. The checks use the page's class names, so when you rename a class that
-  `.github/scripts/docs-sweep.mjs` names, change the script too.
+  their results or into the hero demo's arrows, values that wrap, and a header or navigation that
+  is missing, too tall or collides. It checks each width again with the hero demo expanded, and
+  marks a problem that only the expanded card has with `[expanded]`. From 1024px, it also reports
+  an expanded card that isn't as tall as the collapsed one. Each line names a problem and the
+  widths where it appears. The script exits 1 when it finds a problem, and 2 when it can't run.
+  Run it after each change to `docs/` and before you open the PR. `--from`, `--to` and `--step`
+  change the widths, and `--touch` emulates a touch screen. The checks use the page's class
+  names, so when you rename a class that `.github/scripts/docs-sweep.mjs` names, change the
+  script too.
 - `pnpm docs:shot` takes a screenshot at a device width. Headless Chrome can't make a window
   narrower than about 500px, so the script emulates the device instead, and a 390px phone
   screenshot is correct. It defaults to 390 by 844px in light, at twice the pixel density, and
@@ -356,6 +359,31 @@ positive value in a unit of the result's type.
 A property that fails prints the smallest input that fails. Check that input against the README,
 `PARSING.md` and the existing tests before you change the code or the property. A property must
 not cover an input that an existing test reads in a different way.
+
+`tests/measurementModel.ts` supplies the independent unit definitions and writers used by these
+properties. Generate a quantity first, then write its text; calculate the expected result from
+that quantity, never from the parser, its tokenizer or its conversion functions. Keep this model
+small: it writes bounded integer phrases and supported unit placements, not arbitrary prose.
+Comments beside each property identify the contract for its domain. For example, bare prefix
+`in` and `m` need labels, and the multiplier after "and a half" is tested before the unit, since
+the forward-read contract differs. Exact agreement boundaries use integers and binary fractions;
+conversion assertions allow only rounding error from a few arithmetic operations.
+
+The original properties use seed `20261017` and 1000 runs (50 in Stryker workers). The added
+semantic combinations use seed `20261104` and 250 runs (25 in workers), with separate tests for
+important boundaries and syntax choices. Run `pnpm test:unit tests/properties.test.ts`, then
+`pnpm build && pnpm test:package tests/properties.test.ts` to check source, ESM and CJS. To replay
+a failure, run its test with `-t 'test name'` and temporarily set its `fc.assert` options to the
+reported `seed` and `path`. Keep the shrunk input and check its expected meaning independently.
+Report a genuine existing bug under `AGENTS.md`; don't filter it out or adopt its wrong output.
+
+For historical sensitivity checks, extract a fixing revision's `src/` and its parent's `src/`
+with `git archive` into temporary directories. Use a temporary Vitest config with an alias from
+`/^\.\.\/src$/` to each directory's `src/index.ts`, then run the same property by name. Record the
+revision, command, seed and small counterexample, and confirm failure before the fix and success
+after it. Some later contracts don't apply to old revisions; isolate the relevant property or
+use an isolated deliberate defect instead. Historical sources and network access are not needed
+for normal tests.
 
 ### Tests against the package
 

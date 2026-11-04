@@ -110,7 +110,7 @@ const cases: ReadmeCase[] = [
     input: '150 lbs',
     options: { type: 'weight', normalizedUnit: 'kg' },
     expected: {
-      value: 68.04,
+      value: 68.0388555,
       unit: 'kg',
       type: 'weight',
       matches: [{ value: 150, unit: 'lb' }],
