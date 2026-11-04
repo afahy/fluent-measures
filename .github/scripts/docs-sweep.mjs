@@ -99,10 +99,17 @@ function probe() {
     }
   });
   // Hero demo: an input chip or its options never run into the row's arrow (AFA-190).
+  const demoList = need('.demo-list');
+  if (demoList && !demoList.querySelector(':scope > div')) out.push('MISSING .demo-list > div');
   document.querySelectorAll('.demo-list > div').forEach(row => {
     const dt = row.querySelector('dt');
     const arrow = row.querySelector('.demo-arrow');
-    if (!vis(row) || !dt || !arrow) return;
+    if (!vis(row)) return;
+    if (!dt || !arrow) {
+      const text = JSON.stringify(row.textContent.trim().replace(/\s+/g, ' ').slice(0, 30));
+      out.push('MISSING dt or .demo-arrow in ' + text);
+      return;
+    }
     const a = arrow.getBoundingClientRect();
     // The chip's box and the lines of text. A block's box can span the arrow's column on a line
     // of its own, so it doesn't count.
@@ -192,17 +199,21 @@ function probe() {
 
 /**
  * Runs in the page. Presses the hero demo's "More input examples" button and returns the card's
- * height, or null when the page has no such button. A second press collapses the card again.
+ * height before and after the press, and whether the card is now expanded. Returns a string that
+ * names the missing element when the page has no card or no button.
  */
 async function toggleDemo() {
   const demo = document.querySelector('[data-demo]');
-  const more = demo?.querySelector('[data-demo-more]');
-  if (!more) return null;
+  if (!demo) return '[data-demo]';
+  const more = demo.querySelector('[data-demo-more]');
+  if (!more) return '[data-demo-more]';
+  const before = demo.getBoundingClientRect().height;
   more.click();
   await new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done)));
   return {
     expanded: more.getAttribute('aria-expanded') === 'true',
-    height: demo.getBoundingClientRect().height,
+    before,
+    after: demo.getBoundingClientRect().height,
   };
 }
 
@@ -239,25 +250,28 @@ try {
       const found = new Set(await browser.evaluate(`(${probe})()`));
       // The same checks with the hero card expanded. A problem that the collapsed card has too
       // is listed once, without the tag.
-      const collapsedHeight = await browser.evaluate(
-        `document.querySelector('[data-demo]')?.getBoundingClientRect().height ?? null`
-      );
       const open = await browser.evaluate(`(${toggleDemo})()`);
-      if (!open) {
-        found.add('MISSING [data-demo-more]');
+      let broken = false;
+      if (typeof open === 'string') {
+        found.add('MISSING ' + open);
       } else if (!open.expanded) {
         found.add('DEMO-TOGGLE the "More input examples" button does not expand the card');
+        broken = true;
       } else {
         for (const problem of await browser.evaluate(`(${probe})()`)) {
           if (!found.has(problem)) found.add(problem + ' [expanded]');
         }
-        const grew = Math.round(open.height - collapsedHeight);
-        if (width >= SAME_HEIGHT_FROM && grew !== 0) {
-          found.add(`DEMO-HEIGHT the expanded card is ${grew}px taller than the collapsed one`);
+        if (width >= SAME_HEIGHT_FROM && Math.round(open.after) !== Math.round(open.before)) {
+          found.add('DEMO-HEIGHT the expanded card is not as tall as the collapsed one');
         }
         const shut = await browser.evaluate(`(${toggleDemo})()`);
-        if (shut.expanded) found.add('DEMO-TOGGLE a second press does not collapse the card');
+        if (shut.expanded) {
+          found.add('DEMO-TOGGLE a second press does not collapse the card');
+          broken = true;
+        }
       }
+      // A card that is stuck open would make the next width's collapsed checks wrong.
+      if (broken) await browser.load(url, { width, height: 900, scale: 1, scheme, touch });
       for (const problem of found) {
         problems.set(problem, [...(problems.get(problem) ?? []), { scheme, width }]);
       }
