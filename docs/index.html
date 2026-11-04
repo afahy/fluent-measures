@@ -1476,7 +1476,7 @@ if (result) {
                   People sometimes type only a number, for example in a field that already names the
                   unit. Set <a href="#parse-options"><code>allowUnqualified</code></a> to read it,
                   and <code>type</code> to say whether it is a height or a weight. Without
-                  <code>type</code>, the call can throw an error.
+                  <code>type</code>, the call throws an error for almost any input.
                   <a href="#parse-options"><code>inferUnit</code></a> chooses metric or imperial
                   units, and imperial is the default.
                 </p>
@@ -1790,7 +1790,7 @@ const strict = parseMeasurement(
                   </dt>
                   <dd>
                     Read a number that has no unit. Without <code>type</code>,
-                    <code>parseMeasurement</code> can throw an error. See
+                    <code>parseMeasurement</code> throws an error for almost any input. See
                     <a href="#ex-unqualified">Numbers without a unit</a>.
                   </dd>
                 </div>

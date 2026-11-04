@@ -82,8 +82,8 @@ parseMeasurement('150 lbs', { type: 'weight', normalizedUnit: 'kg' });
 
 People sometimes type only a number, for example in a field that already names the unit. Set
 `allowUnqualified` to read it, and `type` to say whether it is a height or a weight. Without
-`type`, the call can throw an error. `inferUnit` chooses metric or imperial units, and imperial is the
-default:
+`type`, the call throws an error for almost any input. `inferUnit` chooses metric or imperial
+units, and imperial is the default:
 
 ```typescript
 parseMeasurement('72', { type: 'height', allowUnqualified: true, inferUnit: 'imperial' });
@@ -126,7 +126,8 @@ interface ParseOptions {
   // name must be exact.
   fuzziness?: number;
 
-  // Read a number that has no unit. Without type, parseMeasurement can throw an error.
+  // Read a number that has no unit. Without type, parseMeasurement throws an error for almost
+  // any input.
   allowUnqualified?: boolean;
 
   // The unit system for a number that has no unit. Without it, or with 'imperial', a height is
