@@ -40,6 +40,8 @@ describe('units next to an omitted numeric range', () => {
     '1-2 ft 6',
     'ft 1-2 6',
     '6 1-2 ft',
+    // Two and a half is still a preceding number: the range's feet cannot attach to 3.
+    'two and a half 1-2; ft 3',
     '1-2 inches 6',
     'kg 50-70 180',
     '6 1-2 ft text in',
