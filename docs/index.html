@@ -6,7 +6,7 @@
     <title>fluent-measures: parse height and weight text in TypeScript</title>
     <meta
       name="description"
-      content="A lightweight TypeScript library that converts everyday height and weight descriptions into structured data. Metric and imperial units, written-out numbers and fuzzy matching, with zero dependencies."
+      content="A TypeScript library that reads a height or a weight from everyday text, such as five feet eleven inches or 150 lbs, and returns its value and unit. It has no dependencies."
     />
     <link rel="canonical" href="https://afahy.github.io/fluent-measures/" />
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
@@ -26,7 +26,7 @@
     />
     <meta
       property="og:description"
-      content="Converts everyday height and weight descriptions into structured data. Metric and imperial units, written-out numbers and fuzzy matching."
+      content="Reads a height or a weight from everyday text, such as five feet eleven inches or 150 lbs, and returns its value and unit."
     />
     <meta property="og:url" content="https://afahy.github.io/fluent-measures/" />
     <meta property="og:image" content="https://afahy.github.io/fluent-measures/og.png" />
@@ -467,8 +467,8 @@
               </h1>
               <p class="hero-intro">
                 <span class="intro-long"
-                  >A small TypeScript library for health apps, fitness trackers and web forms. It
-                  reads metric and imperial units, in digits or in words, as in
+                  >A TypeScript library for health apps, fitness trackers and web forms. It reads
+                  metric and imperial units, and numbers in digits or in words, as in
                   <strong>5' 11"</strong> or <strong>five feet eleven inches</strong>.</span
                 ><span class="intro-short"
                   >A TypeScript library for input like <strong>5' 11"</strong> or
@@ -629,7 +629,8 @@
               ></span>
               <p class="feature-title">Metric and imperial units</p>
               <p>
-                Heights and weights in ft, in, cm, m, lb and kg, converted to the unit you select.
+                Heights and weights in ft, in, cm, m, lb and kg. Set <code>normalizedUnit</code> to
+                convert the result to one unit.
               </p>
             </li>
             <li>
@@ -638,8 +639,8 @@
               ></span>
               <p class="feature-title">Numbers in digits or words</p>
               <p>
-                Thousands separators and decimal commas, and unit names with spelling errors when
-                you set <code>fuzziness</code>.
+                Thousands separators and decimal commas work too. Set <code>fuzziness</code> to read
+                unit names with spelling errors.
               </p>
             </li>
             <li>
@@ -647,7 +648,9 @@
                 ><svg class="icon"><use href="#i-package-check" /></svg
               ></span>
               <p class="feature-title">No dependencies</p>
-              <p>Tree-shakeable, and supports both ES modules and CommonJS.</p>
+              <p>
+                Under 5 kB, minified and compressed with Brotli. Supports ES modules and CommonJS.
+              </p>
             </li>
           </ul>
         </div>
@@ -876,8 +879,8 @@ if (result) {
                   ></span>
                   <p class="feature-title">Metric and imperial units</p>
                   <p>
-                    Heights and weights in ft, in, cm, m, lb and kg, converted to the unit you
-                    select.
+                    Heights and weights in ft, in, cm, m, lb and kg. Set <code>normalizedUnit</code>
+                    to convert the result to one unit.
                   </p>
                 </li>
                 <li>
@@ -886,8 +889,8 @@ if (result) {
                   ></span>
                   <p class="feature-title">Numbers in digits or words</p>
                   <p>
-                    Thousands separators and decimal commas, and unit names with spelling errors
-                    when you set <code>fuzziness</code>.
+                    Thousands separators and decimal commas work too. Set <code>fuzziness</code> to
+                    read unit names with spelling errors.
                   </p>
                 </li>
                 <li>
@@ -895,7 +898,10 @@ if (result) {
                     ><svg class="icon"><use href="#i-package-check" /></svg
                   ></span>
                   <p class="feature-title">No dependencies</p>
-                  <p>Tree-shakeable, and supports both ES modules and CommonJS.</p>
+                  <p>
+                    Under 5 kB, minified and compressed with Brotli. Supports ES modules and
+                    CommonJS.
+                  </p>
                 </li>
               </ul>
             </div>
@@ -989,9 +995,9 @@ if (result) {
                   <li class="is-none">none</li>
                 </ul>
                 <p>
-                  The unit in the text shows if it is a height or a weight, so <code>6 ft</code> and
-                  <code>150 lbs</code> need no options. Pick an input to see its call and the object
-                  it returns.
+                  The unit in the text shows whether it is a height or a weight, so
+                  <code>6 ft</code> and <code>150 lbs</code> need no options. Pick an input to see
+                  its call and the object it returns.
                 </p>
                 <div class="picker">
                   <span class="picker-label" id="basic-input-label">Input</span>
@@ -1138,8 +1144,8 @@ if (result) {
                   <li><code>type</code></li>
                 </ul>
                 <p>
-                  A height in feet and inches gives the total in inches. <code>matches</code> gives
-                  each part.
+                  A height in feet and inches gives the total in inches, and <code>matches</code>
+                  lists each part.
                 </p>
                 <div class="code on-code">
                   <div class="code-head">
@@ -1216,8 +1222,9 @@ if (result) {
                   <li><code>type</code></li>
                 </ul>
                 <p>
-                  Set <a href="#parse-options"><code>type</code></a> to read only a height or only a
-                  weight.
+                  Set <a href="#parse-options"><code>type</code></a> when a field expects one kind
+                  of measurement, such as a weight. The parser then reads only that kind, so a
+                  height typed into a weight field returns <code>null</code>.
                 </p>
                 <div class="code on-code">
                   <div class="code-head">
@@ -1293,8 +1300,9 @@ if (result) {
                   <li><code>normalizedUnit</code></li>
                 </ul>
                 <p>
-                  Set <a href="#parse-options"><code>normalizedUnit</code></a> to convert the result
-                  to one unit. <code>matches</code> keeps each part in its unit from the text.
+                  Set <a href="#parse-options"><code>normalizedUnit</code></a> to get the result in
+                  the unit that you store. <code>matches</code> keeps each part in its unit from the
+                  text.
                 </p>
                 <div class="picker">
                   <span class="picker-label" id="convert-input-label">Input</span>
@@ -1465,9 +1473,11 @@ if (result) {
                   <li><code>inferUnit</code></li>
                 </ul>
                 <p>
-                  Set <a href="#parse-options"><code>allowUnqualified</code></a> to read a number
-                  that has no unit. <a href="#parse-options"><code>inferUnit</code></a> selects the
-                  unit system.
+                  People sometimes type only a number, for example in a field that already names the
+                  unit. Set <a href="#parse-options"><code>allowUnqualified</code></a> to read it,
+                  and <a href="#parse-options"><code>inferUnit</code></a> to choose metric or
+                  imperial units. <code>allowUnqualified</code> also needs <code>type</code>.
+                  Without <code>type</code>, the call throws an error.
                 </p>
                 <div class="code on-code">
                   <div class="code-head">
@@ -1778,7 +1788,8 @@ const strict = parseMeasurement(
                     <span class="name">allowUnqualified?</span><span class="type">boolean</span>
                   </dt>
                   <dd>
-                    Read a number that has no unit. See
+                    Read a number that has no unit. Without <code>type</code>,
+                    <code>parseMeasurement</code> throws an error. See
                     <a href="#ex-unqualified">Numbers without a unit</a>.
                   </dd>
                 </div>
@@ -1797,8 +1808,9 @@ const strict = parseMeasurement(
                   <dd>
                     The unit of the result. It also selects the measurement type, so a weight unit
                     reads only a weight. A <code>type</code> that contradicts it throws an error.
-                    Shorthand such as <code>5-11</code>, and <code>allowUnqualified</code>, still
-                    need <code>type</code>. See <a href="#ex-convert">Convert to one unit</a>.
+                    Shorthand such as <code>5-11</code> still needs <code>type</code>, and so does
+                    <code>allowUnqualified</code>. See
+                    <a href="#ex-convert">Convert to one unit</a>.
                   </dd>
                 </div>
               </dl>
@@ -2024,7 +2036,15 @@ const strict = parseMeasurement(
               </table>
             </div>
             <p class="measure mt-md">
-              Most units can also come before their number, as in <code>kg 70</code>.
+              Most units can also come before their number, as in <code>kg 70</code>. The short
+              forms <code>in</code> and <code>m</code> can come first only as a label, because
+              before a number they are usually ordinary words.
+              <a
+                href="https://github.com/afahy/fluent-measures/blob/main/PARSING.md#units-before-a-number"
+                >PARSING.md<svg class="icon ext" aria-hidden="true">
+                  <use href="#i-external" /></svg
+              ></a>
+              says what counts as a label.
             </p>
           </section>
 
@@ -2096,8 +2116,8 @@ const strict = parseMeasurement(
                 <div class="callout-body">
                   <p class="callout-title">Ordinary words can read as units</p>
                   <p>
-                    Fuzzy matching can read an ordinary word as a unit. After a number,
-                    <code>in</code> means inches, also in ordinary text, so
+                    Fuzzy matching can read an ordinary word as a unit. Even without it,
+                    <code>in</code> after a number means inches, so
                     <code>Top 10 in the class</code> returns 10 inches.
                   </p>
                 </div>
@@ -2127,12 +2147,12 @@ const strict = parseMeasurement(
                 <ol>
                   <li>The unit isn't supported. See <a href="#units">Supported units</a>.</li>
                   <li>
-                    The text doesn't show if it is a height or a weight. Set
+                    The text doesn't say whether it is a height or a weight. Set
                     <a href="#ex-type"><code>type</code></a
                     >.
                   </li>
                   <li>
-                    A number has no unit. Set
+                    A number has no unit. Set <code>type</code>,
                     <a href="#ex-unqualified"><code>allowUnqualified</code></a> and
                     <code>inferUnit</code>.
                   </li>
@@ -2149,9 +2169,10 @@ const strict = parseMeasurement(
               <div class="callout">
                 <svg class="icon" aria-hidden="true"><use href="#i-help" /></svg>
                 <p>
-                  Still stuck? Search the
-                  <a href="https://github.com/afahy/fluent-measures/issues">GitHub issues</a>, or
-                  open a new one if you've found a bug.
+                  If none of these explains the result, search the
+                  <a href="https://github.com/afahy/fluent-measures/issues">GitHub issues</a>. To
+                  report a bug, open an issue with the input, the options and the result that you
+                  expected.
                 </p>
               </div>
             </div>

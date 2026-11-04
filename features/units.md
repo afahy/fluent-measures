@@ -20,7 +20,7 @@ in `I drink 8 oz of water, weight 180 lbs`, which gives 180 lb.
 ## Where the rules are
 
 - README.md, "Usage"
-- README.md, "Supported Units"
+- README.md, "Supported units"
 - README.md, "Limits"
 - PARSING.md, "Unsupported Units"
 

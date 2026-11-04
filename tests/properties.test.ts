@@ -31,7 +31,7 @@ function convert(value: number, from: Unit, to: Unit): number {
   return (value * table[from]) / table[to];
 }
 
-// The names in "Supported Units" in the README, without the marks, which follow other rules.
+// The names in "Supported units" in the README, without the marks, which follow other rules.
 const NAMES: Record<Unit, readonly string[]> = {
   ft: ['ft', 'feet', 'foot'],
   in: ['in', 'inch', 'inches'],
@@ -156,7 +156,7 @@ describe('generated single measurements', () => {
 
   it('reads the value and the unit of each unit name', () => {
     expect.hasAssertions();
-    // README, "Supported Units". PARSING.md: after a number, "in" and "m" are units.
+    // README, "Supported units". PARSING.md: after a number, "in" and "m" are units.
     fc.assert(
       fc.property(amount, measurement, fc.boolean(), (value, { unit, name }, space) => {
         const raw = `${value}${space ? ' ' : ''}${name}`;
