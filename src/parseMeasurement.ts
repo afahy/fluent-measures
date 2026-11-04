@@ -233,6 +233,14 @@ function labelHasValue(
  * tokens, which `remaining` reads as "", so the check reads units in `text`, which reads them all.
  */
 function hasUnsupportedPart(text: Words, remaining: Words, i: number, fuzziness?: number): boolean {
+  // A comma separates number phrases, but not a weight's parts. For this check only, read its
+  // boundary as "and", which both number readers skip, so "stone -twenty five, 4 lb" stays null.
+  const acrossComma =
+    (words: Words): Words =>
+    at =>
+      words(at) === 'COMMA' ? 'and' : words(at);
+  text = acrossComma(text);
+  remaining = acrossComma(remaining);
   const word = remaining(i);
   if (!UNSUPPORTED_WEIGHT_UNITS.test(word)) return false;
   // Stryker disable next-line StringLiteral: a missing token and "Stryker was here!" are both no weight unit.
@@ -246,7 +254,7 @@ function hasUnsupportedPart(text: Words, remaining: Words, i: number, fuzziness?
   // can be a part's unit, as in "Stone: 12, lb: 4".
   const skip = (start: number): number => skipSemicolons(text, start);
   const next = skip(i + 1);
-  const [after, afterEnd] = readSignedPhrase(text, next);
+  const [after, afterEnd, afterSigned] = readSignedPhrase(text, next);
   const unitAt = skip(afterEnd);
   // A supported part before it can have its unit first, as in "kg 3, 400 g". Earlier
   // matches use their tokens, so check all the tokens for a unit.
@@ -256,11 +264,16 @@ function hasUnsupportedPart(text: Words, remaining: Words, i: number, fuzziness?
   // unless a weight unit after that number takes it, as in "stone, 50 lb bag". A unit with
   // its own number after it doesn't, as in "Stone: 12, lb: 4". Like "in" and "m", "st"
   // and "g" before a number are usually other words, as in "Main St 12".
+  // A signed phrase still invalidates the supported part, as in "stone -a hundred, 4 lb".
   return before === null
     ? after !== null &&
         word !== 'st' &&
         word !== 'g' &&
-        !(isWeightUnit(text(unitAt)) && readNumberPhrase(text, skip(unitAt + 1))[0] === null) &&
+        !(
+          !afterSigned &&
+          isWeightUnit(text(unitAt)) &&
+          readNumberPhrase(text, skip(unitAt + 1))[0] === null
+        ) &&
         (partEndsAt(i - 1) || isWeightUnit(text(skip(readNumberPhrase(text, unitAt)[1]))))
     : isUnsupportedUnit(word, remaining(i - 1)) &&
         (partEndsAt(beforeEnd) || isWeightUnit(text(unitAt)));

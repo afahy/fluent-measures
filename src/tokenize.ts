@@ -2,7 +2,7 @@ import { matchUnit } from './matchUnit';
 import { LABEL_ALIASES, UNIT_ALIASES } from './units';
 import { MULTIPLIERS, NUMBER_WORDS, wordsToNumber } from './wordsToNumber';
 
-/** A word, number, mark or semicolon of the input. */
+/** A word, number, mark, semicolon or number-phrase boundary of the input. */
 export interface Token {
   text: string;
   /**
@@ -107,6 +107,10 @@ const CURLY_DOUBLE = new RegExp(
 
 // The number words, as alternatives in a pattern.
 const NUMBER_WORD = [...NUMBER_WORDS.keys(), ...MULTIPLIERS.keys()].join('|');
+
+// A comma and space after a number word separate it from digits, as in "phase twenty, 5 cm".
+// Numeric commas and commas between number words keep their existing rules (AFA-179, AFA-75).
+const WORD_COMMA = new RegExp(String.raw`(\b(?:${NUMBER_WORD}))\s*,(?=\s+\.?\d)`, 'g');
 
 // A minus sign before a number, when no number comes earlier: no digit, Unicode fraction or number
 // word. The number can be a word too, as in "−five'", also after "a" or "an", as in "−a hundred"
@@ -239,6 +243,9 @@ export function tokenizeNormalized(
       // "#" right after a number means pounds, as in "185#". Before a number, or before a letter,
       // a digit or another "#", as in "#5", "185#kg" and "12#3", it isn't a unit.
       .replace(/(?<=\d)#(?![\p{L}\p{N}_#])/gu, ' lb ')
+      // Keep this boundary as a non-number token in both reading directions. The uppercase word
+      // can't come from input, which is lowercase, and can't match a unit even with fuzziness.
+      .replace(WORD_COMMA, '$1 COMMA ')
       // Split punctuation, hyphens that join two values after a feet or inch mark, as in `5'-11`,
       // `5"-5 in`, `5'-eleven` and `five'-10"`, and underscores before minus signs.
       .replace(PUNCTUATION, ' ')
