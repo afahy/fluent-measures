@@ -1475,9 +1475,10 @@ if (result) {
                 <p>
                   People sometimes type only a number, for example in a field that already names the
                   unit. Set <a href="#parse-options"><code>allowUnqualified</code></a> to read it,
-                  and <a href="#parse-options"><code>inferUnit</code></a> to choose metric or
-                  imperial units. <code>allowUnqualified</code> also needs <code>type</code>.
-                  Without <code>type</code>, the call throws an error.
+                  and <code>type</code> to say whether it is a height or a weight. Without
+                  <code>type</code>, the call throws an error.
+                  <a href="#parse-options"><code>inferUnit</code></a> chooses metric or imperial
+                  units, and imperial is the default.
                 </p>
                 <div class="code on-code">
                   <div class="code-head">
@@ -1798,7 +1799,12 @@ const strict = parseMeasurement(
                     <span class="name">inferUnit?</span
                     ><span class="type">'metric' | 'imperial'</span>
                   </dt>
-                  <dd>The unit system for a number that has no unit.</dd>
+                  <dd>
+                    The unit system for a number that has no unit. Without it, or with
+                    <code>'imperial'</code>, a height is in inches and a weight in pounds. With
+                    <code>'metric'</code>, a weight is in kilograms, a height below 3 in meters, and
+                    any other height in centimeters.
+                  </dd>
                 </div>
                 <div>
                   <dt>
@@ -2108,8 +2114,10 @@ const strict = parseMeasurement(
                 </table>
               </div>
               <p class="topic-lead">
-                When the text has more than one measurement, the result is the first one. The others
-                must agree with it within 1%. If not, the result is <code>null</code>.
+                When the text has more than one height, or more than one weight, the result is the
+                first one. The others must agree with it within 1%. If not, the result is
+                <code>null</code>. If the text has both a height and a weight, set
+                <a href="#ex-type"><code>type</code></a> to choose which one you get.
               </p>
               <div class="callout is-caution">
                 <svg class="icon" aria-hidden="true"><use href="#i-alert" /></svg>

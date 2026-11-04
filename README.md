@@ -81,8 +81,9 @@ parseMeasurement('150 lbs', { type: 'weight', normalizedUnit: 'kg' });
 ```
 
 People sometimes type only a number, for example in a field that already names the unit. Set
-`allowUnqualified` to read it, and `inferUnit` to choose metric or imperial units.
-`allowUnqualified` also needs `type`. Without `type`, the call throws an error:
+`allowUnqualified` to read it, and `type` to say whether it is a height or a weight. Without
+`type`, the call throws an error. `inferUnit` chooses metric or imperial units, and imperial is the
+default:
 
 ```typescript
 parseMeasurement('72', { type: 'height', allowUnqualified: true, inferUnit: 'imperial' });
@@ -128,7 +129,9 @@ interface ParseOptions {
   // Read a number that has no unit. Without type, parseMeasurement throws an error.
   allowUnqualified?: boolean;
 
-  // The unit system for a number that has no unit
+  // The unit system for a number that has no unit. Without it, or with 'imperial', a height is
+  // in inches and a weight in pounds. With 'metric', a weight is in kilograms, a height below 3
+  // in meters, and any other height in centimeters.
   inferUnit?: 'metric' | 'imperial';
 
   // The unit of the result. It also selects the measurement type, so a weight unit reads only a
@@ -191,8 +194,9 @@ parseMeasurement('70 kg (154 lbs)'); // { value: 70, unit: 'kg', ... }: the seco
 parseMeasurement('210 lbs to 180 lbs'); // null: the two weights disagree
 ```
 
-When the text has more than one measurement, the result is the first one. The others must agree
-with it within 1%. If not, the result is `null`.
+When the text has more than one height, or more than one weight, the result is the first one. The
+others must agree with it within 1%. If not, the result is `null`. If the text has both a height
+and a weight, set `type` to choose which one you get.
 
 Fuzzy matching can read an ordinary word as a unit. Even without it, `in` after a number means
 inches, so `Top 10 in the class` returns 10 inches.

@@ -122,7 +122,7 @@ compact-ft-in-dots (compact)
 
 Entries with the outcome "throws" (0):
 
-Entries that agree with one of several outputs (8):
+Entries that agree with one of several outputs (7):
 
 unicode-en-dash-shorthand: null
 unicode-hyphen-shorthand: null
@@ -130,6 +130,5 @@ multiple-kg-with-lbs: 70 kg (weight)
 multiple-height-weight-no-type: 71 in (height)
 multiple-6-1-190-no-type: 73 in (height)
 unqualified-1-75-metric-height: 1.75 m (height)
-unqualified-no-infer-unit: 150 lb (weight)
 unqualified-1-8-metric-height: 1.8 m (height)"
 `;
