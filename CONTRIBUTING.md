@@ -360,6 +360,31 @@ A property that fails prints the smallest input that fails. Check that input aga
 `PARSING.md` and the existing tests before you change the code or the property. A property must
 not cover an input that an existing test reads in a different way.
 
+`tests/measurementModel.ts` supplies the independent unit definitions and writers used by these
+properties. Generate a quantity first, then write its text; calculate the expected result from
+that quantity, never from the parser, its tokenizer or its conversion functions. Keep this model
+small: it writes bounded integer phrases and supported unit placements, not arbitrary prose.
+Comments beside each property identify the contract for its domain. For example, bare prefix
+`in` and `m` need labels, and the multiplier after "and a half" is tested before the unit, since
+the forward-read contract differs. Exact agreement boundaries use integers and binary fractions;
+conversion assertions allow only rounding error from a few arithmetic operations.
+
+The original properties use seed `20261017` and 1000 runs (50 in Stryker workers). The added
+semantic combinations use seed `20261104` and 250 runs (25 in workers), with separate tests for
+important boundaries and syntax choices. Run `pnpm test:unit tests/properties.test.ts`, then
+`pnpm build && pnpm test:package tests/properties.test.ts` to check source, ESM and CJS. To replay
+a failure, run its test with `-t 'test name'` and temporarily set its `fc.assert` options to the
+reported `seed` and `path`. Keep the shrunk input and check its expected meaning independently.
+Report a genuine existing bug under `AGENTS.md`; don't filter it out or adopt its wrong output.
+
+For historical sensitivity checks, extract a fixing revision's `src/` and its parent's `src/`
+with `git archive` into temporary directories. Use a temporary Vitest config with an alias from
+`/^\.\.\/src$/` to each directory's `src/index.ts`, then run the same property by name. Record the
+revision, command, seed and small counterexample, and confirm failure before the fix and success
+after it. Some later contracts don't apply to old revisions; isolate the relevant property or
+use an isolated deliberate defect instead. Historical sources and network access are not needed
+for normal tests.
+
 ### Tests against the package
 
 `pnpm test:package` runs the tests of results against the built package, once through `import` and

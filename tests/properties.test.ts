@@ -2,7 +2,19 @@ import fc from 'fast-check';
 import { readFileSync } from 'node:fs';
 import { env } from 'node:process';
 import { describe, expect, it } from 'vitest';
-import { parseMeasurement, type MeasurementType, type ParseOptions, type Unit } from '../src';
+import { parseMeasurement, type ParseOptions, type Unit } from '../src';
+import {
+  convert,
+  inWords,
+  NAMES,
+  NUMBER_FORMS,
+  PLACEMENTS,
+  TYPES,
+  UNITS,
+  writeInteger,
+  writeMeasurement,
+  type Quantity,
+} from './measurementModel';
 
 // Each property makes a measurement first, writes it in a form that the README or PARSING.md
 // shows, and expects the measurement back. So each expected value is a hand calculation from the
@@ -11,71 +23,10 @@ import { parseMeasurement, type MeasurementType, type ParseOptions, type Unit } 
 // Stryker runs each test again for each mutant that it covers, so its workers check fewer inputs.
 const NUM_RUNS = env.STRYKER_MUTATOR_WORKER === undefined ? 1000 : 50;
 const RUNS = { numRuns: NUM_RUNS, seed: 20261017 };
-
-// The international definitions: 1 in = 2.54 cm, 1 ft = 12 in, 1 m = 100 cm, 1 lb = 0.45359237 kg.
-const CM_PER_UNIT: Record<Unit, number> = { in: 2.54, ft: 30.48, cm: 1, m: 100, lb: 0, kg: 0 };
-const KG_PER_UNIT: Record<Unit, number> = { lb: 0.45359237, kg: 1, ft: 0, in: 0, cm: 0, m: 0 };
-const TYPES: Record<Unit, MeasurementType> = {
-  ft: 'height',
-  in: 'height',
-  cm: 'height',
-  m: 'height',
-  lb: 'weight',
-  kg: 'weight',
+const SEMANTIC_RUNS = {
+  numRuns: env.STRYKER_MUTATOR_WORKER === undefined ? 250 : 25,
+  seed: 20261104,
 };
-const UNITS = Object.keys(TYPES) as Unit[];
-
-/** The value in the target unit, from the definitions above. */
-function convert(value: number, from: Unit, to: Unit): number {
-  const table = TYPES[from] === 'height' ? CM_PER_UNIT : KG_PER_UNIT;
-  return (value * table[from]) / table[to];
-}
-
-// The names in "Supported Units" in the README, without the marks, which follow other rules.
-const NAMES: Record<Unit, readonly string[]> = {
-  ft: ['ft', 'feet', 'foot'],
-  in: ['in', 'inch', 'inches'],
-  cm: ['cm', 'centimeter', 'centimeters', 'centimetre', 'centimetres'],
-  m: ['m', 'meter', 'meters', 'metre', 'metres'],
-  lb: ['lb', 'lbs', 'pound', 'pounds'],
-  kg: ['kg', 'kilo', 'kilos', 'kilogram', 'kilograms'],
-};
-
-const ONES = [
-  '',
-  'one',
-  'two',
-  'three',
-  'four',
-  'five',
-  'six',
-  'seven',
-  'eight',
-  'nine',
-  'ten',
-  'eleven',
-  'twelve',
-  'thirteen',
-  'fourteen',
-  'fifteen',
-  'sixteen',
-  'seventeen',
-  'eighteen',
-  'nineteen',
-];
-const TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
-
-/** A number from 1 to 999 in words, as in "one hundred fifty" or "one hundred and fifty". */
-function inWords(value: number, and = false): string {
-  if (value < 20) return ONES[value];
-  if (value < 100) {
-    const ones = value % 10;
-    return TENS[Math.floor(value / 10)] + (ones ? ` ${ONES[ones]}` : '');
-  }
-  const rest = value % 100;
-  const hundreds = `${ONES[Math.floor(value / 100)]} hundred`;
-  return rest ? `${hundreds}${and ? ' and' : ''} ${inWords(rest)}` : hundreds;
-}
 
 /** Relative equality, as the corpus uses, so that a conversion's last bit doesn't count. */
 function expectValue(actual: number | undefined, expected: number): void {
@@ -86,6 +37,34 @@ function expectValue(actual: number | undefined, expected: number): void {
 
 // A positive decimal with at most one decimal place, below 1000 so that it has no thousands group.
 const amount = fc.integer({ min: 1, max: 9999 }).map(tenths => tenths / 10);
+const whole = fc.integer({ min: 1, max: 999 });
+const measurement = fc
+  .constantFrom(...UNITS)
+  .chain(unit => fc.record({ unit: fc.constant(unit), name: fc.constantFrom(...NAMES[unit]) }));
+
+function targets(unit: Unit): Unit[] {
+  return UNITS.filter(target => TYPES[target] === TYPES[unit]);
+}
+
+/** Compare the full meaning, including the original parts, with an independent unit oracle. */
+function expectQuantity(
+  raw: string,
+  quantity: Quantity,
+  options: ParseOptions = {},
+  matches: Quantity[] = [quantity]
+): void {
+  const unit = options.normalizedUnit ?? quantity.unit;
+  const expected = convert(quantity.value, quantity.unit, unit);
+  const result = parseMeasurement(raw, options);
+  expect(result).toMatchObject({ unit, type: TYPES[unit], raw });
+  expect(result?.matches).toEqual(matches);
+  // At most a few multiplies/divides on bounded normal values. 32 machine epsilons cover their
+  // rounding order, while staying far below any generated quantity difference or the 1% rule.
+  expect(result?.value).toBeTypeOf('number');
+  expect(Math.abs((result?.value ?? NaN) - expected)).toBeLessThanOrEqual(
+    32 * Number.EPSILON * Math.abs(expected)
+  );
+}
 
 describe('generated feet and inches', () => {
   // README: "A height in feet and inches gives the total in inches". PARSING.md, "More Than One
@@ -147,13 +126,40 @@ describe('generated feet and inches', () => {
       RUNS
     );
   });
+
+  // PARSING.md, "More Than One Measurement", and unitFirstPhrases.test.ts: both unit systems
+  // have compounds, including unit-first fields. The smaller part is below the next unit.
+  it.each([
+    ['ft', 'in', 12],
+    ['m', 'cm', 100],
+  ] as const)('keeps and normalizes compound %s and %s', (large, small, radix) => {
+    expect.hasAssertions();
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 1, max: 8 }),
+        fc.integer({ min: 1, max: radix - 1 }),
+        fc.constantFrom(...NUMBER_FORMS),
+        fc.constantFrom('suffix' as const, 'colon' as const),
+        fc.constantFrom(...targets(large)),
+        (larger, smaller, form, placement, normalizedUnit) => {
+          const parts = [
+            { value: larger, unit: large },
+            { value: smaller, unit: small },
+          ];
+          const raw = parts
+            .map(part => writeMeasurement(writeInteger(part.value, form), part.unit, placement))
+            .join(' ');
+          const total = { value: larger * radix + smaller, unit: small };
+          expectQuantity(raw, total, {}, parts);
+          expectQuantity(raw, total, { normalizedUnit }, parts);
+        }
+      ),
+      SEMANTIC_RUNS
+    );
+  });
 });
 
 describe('generated single measurements', () => {
-  const measurement = fc
-    .constantFrom(...UNITS)
-    .chain(unit => fc.record({ unit: fc.constant(unit), name: fc.constantFrom(...NAMES[unit]) }));
-
   it('reads the value and the unit of each unit name', () => {
     expect.hasAssertions();
     // README, "Supported Units". PARSING.md: after a number, "in" and "m" are units.
@@ -296,6 +302,203 @@ describe('generated single measurements', () => {
   });
 });
 
+describe('generated number phrases', () => {
+  // PARSING.md, "Numbers" and "Units Before a Number"; unitFirstPhrases.test.ts. Each placement
+  // runs independently, including under Stryker, so prefix/label coverage isn't left to chance.
+  it.each(PLACEMENTS)('reads and normalizes the whole phrase with a %s unit', placement => {
+    expect.hasAssertions();
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 21, max: 999 }),
+        measurement,
+        fc.constantFrom(...NUMBER_FORMS),
+        (value, { unit, name }, form) => {
+          const raw = writeMeasurement(writeInteger(value, form), name, placement);
+          expectQuantity(raw, { value, unit });
+          for (const normalizedUnit of targets(unit)) {
+            expectQuantity(raw, { value, unit }, { normalizedUnit });
+          }
+        }
+      ),
+      SEMANTIC_RUNS
+    );
+  });
+
+  // fractions.test.ts: mixed proper fractions and Unicode fractions. Powers of two give exact
+  // finite decimals; this writer doesn't broaden the contract to exponent-form fractions.
+  it.each(['suffix', 'prefix'] as const)('reads proper fractions with a %s unit', placement => {
+    expect.hasAssertions();
+    const fraction = fc.constantFrom(2, 4, 8, 16).chain(denominator =>
+      fc.record({
+        denominator: fc.constant(denominator),
+        numerator: fc.integer({ min: 1, max: denominator - 1 }),
+      })
+    );
+    fc.assert(
+      fc.property(
+        whole,
+        fraction,
+        measurement,
+        (integer, { numerator, denominator }, { unit, name }) => {
+          const value = integer + numerator / denominator;
+          expectQuantity(
+            writeMeasurement(`${integer} ${numerator}/${denominator}`, name, placement),
+            { value, unit }
+          );
+        }
+      ),
+      SEMANTIC_RUNS
+    );
+  });
+
+  it.each([
+    ['¼', 0.25],
+    ['½', 0.5],
+    ['¾', 0.75],
+  ] as const)('reads the Unicode fraction %s', (mark, fraction) => {
+    expect.hasAssertions();
+    fc.assert(
+      fc.property(whole, measurement, (integer, { unit, name }) => {
+        expectQuantity(`${integer}${mark} ${name}`, { value: integer + fraction, unit });
+      }),
+      SEMANTIC_RUNS
+    );
+  });
+
+  // andAHalf.test.ts: a whole number plus a half, then increasing multipliers. Only the suffix
+  // form has the multiplier contract; a forward read can stop at the half (see that test).
+  it.each([
+    ['', 1],
+    [' hundred', 100],
+    [' thousand', 1000],
+    [' hundred thousand', 100_000],
+  ] as const)('multiplies the whole number and half by%s', (multiplier, factor) => {
+    expect.hasAssertions();
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 1, max: 9 }),
+        measurement,
+        fc.boolean(),
+        (integer, { unit, name }, words) => {
+          const phrase = `${words ? inWords(integer) : integer} and a half${multiplier}`;
+          expectQuantity(`${phrase} ${name}`, { value: (integer + 0.5) * factor, unit });
+        }
+      ),
+      SEMANTIC_RUNS
+    );
+  });
+
+  // signedParts.test.ts: a sign on the first number word, including a/an, signs the whole phrase.
+  it.each(['-', '−', '﹣'])('rejects a whole signed phrase starting with %s', sign => {
+    expect.hasAssertions();
+    fc.assert(
+      fc.property(
+        whole,
+        measurement,
+        fc.constantFrom('suffix' as const, 'prefix' as const, 'colon' as const),
+        (value, { name }, placement) => {
+          for (const phrase of [inWords(value), 'a hundred', 'an eighty']) {
+            expect(
+              parseMeasurement(writeMeasurement(`${sign}${phrase}`, name, placement))
+            ).toBeNull();
+          }
+        }
+      ),
+      SEMANTIC_RUNS
+    );
+  });
+});
+
+describe('generated label ownership', () => {
+  // PARSING.md, "Labels", unitLabels.test.ts and labelValues.test.ts. A preceding field can
+  // change independently of the measurement, in digits or words and with each supported label.
+  it.each([', ', '; ', '&', ': ', '= ', ' '])(
+    'keeps the label value after delimiter %j',
+    delimiter => {
+      expect.hasAssertions();
+      fc.assert(
+        fc.property(
+          whole,
+          whole,
+          measurement,
+          fc.constantFrom(...NUMBER_FORMS),
+          fc.constantFrom('colon' as const, 'equals' as const, 'brackets' as const),
+          (previous, value, { unit, name }, form, placement) => {
+            const label = writeMeasurement(writeInteger(value, form), name, placement);
+            expectQuantity(`age=${previous}${delimiter}${label}`, { value, unit });
+            expectQuantity(`age=${previous + 1}${delimiter}${label}`, { value, unit });
+          }
+        ),
+        SEMANTIC_RUNS
+      );
+    }
+  );
+
+  // A delimiter blocks fallback to the previous field if the label's value has its own unit.
+  it.each([', ', '; ', '&', ': ', '= '])(
+    'gives a value its own unit after delimiter %j',
+    delimiter => {
+      expect.hasAssertions();
+      fc.assert(
+        fc.property(
+          whole,
+          whole,
+          measurement,
+          measurement,
+          fc.constantFrom(...NUMBER_FORMS),
+          fc.constantFrom('colon' as const, 'equals' as const, 'brackets' as const),
+          (previous, value, label, own, form, placement) => {
+            const text = writeMeasurement(
+              `${writeInteger(value, form)} ${own.name}`,
+              label.name,
+              placement
+            );
+            expectQuantity(`id=${previous}${delimiter}${text}`, { value, unit: own.unit });
+            expectQuantity(`id=${previous + 1}${delimiter}${text}`, { value, unit: own.unit });
+          }
+        ),
+        SEMANTIC_RUNS
+      );
+    }
+  );
+
+  // With no delimiter, ordinary labels fall back to the preceding value. Explicit types keep
+  // both dimensions observable, rather than letting the parser's default selection hide one.
+  it.each([
+    ['kg:', 'kg', 'cm'],
+    ['ft:', 'ft', 'kg'],
+    ['(in)', 'in', 'lb'],
+    ['in.', 'in', 'lb'],
+    ['(m)', 'm', 'kg'],
+  ] as const)('keeps the preceding quantity for label %s', (label, unit, ownUnit) => {
+    expect.hasAssertions();
+    fc.assert(
+      fc.property(whole, whole, fc.constantFrom(...NUMBER_FORMS), (previous, value, form) => {
+        const raw = `${previous} ${label} ${writeInteger(value, form)} ${ownUnit}`;
+        expectQuantity(raw, { value: previous, unit }, { type: TYPES[unit] });
+        expectQuantity(raw, { value, unit: ownUnit }, { type: TYPES[ownUnit] });
+      }),
+      SEMANTIC_RUNS
+    );
+  });
+
+  // in/m before : or = are field names, which don't take the preceding value in this case.
+  it.each(['in:', 'in=', '(in):', 'm:', 'm=', '(m):'])(
+    'keeps field name %s from taking the previous value',
+    label => {
+      expect.hasAssertions();
+      fc.assert(
+        fc.property(whole, whole, fc.constantFrom(...NUMBER_FORMS), (previous, value, form) => {
+          const raw = `${previous} ${label} ${writeInteger(value, form)} lbs`;
+          expectQuantity(raw, { value, unit: 'lb' });
+          expect(parseMeasurement(raw, { type: 'height' })).toBeNull();
+        }),
+        SEMANTIC_RUNS
+      );
+    }
+  );
+});
+
 describe('generated pairs of measurements', () => {
   // PARSING.md, "More Than One Measurement": the result is the first measurement. The others must
   // agree with it within 1%, or the result is null.
@@ -304,6 +507,8 @@ describe('generated pairs of measurements', () => {
     ['lb', 'kg'],
     ['cm', 'in'],
     ['in', 'cm'],
+    ['ft', 'in'],
+    ['m', 'cm'],
   ];
 
   it('gives the first measurement when the second agrees', () => {
@@ -318,6 +523,15 @@ describe('generated pairs of measurements', () => {
           const result = parseMeasurement(`${value} ${first} (${other} ${second})`);
           expect(result?.unit).toBe(first);
           expect(result?.value).toBe(value);
+          expect(result?.type).toBe(TYPES[first]);
+          expect(result?.matches).toEqual([{ value, unit: first }]);
+          for (const normalizedUnit of targets(first)) {
+            expectQuantity(
+              `${value} ${first} (${other} ${second})`,
+              { value, unit: first },
+              { normalizedUnit }
+            );
+          }
         }
       ),
       RUNS
@@ -344,6 +558,43 @@ describe('generated pairs of measurements', () => {
       RUNS
     );
   });
+
+  // The first quantity is 100*k and the difference is k. These integers make exactly 1%, with
+  // no rounded conversion at the boundary. 1/1024 is exact in binary and much larger than float
+  // error here (k <= 1000), so the inside/outside cases cannot cross the boundary by rounding.
+  it.each([0, 1 / 1024])('accepts agreement at or inside one percent by %s', inside => {
+    expect.hasAssertions();
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 1, max: 1000 }),
+        fc.constantFrom(...UNITS),
+        fc.constantFrom(-1, 1),
+        (k, unit, direction) => {
+          const value = 100 * k;
+          const other = value + direction * (k - inside);
+          expectQuantity(`${value} ${unit} (${other} ${unit})`, { value, unit });
+        }
+      ),
+      SEMANTIC_RUNS
+    );
+  });
+
+  it('rejects agreement just outside 1%', () => {
+    expect.hasAssertions();
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 1, max: 1000 }),
+        fc.constantFrom(...UNITS),
+        fc.constantFrom(-1, 1),
+        (k, unit, direction) => {
+          const value = 100 * k;
+          const other = value + direction * (k + 1 / 1024);
+          expect(parseMeasurement(`${value} ${unit} (${other} ${unit})`)).toBeNull();
+        }
+      ),
+      SEMANTIC_RUNS
+    );
+  });
 });
 
 describe('generated numbers with no unit', () => {
@@ -366,6 +617,120 @@ describe('generated numbers with no unit', () => {
         }
       ),
       RUNS
+    );
+  });
+
+  // README, allowUnqualified; unqualifiedMeters.test.ts supplies the metric height boundary:
+  // below 3 means meters, from 3 means centimeters. Generate the source meaning in each domain,
+  // rather than asking the parser which unit it inferred. No subnormal/underflow cases (AFA-107).
+  it.each([
+    ['height', 'metric', 'm', 1, 299, 100],
+    ['height', 'metric', 'cm', 300, 9999, 100],
+    ['height', 'imperial', 'in', 1, 9999, 10],
+    ['weight', 'metric', 'kg', 1, 9999, 10],
+    ['weight', 'imperial', 'lb', 1, 9999, 10],
+  ] as const)('normalizes inferred %s in %s %s', (type, inferUnit, unit, min, max, divisor) => {
+    expect.hasAssertions();
+    fc.assert(
+      fc.property(fc.integer({ min, max }), numerator => {
+        const value = numerator / divisor;
+        for (const normalizedUnit of targets(unit)) {
+          const options = { type, normalizedUnit };
+          expectQuantity(
+            String(value),
+            { value, unit },
+            { ...options, inferUnit, allowUnqualified: true }
+          );
+          expectQuantity(`${value} ${unit}`, { value, unit }, options);
+          expect(parseMeasurement(String(value), options)).toBeNull();
+        }
+      }),
+      // Ensure both ends, particularly 2.99 m and 3 cm, also run in mutation workers.
+      { ...SEMANTIC_RUNS, examples: [[min], [max]] }
+    );
+  });
+});
+
+describe('generated normalized type selection', () => {
+  // README ParseOptions and unitConversions.test.ts: normalizedUnit chooses the dimension even
+  // in mixed text, in either order. A conflicting explicit type throws, and inference needs type.
+  it.each(UNITS)('selects and converts only the dimension of %s', normalizedUnit => {
+    expect.hasAssertions();
+    const selectedUnits = targets(normalizedUnit);
+    const otherUnits = UNITS.filter(unit => TYPES[unit] !== TYPES[normalizedUnit]);
+    fc.assert(
+      fc.property(
+        whole,
+        whole,
+        fc.constantFrom(...selectedUnits),
+        fc.constantFrom(...otherUnits),
+        fc.constantFrom(...NUMBER_FORMS),
+        fc.boolean(),
+        (value, otherValue, unit, otherUnit, form, reverse) => {
+          const fields = [
+            `${writeInteger(value, form)} ${unit}`,
+            `${writeInteger(otherValue, form)} ${otherUnit}`,
+          ];
+          const raw = (reverse ? fields.reverse() : fields).join(', ');
+          expectQuantity(raw, { value, unit }, { normalizedUnit });
+          expectQuantity(raw, { value, unit }, { normalizedUnit, type: TYPES[unit] });
+          expect(() => parseMeasurement(raw, { normalizedUnit, type: TYPES[otherUnit] })).toThrow(
+            `normalizedUnit ${normalizedUnit} is not a ${TYPES[otherUnit]} unit`
+          );
+          expect(() =>
+            parseMeasurement(String(value), { normalizedUnit, allowUnqualified: true })
+          ).toThrow('allowUnqualified requires type');
+        }
+      ),
+      SEMANTIC_RUNS
+    );
+  });
+});
+
+describe('generated numeric fuzziness boundaries', () => {
+  // fuzzyUnits.test.ts and features/fuzzy-matching.md. The second column is the allowed number
+  // of edits, independently specified here, not calculated by production option handling.
+  it.each([
+    [Infinity, 0],
+    [-Infinity, 0],
+    [NaN, 0],
+    [0, 0],
+    [-0, 0],
+    [-1, 0],
+    [-0.5, 0],
+    [Number.MIN_VALUE, 0],
+    [0.5, 0],
+    [1 - Number.EPSILON, 0],
+    [1, 1],
+    [1.5, 1],
+    [2 - Number.EPSILON, 1],
+    [2, 2],
+  ])('allows the specified edits with fuzziness %s', (fuzziness, edits) => {
+    expect.hasAssertions();
+    fc.assert(
+      fc.property(amount, measurement, (value, { unit, name }) => {
+        expectQuantity(`${value} ${name}`, { value, unit }, { fuzziness });
+        // "foots" adds s to foot; "kilgrm" deletes o and a from kilogram. Each is unambiguous
+        // and satisfies the name-length and first-letter rules in PARSING.md.
+        for (const [word, typoUnit, distance] of [
+          ['foots', 'ft', 1],
+          ['kilgrm', 'kg', 2],
+        ] as const) {
+          const raw = `${value} ${word}`;
+          const expected =
+            edits >= distance
+              ? {
+                  value,
+                  unit: typoUnit,
+                  type: TYPES[typoUnit],
+                  raw,
+                  matches: [{ value, unit: typoUnit }],
+                }
+              : null;
+          expect(parseMeasurement(raw, { fuzziness })).toEqual(expected);
+        }
+      }),
+      SEMANTIC_RUNS
     );
   });
 });
