@@ -1150,6 +1150,25 @@ a:hover {
 }
 
 /*
+ * The smallest phones: the demo's type is a step smaller and its gaps a touch tighter, so the
+ * longest chips ("not a measurement", "eighty kilograms") stay clear of the arrows (AFA-190).
+ */
+@media (max-width: 339px) {
+  .demo {
+    --mono-md: 0.8125rem;
+    --mono-lg: 0.875rem;
+  }
+
+  .demo-list {
+    column-gap: 8px;
+  }
+
+  .demo-input {
+    padding: 1px 6px;
+  }
+}
+
+/*
  * Four rows first (height and weight only on phones); four more sit behind "More input
  * examples". Beside the hero copy, the second four replace the first, so the card keeps
  * its height; stacked layouts simply grow.
