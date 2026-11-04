@@ -103,7 +103,12 @@ function heroRows(html: string): ShownCase[] {
   const row =
     /<dt>\s*<span class="demo-input">([^<]*)<\/span>\s*<span class="demo-opts( is-none)?"\s*>([\s\S]*?)<\/span\s*>\s*<\/dt>\s*<dd( class="is-null")?>\s*<svg[\s\S]*?<\/svg>\s*<span>([\s\S]*?)<\/span>\s*<\/dd>/g;
   return [...list.matchAll(row)].map(([, input, none, optionsHtml, isNull, result]) => {
-    const keys = optionsHtml.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ');
+    // Drop the markup, then any stray angle bracket, so no tag can survive (CodeQL
+    // js/incomplete-multi-character-sanitization). The options text never contains < or >.
+    const keys = optionsHtml
+      .replace(/<[^>]*>/g, '')
+      .replace(/[<>]/g, '')
+      .replace(/\s+/g, ' ');
     const options = none ? undefined : (new Function(`return ({${keys}});`)() as ParseOptions);
     return shownCase(input, options, shownResult(Boolean(isNull), result));
   });
