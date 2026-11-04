@@ -385,6 +385,37 @@ after it. Some later contracts don't apply to old revisions; isolate the relevan
 use an isolated deliberate defect instead. Historical sources and network access are not needed
 for normal tests.
 
+### PR workflow models
+
+`tests/prReview.model.test.ts` checks review obligations after every event against the small
+ledger in `tests/reviewModel.ts`. The ledger uses typed answer targets, reviewer identities and
+logical time; a separate adapter writes GitHub snapshots and links. It does not parse comments
+or call production helpers for expected results. Thread replies, review-body answers and Claude
+summary answers have separate obligations. Late reviews use submission time for change requests
+and commit identity for head completion, as the existing policy requires.
+
+`tests/prPolling.model.test.ts` drives the CLI's extracted polling loop and real API error
+classification with fake fetch and time. Its independent transition model checks each API call,
+wait and terminal result, including the last result at timeout and the five-consecutive-error
+budget. It preserves the current final poll on the deadline; a retry scheduled after it cannot
+start. The real CLI fixture tests remain in `tests/prStatus.test.ts`.
+
+Run `pnpm test:unit tests/prReview.model.test.ts tests/prPolling.model.test.ts`. Each generated
+suite uses 200 runs, with seeds `199202611` (reviews) and `199202612` (polling). Review tails have
+1–50 events; polling schedules have 1–20 responses, bounded further by their fake deadlines.
+Assertions count executed command families and multi-event runs, including real edits and
+deletions. On failure, fast-check reports a reduced sequence, seed and path. Replay with the
+test name (`-t`) and those `fc.assert` options, as for the parser properties above.
+
+Stryker mutates `src/`, so its score does not establish sensitivity of these tooling tests.
+For that, copy `pr-state.mjs` and `pr-poll.mjs` into a temporary directory and use a temporary
+Vitest alias to redirect the two test imports there. First run unchanged copies. Then make one
+isolated defect at a time, for example remove the specific-link check in `answered`, or replace
+the polling deadline's `ending(error)` with `throw error` to lose the last successful result.
+Run the same model tests and record the edit, command, seed, reduced sequence and failure before
+restoring the unchanged copies and confirming success. Do not modify fixtures, weaken assertions
+or require historical checkouts or network access in ordinary CI.
+
 ### Tests against the package
 
 `pnpm test:package` runs the tests of results against the built package, once through `import` and
