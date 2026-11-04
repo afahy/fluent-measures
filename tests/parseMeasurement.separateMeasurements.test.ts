@@ -48,7 +48,7 @@ describe('separate measurements in one input', () => {
   it.each([
     ['210 lbs to 180 lbs', {}],
     ['M/28/5\'11" [210lbs > 180lbs]', { type: 'weight' }],
-    // 150 lb is 68.04 kg, 2.8% from 70 kg
+    // 150 lb is about 68.04 kg, 2.8% from 70 kg
     ['70 kg (150 lbs)', {}],
     ['5 ft-1 m', {}],
     ['5 ft-1 m', { normalizedUnit: 'm' }],
