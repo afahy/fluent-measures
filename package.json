@@ -38,6 +38,8 @@
     "clean:cache": "node -e \"require('fs').rmSync('.eslintcache', { recursive: true, force: true })\"",
     "clean:output": "node -e \"for (const dir of ['dist', 'coverage']) require('fs').rmSync(dir, { recursive: true, force: true })\"",
     "dev": "tsup --watch",
+    "docs:shot": "node .github/scripts/docs-shot.mjs",
+    "docs:sweep": "node .github/scripts/docs-sweep.mjs",
     "lint": "pnpm lint:eslint && pnpm lint:format && pnpm lint:spell",
     "lint:eslint": "eslint src tests",
     "lint:eslint:fix": "eslint src tests --fix",

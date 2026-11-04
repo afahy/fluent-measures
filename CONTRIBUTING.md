@@ -63,8 +63,9 @@ fluent-measures/
 │
 ├── docs/                 # Documentation
 │   ├── index.html        # Main documentation page
-│   ├── tailwind.config.cjs  # Tailwind settings for the page
-│   └── tailwind.css      # Tailwind CSS built for the page
+│   ├── site.css          # Styles for the page, which you edit
+│   ├── tailwind.config.cjs  # Tailwind settings that copy site.css into tailwind.css
+│   └── tailwind.css      # CSS built from site.css, which the page loads
 │
 ├── README.md             # Basic use and API reference
 ├── PARSING.md            # Parsing rules, with examples
@@ -72,9 +73,12 @@ fluent-measures/
 └── [configuration files]
 ```
 
-`docs/tailwind.css` holds the Tailwind CSS that the documentation page uses. Build it again when
-you change a class in `docs/index.html` or a setting in `docs/tailwind.config.cjs`. Run these
-commands from the repository root, then commit the new file:
+### Docs page
+
+The styles of the documentation page are in `docs/site.css`. The page doesn't load that file. It
+loads `docs/tailwind.css`, which the build copies from `site.css`, rule by rule, with the settings
+in `docs/tailwind.config.cjs`. So build `tailwind.css` again each time you change `site.css` or
+the settings. Run these commands from the repository root, then commit both files:
 
 ```bash
 pnpm dlx tailwindcss@3.4.17 -c docs/tailwind.config.cjs -o docs/tailwind.css
@@ -82,7 +86,30 @@ pnpm exec prettier --write docs/tailwind.css
 ```
 
 `tests/docsPage.test.ts` fails if a class in a `class` attribute or a `classList` call on the page
-has no rule in the file.
+has no rule in `tailwind.css`.
+
+Two scripts check the page in your installed Chrome or Chromium, so they need no other package.
+If they can't find it, set `CHROME_PATH` to its binary. Each script takes the page as its first
+argument and defaults to `docs/index.html`. A URL, such as `http://localhost:8080/`, works too.
+
+- `pnpm docs:sweep` loads the page in light and dark, and resizes it through each width from
+  320 to 1600px. It reports layout problems at each width: a sideways scroll on the page or in a
+  code block, content that a box clips or that runs off the screen, input chips that run into
+  their results, values that wrap, and a header or navigation that is missing, too tall or
+  collides. Each line names a problem and the widths where it appears. The script exits 1 when it
+  finds a problem, and 2 when it can't run. Run it after each change to `docs/` and before you
+  open the PR. `--from`, `--to` and `--step` change the widths, and `--touch` emulates a touch
+  screen. The checks use the page's class names, so when you rename a class that
+  `.github/scripts/docs-sweep.mjs` names, change the script too.
+- `pnpm docs:shot` takes a screenshot at a device width. Headless Chrome can't make a window
+  narrower than about 500px, so the script emulates the device instead, and a 390px phone
+  screenshot is correct. It defaults to 390 by 844px in light, at twice the pixel density, and
+  writes `docs-shots/<width>-<scheme>.png`, which git ignores. `--width`, `--height`,
+  `--scheme dark` and `--out <file>` change these. `--full` takes the whole page, at the normal
+  density, and adds `-full` to the file name.
+
+For example, `pnpm docs:shot --width 1440 --scheme dark --full` takes the whole page at desktop
+width in dark, and writes `docs-shots/1440-dark-full.png`.
 
 ## Development Setup
 
