@@ -39,7 +39,9 @@ these values:
 - `PAGE_SOURCE`: `The page isn't in a local repository. Read its HTML, CSS and JavaScript from the browser.`
 - `CONTENT_SPEC`: `There is no content spec. Judge the content only for clarity.`
 - `HISTORY`, `CHANGELOG` and `DECISIONS`: `None. This is a calibration run.`
-- `REPO`, `SCRATCH` and `TARGET_SCORE`: as for a judging round.
+- `SCRATCH`: a new folder for each judge model and each site, such as
+  `<run>/calibration/<model>-<site>/`, so that runs at the same time don't write over each other.
+- `REPO` and `TARGET_SCORE`: as for a judging round.
 
 Run the judges as "4. Judge" in SKILL.md says. Run the calibration judges in parallel with each
 other, but not with the judges of the page.

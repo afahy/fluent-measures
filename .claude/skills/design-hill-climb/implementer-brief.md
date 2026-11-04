@@ -1,9 +1,8 @@
-<!-- Fill this file with fill.mjs, as SKILL.md says. Don't fill it by hand.
-cspell:ignore CODEOWNERS -->
+<!-- Fill this file with fill.mjs, as SKILL.md says. Don't fill it by hand. -->
 
 You are the implementation designer and engineer for round {ROUND} of a design hill-climb on
-`{TARGET}`, in the git worktree `{REPO}`. The judges' goal is a score of {TARGET_SCORE} on every
-criterion.
+`{TARGET}`, in the git worktree `{REPO}`. The goal is an Overall score of at least {TARGET_SCORE}
+from each judge.
 
 ## Content rules
 
@@ -28,7 +27,7 @@ criterion.
 ## Files
 
 - Edit only the files in the folder of `{TARGET}`. Don't touch `README.md`, `PARSING.md`,
-  `src/`, `tests/`, `.changeset/`, or any file that `.github/CODEOWNERS` lists.
+  `src/`, `tests/`, `.changeset/`, `.github/`, `package.json` or a config file.
 - If you change `docs/site.css`, build `docs/tailwind.css` again, as `CONTRIBUTING.md` says.
 - Don't commit, branch or push. The agent that started you commits each round.
 

@@ -14,6 +14,14 @@ const fail = message => {
   process.exit(1);
 };
 
+const read = path => {
+  try {
+    return readFileSync(path, 'utf8');
+  } catch (error) {
+    return fail(`can't read ${path}: ${error.message}`);
+  }
+};
+
 const [template, out, ...pairs] = process.argv.slice(2);
 if (!template || !out) {
   fail('usage: node fill.mjs <template> <out> NAME=value NAME=@file ...');
@@ -25,13 +33,13 @@ for (const pair of pairs) {
   if (!match) fail(`"${pair}" isn't NAME=value or NAME=@file.`);
   const [, name, raw] = match;
   if (values.has(name)) fail(`${name} has two values.`);
-  const value = raw.startsWith('@') ? readFileSync(raw.slice(1), 'utf8').trim() : raw.trim();
+  const value = raw.startsWith('@') ? read(raw.slice(1)).trim() : raw.trim();
   if (value === '') fail(`${name} is empty. Write "None." when there is nothing to say.`);
   values.set(name, value);
 }
 
 const placeholder = /\{([A-Z][A-Z0-9_]*)\}/g;
-const text = readFileSync(template, 'utf8').replace(/^<!--[\s\S]*?-->\s*/, '');
+const text = read(template).replace(/^<!--[\s\S]*?-->\s*/, '');
 const names = new Set([...text.matchAll(placeholder)].map(match => match[1]));
 const missing = [...names].filter(name => !values.has(name));
 if (missing.length > 0) fail(`no value for ${missing.join(', ')}.`);
