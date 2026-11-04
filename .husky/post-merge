@@ -1,3 +1,4 @@
+. "$(dirname -- "$0")/_pnpm.sh"
 
 if git diff-tree -r --name-only --no-commit-id ORIG_HEAD HEAD | grep --quiet "^package.json\|^pnpm-lock.yaml"; then
   echo "📦 Package files changed. Running pnpm install..."

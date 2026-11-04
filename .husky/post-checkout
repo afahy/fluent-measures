@@ -1,3 +1,4 @@
+. "$(dirname -- "$0")/_pnpm.sh"
 
 prevHEAD=$1
 newHEAD=$2

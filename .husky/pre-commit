@@ -1,3 +1,5 @@
+. "$(dirname -- "$0")/_pnpm.sh"
+
 branch="$(git rev-parse --abbrev-ref HEAD)"
 
 # Run lint-staged (quick checks: formatting, linting, related tests)
