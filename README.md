@@ -75,7 +75,7 @@ parseMeasurement('5\' 11"', { type: 'height', normalizedUnit: 'cm' });
 // { value: 180.34, unit: 'cm', type: 'height', matches: [{ value: 5, unit: 'ft' }, { value: 11, unit: 'in' }], raw: '5\' 11"' }
 
 parseMeasurement('150 lbs', { type: 'weight', normalizedUnit: 'kg' });
-// { value: 68.04, unit: 'kg', type: 'weight', matches: [{ value: 150, unit: 'lb' }], raw: '150 lbs' }
+// { value: 68.0388555, unit: 'kg', type: 'weight', matches: [{ value: 150, unit: 'lb' }], raw: '150 lbs' }
 ```
 
 Set `allowUnqualified` to read a number that has no unit. `inferUnit` selects the unit system:

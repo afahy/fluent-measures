@@ -1174,6 +1174,39 @@ a:hover {
   }
 }
 
+/*
+ * A long result (150 lbs in kg) widens the shared result column. So its input and options take
+ * the whole row, which keeps them on as few lines as in the other rows, and the result sits on
+ * the chip's line. On a phone the result takes its own line instead, so it doesn't widen the
+ * column for every row and push the arrows into the inputs.
+ */
+.demo-list > .demo-long dt {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  align-self: baseline;
+}
+
+.demo-list > .demo-long dd {
+  grid-row: 1;
+  align-self: baseline;
+}
+
+.demo-list > .demo-long dd > span {
+  align-self: baseline;
+}
+
+@media (max-width: 639px) {
+  .demo-list > .demo-long dd {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+    margin-top: 4px;
+  }
+}
+
 /* The hero demo's "More" toggle. Without JavaScript all rows show. */
 [data-js] .demo-more {
   display: flex;
