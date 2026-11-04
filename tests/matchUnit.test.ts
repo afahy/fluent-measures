@@ -87,6 +87,23 @@ describe('matchUnit', () => {
       }
     });
 
+    // AFA-189: Infinity isn't finite, so it turns fuzzy matching off. "fett" is one edit from
+    // "feet", and "kilgrm" two edits from "kilogram", so both match with a fuzziness of 2.
+    it('matches only exact aliases when fuzziness is Infinity', () => {
+      expect(matchUnit('feet', 'height', Infinity)).toBe('ft');
+      expect(matchUnit('fett', 'height', Infinity)).toBeNull();
+      expect(matchUnit('kilgrm', 'weight', Infinity)).toBeNull();
+      expect(matchUnit('kilgrm', 'weight', 2)).toBe('kg');
+    });
+
+    // A fraction is finite and above 0, so it keeps its result: "fett" is one edit from "feet".
+    it.each([
+      [0.5, null],
+      [1.5, 'ft'],
+    ])('reads fett with fuzziness %s as %s', (fuzziness, unit) => {
+      expect(matchUnit('fett', 'height', fuzziness)).toBe(unit);
+    });
+
     it('handles small typos with fuzziness=1', () => {
       expect(matchUnit('fett', 'height', 1)).toBe('ft');
       expect(matchUnit('inche', 'height', 1)).toBe('in');

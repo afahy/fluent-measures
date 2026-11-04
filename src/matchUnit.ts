@@ -7,6 +7,9 @@ const EXACT_ALIASES = new Set(['centimetre', 'centimetres', 'metre', 'metres']);
 
 /** Prefer exact aliases, then the closest typo that retains enough of the unit's spelling. */
 export function matchUnit(word: string, type: MeasurementType, fuzziness?: number): Unit | null {
+  // A fuzziness that isn't finite, such as Infinity or NaN, turns fuzzy matching off. Infinity
+  // would let every typo match (AFA-189). A fuzziness of 0 or less matches no typo either.
+  if (!Number.isFinite(fuzziness)) fuzziness = 0;
   let closestUnit: Unit | null = null;
   for (const aliases of UNIT_ALIASES[type]) {
     for (const alias of aliases) {
