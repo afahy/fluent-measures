@@ -8,6 +8,94 @@ import { describe, expect, it } from 'vitest';
 // also needs crossorigin="anonymous". A URL that starts with "//" loads from another host too.
 const page = readFileSync(new URL('../docs/index.html', import.meta.url), 'utf8');
 
+// The ticket orders these for lookup, independently of the exported interface's source order.
+// Default and omitted behavior follow the README's ParseOptions and PARSING's Bare Numbers.
+describe('the ParseOptions reference', () => {
+  const reference =
+    page.split('aria-label="ParseOptions properties">')[1]?.split('id="parsed-value"')[0] ?? '';
+  const options = [
+    ...reference.matchAll(/<div id="option-([^"]+)">([\s\S]*?)(?=<div id="option-|$)/g),
+  ];
+  const text = (html: string): string =>
+    html
+      .split(/<[^>]*>/)
+      .join('')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  it('puts common settings before the input-length safeguard', () => {
+    expect(options.map(([, id]) => id)).toEqual([
+      'type',
+      'normalized-unit',
+      'fuzziness',
+      'allow-unqualified',
+      'infer-unit',
+      'max-length',
+    ]);
+  });
+
+  it.each([
+    [
+      'type',
+      'When omitted',
+      'Selected by normalizedUnit when set; otherwise inferred from the input.',
+    ],
+    ['normalized-unit', 'When omitted', 'Uses the parsed or inferred unit.'],
+    ['fuzziness', 'Default', '0 — unit names must be exact.'],
+    ['allow-unqualified', 'Default', 'false — bare-number inference is off.'],
+    [
+      'infer-unit',
+      'When omitted',
+      "Same as 'imperial': a height is in inches and a weight in pounds.",
+    ],
+    ['max-length', 'Default', '1000.'],
+  ])(
+    'labels %s purpose, omitted behavior and constraints in visible markup',
+    (id, label, omitted) => {
+      const option = options.find(([, key]) => key === id)?.[2] ?? '';
+      const facts = [...option.matchAll(/<dt>([^<]+)<\/dt>\s*<dd>([\s\S]*?)<\/dd>/g)];
+      expect(facts.map(([, key]) => key)).toEqual(['Purpose', label, 'Constraints']);
+      expect(text(facts[1]?.[2] ?? '')).toBe(omitted);
+      expect(facts.every(([, , value]) => text(value).length > 0)).toBe(true);
+      expect(option).toContain(`href="#option-${id}"`);
+      expect(option).not.toMatch(/<details|\bhidden\b|aria-hidden/);
+    }
+  );
+
+  it('retains conditional inference, error caveats and practical example links', () => {
+    expect.hasAssertions();
+    const optionText = (id: string): string =>
+      text(options.find(([, key]) => key === id)?.[2] ?? '');
+    expect(optionText('normalized-unit')).toContain('a weight unit reads only a weight');
+    expect(optionText('normalized-unit')).toContain('A type that contradicts it throws an error');
+    expect(optionText('normalized-unit')).toContain(
+      'Shorthand such as 5-11 still needs type, and so does allowUnqualified'
+    );
+    expect(optionText('allow-unqualified')).toContain('Requires an explicit type when enabled');
+    expect(optionText('allow-unqualified')).toContain('throws an error for almost any input');
+    expect(optionText('infer-unit')).toContain('when allowUnqualified and type are set');
+    expect(optionText('infer-unit')).toContain(
+      "With 'metric', a weight is in kilograms, a height below 3 in meters, and any other height in centimeters"
+    );
+    expect(optionText('max-length')).toContain('raw input.length before trimming or parsing');
+    expect(optionText('max-length')).toContain(
+      'A number of at least 1, or Infinity for no limit. Other values throw'
+    );
+    for (const id of [
+      'ex-type',
+      'ex-convert',
+      'ex-fuzzy',
+      'ex-unqualified',
+      'unit-type',
+      'measurement-type',
+    ]) {
+      expect(reference).toContain(`href="#${id}"`);
+      expect(page).toContain(`id="${id}"`);
+    }
+    expect(page).toContain('id="parse-options"');
+  });
+});
+
 /**
  * The external scripts and stylesheets in an HTML page. Prettier checks the page, and it writes
  * each attribute value in double quotes with no spaces around "=". Names and "rel" values in HTML
