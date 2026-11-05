@@ -124,7 +124,9 @@ function activeCommands(log: string): string[] {
   return commands;
 }
 
-describe('regression-check.mjs', () => {
+// Real TypeScript/Vitest subprocesses exceeded the default 5s timeout on hosted CI,
+// including the nested Git-environment run. Allow their assertions to finish on shared runners.
+describe('regression-check.mjs', { timeout: 30_000 }, () => {
   // AFA-128: git C-quotes these names without -z. The base source must actually be restored.
   it.each(['src/é.ts', 'src/a"b.ts', 'src/a\nb.ts'])(
     'catches a regression in the changed source %j',
@@ -233,7 +235,7 @@ it('adds the source', () => { expect(existsSync('src/é.ts')).toBe(true); });\n`
     ['caught', 4, 'x ##[error]fake'],
     ['not-caught', 2, 'x ##[error]fake'],
   ] as const)(
-    'protects child output and resumes commands after %s with %j and %j',
+    'protects child output and resumes commands after %s (case %#)',
     (result, expected, title) => {
       const repository = createRepository();
       commitFiles(repository, { 'src/units.ts': before });
@@ -290,24 +292,21 @@ expect(double(2))`
     ['x\n::error::fake\n', '::error::fake'],
     ['x ##[error]fake', '##\\[error]fake'],
     ['x ##[ErRoR]fake', '##\\[ErRoR]fake'],
-  ])(
-    'escapes captured TypeScript output when it reports a startup failure for %j',
-    (input, rendered) => {
-      const repository = createRepository();
-      commitFiles(repository, { 'src/units.ts': before });
-      commitFiles(repository, {
-        'src/units.ts': after,
-        'tests/units.test.ts': testSource(),
-        'tsconfig.json': JSON.stringify({ compilerOptions: { types: [input] } }),
-      });
+  ])('escapes captured TypeScript startup output (case %#)', (input, rendered) => {
+    const repository = createRepository();
+    commitFiles(repository, { 'src/units.ts': before });
+    commitFiles(repository, {
+      'src/units.ts': after,
+      'tests/units.test.ts': testSource(),
+      'tsconfig.json': JSON.stringify({ compilerOptions: { types: [input] } }),
+    });
 
-      const check = runCheck(repository);
+    const check = runCheck(repository);
 
-      expect(check.status).toBe(1);
-      expect(check.output).toBe('');
-      expect(check.log).toContain('tsc exited with status');
-      expect(check.log).toContain(rendered);
-      expect(activeCommands(check.log)).toEqual([]);
-    }
-  );
+    expect(check.status).toBe(1);
+    expect(check.output).toBe('');
+    expect(check.log).toContain('tsc exited with status');
+    expect(check.log).toContain(rendered);
+    expect(activeCommands(check.log)).toEqual([]);
+  });
 });

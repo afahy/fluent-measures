@@ -33,10 +33,16 @@ describe('workflow command escapes', () => {
     ['src/a\nb.ts', 'src/a\\nb.ts'],
     ['src/a\r\n::error::b', 'src/a\\r\\n::error::b'],
     ['src/a\\nb.ts', 'src/a\\\\nb.ts'],
+  ])('writes %j in a log line as %j', (text, written) => {
+    expect(logText(text)).toBe(written);
+  });
+
+  // Display a safe case number: the payload itself would be a command in the outer reporter.
+  it.each([
     ['x ##[error]fake', 'x ##\\[error]fake'],
     ['##[ErRoR]fake', '##\\[ErRoR]fake'],
     ['##[warning]one ##[error]two', '##\\[warning]one ##\\[error]two'],
-  ])('writes %j in a log line as %j', (text, written) => {
+  ])('escapes legacy commands in a plain log (case %#)', (text, written) => {
     expect(logText(text)).toBe(written);
   });
 });
