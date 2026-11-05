@@ -55,21 +55,12 @@ function runCoverage(
     '.github/tool.ts': 'export function outside() { return 1; }',
     '.stryker-tmp/tool.ts': 'export function outside() { return 1; }',
     'other/tool.ts': 'export function outside() { return 1; }',
-    'tests/value.test.ts': `
-      import { expect, it } from 'vitest';
-      import { value } from '../src/value';
-      import { unused } from '../src/nested/unused';
-      import '../src/.hidden';
-      import '../src/.github/tool';
-      import '../src/.stryker-tmp/tool';
-      import '../src/nested/.hidden';
-      import '../src/nested/.cache/tool';
-      it('covers the fixture', () => {
-        expect(value(true)).toBe(42);
-        expect(value(false)).toBe(0);
-        ${coverAll ? 'expect(unused()).toBe(7);' : ''}
-      });
-    `,
+    // Keep fixture imports separate from this test: the mutation-cache check scans test
+    // imports to find tests of this repository's parser, not this temporary source tree.
+    'tests/value.test.ts': readFileSync(
+      new URL('./fixtures/coverage-config/value.test.ts.txt', import.meta.url),
+      'utf8'
+    ),
   };
   for (const [file, contents] of Object.entries(files)) {
     const path = join(root, file);
@@ -90,7 +81,12 @@ function runCoverage(
       '--coverage.reporter=json',
       '--coverage.reporter=json-summary',
     ],
-    { cwd: root, encoding: 'utf8', timeout: 20_000 }
+    {
+      cwd: root,
+      encoding: 'utf8',
+      timeout: 20_000,
+      env: { ...process.env, COVERAGE_FIXTURE_COVER_ALL: String(coverAll) },
+    }
   );
   if (result.error) throw result.error;
   const coverage = JSON.parse(readFileSync(join(root, 'coverage/coverage-final.json'), 'utf8'));

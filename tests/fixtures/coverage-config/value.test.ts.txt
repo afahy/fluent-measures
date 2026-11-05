@@ -1,0 +1,14 @@
+import { expect, it } from 'vitest';
+import { value } from '../src/value';
+import { unused } from '../src/nested/unused';
+import '../src/.hidden';
+import '../src/.github/tool';
+import '../src/.stryker-tmp/tool';
+import '../src/nested/.hidden';
+import '../src/nested/.cache/tool';
+
+it('covers the fixture', () => {
+  expect(value(true)).toBe(42);
+  expect(value(false)).toBe(0);
+  if (process.env.COVERAGE_FIXTURE_COVER_ALL === 'true') expect(unused()).toBe(7);
+});
