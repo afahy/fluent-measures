@@ -1138,8 +1138,17 @@ a:hover {
   }
 
   .demo-list > div {
-    min-height: 60px;
-    padding: 10px 16px;
+    min-height: 56px;
+    padding: 7px 16px;
+  }
+
+  .demo-opts {
+    margin-top: 2px;
+  }
+
+  .demo-head {
+    padding-top: 10px;
+    padding-bottom: 10px;
   }
 
   .demo-head,
@@ -1168,29 +1177,9 @@ a:hover {
   }
 }
 
-/*
- * Four rows first (height and weight only on phones); four more sit behind "More input
- * examples". Beside the hero copy, the second four replace the first, so the card keeps
- * its height; stacked layouts simply grow.
- */
+/* Four curated examples at every width. Without JavaScript all eight show. */
 [data-js] .demo:not([data-expanded='true']) .demo-extra {
   display: none;
-}
-
-@media (min-width: 1024px) {
-  [data-js] .demo[data-expanded='true'] .demo-list > div:not(.demo-extra) {
-    display: none;
-  }
-
-  [data-js] .demo-list > div:not(.demo-extra) + .demo-extra {
-    border-top: 0;
-  }
-}
-
-@media (max-width: 639px) {
-  [data-js] .demo:not([data-expanded='true']) .demo-wide {
-    display: none;
-  }
 }
 
 /*
@@ -1226,30 +1215,49 @@ a:hover {
   }
 }
 
-/* The hero demo's "More" toggle. Without JavaScript all rows show. */
+/* A quiet disclosure beside Usage, with a full touch target. */
+.demo-links {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.demo-foot a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.demo-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
 [data-js] .demo-more {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 6px;
-  width: 100%;
   min-height: 44px;
+  padding: 0;
   border: 0;
-  border-top: 1px solid var(--border);
-  background: var(--surface-muted);
-  color: var(--heading);
+  background: transparent;
+  color: var(--accent);
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
+  /* An immediate collapse adjustment leaves the control below the sticky header. */
+  scroll-margin-top: calc(var(--header-h) + 12px);
+  scroll-margin-bottom: 12px;
 }
 
 [data-js] .demo-more:hover {
-  background: var(--accent-soft);
+  text-decoration: underline;
 }
 
 .demo-more:focus-visible {
-  outline-offset: -3px;
-  border-radius: 0;
+  outline-offset: 2px;
+  border-radius: 3px;
 }
 
 .demo-more .chevron {
