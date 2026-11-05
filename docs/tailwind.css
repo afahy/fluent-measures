@@ -3297,3 +3297,12 @@ tbody th {
 .footer-inner a:hover {
   color: var(--heading);
 }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
