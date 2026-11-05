@@ -1,4 +1,12 @@
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
+
+// Vitest matches coverage excludes against absolute paths. Anchor dot paths inside this
+// repository so a .t3 or .codex ancestor cannot exclude all source files. Escape glob syntax
+// in the checkout path, and use the same forward slashes as Vitest's coverage matcher.
+const coverageRoot = fileURLToPath(new URL('.', import.meta.url))
+  .replace(/\\/g, '/')
+  .replace(/[*?{}()[\]]/g, '\\$&');
 
 export default defineConfig({
   test: {
@@ -12,7 +20,13 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
       include: ['src/**'],
-      exclude: ['coverage/**', 'dist/**', '**/[.]**', 'commitlint.config.js', 'tests/**'],
+      exclude: [
+        'coverage/**',
+        'dist/**',
+        `${coverageRoot}**/[.]**`,
+        'commitlint.config.js',
+        'tests/**',
+      ],
       thresholds: {
         branches: 100,
         functions: 100,
