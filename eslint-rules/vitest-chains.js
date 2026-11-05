@@ -1,3 +1,5 @@
+import vitest from '@vitest/eslint-plugin';
+
 // A local ESLint rule for tests (AFA-172). It follows each Vitest chain back to its root, as in
 // it.skipIf(c).concurrent.each(cases)('x', fn). The scope manager checks that the root is
 // Vitest's it, test, describe or suite. Then the rule reports what AGENTS.md rule 3 forbids:
@@ -12,6 +14,13 @@ const MARKS = new Set(['fails', 'todo']);
 const UNKNOWN = Symbol('unknown');
 // A call in a chain's names.
 const CALL = '()';
+const WRAPPERS = new Set([
+  'ChainExpression',
+  'TSNonNullExpression',
+  'TSAsExpression',
+  'TSSatisfiesExpression',
+  'TSTypeAssertion',
+]);
 
 const MESSAGES = {
   constant: 'A constant condition always skips the test or always runs it. Use a real one.',
@@ -21,11 +30,7 @@ const MESSAGES = {
 
 /** The name of a member's property, also in brackets, as in it['fails']. */
 function propertyName(member) {
-  if (!member.computed && member.property.type === 'Identifier') return member.property.name;
-  if (member.property.type === 'Literal' && typeof member.property.value === 'string') {
-    return member.property.value;
-  }
-  return undefined;
+  return keyName({ key: member.property, computed: member.computed });
 }
 
 /** A key's name, also in quotes, as in { 'fails': true }. */
@@ -34,7 +39,15 @@ function keyName(property) {
   if (property.key.type === 'Literal' && typeof property.key.value === 'string') {
     return property.key.value;
   }
+  if (property.key.type === 'TemplateLiteral' && property.key.expressions.length === 0) {
+    return property.key.quasis[0].value.cooked;
+  }
   return undefined;
+}
+
+function unwrap(node) {
+  while (WRAPPERS.has(node.type)) node = node.expression;
+  return node;
 }
 
 /**
@@ -55,13 +68,7 @@ function chainOf(node) {
       // A table, as in it.each`a ${1}`.
       names.unshift(CALL);
       current = current.tag;
-    } else if (
-      current.type === 'ChainExpression' ||
-      current.type === 'TSNonNullExpression' ||
-      current.type === 'TSAsExpression' ||
-      current.type === 'TSSatisfiesExpression' ||
-      current.type === 'TSTypeAssertion'
-    ) {
+    } else if (WRAPPERS.has(current.type)) {
       current = current.expression;
     } else {
       return { root: current, names };
@@ -98,25 +105,13 @@ function isRequireVitest(node) {
   );
 }
 
-/** Whether a name holds all of vitest: a namespace import, an import-equals or a require. */
-function isVitestNamespace(node, scope) {
-  if (node.type !== 'Identifier') return false;
-  const definition = findVariable(scope, node.name)?.defs[0];
-  if (definition?.type === 'ImportBinding') {
-    if (definition.node.type === 'TSImportEqualsDeclaration') {
-      return definition.node.moduleReference.expression?.value === 'vitest';
-    }
-    return (
-      definition.node.type === 'ImportNamespaceSpecifier' &&
-      definition.parent.source?.value === 'vitest'
-    );
+/** Append names to a chain, including a namespace that hasn't selected a test function yet. */
+function appendNames(base, names) {
+  if (base?.namespace) {
+    if (names.length === 0) return base;
+    return TEST_FUNCTIONS.has(names[0]) ? { fn: names[0], names: names.slice(1) } : undefined;
   }
-  return (
-    definition?.type === 'Variable' &&
-    definition.node.id.type === 'Identifier' &&
-    Boolean(definition.node.init) &&
-    isRequireVitest(definition.node.init)
-  );
+  return base && { ...base, names: [...base.names, ...names] };
 }
 
 /**
@@ -124,8 +119,9 @@ function isVitestNamespace(node, scope) {
  * member names after it. The root is an import from vitest, or from a local module such as a
  * fixtures file that exports test.extend(...). It can also be a namespace import of vitest,
  * require('vitest'), a Vitest global, or a variable that holds such a chain. A root that can't be
- * resolved, such as a parameter, gives { unknown: true, name, names }. A known local value that
- * isn't a test, such as an object, gives undefined.
+ * resolved, such as a parameter, gives { unknown: true, name, names }. A namespace without a
+ * selected test gives { namespace: true }. A known non-test gives undefined; an unresolved
+ * factory result or object member remains unknown.
  */
 function resolveChain(node, scope, seen = new Set()) {
   const { root, names } = chainOf(node);
@@ -149,16 +145,17 @@ function resolveChain(node, scope, seen = new Set()) {
     const local = source.startsWith('.') || source.startsWith('#');
     if (equals || definition.node.type === 'ImportNamespaceSpecifier') {
       if (source === 'vitest') {
-        return TEST_FUNCTIONS.has(names[0]) ? { fn: names[0], names: names.slice(1) } : undefined;
+        return appendNames({ namespace: true }, names);
       }
-      return local ? unknown : undefined;
+      return unknown;
     }
     const imported = definition.node.imported?.name ?? definition.node.imported?.value;
     if (definition.node.type === 'ImportSpecifier' && TEST_FUNCTIONS.has(imported)) {
       if (source === 'vitest' || local) return { fn: imported, names };
     }
-    // Another export of a local module, such as a fixtures file's myTest, may be a test function.
-    return local ? unknown : undefined;
+    // Other imports, including path aliases and fixture packages, may export test functions.
+    // Vitest's own non-test exports, such as expect, are known.
+    return source === 'vitest' ? undefined : unknown;
   }
   if (definition.type === 'Variable') {
     const { id, init } = definition.node;
@@ -167,23 +164,29 @@ function resolveChain(node, scope, seen = new Set()) {
     if (id.type === 'ObjectPattern') {
       const key = destructuredKey(id, root.name);
       // const { it } = require('vitest'), or const { it } = v for a namespace v.
-      if (isRequireVitest(init) || isVitestNamespace(init, variable.scope)) {
-        return TEST_FUNCTIONS.has(key) ? { fn: key, names } : undefined;
-      }
-      const base = resolveChain(init, variable.scope, seen);
+      const base = isRequireVitest(unwrap(init))
+        ? { namespace: true }
+        : resolveChain(init, variable.scope, seen);
       if (base?.unknown) return unknown;
-      return base && key !== undefined
-        ? { fn: base.fn, names: [...base.names, key, ...names] }
-        : base && unknown;
+      return base && key !== undefined ? appendNames(base, [key, ...names]) : base && unknown;
     }
     if (id.type !== 'Identifier') return unknown;
     // const v = require('vitest') is a namespace.
-    if (isRequireVitest(init)) {
-      return TEST_FUNCTIONS.has(names[0]) ? { fn: names[0], names: names.slice(1) } : undefined;
+    if (isRequireVitest(unwrap(init))) {
+      return appendNames({ namespace: true }, names);
     }
     const base = resolveChain(init, variable.scope, seen);
     if (base?.unknown) return unknown;
-    return base && { fn: base.fn, names: [...base.names, ...names] };
+    if (base) return appendNames(base, names);
+    // A factory's return value or an object's member may be a test, even when the root isn't.
+    const value = unwrap(init);
+    if (
+      (value.type === 'ObjectExpression' && names.length > 0) ||
+      (['ArrowFunctionExpression', 'FunctionExpression'].includes(value.type) && names[0] === CALL)
+    ) {
+      return unknown;
+    }
+    return undefined;
   }
   // A parameter may hold a test function, as in function run(t) { t.fails(...) }.
   if (definition.type === 'Parameter') return unknown;
@@ -221,19 +224,46 @@ const BINARY = {
   '>>>': (a, b) => a >>> b,
 };
 
+/** Follow only a local const with an initializer, and stop cycles between aliases. */
+function constantBinding(node, scope, seen) {
+  if (node.type !== 'Identifier') return undefined;
+  const variable = findVariable(scope, node.name);
+  const definition = variable?.defs[0];
+  if (
+    seen.has(variable) ||
+    definition?.type !== 'Variable' ||
+    definition.parent.kind !== 'const' ||
+    definition.node.id.type !== 'Identifier' ||
+    !definition.node.init
+  ) {
+    return undefined;
+  }
+  return {
+    node: definition.node.init,
+    scope: variable.scope,
+    seen: new Set([...seen, variable]),
+  };
+}
+
 /** The value of an expression of literals, such as !!1 or `${1}`, or UNKNOWN. */
-function staticValue(node) {
+function staticValue(node, scope, seen = new Set()) {
+  node = unwrap(node);
+  const evaluate = child => staticValue(child, scope, seen);
   switch (node.type) {
     case 'Literal':
       return node.regex ? UNKNOWN : node.value;
     case 'TemplateLiteral': {
-      const parts = node.expressions.map(staticValue);
+      const parts = node.expressions.map(evaluate);
       if (parts.includes(UNKNOWN)) return UNKNOWN;
       return node.quasis
         .map((quasi, i) => quasi.value.cooked + (i < parts.length ? String(parts[i]) : ''))
         .join('');
     }
-    case 'Identifier':
+    case 'Identifier': {
+      const binding = constantBinding(node, scope, seen);
+      if (binding) return staticValue(binding.node, binding.scope, binding.seen);
+      // A local binding named undefined, NaN or Infinity isn't the built-in constant.
+      if (findVariable(scope, node.name)?.defs.length) return UNKNOWN;
       switch (node.name) {
         case 'undefined':
           return undefined;
@@ -244,9 +274,10 @@ function staticValue(node) {
         default:
           return UNKNOWN;
       }
+    }
     case 'UnaryExpression': {
       if (node.operator === 'void') return undefined;
-      const value = staticValue(node.argument);
+      const value = evaluate(node.argument);
       if (value === UNKNOWN) return UNKNOWN;
       // A BigInt operand can make an operator throw, as +1n does.
       try {
@@ -256,8 +287,8 @@ function staticValue(node) {
       }
     }
     case 'BinaryExpression': {
-      const left = staticValue(node.left);
-      const right = staticValue(node.right);
+      const left = evaluate(node.left);
+      const right = evaluate(node.right);
       if (left === UNKNOWN || right === UNKNOWN || !BINARY[node.operator]) return UNKNOWN;
       // A BigInt operand can make an operator throw, as 1n + 1 does.
       try {
@@ -267,29 +298,31 @@ function staticValue(node) {
       }
     }
     case 'LogicalExpression': {
-      const left = staticValue(node.left);
-      const right = staticValue(node.right);
-      if (left === UNKNOWN || right === UNKNOWN) return UNKNOWN;
-      if (node.operator === '&&') return left && right;
-      if (node.operator === '||') return left || right;
-      return left ?? right;
+      const left = evaluate(node.left);
+      if (left === UNKNOWN) return UNKNOWN;
+      if (node.operator === '&&') return left ? evaluate(node.right) : left;
+      if (node.operator === '||') return left ? left : evaluate(node.right);
+      return left == null ? evaluate(node.right) : left;
     }
     case 'ConditionalExpression': {
-      const test = staticValue(node.test);
+      const test = evaluate(node.test);
       if (test === UNKNOWN) return UNKNOWN;
-      return staticValue(test ? node.consequent : node.alternate);
+      return evaluate(test ? node.consequent : node.alternate);
     }
     case 'SequenceExpression':
-      return staticValue(node.expressions.at(-1));
+      return evaluate(node.expressions.at(-1));
     default:
       return UNKNOWN;
   }
 }
 
 /** Whether an expression is truthy on every run, falsy on every run, or undefined if neither. */
-function truthiness(node) {
-  const value = staticValue(node);
+function truthiness(node, scope, seen = new Set()) {
+  node = unwrap(node);
+  const value = staticValue(node, scope, seen);
   if (value !== UNKNOWN) return Boolean(value);
+  const binding = constantBinding(node, scope, seen);
+  if (binding) return truthiness(binding.node, binding.scope, binding.seen);
   switch (node.type) {
     // An object, an array, a function or a class is always truthy, whatever it holds.
     case 'ArrayExpression':
@@ -302,13 +335,47 @@ function truthiness(node) {
     case 'UnaryExpression':
       if (node.operator === 'typeof') return true;
       if (node.operator === '!') {
-        const inner = truthiness(node.argument);
+        const inner = truthiness(node.argument, scope, seen);
         return inner === undefined ? undefined : !inner;
       }
       return undefined;
+    case 'LogicalExpression': {
+      const left = truthiness(node.left, scope, seen);
+      const right = truthiness(node.right, scope, seen);
+      if (node.operator === '&&') {
+        if (left === false || right === false) return false;
+        return left === true ? right : undefined;
+      }
+      if (node.operator === '||') {
+        if (left === true || right === true) return true;
+        return left === false ? right : undefined;
+      }
+      const first = staticValue(node.left, scope, seen);
+      return first !== UNKNOWN && first == null ? right : left;
+    }
     default:
       return undefined;
   }
+}
+
+/** Resolve an options object, its const aliases and spreads, respecting the last known key. */
+function optionProperties(node, scope, seen = new Set()) {
+  node = unwrap(node);
+  const binding = constantBinding(node, scope, seen);
+  if (binding) return optionProperties(binding.node, binding.scope, binding.seen);
+  const properties = new Map();
+  if (node.type !== 'ObjectExpression') return properties;
+  for (const property of node.properties) {
+    if (property.type === 'SpreadElement') {
+      for (const [key, entry] of optionProperties(property.argument, scope, seen)) {
+        properties.set(key, entry);
+      }
+    } else if (property.type === 'Property') {
+      const key = keyName(property);
+      if (key !== undefined) properties.set(key, { property, scope });
+    }
+  }
+  return properties;
 }
 
 /** The first function among a call's arguments, as in test(name, fn, timeout). */
@@ -329,84 +396,98 @@ export default {
   create(context) {
     const { sourceCode } = context;
     const resolve = (node, at) => resolveChain(node, sourceCode.getScope(at));
+    const pluginSkips = new Set();
+    const skips = [];
+    // Ask the installed plugin which exact nodes it reports. A name alone can't tell us:
+    // named imports can be aliased, fixture imports aren't configured, and stored members
+    // aren't calls. Keep the plugin's error when it reports a skip, and fill only its gaps.
+    const disabled = vitest.rules['no-disabled-tests'].create(
+      Object.create(context, {
+        report: {
+          value: ({ node, messageId }) => {
+            if (messageId === 'disabledTest' || messageId === 'disabledSuite') {
+              pluginSkips.add(node);
+            }
+          },
+        },
+      })
+    );
+    const reportSkip = (node, key = node) => skips.push({ node, key });
     // A chain from a test function. A root that can't be resolved counts when it has the name of
     // one, as before AFA-172.
-    const testChain = result =>
-      result?.unknown
-        ? TEST_FUNCTIONS.has(result.name)
-          ? { fn: result.name, names: result.names }
-          : undefined
-        : result;
+    const testChain = result => {
+      if (result?.namespace) return undefined;
+      if (!result?.unknown) return result;
+      return TEST_FUNCTIONS.has(result.name) ? { fn: result.name, names: result.names } : undefined;
+    };
 
     /**
      * Reports each use of a context variable's skip, also through an alias such as
-     * const other = ctx. vitest/no-disabled-tests already reports ctx.skip() on the first
-     * parameter of a bare it or test call, so that call isn't reported twice.
+     * const other = ctx, including TypeScript wrappers around the reference.
      */
-    const checkContextVariable = (variable, pluginReportsCall, seen = new Set()) => {
+    const checkContextVariable = (variable, seen = new Set()) => {
       if (!variable || seen.has(variable)) return;
       seen.add(variable);
       for (const reference of variable.references) {
-        const { parent } = reference.identifier;
-        const called = parent.parent?.type === 'CallExpression' && parent.parent.callee === parent;
+        let value = reference.identifier;
+        while (WRAPPERS.has(value.parent.type)) value = value.parent;
+        const { parent } = value;
         if (
           parent.type === 'MemberExpression' &&
-          parent.object === reference.identifier &&
-          propertyName(parent) === 'skip' &&
-          !(pluginReportsCall && called)
+          parent.object === value &&
+          propertyName(parent) === 'skip'
         ) {
-          context.report({ node: parent, messageId: 'skip' });
+          reportSkip(parent, parent.property);
         }
-        if (parent.type === 'VariableDeclarator' && parent.init === reference.identifier) {
+        if (parent.type === 'VariableDeclarator' && parent.init === value) {
           if (parent.id.type === 'ObjectPattern') {
             if (parent.id.properties.some(p => p.type === 'Property' && keyName(p) === 'skip')) {
-              context.report({ node: parent.id, messageId: 'skip' });
+              reportSkip(parent.id);
             }
           } else if (parent.id.type === 'Identifier') {
             const [alias] = sourceCode.getDeclaredVariables(parent);
-            checkContextVariable(alias, false, seen);
+            checkContextVariable(alias, seen);
           }
         }
       }
     };
 
     /** Reports each use of the context's skip in a test function. */
-    const checkContext = (fn, index, pluginReportsCall) => {
+    const checkContext = (fn, index) => {
       let param = fn.params[index];
       if (param?.type === 'AssignmentPattern') param = param.left;
       if (!param) return;
       if (param.type === 'ObjectPattern') {
         for (const property of param.properties) {
           if (property.type === 'Property' && keyName(property) === 'skip') {
-            context.report({ node: property, messageId: 'skip' });
+            reportSkip(property, property.key);
           }
         }
         return;
       }
       if (param.type !== 'Identifier') return;
       const variable = sourceCode.getDeclaredVariables(fn).find(v => v.name === param.name);
-      checkContextVariable(variable, pluginReportsCall);
-    };
-
-    /**
-     * Whether vitest/no-disabled-tests reads a chain itself: one that starts at it, test,
-     * describe or suite by that name. It doesn't read an alias or a namespace.
-     */
-    const pluginReads = node => {
-      const { root } = chainOf(node);
-      return root.type === 'Identifier' && TEST_FUNCTIONS.has(root.name);
+      checkContextVariable(variable);
     };
 
     return {
+      'Program:exit'() {
+        for (const { node, key } of skips) {
+          if (!pluginSkips.has(key)) context.report({ node, messageId: 'skip' });
+        }
+      },
+      'CallExpression:exit'(node) {
+        disabled['CallExpression:exit'](node);
+      },
       // .fails or .todo on a chain from a test function, also in an alias. On a root that can't
       // be resolved, only a call counts, as in t.fails(...) or t.todo.each(...).
       MemberExpression(node) {
         const name = propertyName(node);
-        // .skip on an alias or a namespace, as in const t = it; t.skip(...).
+        // .skip on a chain, including a stored member or an alias.
         if (name === 'skip') {
           const result = resolve(node.object, node);
-          if (result && !result.unknown && !pluginReads(node.object)) {
-            context.report({ node: node.property, messageId: 'skip' });
+          if (testChain(result)) {
+            reportSkip(node.property);
           }
           return;
         }
@@ -418,7 +499,7 @@ export default {
           (parent.type === 'MemberExpression' &&
             parent.object === node &&
             ['each', 'for'].includes(propertyName(parent)));
-        if ((result && !result.unknown) || (result?.unknown && called)) {
+        if (result?.fn || (result?.unknown && called)) {
           context.report({ node: node.property, messageId: 'mark' });
         }
       },
@@ -426,15 +507,18 @@ export default {
       VariableDeclarator(node) {
         if (node.id.type !== 'ObjectPattern' || !node.init) return;
         const result = resolve(node.init, node);
-        if (!result || result.unknown) return;
+        if (!result?.fn) return;
         for (const property of node.id.properties) {
-          if (property.type === 'Property' && MARKS.has(keyName(property))) {
-            context.report({ node: property, messageId: 'mark' });
-          }
+          if (property.type !== 'Property') continue;
+          const key = keyName(property);
+          if (MARKS.has(key)) context.report({ node: property, messageId: 'mark' });
+          if (key === 'skip') reportSkip(property, property.key);
         }
       },
       CallExpression(node) {
+        disabled.CallExpression(node);
         const { callee } = node;
+        const scope = sourceCode.getScope(node);
         const last = callee.type === 'MemberExpression' ? propertyName(callee) : undefined;
 
         // A constant condition. A literal counts on any object, as before AFA-150.
@@ -443,7 +527,8 @@ export default {
           if (
             condition &&
             (condition.type === 'Literal' ||
-              (testChain(resolve(callee.object, node)) && truthiness(condition) !== undefined))
+              (testChain(resolve(callee.object, node)) &&
+                truthiness(condition, scope) !== undefined))
           ) {
             context.report({ node: condition, messageId: 'constant' });
           }
@@ -456,15 +541,13 @@ export default {
 
         // The fails and todo options, unless their value is always false.
         for (const argument of node.arguments) {
-          if (argument.type !== 'ObjectExpression') continue;
-          for (const property of argument.properties) {
-            if (property.type !== 'Property' || truthiness(property.value) === false) continue;
-            if (MARKS.has(keyName(property))) {
+          for (const [key, { property, scope: at }] of optionProperties(argument, scope)) {
+            if (truthiness(property.value, at) === false) continue;
+            if (MARKS.has(key)) {
               context.report({ node: property, messageId: 'mark' });
             }
-            // The skip option on an alias or a namespace, which vitest/no-disabled-tests misses.
-            if (keyName(property) === 'skip' && !pluginReads(callee)) {
-              context.report({ node: property, messageId: 'skip' });
+            if (key === 'skip') {
+              reportSkip(property, property.key);
             }
           }
         }
@@ -473,9 +556,7 @@ export default {
         // context, and in .each no parameter is the context.
         if (SUITES.has(chain.fn) || chain.names.includes('each')) return;
         const fn = testFunction(node);
-        const bare =
-          callee.type === 'Identifier' && (callee.name === 'it' || callee.name === 'test');
-        if (fn) checkContext(fn, chain.names.includes('for') ? 1 : 0, bare);
+        if (fn) checkContext(fn, chain.names.includes('for') ? 1 : 0);
       },
     };
   },

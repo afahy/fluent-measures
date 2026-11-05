@@ -219,3 +219,127 @@ describe('the lint for tests that skip or are expected to fail', () => {
     ]);
   });
 });
+
+// AFA-180: stored members, aliases and constant expressions must enforce the same policy as
+// direct Vitest calls. These expectations follow rule 3, not the rule's previous output.
+describe('the additional Vitest chain forms', () => {
+  it.each([
+    // 1–3: stored skip, namespace aliases and context aliases through TypeScript wrappers.
+    [`const skipped = it.skip;\nskipped('x', ${pass});`, skip],
+    [
+      `import * as v from 'vitest';\n\nconst w = v;\nw.it.skip('x', () => {\n  v.expect(1).toBe(1);\n});`,
+      skip,
+    ],
+    [`const v = require('vitest');\nconst w = v;\nw.it.fails('x', ${pass});`, fails],
+    [
+      `import * as v from 'vitest';\n\nconst w = v;\nconst { it, expect } = w;\nit.fails('x', ${pass});`,
+      fails,
+    ],
+    [
+      `it('x', ctx => {\n  const other = ctx as typeof ctx;\n  other.skip();\n  expect(1).toBe(1);\n});`,
+      skip,
+    ],
+    [
+      `it('x', ctx => {\n  const other = ctx satisfies typeof ctx;\n  other.skip();\n  expect(1).toBe(1);\n});`,
+      skip,
+    ],
+    [`it('x', ctx => {\n  const other = ctx!;\n  other.skip();\n  expect(1).toBe(1);\n});`, skip],
+    [
+      `it('x', ctx => {\n  const { skip } = (ctx as typeof ctx)!;\n  skip();\n  expect(1).toBe(1);\n});`,
+      skip,
+    ],
+    [`it('x', ctx => {\n  (ctx satisfies typeof ctx).skip();\n  expect(1).toBe(1);\n});`, skip],
+    // 4: the right operand decides truthiness even when the left operand is unknown.
+    [`it.skipIf(process.env.CI || true)('x', ${pass});`, constant],
+    [`it.runIf(process.env.CI && false)('x', ${pass});`, constant],
+    [`it.skipIf(process.env.CI || [])('x', ${pass});`, constant],
+    [`it.runIf(process.env.CI && 0)('x', ${pass});`, constant],
+    [`it.skipIf(true || process.env.CI)('x', ${pass});`, constant],
+    [`it.runIf(false && process.env.CI)('x', ${pass});`, constant],
+    // 5–6: static template keys and options stored in local const objects.
+    [`it[\`fails\`]('x', ${pass});`, fails],
+    [`it('x', { [\`todo\`]: true }, ${pass});`, fails],
+    [`const options = { fails: true };\nit('x', options, ${pass});`, fails],
+    [`const options = { todo: true };\nconst alias = options;\nit('x', alias, ${pass});`, fails],
+    [`const options = { skip: true };\nit('x', options as typeof options, ${pass});`, skip],
+    // 7: unresolved imports, factory returns and object members can still be test functions.
+    [`import { test, expect } from '@/fixtures';\n\ntest.fails('x', ${pass});`, fails],
+    [`const make = () => it;\nconst t = make();\nt.fails('x', ${pass});`, fails],
+    [`const h = { t: it };\nh.t.fails('x', ${pass});`, fails],
+    [`import { test, expect } from 'test-utils';\n\ntest('x', { todo: true }, ${pass});`, fails],
+    // 8: fixture imports aren't necessarily read by the plugin.
+    [`import { test, expect } from './fixtures';\n\ntest.skip('x', ${pass});`, skip],
+    [`import { test, expect } from './fixtures';\n\ntest('x', { skip: true }, ${pass});`, skip],
+    // 9–11: truthy skip options, third-argument options, default context and destructured skip.
+    [`it('x', { skip: 1 }, ${pass});`, skip],
+    [`it('x', { skip: !0 }, ${pass});`, skip],
+    [`it('x', ${pass}, { skip: true });`, skip],
+    [`it('x', (ctx = {} as never) => {\n  ctx.skip();\n  expect(1).toBe(1);\n});`, skip],
+    [`const { skip } = it;\nskip('x', ${pass});`, skip],
+    // 12: constants and options spread from const objects, including nested aliases.
+    [`const c = true;\nit.skipIf(c)('x', ${pass});`, constant],
+    [`const c = false;\nconst alias = c;\nit.runIf(alias)('x', ${pass});`, constant],
+    [`const c = 1;\nit.skipIf(c === 1)('x', ${pass});`, constant],
+    [`const c = 1;\nit.skipIf(\`\${c}\`)('x', ${pass});`, constant],
+    [`const c = {};\nit.skipIf(c)('x', ${pass});`, constant],
+    [`const c = process.env.CI || true;\nit.skipIf(c)('x', ${pass});`, constant],
+    [`const c = null;\nit.skipIf(c ?? [])('x', ${pass});`, constant],
+    [`const o = { todo: true };\nit('x', { ...o }, ${pass});`, fails],
+    [`const o = { skip: true };\nconst options = { ...o };\nit('x', options, ${pass});`, skip],
+    [`const o = { fails: true };\nit('x', { fails: false, ...o }, ${pass});`, fails],
+    // Read a const initializer in its own scope, even when its use shadows a name.
+    [
+      `const c = true;\nconst options = { fails: c };\nfunction run(c: boolean): void {\n  it('x', options, ${pass});\n  void c;\n}\nrun(false);`,
+      fails,
+    ],
+  ])('rejects the additional form %s', async (body, problem) => {
+    expect(await problems(body)).toContain(problem);
+  });
+
+  it.each([
+    `const underStryker = Boolean(process.env.STRYKER);\nit.skipIf(underStryker)('x', ${pass});`,
+    `it.skipIf(process.env.CI || false)('x', ${pass});`,
+    `it.runIf(process.env.CI && true)('x', ${pass});`,
+    `it.skipIf(process.env.CI ?? true)('x', ${pass});`,
+    `const c = Boolean(process.env.CI);\nconst alias = c;\nit.skipIf(alias)('x', ${pass});`,
+    // Don't infer const values from mutable or shadowed bindings.
+    `let c = true;\nc = c && Boolean(process.env.CI);\nit.skipIf(c)('x', ${pass});`,
+    `const c = true;\nfunction run(c: boolean): void {\n  it.skipIf(c)('x', ${pass});\n}\nrun(c);`,
+    `const options = { todo: false };\nit('x', options, ${pass});`,
+    `const off = false;\nit('x', { fails: off }, ${pass});`,
+    `const off = false;\nconst options = { fails: off };\nfunction run(off: boolean): void {\n  it('x', options, ${pass});\n  void off;\n}\nrun(true);`,
+    `const o = { skip: false };\nit('x', { ...o }, ${pass});`,
+    `const o = { fails: true };\nit('x', { ...o, fails: false }, ${pass});`,
+    `const o = { fails: false };\nit('x', { fails: true, ...o }, ${pass});`,
+    `const o = { todo: true };\nexport const custom = test.extend(o);`,
+    `let options = { todo: true };\noptions = { todo: !options.todo };\nit('x', options, ${pass});`,
+    `import * as v from 'vitest';\n\nconst w = v;\nw.expect(1).toBe(1);`,
+    `it('x', ctx => {\n  const other = ctx as typeof ctx;\n  expect(other.task.name).toBe('x');\n});`,
+    // Custom matcher names aren't test modifiers on Vitest's known expect export.
+    `it('x', () => {\n  expect(1).fails();\n});`,
+    `it('x', () => {\n  expect(1).todo();\n});`,
+  ])('allows the dynamic or inactive form %s', async body => {
+    expect(await problems(body)).toEqual([]);
+  });
+
+  // Invalid cyclic initializers can have other lint errors; this rule must terminate without
+  // inventing a constant condition or a marked test from an unresolved cycle.
+  it.each([
+    [`const a = b;\nconst b = a;\nit.skipIf(a)('x', ${pass});`, constant],
+    [`const a = { ...b };\nconst b = { ...a };\nit('x', a, ${pass});`, fails],
+  ])('stops resolving cyclic const bindings in %s', async (body, problem) => {
+    expect(await problems(body)).not.toContain(problem);
+  });
+
+  // 8: use the installed plugin's report, including import aliases, without adding a second one.
+  it.each([
+    `it.skip('x', ${pass});`,
+    `it('x', { skip: true }, ${pass});`,
+    `import { expect, it as t } from 'vitest';\n\nt.skip('x', ${pass});`,
+    `import { expect, it as t } from 'vitest';\n\nt('x', { skip: true }, ${pass});`,
+    `it.concurrent.skip('x', ${pass});`,
+    `it('x', ctx => {\n  ctx.skip();\n  expect(1).toBe(1);\n});`,
+  ])('keeps exactly one plugin error for %s', async body => {
+    expect(await problems(body)).toEqual(['vitest/no-disabled-tests']);
+  });
+});

@@ -132,12 +132,12 @@ export default [
       // The preset only warns, and lint passes with warnings. AGENTS.md rule 3 forbids skipping a
       // test to make CI pass (AFA-70).
       'vitest/no-disabled-tests': 'error',
-      // Other ways to skip a test or to mark it as expected to fail, which rule 3 forbids too
-      // (AFA-70, AFA-150). no-disabled-tests finds .skip on an alias or a chain such as
-      // test.concurrent.skip, and ctx.skip() in the first parameter. The local rule follows each
-      // Vitest chain to its import (AFA-172). It finds .fails, .todo, their options, a skip from
-      // the test's context and a constant condition. A skipIf with a real condition stays
-      // allowed, such as the one for Stryker in AFA-95.
+      // Other ways to skip a test or to mark it as expected to fail, which rule 3 forbids too.
+      // no-disabled-tests finds direct .skip calls, including named import aliases and chains
+      // such as test.concurrent.skip, and ctx.skip() on a bare test's first parameter. The local
+      // rule follows Vitest chains and namespace aliases. It fills gaps for stored or destructured
+      // .skip, fixture imports, .fails, .todo, options, context aliases and constant conditions.
+      // A skipIf with a real condition stays allowed, such as the one for Stryker.
       'local/vitest-chains': 'error',
       // A count of 0 assertions.
       'no-restricted-syntax': [
