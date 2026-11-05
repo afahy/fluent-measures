@@ -93,7 +93,59 @@ function commitFiles(repository: string, files: Record<string, string>): string 
   return git(repository, 'rev-parse', 'HEAD').trim();
 }
 
+/** Commits a raw Git path without asking the file system to accept invalid UTF-8. */
+function commitInvalidFile(repository: string, extension: string, content: string): void {
+  const env = withoutGitRepository();
+  const blob = execFileSync('git', ['hash-object', '-w', '--stdin'], {
+    cwd: repository,
+    input: content,
+    encoding: 'utf8',
+    env,
+  }).trim();
+  const entry = Buffer.concat([
+    Buffer.from(`100644 ${blob}\tsrc/bad`),
+    Buffer.from([0xff]),
+    Buffer.from(`${extension}\0`),
+  ]);
+  execFileSync('git', ['update-index', '-z', '--index-info'], {
+    cwd: repository,
+    input: entry,
+    env,
+  });
+  git(repository, 'commit', '-m', 'test: add an invalid path');
+}
+
 describe('mutation-check.mjs', () => {
+  describe.each([
+    ['report', []],
+    ['prepare', ['--prepare', 'incremental.json']],
+  ] as const)('invalid UTF-8 paths in %s mode', (_mode, args) => {
+    it.each(['.mts', '.ts'])('fails for src/bad<0xff>%s and asks for a rename', extension => {
+      const repository = createRepository();
+      const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
+      commitInvalidFile(repository, extension, 'export const a = 1;\n');
+
+      const check = runCheck(repository, base, {}, [...args]);
+
+      expect(check.status).toBe(1);
+      expect(check.stderr).toBe(
+        `::error::Rename "src/bad\uFFFD${extension}". Its name isn't valid UTF-8, so this check can't read the file.\n`
+      );
+      expect(check.stdout).toBe('');
+    });
+
+    it('passes src/bad<0xff>.json because it is not code', () => {
+      const repository = createRepository();
+      const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
+      commitInvalidFile(repository, '.json', '{}\n');
+
+      const check = runCheck(repository, base, {}, [...args]);
+
+      expect(check.status).toBe(0);
+      expect(check.stderr).toBe('');
+    });
+  });
+
   // AFA-71: Stryker reads a backslash as a slash, so it wouldn't check the file. The check stops
   // before checking its report.
   it('fails for each changed path with a backslash, and asks for a rename', () => {
