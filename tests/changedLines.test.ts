@@ -1,6 +1,5 @@
 import { Buffer } from 'node:buffer';
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { execPath } from 'node:process';
 import { describe, expect, it } from 'vitest';
@@ -13,13 +12,10 @@ import {
   hunkRanges,
   isSourceFile,
   isUnmutatedCode,
-  literalGlob,
-  mutatedFiles,
   reasonlessDirectives,
   revisions,
   unexplainedIgnores,
   unkilledMutants,
-  unmatchedFiles,
 } from '../.github/scripts/changed-lines.mjs';
 
 // Output of `git diff --unified=0` for one file: an insertion, a one-line change, a deletion and
@@ -89,7 +85,7 @@ describe('isSourceFile', () => {
   });
 });
 
-// AFA-85: other code that tsc, Vitest and tsup read, but that the check never gives to Stryker.
+// AFA-85: other code that tsc, Vitest and tsup read, outside the project's mutation scope.
 describe('isUnmutatedCode', () => {
   it.each([
     ['src/units.mts', true],
@@ -108,71 +104,6 @@ describe('isUnmutatedCode', () => {
     ['src/data.json', false],
   ])('returns %s → %s', (file, expected) => {
     expect(isUnmutatedCode(file)).toBe(expected);
-  });
-});
-
-// AFA-72: the check mutates only the changed files that stryker.config.json mutates.
-describe('mutatedFiles', () => {
-  const { mutate } = JSON.parse(
-    readFileSync(new URL('../stryker.config.json', import.meta.url), 'utf8')
-  ) as { mutate: string[] };
-
-  it('leaves out the test files that the project config leaves out', () => {
-    const files = [
-      'src/units.ts',
-      'src/parse/units.ts',
-      'src/units.test.ts',
-      'src/units.spec.ts',
-      'src/parse/units.test.ts',
-      'src/test.ts',
-    ];
-    expect(mutatedFiles(files, mutate)).toEqual([
-      'src/units.ts',
-      'src/parse/units.ts',
-      'src/test.ts',
-    ]);
-  });
-
-  // Codex, round 1 of #81: Stryker applies the patterns in order, and ignores a line range.
-  it.each([
-    [['src/**/*.ts', '!src/a.ts'], ['src/b.ts']],
-    [
-      ['!src/a.ts', 'src/**/*.ts'],
-      ['src/a.ts', 'src/b.ts'],
-    ],
-    [['src/a.ts:1-10'], ['src/a.ts']],
-    [
-      ['src/a.ts:1:2-10:4', 'src/b.ts'],
-      ['src/a.ts', 'src/b.ts'],
-    ],
-    // Codex, round 2 of #81: Stryker reads a pattern from the project folder.
-    [['./src/**/*.ts', '!./src/b.ts'], ['src/a.ts']],
-    // AFA-113: an absolute pattern too, as Stryker resolves each pattern.
-    [[resolve('src/**/*.ts'), `!${resolve('src/b.ts')}`], ['src/a.ts']],
-  ])('applies %j in order', (patterns, expected) => {
-    expect(mutatedFiles(['src/a.ts', 'src/b.ts'], patterns)).toEqual(expected);
-  });
-
-  // Stryker resolves each pattern from the project folder, so "../repo/" names the same files.
-  // The project folder's own path isn't a glob, even with "[" and "]" in it.
-  it('reads patterns in a project folder whose path has glob characters', () => {
-    expect(mutatedFiles(['src/a.ts'], ['src/**/*.ts'], '/tmp/a[1]/repo')).toEqual(['src/a.ts']);
-  });
-
-  it('reads a pattern that leaves the project folder and comes back', () => {
-    expect(
-      mutatedFiles(
-        ['src/a.ts', 'src/b.ts'],
-        ['../repo/src/**/*.ts', '!../repo/src/b.ts'],
-        '/x/repo'
-      )
-    ).toEqual(['src/a.ts']);
-  });
-
-  it('leaves out the files that a pattern with "!" matches, as Stryker does', () => {
-    expect(
-      mutatedFiles(['src/a.ts', 'src/b.ts', 'lib/c.ts'], ['src/**/*.ts', '!src/b.ts'])
-    ).toEqual(['src/a.ts']);
   });
 });
 
@@ -211,23 +142,6 @@ describe('decodeNames', () => {
   });
 });
 
-describe('unmatchedFiles', () => {
-  it('returns the files whose pattern Stryker says matched no file', () => {
-    const log = [
-      '10:00:00 (1) WARN ProjectReader Glob pattern "src/node_modules/x.ts" did not result in any files.',
-      '10:00:00 (1) WARN ProjectReader Glob pattern "src/[[]u[]]nits.ts" did not result in any files.',
-      '10:00:00 (1) WARN ProjectReader Glob pattern "!src/units.ts" did not exclude any files.',
-    ].join('\n');
-    expect(
-      unmatchedFiles(log, ['src/node_modules/x.ts', 'src/[u]nits.ts', 'src/units.ts'])
-    ).toEqual(['src/node_modules/x.ts', 'src/[u]nits.ts']);
-  });
-
-  it('returns no files for a log without warnings', () => {
-    expect(unmatchedFiles('', ['src/units.ts'])).toEqual([]);
-  });
-});
-
 describe('controlPaths', () => {
   it('returns the paths with a control character', () => {
     expect(
@@ -252,16 +166,6 @@ describe('backslashPaths', () => {
 
   it('returns no paths when none has a backslash', () => {
     expect(backslashPaths(['src/units.ts', 'src/a/b.ts'])).toEqual([]);
-  });
-});
-
-describe('literalGlob', () => {
-  it.each([
-    ['src/units.ts', 'src/units.ts'],
-    ['src/[u]nits.ts', 'src/[[]u[]]nits.ts'],
-    ['src/a(b){c}*?.ts', 'src/a[(]b[)][{]c[}][*][?].ts'],
-  ])('writes %s as %s', (file, pattern) => {
-    expect(literalGlob(file)).toBe(pattern);
   });
 });
 

@@ -1,5 +1,13 @@
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, join, matchesGlob, relative } from 'node:path';
 import { env } from 'node:process';
@@ -8,7 +16,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 // AFA-111: CI's mutation job reuses Stryker's results from the last run. GitHub runs the job only
 // in CI, so these tests read the workflow.
 const ci = readFileSync('.github/workflows/ci.yml', 'utf8');
-const job = ci.slice(ci.indexOf('\n  mutation:\n'), ci.indexOf('\n  mutation-changed-lines:'));
+const job = ci.slice(ci.indexOf('\n  mutation:\n'), ci.indexOf('\n  ci-ok:'));
 const hashed = (/hashFiles\(([^)]*)\)/.exec(job)?.[1] ?? '')
   .split(',')
   .map(pattern => pattern.trim().replace(/^'|'$/g, ''));
@@ -206,8 +214,11 @@ describe('the mutation job in CI', () => {
     );
     writeFileSync(join(bin, 'output'), '');
     writeFileSync(join(bin, 'pgrep.log'), '');
+    mkdirSync(join(bin, 'reports/mutation'), { recursive: true });
+    writeFileSync(join(bin, 'reports/mutation/mutation.json'), 'stale report');
 
     const result = spawnSync('bash', ['-e', '-c', script], {
+      cwd: bin,
       env: {
         ...env,
         PATH: `${bin}${delimiter}${env.PATH}`,
@@ -216,6 +227,7 @@ describe('the mutation job in CI', () => {
     });
 
     expect(result.status).toBe(stepStatus);
+    expect(existsSync(join(bin, 'reports/mutation/mutation.json'))).toBe(false);
     expect(readFileSync(join(bin, 'args'), 'utf8')).toBe(
       '--signal=INT 27m pnpm test:mutation --incremental\n'
     );
@@ -265,5 +277,55 @@ describe('the mutation job in CI', () => {
 
   it.each(read)('hashes %s, which a parser test reads', file => {
     expect(isHashed(file)).toBe(true);
+  });
+
+  // The changed-lines filter shares the full run's report. Its annotations must still run when
+  // the score fails, while the mutation step's failure must continue to fail the job and ci-ok.
+  it('uses one mutation run and keeps it required through ci-ok', () => {
+    expect([...ci.matchAll(/pnpm test:mutation/g)]).toHaveLength(1);
+    expect(ci).not.toMatch(/^ {2}mutation-changed-lines:/m);
+    expect(ci).toContain('needs: [test, package, mutation]');
+    expect(mutation).not.toContain('continue-on-error');
+    expect(job).not.toContain('continue-on-error');
+  });
+
+  it('writes a report without changing the score threshold', () => {
+    const config = JSON.parse(readFileSync('stryker.config.json', 'utf8')) as {
+      reporters: string[];
+      plugins: string[];
+      jsonReporter: { fileName: string };
+      thresholds: { break: number };
+    };
+    expect(config.reporters).toContain('mutation-json');
+    expect(config.plugins).toContain('./.github/scripts/mutation-report.mjs');
+    expect(config.jsonReporter.fileName).toBe('reports/mutation/mutation.json');
+    expect(config.thresholds.break).toBe(98);
+    expect(mutation).toContain('rm -f reports/mutation/mutation.json');
+  });
+
+  const filter = steps.find(step => field(step, 'name') === 'Mutants on changed lines are killed');
+  const refresh = steps.find(
+    step => field(step, 'name') === 'Refresh mutation results for changed source files'
+  );
+
+  it('filters the report after a successful or failing mutation run, except when cancelled', () => {
+    expect(field(filter, 'if')).toBe(
+      "${{ !cancelled() && github.event_name == 'pull_request' && (steps.mutation.outcome == 'success' || steps.mutation.outcome == 'failure') }}"
+    );
+    expect(field(filter, 'run')).toBe(
+      'node .github/scripts/mutation-check.mjs --report reports/mutation/mutation.json'
+    );
+    expect(steps.indexOf(filter ?? '')).toBeGreaterThan(steps.indexOf(mutation ?? ''));
+    expect(steps.indexOf(filter ?? '')).toBeLessThan(steps.indexOf(save ?? ''));
+  });
+
+  it('fetches the merge parents and refreshes changed files after restoring the cache', () => {
+    expect(job).toMatch(/uses: actions\/checkout@v4\n +with:\n(?: +#.*\n)* +fetch-depth: 2/);
+    expect(field(refresh, 'if')).toBe("github.event_name == 'pull_request'");
+    expect(field(refresh, 'run')).toBe(
+      'node .github/scripts/mutation-check.mjs --prepare reports/stryker-incremental.json'
+    );
+    expect(steps.indexOf(refresh ?? '')).toBeGreaterThan(steps.indexOf(restore ?? ''));
+    expect(steps.indexOf(refresh ?? '')).toBeLessThan(steps.indexOf(mutation ?? ''));
   });
 });
