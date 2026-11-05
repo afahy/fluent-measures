@@ -102,16 +102,21 @@ function runCheck(repository: string): { status: number | null; log: string; out
   return { status, log: readFileSync(log, 'utf8'), output: readFileSync(output, 'utf8') };
 }
 
-// GitHub ignores every command while stopped, except the exact line that resumes the token.
+// GitHub parses V2 commands after leading whitespace and legacy ##[...] commands anywhere.
+// While stopped it ignores either syntax, except the command that resumes the exact token.
 function activeCommands(log: string): string[] {
   let stopped: string | undefined;
   const commands: string[] = [];
   for (const line of log.split(/\r?\n/)) {
+    const command =
+      /^::([^ :]+)(?: [^:]*)?::(.*)$/.exec(line.trimStart()) ??
+      /##\[([^ \]]+)(?: [^\]]*)?\](.*)$/.exec(line);
+    if (command === null) continue;
     if (stopped !== undefined) {
-      if (line === `::${stopped}::`) stopped = undefined;
-    } else if (line.startsWith('::stop-commands::')) {
-      stopped = line.slice('::stop-commands::'.length);
-    } else if (line.startsWith('::')) {
+      if (command[1] === stopped) stopped = undefined;
+    } else if (command[1].toLowerCase() === 'stop-commands') {
+      stopped = command[2];
+    } else {
       commands.push(line);
     }
   }
@@ -223,39 +228,45 @@ it('adds the source', () => { expect(existsSync('src/é.ts')).toBe(true); });\n`
 
   // AFA-128: test names and both output streams can emit commands, including stop-commands.
   it.each([
-    ['caught', 4],
-    ['not-caught', 2],
-  ] as const)('protects child output and resumes commands after %s', (result, expected) => {
-    const repository = createRepository();
-    commitFiles(repository, { 'src/units.ts': before });
-    commitFiles(repository, {
-      'src/units.ts': after,
-      'tests/units.test.ts': testSource('src/units.ts', expected)
-        .replace("'doubles two'", JSON.stringify('x\n::error file=src/units.ts::fake'))
-        .replace(
-          'expect(double(2))',
-          `process.stdout.write('x\\n::error file=src/units.ts::fake\\n');
-process.stderr.write('::stop-commands::x\\n::x::\\n::warning::fake\\n');
+    ['caught', 4, 'x\n::error file=src/units.ts::fake'],
+    ['not-caught', 2, 'x\n::error file=src/units.ts::fake'],
+    ['caught', 4, 'x ##[error]fake'],
+    ['not-caught', 2, 'x ##[error]fake'],
+  ] as const)(
+    'protects child output and resumes commands after %s with %j and %j',
+    (result, expected, title) => {
+      const repository = createRepository();
+      commitFiles(repository, { 'src/units.ts': before });
+      commitFiles(repository, {
+        'src/units.ts': after,
+        'tests/units.test.ts': testSource('src/units.ts', expected)
+          .replace("'doubles two'", JSON.stringify(title))
+          .replace(
+            'expect(double(2))',
+            `process.stdout.write('x\\n::error file=src/units.ts::fake\\n');
+process.stderr.write('::stop-commands::x\\n::x::\\n::warning::fake\\nlegacy ##[error]fake\\n');
 expect(double(2))`
-        ),
-    });
+          ),
+      });
 
-    const check = runCheck(repository);
+      const check = runCheck(repository);
 
-    expect(check.status).toBe(0);
-    expect(check.output).toBe(`result=${result}\n`);
-    expect(check.log).toContain('\n::error file=src/units.ts::fake\n');
-    expect(check.log).toContain('\n::stop-commands::x\n');
-    expect(activeCommands(check.log)).toEqual([]);
-    expect(check.log).toMatch(/\n::stop-commands::([\w-]+)\n[\s\S]*\n::\1::\n/);
-    const repeated = runCheck(repository);
-    expect(repeated.status).toBe(0);
-    expect(repeated.output).toBe(check.output);
-    expect(activeCommands(repeated.log)).toEqual([]);
-    expect(repeated.log.match(/\n::stop-commands::([\w-]+)\n/)?.[1]).not.toBe(
-      check.log.match(/\n::stop-commands::([\w-]+)\n/)?.[1]
-    );
-  });
+      expect(check.status).toBe(0);
+      expect(check.output).toBe(`result=${result}\n`);
+      expect(check.log).toContain('\n::error file=src/units.ts::fake\n');
+      expect(check.log).toContain('\n::stop-commands::x\n');
+      expect(check.log).toContain('legacy ##[error]fake');
+      expect(activeCommands(check.log)).toEqual([]);
+      expect(check.log).toMatch(/\n::stop-commands::([\w-]+)\n[\s\S]*\n::\1::\n/);
+      const repeated = runCheck(repository);
+      expect(repeated.status).toBe(0);
+      expect(repeated.output).toBe(check.output);
+      expect(activeCommands(repeated.log)).toEqual([]);
+      expect(repeated.log.match(/\n::stop-commands::([\w-]+)\n/)?.[1]).not.toBe(
+        check.log.match(/\n::stop-commands::([\w-]+)\n/)?.[1]
+      );
+    }
+  );
 
   it('resumes commands when Vitest cannot write a report', () => {
     const repository = createRepository();
@@ -275,21 +286,28 @@ expect(double(2))`
     expect(activeCommands(check.log)).toEqual([]);
   });
 
-  it('escapes captured TypeScript output when it reports a startup failure', () => {
-    const repository = createRepository();
-    commitFiles(repository, { 'src/units.ts': before });
-    commitFiles(repository, {
-      'src/units.ts': after,
-      'tests/units.test.ts': testSource(),
-      'tsconfig.json': JSON.stringify({ compilerOptions: { types: ['x\n::error::fake\n'] } }),
-    });
+  it.each([
+    ['x\n::error::fake\n', '::error::fake'],
+    ['x ##[error]fake', '##\\[error]fake'],
+    ['x ##[ErRoR]fake', '##\\[ErRoR]fake'],
+  ])(
+    'escapes captured TypeScript output when it reports a startup failure for %j',
+    (input, rendered) => {
+      const repository = createRepository();
+      commitFiles(repository, { 'src/units.ts': before });
+      commitFiles(repository, {
+        'src/units.ts': after,
+        'tests/units.test.ts': testSource(),
+        'tsconfig.json': JSON.stringify({ compilerOptions: { types: [input] } }),
+      });
 
-    const check = runCheck(repository);
+      const check = runCheck(repository);
 
-    expect(check.status).toBe(1);
-    expect(check.output).toBe('');
-    expect(check.log).toContain('tsc exited with status');
-    expect(check.log).toContain('::error::fake');
-    expect(activeCommands(check.log)).toEqual([]);
-  });
+      expect(check.status).toBe(1);
+      expect(check.output).toBe('');
+      expect(check.log).toContain('tsc exited with status');
+      expect(check.log).toContain(rendered);
+      expect(activeCommands(check.log)).toEqual([]);
+    }
+  );
 });

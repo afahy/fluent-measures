@@ -33,6 +33,9 @@ describe('workflow command escapes', () => {
     ['src/a\nb.ts', 'src/a\\nb.ts'],
     ['src/a\r\n::error::b', 'src/a\\r\\n::error::b'],
     ['src/a\\nb.ts', 'src/a\\\\nb.ts'],
+    ['x ##[error]fake', 'x ##\\[error]fake'],
+    ['##[ErRoR]fake', '##\\[ErRoR]fake'],
+    ['##[warning]one ##[error]two', '##\\[warning]one ##\\[error]two'],
   ])('writes %j in a log line as %j', (text, written) => {
     expect(logText(text)).toBe(written);
   });
