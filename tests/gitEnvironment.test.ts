@@ -1,13 +1,15 @@
-import { execFileSync, spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync, type SpawnSyncReturns } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { devNull, tmpdir } from 'node:os';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { git, withoutGitRepository } from './gitEnvironment';
 
 vi.mock('node:child_process', { spy: true });
 
 const directories: string[] = [];
+const vitest = fileURLToPath(new URL('../node_modules/vitest/vitest.mjs', import.meta.url));
 
 // Every other test file that starts a child process. Any of them can run git, so the nested run
 // below includes them all, and a new file is checked without a change here.
@@ -41,6 +43,48 @@ function developerGitEnvironment(): Record<string, string> {
     GIT_CONFIG_SYSTEM: resolve(directory, 'system'),
     GIT_CONFIG_NOSYSTEM: '0',
   };
+}
+
+// Verify the real nested suite, or exercise its failure path with an injected spawn result.
+function verifyGitIsolation(): void {
+  const sentinel = mkdtempSync(resolve(tmpdir(), 'fluent-measures-sentinel-'));
+  directories.push(sentinel);
+  git(sentinel, 'init', '--quiet', '--initial-branch', 'main');
+  const config = resolve(sentinel, '.git', 'config');
+  const before = readFileSync(config, 'utf8');
+
+  const started = performance.now();
+  // Use this worker's Node binary, rather than whichever Node a package-manager shim finds.
+  const result = spawnSync(process.execPath, [vitest, 'run', ...childProcessTests], {
+    encoding: 'utf8',
+    env: {
+      ...withoutGitRepository(),
+      ...developerGitEnvironment(),
+      GIT_DIR: resolve(sentinel, '.git'),
+    },
+    timeout: 90_000,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  // A null status alone hid the cause of the 90-second failure on main (AFA-204). Print a
+  // compact summary on success too, so hosted timings and the runtime remain observable.
+  const diagnostic = JSON.stringify({
+    node: process.version,
+    execPath: process.execPath,
+    platform: process.platform,
+    arch: process.arch,
+    elapsedMs: Math.round(performance.now() - started),
+    status: result.status,
+    signal: result.signal,
+    error: result.error
+      ? { message: result.error.message, code: (result.error as NodeJS.ErrnoException).code }
+      : null,
+  });
+  process.stdout.write(`Git isolation: ${diagnostic}\n`);
+  const output = `${diagnostic}\n${result.stdout}${result.stderr}`;
+
+  expect(readFileSync(config, 'utf8'), output).toBe(before);
+  expect(result.error, output).toBeUndefined();
+  expect(result.status, output).toBe(0);
 }
 
 afterEach(() => {
@@ -130,24 +174,80 @@ describe('withoutGitRepository', () => {
   // A linked worktree's pre-push hook runs the tests with GIT_DIR set. The tests that start git
   // must pass and must not change the repository that GIT_DIR names.
   it('keeps the tests that run git off the repository in GIT_DIR', { timeout: 120_000 }, () => {
-    const sentinel = mkdtempSync(resolve(tmpdir(), 'fluent-measures-sentinel-'));
-    directories.push(sentinel);
-    git(sentinel, 'init', '--quiet', '--initial-branch', 'main');
-    const config = resolve(sentinel, '.git', 'config');
-    const before = readFileSync(config, 'utf8');
+    verifyGitIsolation();
+    expect(vi.mocked(spawnSync).mock.lastCall?.[0]).toBe(process.execPath);
+  });
 
-    const result = spawnSync('pnpm', ['exec', 'vitest', 'run', ...childProcessTests], {
-      encoding: 'utf8',
-      env: {
-        ...withoutGitRepository(),
-        ...developerGitEnvironment(),
-        GIT_DIR: resolve(sentinel, '.git'),
-      },
+  // Reproduce main's null-status/90,074ms failure shape without another nested suite or a
+  // 90-second wait. The injected error and signal are test cases, not a claim about that run.
+  it.each([
+    { status: null, signal: 'SIGTERM', code: 'ETIMEDOUT' },
+    { status: null, signal: 'SIGKILL', code: null },
+    { status: 1, signal: null, code: null },
+    { status: 0, signal: null, code: 'ETIMEDOUT' },
+  ] as const)('reports a nested failure with %j', failure => {
+    const clock = vi.spyOn(performance, 'now').mockReturnValue(100);
+    const log = vi.spyOn(process.stdout, 'write').mockReturnValue(true);
+    const execute = vi.mocked(spawnSync).mockImplementationOnce(() => {
+      clock.mockReturnValue(90_174);
+      const result: SpawnSyncReturns<string> = {
+        pid: 1,
+        output: [null, 'nested stdout', 'nested stderr'],
+        stdout: 'nested stdout',
+        stderr: 'nested stderr',
+        status: failure.status,
+        signal: failure.signal,
+        error: failure.code
+          ? Object.assign(new Error('nested spawn failed'), { code: failure.code })
+          : undefined,
+      };
+      return result;
+    });
+
+    expect(verifyGitIsolation).toThrow('nested stdoutnested stderr');
+    const line = String(log.mock.lastCall?.[0]);
+    expect(line).toMatch(/^Git isolation: /);
+    expect(JSON.parse(line.slice('Git isolation: '.length))).toEqual({
+      node: process.version,
+      execPath: process.execPath,
+      platform: process.platform,
+      arch: process.arch,
+      elapsedMs: 90_074,
+      status: failure.status,
+      signal: failure.signal,
+      error: failure.code ? { message: 'nested spawn failed', code: failure.code } : null,
+    });
+    expect(execute.mock.lastCall?.[0]).toBe(process.execPath);
+    expect(execute.mock.lastCall?.[1]).toEqual(
+      expect.arrayContaining([
+        'run',
+        'tests/lifecycleScripts.test.ts',
+        'tests/postCheckoutHook.test.ts',
+        'tests/prepareCommitMsgHook.test.ts',
+      ])
+    );
+    expect(execute.mock.lastCall?.[2]).toMatchObject({
       timeout: 90_000,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
+  });
 
-    expect(readFileSync(config, 'utf8')).toBe(before);
-    expect(result.status, result.stdout + result.stderr).toBe(0);
+  it('rejects a successful nested run that changes the sentinel config', () => {
+    vi.spyOn(process.stdout, 'write').mockReturnValue(true);
+    vi.mocked(spawnSync).mockImplementationOnce((_command, _args, options) => {
+      const directory = options?.env?.GIT_DIR;
+      if (!directory) throw new Error('Missing sentinel GIT_DIR');
+      writeFileSync(resolve(directory, 'config'), 'changed sentinel config');
+      const result: SpawnSyncReturns<string> = {
+        pid: 1,
+        output: [null, '', ''],
+        stdout: '',
+        stderr: '',
+        status: 0,
+        signal: null,
+      };
+      return result;
+    });
+    expect(verifyGitIsolation).toThrow('changed sentinel config');
   });
 });
