@@ -11,9 +11,11 @@
 //   not-caught  All of those tests pass against the base branch.
 
 import { execFileSync, spawnSync } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { appendFileSync, existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
+import { decodeNames } from './changed-lines.mjs';
 import { normalizeSource } from './normalize-source.mjs';
 import { isTypeAssertionError } from './type-assertion.mjs';
 import { escapeData, logText } from './workflow-commands.mjs';
@@ -31,7 +33,13 @@ const IMPORT_ERRORS = new Set(['TS2305', 'TS2307', 'TS2459', 'TS2460', 'TS2614',
  * @returns {string[]}
  */
 function git(...args) {
-  return execFileSync('git', args, { encoding: 'utf8' }).split('\n').filter(Boolean);
+  const { names, invalid } = decodeNames(execFileSync('git', args));
+  if (invalid.length > 0) {
+    throw new Error(
+      `Rename these paths: their names aren't valid UTF-8: ${logText(invalid.join(', '))}`
+    );
+  }
+  return names;
 }
 
 /**
@@ -55,9 +63,18 @@ function fileAt(rev, path) {
  * @param {import('node:child_process').SpawnSyncOptions} options
  */
 function run(script, args, options) {
-  const result = spawnSync(process.execPath, [script, ...args], options);
-  if (result.error) throw result.error;
-  return result;
+  // A test controls both streams. Keep live output, but stop GitHub from reading commands in
+  // it. Each run needs a fresh token that a test name or printed message cannot predict.
+  const token = options.stdio === 'inherit' ? randomUUID() : undefined;
+  if (token !== undefined) console.log(`::stop-commands::${token}`);
+  try {
+    const result = spawnSync(process.execPath, [script, ...args], options);
+    if (result.error) throw result.error;
+    return result;
+  } finally {
+    // A child can exit without a trailing newline. Resume on a line of our own.
+    if (token !== undefined) console.log(`\n::${token}::`);
+  }
 }
 
 /**
@@ -73,6 +90,7 @@ console.log(`Node ${process.version}`);
 const packageFiles = git(
   'diff',
   '--name-only',
+  '-z',
   '--no-renames',
   BASE,
   'HEAD',
@@ -98,6 +116,7 @@ console.log(`This PR changes:\n${fixed.map(path => `  ${logText(path)}`).join('\
 const testPaths = git(
   'diff',
   '--name-only',
+  '-z',
   '--no-renames',
   '--diff-filter=AM',
   BASE,
@@ -126,7 +145,7 @@ const tsc = run('node_modules/typescript/bin/tsc', ['--noEmit', '--pretty', 'fal
   encoding: 'utf8',
 });
 if (tsc.status !== 0 && !/^\S+\(\d+,\d+\): error TS\d+/m.test(tsc.stdout)) {
-  throw new Error(`tsc exited with status ${tsc.status}:\n${tsc.stdout}${tsc.stderr}`);
+  throw new Error(`tsc exited with status ${tsc.status}:\n${logText(tsc.stdout + tsc.stderr)}`);
 }
 const typeErrors = [
   ...tsc.stdout.matchAll(/^(tests\/.+?)\((\d+),(\d+)\): error (TS\d+): (.*)$/gm),
