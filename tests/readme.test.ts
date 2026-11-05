@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
@@ -259,6 +260,18 @@ const cases: ReadmeCase[] = [
     expected: { value: 6, unit: 'ft' },
   },
   { section: 'More Than One Measurement', input: '210 lbs to 180 lbs', expected: null },
+  {
+    section: 'More Than One Measurement',
+    input: '5\'11", 180 lbs',
+    options: { type: 'height' },
+    expected: { value: 71, unit: 'in' },
+  },
+  {
+    section: 'More Than One Measurement',
+    input: '5\'11", 180 lbs',
+    options: { type: 'weight' },
+    expected: { value: 180, unit: 'lb' },
+  },
   { section: 'Numbers', input: '72.5 kg', expected: { value: 72.5, unit: 'kg' } },
   {
     section: 'Numbers',
@@ -269,6 +282,36 @@ const cases: ReadmeCase[] = [
     section: 'Numbers',
     input: 'one hundred and 50 pounds',
     expected: { value: 150, unit: 'lb' },
+  },
+  {
+    section: 'Numbers With No Unit',
+    input: '72',
+    options: { type: 'height', allowUnqualified: true },
+    expected: { value: 72, unit: 'in' },
+  },
+  {
+    section: 'Numbers With No Unit',
+    input: '150',
+    options: { type: 'weight', allowUnqualified: true },
+    expected: { value: 150, unit: 'lb' },
+  },
+  {
+    section: 'Numbers With No Unit',
+    input: '1.8',
+    options: { type: 'height', allowUnqualified: true, inferUnit: 'metric' },
+    expected: { value: 1.8, unit: 'm' },
+  },
+  {
+    section: 'Numbers With No Unit',
+    input: '180',
+    options: { type: 'height', allowUnqualified: true, inferUnit: 'metric' },
+    expected: { value: 180, unit: 'cm' },
+  },
+  {
+    section: 'Numbers With No Unit',
+    input: '70',
+    options: { type: 'weight', allowUnqualified: true, inferUnit: 'metric' },
+    expected: { value: 70, unit: 'kg' },
   },
   {
     section: 'Numbers With No Unit',
@@ -396,14 +439,14 @@ const proseCases: ProseCase[] = [
     input: '6 ft (72 in)',
     expected: { value: 6, unit: 'ft', type: 'height' },
     statement:
-      '`6 ft (72 in)` and `0.5 m (50 cm)` are a height and its conversion. When the text has more than one measurement, the result is the first one',
+      '`6 ft (72 in)` and `0.5 m (50 cm)` are a height and its conversion. When the text has more than one height, or more than one weight, the result is the first one',
   },
   {
     section: 'More Than One Measurement',
     input: '0.5 m (50 cm)',
     expected: { value: 0.5, unit: 'm', type: 'height' },
     statement:
-      '`6 ft (72 in)` and `0.5 m (50 cm)` are a height and its conversion. When the text has more than one measurement, the result is the first one',
+      '`6 ft (72 in)` and `0.5 m (50 cm)` are a height and its conversion. When the text has more than one height, or more than one weight, the result is the first one',
   },
   {
     section: 'Commas',
@@ -733,5 +776,24 @@ describe('documentExamples', () => {
     expect(() => documentExamples(readme, 'README.md')).toThrow(
       "README.md line 4: can't read the parseMeasurement argument input (ReferenceError: input is not defined). Write each argument as a literal."
     );
+  });
+});
+
+// The README and the docs page state the size budget that .size-limit.cjs sets. A change to the
+// budget must change them too, or they claim a size that CI no longer checks.
+describe('the size budget', () => {
+  const budgets = new Set(
+    (createRequire(import.meta.url)('../.size-limit.cjs') as { limit: string }[]).map(
+      ({ limit }) => limit
+    )
+  );
+
+  it.each([
+    ['README.md', README],
+    ['docs/index.html', readFileSync(new URL('../docs/index.html', import.meta.url), 'utf8')],
+  ])('is the only size that %s states', (_file, text) => {
+    const sizes = text.replace(/\s+/g, ' ').match(/\b\d+(?:\.\d+)? kB\b/g) ?? [];
+    expect(sizes.length).toBeGreaterThan(0);
+    expect(new Set(sizes)).toEqual(budgets);
   });
 });

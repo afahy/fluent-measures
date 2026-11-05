@@ -26,7 +26,7 @@ export function convert(value: number, from: Unit, to: Unit): number {
   return (value * table[from]) / table[to];
 }
 
-// The names in "Supported Units" in the README, without the marks, which follow other rules.
+// The names in "Supported units" in the README, without the marks, which follow other rules.
 export const NAMES: Record<Unit, readonly string[]> = {
   ft: ['ft', 'feet', 'foot'],
   in: ['in', 'inch', 'inches'],

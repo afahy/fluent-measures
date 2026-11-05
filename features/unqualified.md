@@ -8,7 +8,7 @@ selects the unit system.
 ## How a user reaches it
 
 - `allowUnqualified` with `type`: `72` as a height, `150` as a weight.
-- `inferUnit: 'metric'` or `inferUnit: 'imperial'`.
+- `inferUnit: 'metric'`, `inferUnit: 'imperial'`, or no `inferUnit`, which is imperial.
 - Other text, a second number or a unit of the other type, which gives `null`: `180 giraffes`,
   `5 11`.
 - `import` and `require`.
