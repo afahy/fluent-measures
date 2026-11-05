@@ -14,6 +14,7 @@ import { dirname, resolve } from 'node:path';
 import { execPath } from 'node:process';
 import { afterEach, describe, expect, it } from 'vitest';
 import { git, withoutGitRepository } from './gitEnvironment';
+import type { ReportMutant } from '../.github/scripts/changed-lines.mjs';
 
 const script = resolve('.github/scripts/mutation-check.mjs');
 const directories: string[] = [];
@@ -643,6 +644,121 @@ describe('mutation-check.mjs', () => {
     expect(check.stderr).not.toContain('src/node_modules/unread.ts');
     // A report check needs no installed Stryker or second mutation run.
     expect(existsSync(resolve(repository, 'node_modules'))).toBe(false);
+  });
+
+  // AFA-131: real Stryker 10 report coordinates for the ticket's three terminators
+  // and maintainer's ignored-mutant example. Expectations below count only LF by hand.
+  const coordinates = JSON.parse(
+    readFileSync(new URL('./fixtures/mutation/coordinates.json', import.meta.url), 'utf8')
+  ) as {
+    files: Record<string, { source: string; mutants: ReportMutant[] }>;
+    filesRead: Record<string, boolean>;
+  };
+
+  it.each([
+    ['src/cr.ts', 1, 24],
+    ['src/ls.ts', 1, 24],
+    ['src/ps.ts', 1, 24],
+    ['src/lf.ts', 0, 11],
+    ['src/crlf.ts', 0, 11],
+  ])('checks git line 1 against real Babel coordinates in %s', (file, status, column) => {
+    const repository = createRepository();
+    const result = coordinates.files[file];
+    const base = commitFiles(repository, { [file]: result.source.replace('a = 1', 'a = 0') });
+    commitFiles(repository, { [file]: result.source });
+    writeReport(repository, coordinates);
+
+    const check = runCheck(repository, base);
+
+    expect(result.mutants).toMatchObject([
+      {
+        replacement: 'a && 2',
+        status: 'NoCoverage',
+        location: { start: { line: 2, column: 11 }, end: { line: 2, column: 17 } },
+      },
+    ]);
+    expect(check.stdout).toContain(`  ${file}:1`);
+    expect(check.status).toBe(status);
+    expect(check.stderr.includes(`::error file=${file},line=1,col=${column}::`)).toBe(status === 1);
+    expect(check.stdout.includes('Tests kill every mutant')).toBe(status === 0);
+  });
+
+  it.each(['src/cr.ts', 'src/ls.ts', 'src/ps.ts'])(
+    'does not count an unchanged mutant as changed git line 2 in %s',
+    file => {
+      const repository = createRepository();
+      const result = coordinates.files[file];
+      const base = commitFiles(repository, { [file]: result.source + 'export const c = 3;\n' });
+      const source = result.source + 'export const c = 4;\n';
+      commitFiles(repository, { [file]: source });
+      writeReport(repository, {
+        ...coordinates,
+        files: { ...coordinates.files, [file]: { ...result, source } },
+      });
+
+      const check = runCheck(repository, base);
+
+      expect(check.stdout).toContain(`  ${file}:2`);
+      expect(check.status).toBe(0);
+      expect(check.stdout).toContain('Tests kill every mutant');
+      expect(check.stderr).toBe('');
+    }
+  );
+
+  it.each(['src/escaped-ls.ts', 'src/escaped-ps.ts'])(
+    'rejects the real uncovered mutant after an escaped separator in %s',
+    file => {
+      const repository = createRepository();
+      const result = coordinates.files[file];
+      const base = commitFiles(repository, { [file]: result.source.replace('a ?? 2', 'a ?? 1') });
+      commitFiles(repository, { [file]: result.source });
+      writeReport(repository, coordinates);
+
+      const check = runCheck(repository, base);
+
+      // Escaped U+2028/U+2029 in this string advances neither Babel nor git's line.
+      expect(result.mutants).toContainEqual(
+        expect.objectContaining({
+          replacement: 'a && 2',
+          status: 'NoCoverage',
+          location: { start: { line: 2, column: 11 }, end: { line: 2, column: 17 } },
+        })
+      );
+      expect(check.stdout).toContain(`  ${file}:2`);
+      expect(check.status).toBe(1);
+      expect(check.stderr).toContain(`::error file=${file},line=2,col=11::`);
+      expect(check.stderr).not.toContain('line=1,');
+      expect(check.stdout).not.toContain('Tests kill every mutant');
+    }
+  );
+
+  it('rejects the real ignored mutant when only git line 3 changes after U+2028', () => {
+    const repository = createRepository();
+    const file = 'src/ignored.ts';
+    const result = coordinates.files[file];
+    const base = commitFiles(repository, { [file]: result.source.replace('a ?? 2', 'a ?? 1') });
+    commitFiles(repository, { [file]: result.source });
+    writeReport(repository, coordinates);
+
+    const check = runCheck(repository, base);
+
+    // The 33 characters before "a ?? 2" put its start at column 34; its end is column 40.
+    expect(result.mutants).toContainEqual(
+      expect.objectContaining({
+        replacement: 'a && 2',
+        status: 'Ignored',
+        statusReason: 'Ignored using a comment',
+        location: { start: { line: 4, column: 34 }, end: { line: 4, column: 40 } },
+      })
+    );
+    expect(check.stdout).toContain(`  ${file}:3`);
+    expect(check.status).toBe(1);
+    expect(check.stderr).toContain(
+      '::error file=src/ignored.ts,line=3,col=34::A Stryker disable comment ignores the LogicalOperator mutant without a reason.'
+    );
+    // The directive is on unchanged git line 2: only the ignored-mutant path can reject it.
+    expect(check.stderr).not.toContain('This Stryker disable comment has no reason.');
+    expect(check.stderr).not.toContain('it survived');
   });
 
   it('passes a type-only file omitted from the recorded report but selected by Stryker', () => {

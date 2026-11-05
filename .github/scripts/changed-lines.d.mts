@@ -24,7 +24,7 @@ export interface ReportMutant {
 }
 
 export interface Report {
-  files: Record<string, { mutants: ReportMutant[] }>;
+  files: Record<string, { source?: string; mutants: ReportMutant[] }>;
 }
 
 export interface UnkilledMutant {
