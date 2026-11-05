@@ -530,7 +530,7 @@ function optionProperties(node, scope, seen = new Set()) {
   if (binding) {
     const properties = optionProperties(binding.node, binding.scope, binding.seen);
     if (objectMayChange(binding.variable)) {
-      for (const [key, entry] of properties) properties.set(key, { ...entry, uncertain: true });
+      uncertainProperties(properties, node, scope);
     }
     return properties;
   }

@@ -223,6 +223,58 @@ describe('the lint for tests that skip or are expected to fail', () => {
 // AFA-180: stored members, aliases and constant expressions must enforce the same policy as
 // direct Vitest calls. These expectations follow rule 3, not the rule's previous output.
 describe('the additional Vitest chain forms', () => {
+  // Mutation can add keys that are absent from the initializer, including an empty object.
+  it.each([
+    'const update = {};\nObject.assign(update, { fails: true });',
+    'const update = {};\nupdate.fails = true;',
+    "const update = {};\nObject.defineProperty(update, 'fails', { value: true, enumerable: true });",
+    'const update = {};\nconst alias = update;\nalias.fails = true;',
+    'const update = { timeout: 1000 };\nupdate.fails = true;',
+    'const original = {};\nObject.assign(original, { fails: true });\nconst update = { ...original };',
+  ])('keeps added keys from a mutated const spread uncertain in %s', async setup => {
+    expect(
+      await problems(
+        setup +
+          '\nconst options = { fails: false, ...update };\n' +
+          "it('x', { fails: true, ...options }, " +
+          pass +
+          ');'
+      )
+    ).toEqual([fails]);
+  });
+
+  it.each([
+    'const update = {};\nObject.assign(update, { fails: true });',
+    'const update = {};\nupdate.fails = true;',
+    "const update = {};\nObject.defineProperty(update, 'fails', { value: true, enumerable: true });",
+    'const update = {};\nconst alias = update;\nalias.fails = true;',
+  ])('allows a final false flag after a mutated const spread in %s', async setup => {
+    expect(
+      await problems(
+        setup +
+          '\nconst options = { ...update, fails: false };\n' +
+          "it('x', { fails: true, ...options }, " +
+          pass +
+          ');'
+      )
+    ).toEqual([]);
+  });
+
+  it.each(['const update = {};', 'const update = { timeout: 1000 };'])(
+    'allows an unchanged const spread without added keys in %s',
+    async setup => {
+      expect(
+        await problems(
+          setup +
+            '\nconst options = { fails: false, ...update };\n' +
+            "it('x', { fails: true, ...options }, " +
+            pass +
+            ');'
+        )
+      ).toEqual([]);
+    }
+  );
+
   // Reassignment must not erase policy enforcement before the write or on another test alias.
   it.each([
     ["t.skip('x', () => {});", skip],
