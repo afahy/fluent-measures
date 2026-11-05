@@ -31,34 +31,64 @@ jobs:
           fetch-depth: 2
           persist-credentials: false
 
-      - uses: ./.github/actions/setup
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      # An edit to the PR body measures the sizes again too, because it cancels a run that is still
-      # measuring them, and only the last run's summary counts.
-      - name: Measure the bundle sizes on the base branch and in the PR
+      # Corpus-only fixes also need both parsers, even when no package file changed.
+      - name: Decide whether to build evidence
+        id: inputs
         run: |
-          if git diff --quiet HEAD^1 HEAD -- src/ package.json pnpm-lock.yaml tsup.config.ts; then
-            echo "The PR doesn't change the package files."
-            exit 0
+          if git diff --quiet HEAD^1 HEAD -- src/ package.json pnpm-lock.yaml tsup.config.ts tests/corpus/measurements.jsonl; then
+            echo "build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "build=true" >> "$GITHUB_OUTPUT"
           fi
-          # A build over its budget still prints its sizes. CI's own job fails for it.
-          pnpm build && pnpm exec size-limit --json > "$RUNNER_TEMP/size-head.json" || true
-          # The base branch builds in its own worktree, with its own package.json, dependencies and
-          # build config. So a PR that changes the toolchain, or deletes a file, can't change the
-          # base sizes.
-          git worktree add --detach "$RUNNER_TEMP/base" HEAD^1
-          cd "$RUNNER_TEMP/base"
-          pnpm install --frozen-lockfile && pnpm build &&
-            pnpm exec size-limit --json > "$RUNNER_TEMP/size-base.json" || true
+
+      - name: Check out the base build
+        id: base-checkout
+        if: steps.inputs.outputs.build == 'true'
+        continue-on-error: true
+        run: git worktree add --detach "$RUNNER_TEMP/base" HEAD^1
+
+      - name: Set up the PR's pnpm
+        id: head-pnpm
+        if: steps.inputs.outputs.build == 'true'
+        continue-on-error: true
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+
+      - name: Build and measure the PR
+        if: always() && steps.inputs.outputs.build == 'true'
+        env:
+          PNPM_SETUP: ${{ steps.head-pnpm.outcome }}
+        run: node .github/scripts/evidence-build.mjs "$GITHUB_WORKSPACE" "$RUNNER_TEMP/build-head.json" "$RUNNER_TEMP/size-head.json" "$PNPM_SETUP" --require-install
+
+      - name: Set up the base revision's pnpm
+        id: base-pnpm
+        if: always() && steps.inputs.outputs.build == 'true' && steps.base-checkout.outcome == 'success'
+        continue-on-error: true
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+        with:
+          package_json_file: ${{ runner.temp }}/base/package.json
+          dest: ${{ runner.temp }}/pnpm-base
+
+      - name: Build and measure the base revision
+        if: always() && steps.inputs.outputs.build == 'true'
+        env:
+          PNPM_SETUP: ${{ steps.base-pnpm.outcome }}
+        run: node .github/scripts/evidence-build.mjs "$RUNNER_TEMP/base" "$RUNNER_TEMP/build-base.json" "$RUNNER_TEMP/size-base.json" "$PNPM_SETUP"
 
       - name: Summarize the changed results and rate the risk
+        if: always()
         env:
           # The body goes in through the environment, so that its text can't change the script.
           PR_BODY: ${{ github.event.pull_request.body }}
           SIZE_BASE: ${{ runner.temp }}/size-base.json
           SIZE_HEAD: ${{ runner.temp }}/size-head.json
+          CORPUS_BASE_MODULE: ${{ runner.temp }}/base/dist/index.js
+          CORPUS_HEAD_MODULE: ${{ github.workspace }}/dist/index.js
+          BUILD_BASE: ${{ runner.temp }}/build-base.json
+          BUILD_HEAD: ${{ runner.temp }}/build-head.json
         # The script from the base branch rates the PR, so a change to the script doesn't rate its
         # own PR. This workflow file still comes from the PR, so the script rates a change to it
         # high. A base branch without the script uses the PR's.

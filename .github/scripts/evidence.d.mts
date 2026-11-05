@@ -32,7 +32,14 @@ export interface Size {
   after: number;
 }
 
+export interface CorpusReplay {
+  changed: (ResultChange & { id: string })[];
+  unavailable: string[];
+}
+
 export interface Facts {
+  corpusReplay: CorpusReplay;
+  buildDiagnostics: string[];
   results: ResultChanges;
   corpus: CorpusChanges;
   examples: { removed: string[]; added: string[] };
@@ -84,3 +91,10 @@ export function changedResults(facts: Facts): number;
 export function assessRisk(facts: Facts): { level: 'low' | 'medium' | 'high'; reasons: string[] };
 export function summary(facts: Facts, risk: { level: string; reasons: string[] }): string;
 export function sizes(base: string | null, head: string | null): Size[];
+
+export function corpusReplayInputs(base: string | null, head: string | null): string[];
+export function replayCorpus(
+  inputs: string[],
+  baseModule?: string,
+  headModule?: string
+): CorpusReplay;
