@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
+import { parseWithin, underStryker } from './timing';
 
 // Inputs and results from AFA-59, which come from the AFA-41 corpus.
 describe('fractions', () => {
@@ -81,11 +82,10 @@ describe('fractions', () => {
   });
 
   // 1 followed by 100,000 zeros is too large to represent, so the result is null. The fraction
-  // pattern must still fail on it quickly.
-  it('rejects a very long number in under a second', () => {
-    const start = Date.now();
-    expect(parseMeasurement(`1${'0'.repeat(100_000)} lbs`, { maxLength: Infinity })).toBeNull();
-    expect(Date.now() - start).toBeLessThan(1000);
+  // pattern must still fail on it quickly. Keep the existing 1000 ms limit, measured as CPU
+  // time; parseWithin reports the time in CI. Large-input timing is excluded under Stryker.
+  it.skipIf(underStryker)('rejects a very long number in under a second', () => {
+    expect(parseWithin(`1${'0'.repeat(100_000)} lbs`, 1000, { maxLength: Infinity })).toBeNull();
   });
 
   it('keeps the shorthand and range rules in PARSING.md', () => {
