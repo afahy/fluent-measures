@@ -1,16 +1,14 @@
 // Fails when a mutant on a line that a pull request adds or changes under src/ survives, or when
 // no test covers it. Run it from the repository root on a pull request merge commit, where
-// HEAD^1 is the base branch. To check other commits, pass `--base <rev>`. Used by
-// .github/workflows/ci.yml.
+// HEAD^1 is the base branch. To check other commits, pass `--base <rev>`. Read the full run
+// with `--report <path>` (default: reports/mutation/mutation.json). Used by .github/workflows/ci.yml.
 //
 // A mutant that can't change behavior can be marked with a comment on the line above it:
 //   // Stryker disable next-line <mutator>: <why behavior can't change>
 // Stryker then gives it the status Ignored, so this check doesn't count it. The reason is required.
 
 import { execFileSync, spawnSync } from 'node:child_process';
-import { lstatSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join, matchesGlob, resolve } from 'node:path';
+import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import {
   backslashPaths,
   controlPaths,
@@ -19,23 +17,36 @@ import {
   hunkRanges,
   isSourceFile,
   isUnmutatedCode,
-  literalGlob,
-  mutatedFiles,
   directiveLines,
   revisions,
   unexplainedIgnores,
   unkilledMutants,
-  unmatchedFiles,
 } from './changed-lines.mjs';
 import { escapeData, escapeProperty } from './workflow-commands.mjs';
 
-const baseFlag = process.argv.indexOf('--base');
-const base = baseFlag >= 0 ? process.argv[baseFlag + 1] : 'HEAD^1';
-if (base === undefined || base.startsWith('-')) {
-  console.error('Usage: node .github/scripts/mutation-check.mjs [--base <rev>]');
+const args = process.argv.slice(2);
+const flags = new Map();
+for (let i = 0; i < args.length; i += 2) {
+  const value = args[i + 1];
+  if (
+    !['--base', '--report', '--prepare'].includes(args[i]) ||
+    flags.has(args[i]) ||
+    value === undefined ||
+    value.startsWith('-')
+  ) {
+    console.error(
+      'Usage: node .github/scripts/mutation-check.mjs [--base <rev>] [--report <path> | --prepare <incremental-report>]'
+    );
+    process.exit(2);
+  }
+  flags.set(args[i], value);
+}
+if (flags.has('--report') && flags.has('--prepare')) {
+  console.error('Use either --report or --prepare, not both.');
   process.exit(2);
 }
-
+const baseFlag = flags.has('--base') ? 0 : -1;
+const base = flags.get('--base') ?? 'HEAD^1';
 if (baseFlag < 0 && spawnSync('git', ['rev-parse', '--quiet', '--verify', 'HEAD^2']).status !== 0) {
   if (process.env.GITHUB_EVENT_NAME === 'pull_request') {
     console.error(
@@ -72,12 +83,40 @@ for (const name of unreadable) {
   );
 }
 if (unreadable.length > 0) process.exit(1);
-// Stryker's config says which files it mutates, so a changed test file under src/ isn't checked.
-// A config without `mutate` leaves every changed source file in.
-const { $schema: _schema, ...config } = JSON.parse(readFileSync('stryker.config.json', 'utf8'));
-const mutated = files => (config.mutate ? mutatedFiles(files, config.mutate) : files);
-/** Whether the config would mutate `file` if it were a `.ts` file. */
-const mutatedAsTs = file => mutated([file.replace(/\.[^./]+$/, '.ts')]).length > 0;
+// Before the single Stryker run, discard cached results for every changed source file.
+// Stryker compares mutant spans, so an edit elsewhere on the same line can otherwise reuse one.
+// Remove whole files instead of translating git's lines into Stryker's parser coordinates.
+const prepare = flags.get('--prepare');
+if (prepare !== undefined) {
+  if (existsSync(prepare)) {
+    const cached = JSON.parse(readFileSync(prepare, 'utf8'));
+    for (const file of names.filter(isSourceFile)) {
+      if (Object.hasOwn(cached.files, file)) {
+        console.log(`Removed cached mutant results for ${escapeData(JSON.stringify(file))}.`);
+      }
+      delete cached.files[file];
+    }
+    writeFileSync(prepare, JSON.stringify(cached));
+  }
+  console.log('Changed source files will have fresh mutation results.');
+  process.exit(0);
+}
+
+const report = flags.get('--report') ?? 'reports/mutation/mutation.json';
+let results;
+try {
+  results = JSON.parse(readFileSync(report, 'utf8'));
+  if (!results.files || !results.filesRead) throw new Error('Missing files or filesRead');
+} catch (error) {
+  console.error(
+    `::error::Cannot read the mutation report ${escapeData(JSON.stringify(report))}. Run pnpm test:mutation with the project config first. ${escapeData(error.message)}`
+  );
+  process.exit(1);
+}
+// Source tests are the only source files that the project deliberately excludes. Other unread
+// or unselected source files fail, including when a broken glob selects no files for mutation.
+const sourceTest = file => /\.(?:test|spec)\.[^./]+$/.test(file);
+const included = file => !sourceTest(file) || results.filesRead[file] !== false;
 // Git stores a symbolic link with mode 120000 and diffs only the path that it holds, but Stryker
 // mutates the files that the link points to. So the changed lines and the mutants' lines don't
 // match. Git's mode counts, not the checkout, which may hold a plain file. Stryker's patterns
@@ -92,7 +131,8 @@ const linked = execFileSync('git', ['ls-tree', '-r', '-z', 'HEAD', '--', 'src/']
   .filter(
     file =>
       statSync(file, { throwIfNoEntry: false })?.isDirectory() ||
-      ((isSourceFile(file) || isUnmutatedCode(file)) && mutatedAsTs(file))
+      (isSourceFile(file) && included(file)) ||
+      (isUnmutatedCode(file) && !sourceTest(file))
   );
 for (const file of linked) {
   console.error(
@@ -108,22 +148,21 @@ const changedRanges = file =>
       encoding: 'utf8',
     })
   );
-// This check gives Stryker only `.ts` files, so it would pass added lines in other code with no
-// check. A file counts when the config would mutate it as a `.ts` file, so a test file still
-// doesn't.
+// The project mutates .ts source files. Other code extensions would pass without a check.
+// Source tests are outside this scope, whatever their extension.
 const unmutated = names
   .filter(isUnmutatedCode)
-  .filter(mutatedAsTs)
+  .filter(file => !sourceTest(file))
   .filter(file => changedRanges(file).length > 0);
 for (const file of unmutated) {
   console.error(
-    `::error file=${escapeProperty(file)}::Use a .ts file in place of ${escapeData(file)}. This check gives Stryker only .ts files, so it can't find the file's mutants.`
+    `::error file=${escapeProperty(file)}::Use a .ts file in place of ${escapeData(file)}. The project mutates only .ts files, so it can't find the file's mutants.`
   );
 }
 if (unmutated.length > 0) process.exit(1);
 /** @type {Map<string, Array<[number, number]>>} */
 const changed = new Map();
-for (const file of mutated(names.filter(isSourceFile))) {
+for (const file of names.filter(isSourceFile).filter(included)) {
   const ranges = changedRanges(file);
   if (ranges.length > 0) changed.set(file, ranges);
 }
@@ -136,12 +175,11 @@ if (changed.size === 0) {
   process.exit(0);
 }
 
-// A control character, such as a line break, would break the lines that this check prints and the
-// lines that it reads from Stryker's log.
+// A control character, such as a line break, would break the lines that this check prints.
 const controlled = controlPaths([...changed.keys()]);
 for (const file of controlled) {
   console.error(
-    `::error::Rename ${escapeData(JSON.stringify(file))}. Its path has a control character, so this check can't read Stryker's log about it.`
+    `::error::Rename ${escapeData(JSON.stringify(file))}. Its path has a control character, so this check can't print its changed lines safely.`
   );
 }
 if (controlled.length > 0) process.exit(1);
@@ -161,101 +199,19 @@ for (const file of backslashed) {
 }
 if (backslashed.length > 0) process.exit(1);
 
-// Stryker resolves each `mutate` pattern from the project folder and matches the result as a
-// glob. So a glob in the folder's own path, as "[1]" in "/tmp/a[1]/repo", can make a pattern match
-// no file, and its warning would ask to move each changed file. Check each file as Stryker's
-// `FileMatcher` does: it writes each "\" in both paths as "/" first.
-const strykerPath = (/** @type {string} */ path) => resolve(path).replace(/\\/g, '/');
-if (
-  [...changed.keys()].some(file => !matchesGlob(strykerPath(file), strykerPath(literalGlob(file))))
-) {
+// Stryker 10 reports only files with mutants. The reporter also records its actual file
+// inventory: a type-only file was selected (true) but has no mutants; an unread file is absent.
+const missing = [...changed.keys()].filter(file => results.filesRead[file] !== true);
+for (const file of missing) {
   console.error(
-    `::error::Move the repository to another folder. Stryker reads the glob characters in ${escapeData(JSON.stringify(process.cwd()))} as part of each pattern, so it finds no file to mutate.`
-  );
-  process.exit(1);
-}
-
-// Mutate the whole of each changed file, so a mutant whose code spans more lines than the change
-// is still made. Only the mutants that overlap a changed line count. Use the project's Stryker
-// config with a JSON report in a temporary folder and no score threshold: this script decides
-// the result from the report.
-const directory = mkdtempSync(join(tmpdir(), 'fluent-measures-mutation-'));
-const report = join(directory, 'mutation.json');
-const configFile = join(directory, 'stryker.config.json');
-writeFileSync(
-  configFile,
-  JSON.stringify({
-    ...config,
-    mutate: [...changed.keys()].map(literalGlob),
-    reporters: ['clear-text', 'json'],
-    jsonReporter: { fileName: report },
-    thresholds: { ...config.thresholds, break: null },
-    // "info" also logs how many mutants Stryker makes, which the check reads below.
-    fileLogLevel: 'info',
-  })
-);
-
-// Stryker adds its log lines to stryker.log: its warnings, its errors and its mutant count. Read
-// only this run's lines, and remove the file if this run made it. A symbolic link would send the
-// lines to /dev/null or to another file, so this check couldn't read them.
-const logFile = 'stryker.log';
-const logBefore = lstatSync(logFile, { throwIfNoEntry: false });
-if (logBefore && !logBefore.isFile()) {
-  console.error(
-    `::error::Remove ${logFile}, or make it a regular file. Stryker writes its log there, and this check reads it.`
-  );
-  process.exit(1);
-}
-
-// Run Stryker with this script's Node binary, not the node_modules/.bin shim.
-const stryker = spawnSync(
-  process.execPath,
-  ['node_modules/@stryker-mutator/core/bin/stryker.js', 'run', configFile],
-  { stdio: 'inherit' }
-);
-if (stryker.error) throw stryker.error;
-
-// Stryker never reads some folders, such as node_modules, so it can't mutate a file in them. It
-// only warns that the file's pattern matched no file, and the report then has no entry for it.
-const log = lstatSync(logFile, { throwIfNoEntry: false })
-  ? readFileSync(logFile)
-      .subarray(logBefore?.size ?? 0)
-      .toString('utf8')
-  : '';
-if (!logBefore) rmSync(logFile, { force: true });
-const unmatched = unmatchedFiles(log, [...changed.keys()]);
-for (const file of unmatched) {
-  console.error(
-    `::error file=${escapeProperty(file)}::Move ${escapeData(file)}. Stryker never reads some folders, such as node_modules, so this check can't find the file's mutants.`
+    `::error file=${escapeProperty(file)}::Move ${escapeData(file)} or include it in Stryker's mutation scope. The full mutation run never read it for mutation, so this check can't find the file's mutants.`
   );
 }
-// Without the file, Stryker may find no tests to run, but the file is the problem to fix.
-if (unmatched.length > 0) process.exit(1);
 // A new directive can ignore a mutant on a line that didn't change, so check the directives too.
 const directives = [...changed].flatMap(([file, ranges]) => {
   const { lines, parsed } = directiveLines(readFileSync(file, 'utf8'), ranges);
   return lines.map(line => ({ file, line, parsed }));
 });
-// Vitest runs only the tests that import a mutated file, and no test imports a file with only
-// types, such as src/types.ts, at runtime. So Stryker stops with "No tests were executed" and
-// writes no report. When the changed files have no mutants, no mutant can fail, so only the
-// directives are left to check (AFA-83).
-const noMutants =
-  stryker.status !== 0 &&
-  log.includes('No tests were executed') &&
-  /Instrumented \d+ source file\(s\) with 0 mutant\(s\)/.test(log);
-if (noMutants && directives.length === 0) {
-  console.log('The changed files have no mutants, so there is nothing to check.');
-  process.exit(0);
-}
-if (stryker.status !== 0 && !noMutants) {
-  console.error(
-    `::error::Stryker exited with status ${stryker.status}. If its log says "No tests were executed", no test imports the changed files: add tests that do.`
-  );
-  process.exit(1);
-}
-
-const results = noMutants ? { files: {} } : JSON.parse(readFileSync(report, 'utf8'));
 const unkilled = unkilledMutants(results, changed);
 const unexplained = unexplainedIgnores(results, changed);
 for (const mutant of unkilled) {
@@ -287,5 +243,6 @@ if (unexplained.length + directives.length > 0) {
     `${unexplained.length + directives.length} Stryker disable comment(s) or ignored mutant(s) on changed lines have no reason, or are in a file that this check can't parse.`
   );
 }
-if (unkilled.length > 0 || unexplained.length > 0 || directives.length > 0) process.exit(1);
+if (missing.length > 0 || unkilled.length > 0 || unexplained.length > 0 || directives.length > 0)
+  process.exit(1);
 console.log('Tests kill every mutant on the changed lines.');

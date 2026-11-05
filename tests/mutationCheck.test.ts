@@ -5,7 +5,6 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
-  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -36,71 +35,50 @@ function createRepository(folder?: string): string {
   git(repository, 'config', 'user.name', 'Test');
   // Don't sign fixture commits with the developer's key, which may prompt for a passphrase.
   git(repository, 'config', 'commit.gpgsign', 'false');
+  writeFileSync(resolve(repository, 'stryker.config.json'), '{}\n');
   return repository;
 }
 
-/**
- * Runs the check on the repository. Its temporary folder goes in a folder that the test removes.
- * The repository has a Stryker config but no Stryker, so the check fails when it runs Stryker.
- */
+/** Runs the report filter in a fixture repository, without installing or running Stryker. */
 function runCheck(
   repository: string,
   base: string,
-  env: Record<string, string> = {}
+  env: Record<string, string> = {},
+  args: string[] = []
 ): SpawnSyncReturns<string> {
-  const temporary = mkdtempSync(resolve(tmpdir(), 'fluent-measures-mutation-tmp-'));
-  directories.push(temporary);
-  return spawnSync(execPath, [script, '--base', base], {
-    cwd: repository,
-    encoding: 'utf8',
-    env: { ...withoutGitRepository(), TMPDIR: temporary, ...env },
-  });
-}
-
-// A stand-in for Stryker. Like Stryker 10, it writes warnings to stryker.log only when the config
-// sets fileLogLevel to "warn" or lower, and it warns about each `mutate` pattern in a node_modules
-// folder. It writes a report with no mutants.
-const STUB_CONFIG = `const fs = require('node:fs');
-const config = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'));`;
-const STRYKER_STUB = `${STUB_CONFIG}
-const logs = ['trace', 'debug', 'info', 'warn'].includes(config.fileLogLevel);
-for (const pattern of logs ? config.mutate : []) {
-  if (/(^|\\/)node_modules\\//i.test(pattern)) {
-    fs.appendFileSync('stryker.log', 'WARN ProjectReader Glob pattern "' + pattern + '" did not result in any files.\\n');
+  // Most tests isolate git and path handling. A synthetic empty report supplies the file
+  // inventory for those cases; recorded real reports below cover mutant and zero-mutant results.
+  const report = resolve(repository, 'mutation.json');
+  if (!existsSync(resolve(repository, 'mutation.json')) && !args.includes('--prepare')) {
+    const filesRead = Object.fromEntries(
+      git(repository, 'ls-files', '-z')
+        .split('\0')
+        .filter(file => file && !file.split('/').includes('node_modules'))
+        .map(file => [file, file.endsWith('.ts') && !/\.(?:test|spec)\.ts$/.test(file)])
+    );
+    writeFileSync(report, JSON.stringify({ files: {}, filesRead }));
   }
+  return spawnSync(
+    execPath,
+    [
+      script,
+      '--base',
+      base,
+      ...(args.some(arg => ['--prepare', '--report'].includes(arg))
+        ? []
+        : ['--report', 'mutation.json']),
+      ...args,
+    ],
+    {
+      cwd: repository,
+      encoding: 'utf8',
+      env: { ...withoutGitRepository(), ...env },
+    }
+  );
 }
-fs.writeFileSync(config.jsonReporter.fileName, JSON.stringify({ files: {} }));
-`;
 
-// A stand-in for Stryker when no test imports the changed files. Like Stryker 10, it logs how many
-// mutants it made when fileLogLevel is "info" or lower, then stops with "No tests were executed".
-const strykerWithNoTests = (
-  mutants: number,
-  error = 'No tests were executed. Stryker will exit prematurely.'
-): string => `${STUB_CONFIG}
-if (['trace', 'debug', 'info'].includes(config.fileLogLevel)) {
-  fs.appendFileSync('stryker.log', '12:00:00 (1) INFO Instrumenter Instrumented 1 source file(s) with ${mutants} mutant(s)\\n');
-  fs.appendFileSync('stryker.log', '12:00:01 (1) ERROR Stryker ${error}\\n');
-}
-process.exit(1);
-`;
-
-// A stand-in for Stryker that reports a surviving mutant and a mutant that a directive ignores
-// without a reason, both on line 1 of the file.
-const strykerWithMutants = (file: string): string => `${STUB_CONFIG}
-const location = { start: { line: 1, column: 17 }, end: { line: 1, column: 21 } };
-const mutants = [
-  { mutatorName: 'BooleanLiteral', replacement: 'false', status: 'Survived', location },
-  { mutatorName: 'EqualityOperator', status: 'Ignored', statusReason: 'Ignored using a comment', location },
-];
-fs.writeFileSync(config.jsonReporter.fileName, JSON.stringify({ files: { ${JSON.stringify(file)}: { mutants } } }));
-`;
-
-/** Puts a Stryker stand-in where the check runs Stryker from. Git doesn't track it. */
-function addStrykerStub(repository: string, stub = STRYKER_STUB): void {
-  const bin = resolve(repository, 'node_modules/@stryker-mutator/core/bin');
-  mkdirSync(bin, { recursive: true });
-  writeFileSync(resolve(bin, 'stryker.js'), stub);
+function writeReport(repository: string, report: object): void {
+  writeFileSync(resolve(repository, 'mutation.json'), JSON.stringify(report));
 }
 
 function commitFiles(repository: string, files: Record<string, string>): string {
@@ -116,7 +94,7 @@ function commitFiles(repository: string, files: Record<string, string>): string 
 
 describe('mutation-check.mjs', () => {
   // AFA-71: Stryker reads a backslash as a slash, so it wouldn't check the file. The check stops
-  // before it runs Stryker.
+  // before checking its report.
   it('fails for each changed path with a backslash, and asks for a rename', () => {
     const repository = createRepository();
     const base = commitFiles(repository, {
@@ -144,7 +122,7 @@ describe('mutation-check.mjs', () => {
 
   // AFA-85: git diffs only the link's target path, but Stryker mutates the file that the link
   // points to, so the changed lines and the mutants' lines don't match. The check stops before it
-  // runs Stryker.
+  // checks its report.
   it('fails for a changed source file that is a symbolic link', () => {
     const repository = createRepository();
     const base = commitFiles(repository, {
@@ -154,7 +132,6 @@ describe('mutation-check.mjs', () => {
     mkdirSync(resolve(repository, 'src'));
     symlinkSync('../lib/impl.ts', resolve(repository, 'src/units.ts'));
     commitFiles(repository, { 'lib/impl.ts': 'export const a = 1 > 0;\n' });
-    addStrykerStub(repository);
 
     const check = runCheck(repository, base);
 
@@ -177,7 +154,6 @@ describe('mutation-check.mjs', () => {
     mkdirSync(resolve(repository, 'src'));
     symlinkSync(target, resolve(repository, link));
     commitFiles(repository, { 'src/index.ts': 'export const c = 1 > 0;\n' });
-    addStrykerStub(repository);
 
     const check = runCheck(repository, base);
 
@@ -221,7 +197,6 @@ describe('mutation-check.mjs', () => {
     commitFiles(repository, { 'lib/impl.ts': 'export const a = 1 > 0;\n' });
     rmSync(resolve(repository, 'src/units.ts'));
     writeFileSync(resolve(repository, 'src/units.ts'), '../lib/impl.ts');
-    addStrykerStub(repository);
 
     const check = runCheck(repository, base);
 
@@ -229,7 +204,7 @@ describe('mutation-check.mjs', () => {
     expect(check.stderr).toContain('::error file=src/units.ts::Replace src/units.ts');
   });
 
-  // AFA-85: the check gives Stryker only `.ts` files, but tsc, Vitest and tsup also use these, so a
+  // AFA-85: the project mutates only `.ts` files, but tsc, Vitest and tsup also use these, so a
   // change to one would pass with no check.
   it.each([
     'src/units.mts',
@@ -246,7 +221,6 @@ describe('mutation-check.mjs', () => {
       [file]: 'export const a = 1 > 0;\n',
       'src/index.ts': "export { a } from './units';\n",
     });
-    addStrykerStub(repository);
 
     const check = runCheck(repository, base);
 
@@ -344,8 +318,8 @@ describe('mutation-check.mjs', () => {
       'Changed lines:\n  src/[u]nits.ts:1\n  src/ab.ts:2\n  src/units.ts:2-3\n'
     );
     expect(check.stderr).not.toContain('Rename');
-    // The check goes on past the backslash check to run Stryker.
-    expect(check.stderr).toContain('::error::Stryker exited with status 1.');
+    expect(check.status).toBe(0);
+    expect(check.stdout).toContain('Tests kill every mutant on the changed lines.');
   });
 
   // AFA-82: git shows a file with a NUL byte, or with a -diff attribute, as binary, with no lines.
@@ -423,7 +397,7 @@ describe('mutation-check.mjs', () => {
   });
 
   // AFA-82 review: a line break or an escape in a name would break the check's output and its
-  // reading of Stryker's log.
+  // printed paths.
   it.each(['src/a\nb.ts', 'src/a\u001b[31mb.ts', 'src/a,b\n%0Ac.ts'])(
     'fails for the changed path %j',
     file => {
@@ -451,7 +425,6 @@ describe('mutation-check.mjs', () => {
     commitFiles(repository, {
       'src/a,b:%c.ts': '// Stryker disable next-line all\nexport type Unit = string;\n',
     });
-    addStrykerStub(repository, strykerWithNoTests(0));
 
     const check = runCheck(repository, base);
 
@@ -467,7 +440,23 @@ describe('mutation-check.mjs', () => {
     const repository = createRepository();
     const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
     commitFiles(repository, { 'src/a,b.ts': 'export const a = true;\n' });
-    addStrykerStub(repository, strykerWithMutants('src/a,b.ts'));
+    const location = { start: { line: 1, column: 17 }, end: { line: 1, column: 21 } };
+    writeReport(repository, {
+      filesRead: { 'src/a,b.ts': true },
+      files: {
+        'src/a,b.ts': {
+          mutants: [
+            { mutatorName: 'BooleanLiteral', replacement: 'false', status: 'Survived', location },
+            {
+              mutatorName: 'EqualityOperator',
+              status: 'Ignored',
+              statusReason: 'Ignored using a comment',
+              location,
+            },
+          ],
+        },
+      },
+    });
 
     const check = runCheck(repository, base);
 
@@ -500,7 +489,7 @@ describe('mutation-check.mjs', () => {
   });
 
   // AFA-82: Stryker never reads a node_modules folder, so it doesn't mutate the file.
-  it('fails for a changed file that Stryker never reads, and removes its log', () => {
+  it('fails for a changed file that the report says Stryker never read', () => {
     const repository = createRepository();
     const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
     commitFiles(repository, {
@@ -509,19 +498,17 @@ describe('mutation-check.mjs', () => {
       'src/node_modules/y,z.ts': 'export const y = 1;\n',
       'src/units.ts': 'export const a = 1;\n',
     });
-    addStrykerStub(repository);
 
     const check = runCheck(repository, base);
 
     expect(check.status).toBe(1);
     expect(check.stderr).toContain(
-      '::error file=src/node_modules/x.ts::Move src/node_modules/x.ts. Stryker never reads'
+      '::error file=src/node_modules/x.ts::Move src/node_modules/x.ts or include it'
     );
     expect(check.stderr).toContain(
-      '::error file=src/node_modules/y%2Cz.ts::Move src/node_modules/y,z.ts. Stryker never reads'
+      '::error file=src/node_modules/y%2Cz.ts::Move src/node_modules/y,z.ts or include it'
     );
     expect(check.stderr).not.toContain('src/units.ts');
-    expect(existsSync(resolve(repository, 'stryker.log'))).toBe(false);
   });
 
   // A file with only types has no mutants, but Stryker still finds it, so the check doesn't flag
@@ -530,7 +517,6 @@ describe('mutation-check.mjs', () => {
     const repository = createRepository();
     const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
     commitFiles(repository, { 'src/types.ts': 'export type Unit = string;\n' });
-    addStrykerStub(repository);
 
     const check = runCheck(repository, base);
 
@@ -592,43 +578,12 @@ describe('mutation-check.mjs', () => {
     expect(check.status).toBe(0);
   });
 
-  // AFA-83: no test imports a file with only types at runtime, so Stryker stops with "No tests
-  // were executed". When the changed files have no mutants, there is nothing to check.
-  it('passes when no test imports the changed files and they have no mutants', () => {
-    const repository = createRepository();
-    const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
-    commitFiles(repository, { 'src/types.ts': 'export type Unit = string;\n' });
-    addStrykerStub(repository, strykerWithNoTests(0));
-
-    const check = runCheck(repository, base);
-
-    expect(check.stderr).toBe('');
-    expect(check.stdout).toContain(
-      'The changed files have no mutants, so there is nothing to check.'
-    );
-    expect(check.status).toBe(0);
-  });
-
-  it('fails when no test imports the changed files and they have mutants', () => {
-    const repository = createRepository();
-    const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
-    commitFiles(repository, { 'src/orphan.ts': 'export const addOne = (a: number) => a + 1;\n' });
-    addStrykerStub(repository, strykerWithNoTests(2));
-
-    const check = runCheck(repository, base);
-
-    expect(check.status).toBe(1);
-    expect(check.stderr).toContain('::error::Stryker exited with status 1.');
-    expect(check.stdout).not.toContain('nothing to check');
-  });
-
   it('fails for a directive without a reason when the changed files have no mutants', () => {
     const repository = createRepository();
     const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
     commitFiles(repository, {
       'src/types.ts': '// Stryker disable next-line all\nexport type Unit = string;\n',
     });
-    addStrykerStub(repository, strykerWithNoTests(0));
 
     const check = runCheck(repository, base);
 
@@ -640,74 +595,6 @@ describe('mutation-check.mjs', () => {
     expect(check.stderr).not.toContain('Stryker exited with status');
   });
 
-  // Only "No tests were executed" means that no test imports the files. Another error still fails.
-  it('fails when Stryker stops for another reason, even with no mutants', () => {
-    const repository = createRepository();
-    const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
-    commitFiles(repository, { 'src/types.ts': 'export type Unit = string;\n' });
-    addStrykerStub(
-      repository,
-      strykerWithNoTests(0, 'There were failed tests in the initial test run.')
-    );
-
-    const check = runCheck(repository, base);
-
-    expect(check.status).toBe(1);
-    expect(check.stderr).toContain('::error::Stryker exited with status 1.');
-  });
-
-  it('ignores the warnings in an older stryker.log, and keeps that file', () => {
-    const repository = createRepository();
-    const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
-    commitFiles(repository, { 'src/units.ts': 'export const a = 1;\n' });
-    addStrykerStub(repository);
-    const old = 'WARN ProjectReader Glob pattern "src/units.ts" did not result in any files.\n';
-    writeFileSync(resolve(repository, 'stryker.log'), old);
-
-    const check = runCheck(repository, base);
-
-    expect(check.stdout).toContain('Tests kill every mutant on the changed lines.');
-    expect(check.status).toBe(0);
-    expect(readFileSync(resolve(repository, 'stryker.log'), 'utf8')).toBe(old);
-  });
-
-  // AFA-82 review: Stryker's warnings through a link to /dev/null are lost.
-  it('fails when stryker.log is not a regular file', () => {
-    const repository = createRepository();
-    const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
-    commitFiles(repository, { 'src/node_modules/x.ts': 'export const x = 1;\n' });
-    addStrykerStub(repository);
-    symlinkSync('/dev/null', resolve(repository, 'stryker.log'));
-
-    const check = runCheck(repository, base);
-
-    expect(check.status).toBe(1);
-    expect(check.stderr).toContain('::error::Remove stryker.log, or make it a regular file.');
-  });
-
-  // AFA-117: Stryker reads some glob characters in the repository's path as part of each pattern,
-  // so it finds no file. The check says so, and doesn't ask to move each changed file. A glob
-  // character that leaves the pattern matching, as "*" does, changes nothing. Stryker writes a "\"
-  // as "/" in both paths, so a "\" in the folder's name changes nothing either.
-  it.each([
-    ['a[1]', 1],
-    ['{a,b}', 1],
-    ['a*b', 0],
-    ['a\\b', 0],
-  ])('checks a repository in the folder %s', (folder, status) => {
-    const repository = createRepository(folder);
-    const base = commitFiles(repository, { 'stryker.config.json': '{}\n' });
-    commitFiles(repository, { 'src/units.ts': 'export const a = 1 > 0;\n' });
-    addStrykerStub(repository);
-
-    const check = runCheck(repository, base);
-
-    expect(check.status).toBe(status);
-    expect(check.stderr.includes('::error::Move the repository to another folder.')).toBe(
-      status === 1
-    );
-  });
-
   // AFA-117: on code nested too deeply to parse, the check flags each changed line with "Stryker
   // disable", and it says why, not that the comment has no reason.
   it('says why it flags a directive in a file that it cannot parse', () => {
@@ -716,7 +603,6 @@ describe('mutation-check.mjs', () => {
     commitFiles(repository, {
       'src/units.ts': `export const x = ${'('.repeat(5000)}1${')'.repeat(5000)};\n// Stryker disable next-line all: a reason\nexport const y = 1;\n`,
     });
-    addStrykerStub(repository);
 
     const check = runCheck(repository, base);
 
@@ -727,30 +613,148 @@ describe('mutation-check.mjs', () => {
     expect(check.stderr).not.toContain('has no reason. Add');
   });
 
-  // The check depends on three things in the installed Stryker: the warning's text, the log's name
-  // and that Stryker adds to the log. If an update changes one, this test fails.
-  it('matches the warning, the log file, its write mode and its option in the installed Stryker', () => {
-    const core = resolve('node_modules/@stryker-mutator/core/dist/src');
-    expect(readFileSync(resolve(core, 'fs/project-reader.js'), 'utf8')).toContain(
-      'this.log.warn(`Glob pattern "${pattern}" did not result in any files.`);'
-    );
-    const backend = readFileSync(resolve(core, 'logging/logging-backend.js'), 'utf8');
-    expect(backend).toContain("const LOG_FILE_NAME = 'stryker.log';");
-    expect(backend).toContain("fs.createWriteStream(LOG_FILE_NAME, { flags: 'a' })");
-    // The file log is off unless the config's fileLogLevel turns it on.
-    expect(backend).toContain('activeFileLevel = "off"');
-    expect(backend).toContain('this.activeFileLevel = fileLogLevel;');
+  // Recorded from the installed Stryker 10.0.0 running six source files, two tests and ten
+  // mutants. The score is 37.5%, so the run fails the unchanged break threshold of 98, yet writes
+  // this complete report. See fixtures/mutation/README.md for reproduction and expectations.
+  const recorded = JSON.parse(
+    readFileSync(new URL('./fixtures/mutation/full.json', import.meta.url), 'utf8')
+  ) as {
+    files: Record<string, { source: string; mutants: Array<{ status: string }> }>;
+    filesRead: Record<string, boolean>;
+    testFiles: object;
+  };
+
+  it.each([
+    ['src/survived.ts', 1, 'it survived'],
+    ['src/covered.ts', 0, 'Tests kill every mutant'],
+    ['src/orphan.ts', 1, 'no test covers it'],
+    ['src/explained.ts', 0, 'Tests kill every mutant'],
+    ['src/ignored.ts', 1, 'without a reason'],
+  ])('filters the recorded report for %s', (file, status, message) => {
+    const repository = createRepository();
+    const base = commitFiles(repository, { 'README.md': 'fixture\n' });
+    commitFiles(repository, { [file]: recorded.files[file].source });
+    writeReport(repository, recorded);
+
+    const check = runCheck(repository, base);
+
+    expect(check.status).toBe(status);
+    expect(check.stdout + check.stderr).toContain(message);
+    expect(check.stderr).not.toContain('src/node_modules/unread.ts');
+    // A report check needs no installed Stryker or second mutation run.
+    expect(existsSync(resolve(repository, 'node_modules'))).toBe(false);
   });
 
-  // AFA-83: the check reads two lines that Stryker logs: the mutant count, at "info" level, and the
-  // error when no test runs. If an update changes either text, this test fails.
-  it('matches the mutant count and the no-tests error in the installed Stryker', () => {
-    const core = realpathSync('node_modules/@stryker-mutator/core');
-    expect(
-      readFileSync(resolve(core, '../instrumenter/dist/src/instrumenter.js'), 'utf8')
-    ).toContain("this.logger.info('Instrumented %d source file(s) with %d mutant(s)'");
-    expect(readFileSync(resolve(core, 'dist/src/process/3-dry-run-executor.js'), 'utf8')).toContain(
-      "throw new ConfigError('No tests were executed."
-    );
+  it('passes a type-only file omitted from the recorded report but selected by Stryker', () => {
+    const repository = createRepository();
+    const base = commitFiles(repository, { 'README.md': 'fixture\n' });
+    commitFiles(repository, { 'src/types.ts': 'export type Unit = string;\n' });
+    writeReport(repository, recorded);
+
+    const check = runCheck(repository, base);
+
+    expect(recorded.files).not.toHaveProperty('src/types.ts');
+    expect(recorded.filesRead['src/types.ts']).toBe(true);
+    expect(check.status).toBe(0);
+    expect(check.stdout).toContain('Tests kill every mutant');
+  });
+
+  it('fails for a changed file absent from the recorded report and Stryker inventory', () => {
+    const repository = createRepository();
+    const base = commitFiles(repository, { 'README.md': 'fixture\n' });
+    commitFiles(repository, { 'src/node_modules/unread.ts': 'export const unread = true;\n' });
+    writeReport(repository, recorded);
+
+    const check = runCheck(repository, base);
+
+    expect(recorded.files).not.toHaveProperty('src/node_modules/unread.ts');
+    expect(recorded.filesRead).not.toHaveProperty('src/node_modules/unread.ts');
+    expect(check.status).toBe(1);
+    expect(check.stderr).toContain('::error file=src/node_modules/unread.ts::Move');
+  });
+
+  // A broken mutation glob can select no files while still reading them. Only explicitly
+  // excluded source tests pass; ordinary source files still require mutation selection.
+  it.each(['a[1]', '{a,b}'])('fails for an unselected source file in the folder %s', folder => {
+    const repository = createRepository(folder);
+    const base = commitFiles(repository, { 'README.md': 'fixture\n' });
+    commitFiles(repository, { 'src/units.ts': 'export const a = 1 > 0;\n' });
+    writeReport(repository, { files: {}, filesRead: { 'src/units.ts': false } });
+
+    const check = runCheck(repository, base);
+
+    expect(check.status).toBe(1);
+    expect(check.stderr).toContain('never read it for mutation');
+  });
+
+  it('reads a report from the requested path', () => {
+    const repository = createRepository();
+    const base = commitFiles(repository, { 'README.md': 'fixture\n' });
+    commitFiles(repository, { 'src/covered.ts': recorded.files['src/covered.ts'].source });
+    writeFileSync(resolve(repository, 'a report.json'), JSON.stringify(recorded));
+
+    const check = runCheck(repository, base, {}, ['--report', 'a report.json']);
+
+    expect(check.status).toBe(0);
+    expect(check.stdout).toContain('Tests kill every mutant');
+  });
+
+  it.each([
+    ['a missing report.json', undefined],
+    ['a broken report.json', '{'],
+    ['an incomplete report.json', '{"files": {}}'],
+  ])('fails closed for %s', (report, contents) => {
+    const repository = createRepository();
+    const base = commitFiles(repository, { 'README.md': 'fixture\n' });
+    commitFiles(repository, { 'src/covered.ts': recorded.files['src/covered.ts'].source });
+    writeOptionalFile(repository, report, contents);
+
+    const check = runCheck(repository, base, {}, ['--report', report]);
+
+    expect(check.status).toBe(1);
+    expect(check.stderr).toContain('::error::Cannot read the mutation report');
+    expect(check.stdout).not.toContain('Tests kill every mutant');
+  });
+
+  it('removes changed source files from the cache before the single mutation run', () => {
+    const repository = createRepository();
+    const base = commitFiles(repository, {
+      'src/covered.ts': recorded.files['src/covered.ts'].source,
+      'src/survived.ts': recorded.files['src/survived.ts'].source,
+      'src/types.ts': 'export type Unit = string;\n',
+    });
+    // Neither mutant's code span changes; git still marks line 1 as changed.
+    commitFiles(repository, {
+      'src/covered.ts': recorded.files['src/covered.ts'].source.trimEnd() + ' // changed\n',
+      'src/types.ts': 'export type Unit = number;\n',
+    });
+    writeFileSync(resolve(repository, 'incremental.json'), JSON.stringify(recorded));
+
+    const check = runCheck(repository, base, {}, ['--prepare', 'incremental.json']);
+    const cached = JSON.parse(
+      readFileSync(resolve(repository, 'incremental.json'), 'utf8')
+    ) as typeof recorded;
+
+    expect(check.status).toBe(0);
+    expect(cached.files).not.toHaveProperty('src/covered.ts');
+    expect(cached.files['src/survived.ts']).toEqual(recorded.files['src/survived.ts']);
+    expect(cached.testFiles).toEqual(recorded.testFiles);
+    expect(check.stdout).toContain('Removed cached mutant results for "src/covered.ts".');
+    expect(check.stdout).toContain('fresh mutation results');
+  });
+
+  it('allows a cold mutation run with no cached report', () => {
+    const repository = createRepository();
+    const base = commitFiles(repository, { 'README.md': 'fixture\n' });
+    commitFiles(repository, { 'src/covered.ts': recorded.files['src/covered.ts'].source });
+
+    const check = runCheck(repository, base, {}, ['--prepare', 'incremental.json']);
+
+    expect(check.status).toBe(0);
+    expect(existsSync(resolve(repository, 'incremental.json'))).toBe(false);
   });
 });
+
+function writeOptionalFile(repository: string, file: string, contents: string | undefined): void {
+  if (contents !== undefined) writeFileSync(resolve(repository, file), contents);
+}

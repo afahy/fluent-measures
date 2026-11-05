@@ -134,6 +134,9 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The merge commit and its parents; HEAD^1 is the pull request base.
+          fetch-depth: 2
 
       - uses: ./.github/actions/setup
         with:
@@ -184,6 +187,12 @@ jobs:
         if: steps.main.outputs.cache-matched-key && !endsWith(steps.main.outputs.cache-matched-key, '-stopped')
         run: rm -f reports/stryker-incremental.json
 
+      # Stryker compares mutant spans, not git lines. Retest each changed source file even when
+      # only another expression or formatting on the same line changed, or a prior PR run cached it.
+      - name: Refresh mutation results for changed source files
+        if: github.event_name == 'pull_request'
+        run: node .github/scripts/mutation-check.mjs --prepare reports/stryker-incremental.json
+
       # Stryker writes its results at the end of a run, before it checks the score, so a run below
       # the threshold saves them too. On SIGINT, it writes the results so far. The job's own time
       # limit doesn't reach Stryker through the step's shell. So `timeout` sends SIGINT to the whole
@@ -195,6 +204,7 @@ jobs:
         run: |
           set -euo pipefail
           command -v timeout pgrep seq > /dev/null
+          rm -f reports/mutation/mutation.json
           status=0
           timeout --signal=INT 27m pnpm test:mutation --incremental || status=$?
           if [ "$status" -eq 124 ]; then
@@ -202,6 +212,12 @@ jobs:
             for _ in $(seq 120); do pgrep -f stryker > /dev/null || break; sleep 1; done
           fi
           exit "$status"
+
+      # Run even below the break threshold, so changed-line annotations still appear. A failed
+      # mutation step keeps the job failed; this step never replaces the full score check.
+      - name: Mutants on changed lines are killed
+        if: ${{ !cancelled() && github.event_name == 'pull_request' && (steps.mutation.outcome == 'success' || steps.mutation.outcome == 'failure') }}
+        run: node .github/scripts/mutation-check.mjs --report reports/mutation/mutation.json
 
       # Each run and attempt saves under its own key, because a key can't be saved twice. A run that
       # went on from a stopped run's results doesn't save here. So a pull request starts only from
@@ -218,40 +234,9 @@ jobs:
           path: reports/stryker-incremental.json
           key: stryker-main-${{ steps.inputs.outputs.tools }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ steps.mutation.outputs.stopped && 'stopped' || 'ended' }}
 
-  # Every mutant on a line that the pull request adds or changes under src/ must be killed. When
-  # there is no pull request or it doesn't change src/, the steps are skipped and the job passes.
-  mutation-changed-lines:
-    name: Mutants on changed lines are killed
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          # The pull request's merge commit and its parents. HEAD^1 is the base branch.
-          fetch-depth: 2
-
-      - name: Check whether the PR changes src/
-        id: changes
-        if: github.event_name == 'pull_request'
-        run: |
-          if git diff --quiet HEAD^1 HEAD -- src/; then
-            echo "This PR doesn't change src/, so there are no changed lines to check."
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - uses: ./.github/actions/setup
-        if: steps.changes.outputs.changed
-        with:
-          node-version: 22
-
-      - name: Mutation tests on the changed lines
-        if: steps.changes.outputs.changed
-        run: node .github/scripts/mutation-check.mjs
-
   ci-ok:
     if: always()
-    needs: [test, package, mutation, mutation-changed-lines]
+    needs: [test, package, mutation]
     runs-on: ubuntu-latest
     steps:
       - name: Check all CI jobs passed

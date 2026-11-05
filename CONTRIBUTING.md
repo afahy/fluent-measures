@@ -258,15 +258,37 @@ read doesn't reset them. So they aren't exact, and a run that goes on from them 
 results for pull requests. When runs on `main` overlap, the newest results can come from an older
 commit than the last run that ended.
 
-A second job, "Mutants on changed lines are killed", runs Stryker on the files that a pull
-request changes under `src/`. It fails when a mutant whose code overlaps a line that the pull
-request adds or changes survives, or no test covers it. So the tests must catch every change to
-the code that a pull request adds. To run it on your committed changes, use
-`node .github/scripts/mutation-check.mjs --base origin/main`.
+The same mutation job checks the JSON report for mutants whose code overlaps a line that the
+pull request adds or changes under `src/`. The step "Mutants on changed lines are killed" fails
+when one survives or no test covers it. It runs even when the full score is below the threshold,
+so its annotations still appear. `ci-ok` waits for both checks through the mutation job.
 
-The job also fails for a changed source file that it can't check. It can't check a file in a
-folder that Stryker never reads, such as `node_modules`. It also can't check a file whose path has
-a backslash or a control character, or whose name isn't valid UTF-8. Rename or move such a file.
+Before Stryker runs, CI removes changed source files from its restored incremental report.
+Stryker normally compares individual mutant code spans, so an edit elsewhere on the same git
+line could reuse a result. Removing the whole changed file gives every mutant on its changed
+lines a fresh result, including on later pushes to the pull request. Unchanged files can still
+reuse results as described above.
+
+For a local check of committed changes, first run `pnpm test:mutation`, then run:
+
+```bash
+node .github/scripts/mutation-check.mjs --base origin/main --report reports/mutation/mutation.json
+```
+
+Use a report from the same source and tests as the commits being checked. To reuse an incremental
+report locally, prepare it before running Stryker:
+
+```bash
+node .github/scripts/mutation-check.mjs --base origin/main --prepare reports/stryker-incremental.json
+pnpm test:mutation --incremental
+```
+
+The project's `mutation-json` reporter writes Stryker's results with its actual file inventory.
+Stryker 10 omits files with no mutants from its normal report. The inventory lets a type-only
+file pass while a changed source file that Stryker never read, such as one under `node_modules`,
+fails. Explicitly excluded source tests stay out of the check. The check also fails for a source
+path with a backslash or control character, a name that isn't valid UTF-8, a symbolic link, or a
+code extension outside the project's `.ts` mutation scope. Rename or move such a file.
 
 If a mutant can't change behavior, put `// Stryker disable next-line <mutator>: <reason>` on
 the line above it. The reason must say why behavior can't change, and the job fails on a disable

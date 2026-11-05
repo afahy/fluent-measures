@@ -6,17 +6,12 @@ export function gitEnvironment(
 
 export function decodeNames(output: Uint8Array): { names: string[]; invalid: string[] };
 
-export function unmatchedFiles(log: string, files: string[]): string[];
-
 export function isSourceFile(file: string): boolean;
 export function isUnmutatedCode(file: string): boolean;
-export function mutatedFiles(files: string[], patterns: string[], root?: string): string[];
 
 export function controlPaths(files: string[]): string[];
 
 export function backslashPaths(files: string[]): string[];
-
-export function literalGlob(file: string): string;
 
 export function hunkRanges(diff: string): Array<[number, number]>;
 

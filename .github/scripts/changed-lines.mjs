@@ -2,7 +2,6 @@
 // and the mutants on them in a Stryker JSON report that no test kills.
 
 import { createRequire } from 'node:module';
-import { matchesGlob, relative, resolve } from 'node:path';
 
 /**
  * Returns the revisions to compare: the base and HEAD in CI, where HEAD is a merge commit whose
@@ -72,24 +71,6 @@ export function decodeNames(output) {
 }
 
 /**
- * Returns the files whose `mutate` pattern, from `literalGlob`, matched no file in Stryker's run,
- * from the warnings in its log. Stryker never reads some folders, such as `node_modules`, so it
- * can't mutate a file in them. A file without mutants, such as one with only types, still matches.
- *
- * @param {string} log
- * @param {string[]} files
- * @returns {string[]}
- */
-export function unmatchedFiles(log, files) {
-  const patterns = new Set(
-    [...log.matchAll(/Glob pattern "(.*)" did not result in any files\./g)].map(
-      ([, pattern]) => pattern
-    )
-  );
-  return files.filter(file => patterns.has(literalGlob(file)));
-}
-
-/**
  * Returns whether Stryker mutates `file`: a TypeScript source file, not a declaration file.
  *
  * @param {string} file
@@ -101,7 +82,7 @@ export function isSourceFile(file) {
 
 /**
  * Returns whether `file` is code that `isSourceFile` leaves out, such as `.mts`, `.cts`, `.js` or
- * `.tsx`, so the check never gives it to Stryker. `tsc`, Vitest and tsup still use such a file. A
+ * `.tsx`, outside the project's mutation scope. `tsc`, Vitest and tsup still use such a file. A
  * declaration file has no code.
  *
  * @param {string} file
@@ -110,34 +91,6 @@ export function isSourceFile(file) {
 export function isUnmutatedCode(file) {
   return (
     /\.(?:[cm]?[jt]s|[jt]sx)$/.test(file) && !isSourceFile(file) && !/\.d\.[cm]?ts$/.test(file)
-  );
-}
-
-/**
- * Returns the files that the `mutate` patterns in the Stryker config cover. As in Stryker, the
- * patterns apply in order: a pattern that starts with "!" leaves files out, and a later pattern
- * can put them back. Stryker's `FileMatcher` resolves each pattern and each file from the project
- * folder, so this does too: `./src/a.ts`, `../repo/src/a.ts` and an absolute path all name
- * `src/a.ts`. A line range after a pattern, as in `src/a.ts:1-10`, doesn't change which files
- * match. The project's pattern leaves out test files under `src/`: Vitest finds tests only under
- * `tests/`, so their mutants would get no coverage. Stryker can read a glob character in the
- * folder's own path as part of each pattern, and then match no file. This function doesn't, so
- * mutation-check.mjs checks the changed files as Stryker does before it runs Stryker.
- *
- * @param {string[]} files
- * @param {string[]} patterns
- * @param {string} [root] the project folder
- * @returns {string[]}
- */
-export function mutatedFiles(files, patterns, root = process.cwd()) {
-  return files.filter(file =>
-    patterns.reduce((mutated, pattern) => {
-      const negated = pattern.startsWith('!');
-      const glob = pattern.replace(/^!/, '').replace(/:\d+(?::\d+)?-\d+(?::\d+)?$/, '');
-      // Resolve the pattern, then take it back to the project folder. So the folder's own path
-      // never becomes part of a glob, as "[1]" in "/tmp/a[1]/repo" would.
-      return matchesGlob(file, relative(root, resolve(root, glob))) ? !negated : mutated;
-    }, false)
   );
 }
 
@@ -158,19 +111,6 @@ export function controlPaths(files) {
  */
 export function backslashPaths(files) {
   return files.filter(file => file.includes('\\'));
-}
-
-/**
- * Returns `file` as a glob pattern that matches only that file. Stryker reads `mutate` entries
- * as globs, so a name such as `src/[u]nits.ts` would otherwise match `src/units.ts`. Each glob
- * character goes in a bracket of its own, such as `[[]` for `[`. Stryker turns backslashes into
- * slashes, so a backslash escape doesn't work.
- *
- * @param {string} file
- * @returns {string}
- */
-export function literalGlob(file) {
-  return file.replace(/[*?[\]{}()]/g, character => (character === ']' ? '[]]' : `[${character}]`));
 }
 
 /**
