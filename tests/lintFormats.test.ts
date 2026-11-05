@@ -6,9 +6,12 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, matchesGlob, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import vitestConfig from '../vitest.config';
 import { git, withoutGitRepository } from './gitEnvironment';
+
+// Keep real subprocess behavior while recording the execution budget passed to Node.
+vi.mock('node:child_process', { spy: true });
 
 type ConfigObject = { files?: string[]; plugins?: Record<string, unknown> };
 
@@ -52,6 +55,7 @@ it('lints all of src/ and tests/ in the lint scripts', () => {
 // before CI. lint-staged itself reads the patterns, in a scratch repository with a file of each
 // format staged (AFA-127). The ESLint task records the files that it gets, and runs nothing else.
 it('runs ESLint on every test format in the pre-commit hook', { timeout: 30_000 }, () => {
+  const execute = vi.mocked(execFileSync);
   const tasks = readJson('.lintstagedrc') as Record<string, string[]>;
   // lint-staged gives each path under git's top folder, with symbolic links resolved, as on
   // macOS, where /var links to /private/var.
@@ -88,8 +92,12 @@ it('runs ESLint on every test format in the pre-commit hook', { timeout: 30_000 
     execFileSync(
       process.execPath,
       [join(lintStaged, 'bin/lint-staged.js'), '--config', config, '--no-stash', '--quiet'],
-      { cwd: repository, env: withoutGitRepository(), stdio: 'pipe' }
+      { cwd: repository, env: withoutGitRepository(), stdio: 'pipe', timeout: 20_000 }
     );
+    // A synchronous subprocess must stop before Vitest's 30-second test budget expires.
+    const options = execute.mock.lastCall?.[2];
+    expect(options?.timeout).toBeGreaterThan(0);
+    expect(options?.timeout).toBeLessThanOrEqual(20_000);
     const linted = new Set(
       readFileSync(log, 'utf8')
         .split('\n')
@@ -98,6 +106,7 @@ it('runs ESLint on every test format in the pre-commit hook', { timeout: 30_000 
     );
     expect(files.filter(file => !linted.has(file))).toEqual([]);
   } finally {
+    execute.mockClear();
     rmSync(scratch, { recursive: true, force: true });
   }
 });
@@ -126,6 +135,12 @@ describe('the lint config for each test format', () => {
     const code = `${imports(format, 'it')}\nit('does nothing', () => {\n  void env;\n});\n`;
     const [result] = await eslint.lintText(code, { filePath: `tests/a/x.test.${format}` });
     expect(result.messages.map(message => message.ruleId)).toEqual(['vitest/expect-expect']);
+  });
+
+  it.each(jsFormats)('rejects an undefined name in a .%s test', async format => {
+    const code = `${imports(format, 'expect, it')}\nit('reads X', () => {\n  expect(forgottenName).toBe(env.X);\n});\n`;
+    const [result] = await eslint.lintText(code, { filePath: `tests/a/x.test.${format}` });
+    expect(result.messages.map(message => message.ruleId)).toEqual(['no-undef']);
   });
 
   // `console` is a global, so `no-undef` mustn't reject it. Then `no-console` allows warn and
@@ -167,6 +182,83 @@ describe('the lint config for each test format', () => {
     const [result] = await eslint.lintText(code, { filePath: 'src/x.ts' });
     expect(result.messages.map(message => message.ruleId)).toEqual(['no-undef']);
   });
+
+  it.each(['Buffer', 'global', 'require', 'module', 'exports', '__filename', '__dirname'])(
+    'rejects the Node global %s in src/',
+    async name => {
+      const [result] = await eslint.lintText(`export const node = (): unknown => ${name};\n`, {
+        filePath: 'src/x.ts',
+      });
+      expect(result.messages.map(message => message.ruleId)).toEqual(['no-undef']);
+    }
+  );
+
+  it('uses the configured source libraries without building a TypeScript program', async () => {
+    const { compilerOptions } = readJson('tsconfig.json') as {
+      compilerOptions: { lib: string[] };
+    };
+    const config = await eslint.calculateConfigForFile('src/x.ts');
+    expect(config.languageOptions.parserOptions.lib).toEqual(compilerOptions.lib);
+    expect(config.languageOptions.parserOptions.project).toBeUndefined();
+    expect(config.languageOptions.parserOptions.projectService).toBeUndefined();
+  });
+
+  // The ticket's URL and AbortSignal examples are accepted by tsc's DOM library. The iterator
+  // type is declared by DOM.Iterable, so it also needs the explicit parser libraries.
+  it.each([
+    "export const u = (): URL => new URL('http://a');",
+    'export const f = (s: AbortSignal): boolean => s.aborted;',
+    'export const entries = (data: FormData): FormDataIterator<[string, FormDataEntryValue]> => data.entries();',
+  ])('accepts a DOM source declaration: %s', async code => {
+    const [result] = await eslint.lintText(code, { filePath: 'src/x.ts' });
+    expect(result.messages).toEqual([]);
+  });
+
+  it.each(['src/x.ts', ...tsFormats.map(format => `tests/a/x.test.${format}`)])(
+    'leaves compiler checks to TypeScript but keeps unreachable code errors in %s',
+    async filePath => {
+      const config = (await eslint.calculateConfigForFile(filePath)) as {
+        rules: Record<string, [number, ...unknown[]]>;
+      };
+      const severities = Object.fromEntries(
+        Object.entries(config.rules).map(([rule, [severity]]) => [rule, severity])
+      );
+      expect(severities).toMatchObject({
+        'constructor-super': 0,
+        'getter-return': 0,
+        'no-class-assign': 0,
+        'no-const-assign': 0,
+        'no-dupe-args': 0,
+        'no-dupe-class-members': 0,
+        'no-dupe-keys': 0,
+        'no-func-assign': 0,
+        'no-import-assign': 0,
+        'no-new-native-nonconstructor': 0,
+        'no-new-symbol': 0,
+        'no-obj-calls': 0,
+        'no-redeclare': 0,
+        'no-setter-return': 0,
+        'no-this-before-super': 0,
+        'no-unreachable': 2,
+        'no-unsafe-negation': 0,
+        'no-with': 0,
+      });
+      const [result] = await eslint.lintText(
+        'export function f(): number { return 1; return 2; }',
+        { filePath }
+      );
+      expect(result.messages.map(message => message.ruleId)).toEqual(['no-unreachable']);
+    }
+  );
+
+  it.each(['src/x.ts', ...tsFormats.map(format => `tests/a/x.test.${format}`)])(
+    'reads class overloads in %s',
+    async filePath => {
+      const code = `export class Value {\n  read(a: string): string;\n  read(a: number): number;\n  read(a: string | number): string | number {\n    return a;\n  }\n}\n`;
+      const [result] = await eslint.lintText(code, { filePath });
+      expect(result.messages).toEqual([]);
+    }
+  );
 
   // TypeScript allows overloads. A repeated var is still an error, because tsc accepts it.
   it('finds a repeated var in src/', async () => {

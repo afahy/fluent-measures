@@ -2,7 +2,7 @@ import { matchUnit } from './matchUnit';
 import { LABEL_ALIASES, UNIT_ALIASES } from './units';
 import { MULTIPLIERS, NUMBER_WORDS, wordsToNumber } from './wordsToNumber';
 
-/** A word, number, mark or semicolon of the input. */
+/** A word, number, mark, semicolon or number-phrase boundary of the input. */
 export interface Token {
   text: string;
   /**
@@ -18,6 +18,8 @@ export interface Token {
    * to the field before it.
    */
   startsField?: boolean;
+  /** Whether this boundary replaces a numeric range. The parser requests these tokens. */
+  range?: boolean;
   /** Whether a measurement has used the token. The parser sets it. */
   used?: boolean;
 }
@@ -28,6 +30,7 @@ export interface Token {
 const NAME_WORD = 'NAME';
 const UNIT_WORD = 'UNIT';
 const FIELD_WORD = 'FIELD';
+const RANGE_WORD = 'RANGE';
 
 // A unit alias in brackets or before a colon or equals sign, as in "(kg)", "m:", "in = 72" and
 // "("):", is a label. So is "in." followed by a space, the usual abbreviation for inches. The alias must
@@ -104,6 +107,10 @@ const CURLY_DOUBLE = new RegExp(
 
 // The number words, as alternatives in a pattern.
 const NUMBER_WORD = [...NUMBER_WORDS.keys(), ...MULTIPLIERS.keys()].join('|');
+
+// A comma and space after a number word separate it from digits, as in "phase twenty, 5 cm".
+// Numeric commas and commas between number words keep their existing rules (AFA-179, AFA-75).
+const WORD_COMMA = new RegExp(String.raw`(\b(?:${NUMBER_WORD}))\s*,(?=\s+\.?\d)`, 'g');
 
 // A minus sign before a number, when no number comes earlier: no digit, Unicode fraction or number
 // word. The number can be a word too, as in "−five'", also after "a" or "an", as in "−a hundred"
@@ -189,15 +196,22 @@ export function normalize(input: string): string {
 }
 
 /**
- * Normalize text and split it into tokens. The parser does the same, but it also replaces each
- * range with a boundary first, so the tokens of `tokenize('5-11')` are "5" and "11".
+ * Normalize text and split it into tokens. The parser requests boundaries for numeric ranges,
+ * while the tokens of `tokenize('5-11')` are "5" and "11".
  */
 export function tokenize(input: string, fuzziness?: number): Token[] {
   return tokenizeNormalized(normalize(input), fuzziness);
 }
 
-/** Split normalized text while retaining negative signs and compound boundaries. */
-export function tokenizeNormalized(input: string, fuzziness?: number): Token[] {
+/**
+ * Split normalized text while retaining negative signs and compound boundaries. The parser can
+ * request numeric range boundaries without losing the text's quote or label context.
+ */
+export function tokenizeNormalized(
+  input: string,
+  fuzziness?: number,
+  rangeBoundaries = false
+): Token[] {
   const words = (
     input
       // Two apostrophes right after a number are an inch mark, as in "72''" (AFA-106).
@@ -210,6 +224,11 @@ export function tokenizeNormalized(input: string, fuzziness?: number): Token[] {
       // grams, which are written "g". Rename it before case is lost.
       .replace(/(?<=\d)G(?![A-Za-z])/g, 'gen')
       .toLowerCase()
+      // Replace ranges after lowercasing so no input can supply the internal marker. Keep the
+      // whole text together: the quote rules below need opening quotes from before a range.
+      .replace(/(?<![\d.])[\d.]+(?:\s*\p{Dash}\s*[\d.]+)+/gu, range =>
+        rangeBoundaries ? ` ${RANGE_WORD} ` : range
+      )
       // Mark labels before the punctuation that marks them is removed, so the parser knows what
       // kind of label each one is, and spell out the short aliases. A bracket label keeps its
       // opening bracket, and a label after a field separator gets a field word first.
@@ -224,6 +243,9 @@ export function tokenizeNormalized(input: string, fuzziness?: number): Token[] {
       // "#" right after a number means pounds, as in "185#". Before a number, or before a letter,
       // a digit or another "#", as in "#5", "185#kg" and "12#3", it isn't a unit.
       .replace(/(?<=\d)#(?![\p{L}\p{N}_#])/gu, ' lb ')
+      // Keep this boundary as a non-number token in both reading directions. The uppercase word
+      // can't come from input, which is lowercase, and can't match a unit even with fuzziness.
+      .replace(WORD_COMMA, '$1 COMMA ')
       // Split punctuation, hyphens that join two values after a feet or inch mark, as in `5'-11`,
       // `5"-5 in`, `5'-eleven` and `five'-10"`, and underscores before minus signs.
       .replace(PUNCTUATION, ' ')
@@ -262,7 +284,9 @@ export function tokenizeNormalized(input: string, fuzziness?: number): Token[] {
     else if (text === NAME_WORD) label = 'name';
     else if (text === UNIT_WORD) label = 'unit';
     else {
-      tokens.push(label ? { text, label, startsField } : { text });
+      if (text === RANGE_WORD) {
+        tokens.push({ text: '-', range: true });
+      } else tokens.push(label ? { text, label, startsField } : { text });
       startsField = false;
       label = undefined;
     }

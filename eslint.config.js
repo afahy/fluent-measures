@@ -2,7 +2,20 @@ import eslint from '@eslint/js';
 import tseslint from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
 import vitest from '@vitest/eslint-plugin';
+import { readFileSync } from 'node:fs';
+import { URL } from 'node:url';
 import vitestChains from './eslint-rules/vitest-chains.js';
+
+const { compilerOptions } = JSON.parse(
+  readFileSync(new URL('./tsconfig.json', import.meta.url), 'utf8')
+);
+// Disable the core checks that TypeScript handles. Keep the current style rules: the preset's
+// no-var and prefer-* additions would change existing lint results (AFA-177).
+const compilerChecks = Object.fromEntries(
+  Object.entries(tseslint.configs['flat/eslint-recommended'].rules).filter(
+    ([, rule]) => rule === 'off'
+  )
+);
 
 // The file formats that vitest.config.ts runs as tests (AFA-68), for every file under tests/.
 // TypeScript's parser reads the TypeScript formats. The JavaScript formats get ESLint's own
@@ -24,13 +37,18 @@ export default [
       parserOptions: {
         ecmaVersion: 'latest',
         sourceType: 'module',
+        // Without a program, the parser can't infer DOM names from tsconfig.json (AFA-177).
+        lib: compilerOptions.lib,
       },
     },
     plugins: {
       '@typescript-eslint': tseslint,
     },
     rules: {
+      ...compilerChecks,
       ...tseslint.configs.recommended.rules,
+      // tsc accepts unreachable code by default; lint must still reject it (AFA-177).
+      'no-unreachable': 'error',
       '@typescript-eslint/explicit-function-return-type': 'warn',
       '@typescript-eslint/no-unused-vars': ['error', UNUSED],
       '@typescript-eslint/no-explicit-any': 'error',
@@ -38,7 +56,6 @@ export default [
       // TypeScript allows overloads and declaration merging, such as two interfaces with the same
       // name. typescript-eslint's version of the rule allows them, and still finds a repeated var,
       // which tsc accepts (AFA-127). As on main, it reports a type and a value with the same name.
-      'no-redeclare': 'off',
       '@typescript-eslint/no-redeclare': 'error',
     },
   },
@@ -48,6 +65,10 @@ export default [
   {
     files: [TS_TESTS],
     rules: { 'no-undef': 'off' },
+  },
+  {
+    files: ['src/**/*.ts'],
+    rules: { 'no-undef': 'error' },
   },
   {
     files: [JS_TESTS],

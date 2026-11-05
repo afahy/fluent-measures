@@ -1768,6 +1768,14 @@ const strict = parseMeasurement(
               </p>
               <dl class="props" aria-label="Properties">
                 <div>
+                  <dt><span class="name">maxLength?</span><span class="type">number</span></dt>
+                  <dd>
+                    The largest raw <code>input.length</code> before trimming or parsing; defaults
+                    to 1,000. Must be a number of at least 1, or <code>Infinity</code> for no limit.
+                    Other values throw.
+                  </dd>
+                </div>
+                <div>
                   <dt>
                     <span class="name">type?</span
                     ><span class="type"><a href="#measurement-type">MeasurementType</a></span>
@@ -1797,7 +1805,9 @@ const strict = parseMeasurement(
                 <div>
                   <dt>
                     <span class="name">inferUnit?</span
-                    ><span class="type">'metric' | 'imperial'</span>
+                    ><span class="type"
+                      ><span class="str">'metric'</span> | <span class="str">'imperial'</span></span
+                    >
                   </dt>
                   <dd>
                     The unit system for a number that has no unit. Without it, or with
@@ -2172,6 +2182,16 @@ const strict = parseMeasurement(
                   <li>
                     The text has a range, or measurements that disagree. See
                     <a href="#limits">Limits</a>.
+                  </li>
+                  <li>
+                    The input isn't a string. Non-string input returns <code>null</code> at runtime;
+                    the TypeScript parameter remains <code>string</code>.
+                  </li>
+                  <li>
+                    The raw <code>input.length</code>, before trimming, exceeds
+                    <code>maxLength</code> (default 1,000). Set a larger <code>maxLength</code> or
+                    <code>Infinity</code> for no limit. Length counts UTF-16 code units, as
+                    JavaScript does.
                   </li>
                 </ol>
               </div>

@@ -35,4 +35,8 @@ describe('parseWithin', () => {
     expect(parseWithin('5 ft', 12_000)).toMatchObject({ value: 5, unit: 'ft' });
     expect(warn.mock.calls).toEqual([['parseWithin: 1234 ms of CPU time, limit 12000 ms']]);
   });
+
+  it('passes options to the parser', () => {
+    expect(parseWithin('5 ft', 12_000, { maxLength: 3 })).toBeNull();
+  });
 });

@@ -21,8 +21,7 @@ anchor when a judge's scores look too high.
 | Site                             | Role                                                |
 | -------------------------------- | --------------------------------------------------- |
 | https://gka.github.io/chroma.js/ | Close in structure: a single-page library reference |
-| https://number-flow.barvian.me/  | High polish                                         |
-| https://cmdk.paco.me/            | High polish, a second choice                        |
+| https://sonner.emilkowal.ski/    | High polish                                         |
 | https://underscorejs.org/        | Low anchor                                          |
 
 Before you use a site, load it and check that it is live and that it is a single page. If it
@@ -57,9 +56,32 @@ other, but not with the judges of the page.
 - If the judges' Overall scores for the same site differ by more than 1, say so in the round's
   report.
 
+On 2026-11-05, the NumberFlow reference had low-contrast navigation and code comments,
+and no phone section navigation. Both judges scored it 8. The alternate reference URL redirected
+to GitHub, so Sonner replaced it as the high-polish reference. These are reference defects,
+not a reason to lower the contrast requirement. Rubric v3 clarifies scope and separates
+observable problems from style preferences.
+
 ## Results
 
 Add one row for each judge and each site. Commit the rows in the PR of the run.
 
-| Date | Rubric | Judge model | Site | Overall | Notes |
-| ---- | ------ | ----------- | ---- | ------- | ----- |
+| Date       | Rubric | Judge model     | Site       | Overall | Notes                                                                                    |
+| ---------- | ------ | --------------- | ---------- | ------- | ---------------------------------------------------------------------------------------- |
+| 2026-11-05 | v2     | GPT-6 Astra     | chroma.js  | 7       | Mobile overflow, editor behavior and secondary text contrast.                            |
+| 2026-11-05 | v2     | Claude Opus 5.5 | chroma.js  | 7       | Mobile overflow and secondary text contrast.                                             |
+| 2026-11-05 | v2     | GPT-6 Astra     | NumberFlow | 8       | Low-contrast comments and navigation; no phone section navigation.                       |
+| 2026-11-05 | v2     | Claude Opus 5.5 | NumberFlow | 8       | Phone navigation, heading hierarchy and secondary text contrast.                         |
+| 2026-11-05 | v3     | GPT-6 Astra     | chroma.js  | 8       | Repeated mobile grouping and contrast failures.                                          |
+| 2026-11-05 | v3     | Claude Opus 5.5 | chroma.js  | 7       | Repeated mobile overflow, contrast and heading hierarchy.                                |
+| 2026-11-05 | v3     | GPT-6 Astra     | Sonner     | 8       | Code contrast, keyboard focus and a missing accessible name.                             |
+| 2026-11-05 | v3     | Claude Opus 5.5 | Sonner     | 8       | Selected states, code contrast and heading hierarchy.                                    |
+| 2026-11-05 | v4     | GPT-6 Astra     | chroma.js  | 8       | Mobile layout and labeling still lower visual scores; gate failures listed separately.   |
+| 2026-11-05 | v4     | Claude Opus 5.5 | chroma.js  | 7       | Mobile layout and navigation still lower visual scores; gate failures listed separately. |
+| 2026-11-05 | v4     | GPT-6 Astra     | Sonner     | 9       | Visual target reached; local explanation and mandatory gate findings remain.             |
+| 2026-11-05 | v4     | Claude Opus 5.5 | Sonner     | 9       | Visual target reached; local hierarchy and mandatory gate findings remain.               |
+
+Rubric v4 keeps a separate list of mandatory gate failures and scores the visual design
+system. The v3 Sonner reviews found local token and accessibility fixes in an otherwise
+excellent visual system. These defects still block shipping; they no longer automatically
+cap the visual score. Structural design problems still lower the score.

@@ -40,7 +40,9 @@ describe('and a half', () => {
   // "1 and a half and a half" isn't a number, so the input has no measurement. Reading it back
   // must not call itself once for each "and a half", which overflowed the stack.
   it('returns null for many copies of "and a half"', () => {
-    expect(parseMeasurement(`1${' and a half'.repeat(10_000)} m`)).toBeNull();
+    expect(
+      parseMeasurement(`1${' and a half'.repeat(10_000)} m`, { maxLength: Infinity })
+    ).toBeNull();
   });
 
   // AFA-94: a multiplier word after "and a half" multiplies the whole number plus 0.5, so

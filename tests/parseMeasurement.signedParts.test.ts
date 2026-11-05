@@ -197,7 +197,7 @@ describe('signed parts', () => {
   // clock time (AFA-95) and up to 720 ms of CPU time (AFA-171). So the 4 s limit of CPU time
   // leaves more than 5 times that. The test skips itself under Stryker.
   it.skipIf(underStryker)('reads many signed label values quickly', () => {
-    expect(parseWithin('kg: -5 '.repeat(20_000), 4000)).toBeNull();
+    expect(parseWithin('kg: -5 '.repeat(20_000), 4000, { maxLength: Infinity })).toBeNull();
   });
 
   // "5 ft -11" has no inch unit, so -11 isn't a part (existing test).

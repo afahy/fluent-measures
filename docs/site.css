@@ -2476,7 +2476,10 @@ a:hover {
   color: var(--heading);
 }
 
-.decl .kw,
+.decl .kw {
+  color: var(--tok-keyword);
+}
+
 .decl .sep {
   color: var(--text-muted);
 }
@@ -2486,8 +2489,9 @@ a:hover {
   font-weight: 650;
 }
 
-.decl .str {
-  color: var(--accent);
+.decl .str,
+.props .type .str {
+  color: var(--tok-string);
 }
 
 .decl a,
@@ -3195,4 +3199,13 @@ tbody th {
 
 .footer-inner a:hover {
   color: var(--heading);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
 }

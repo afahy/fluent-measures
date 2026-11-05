@@ -1,0 +1,261 @@
+{
+  "schemaVersion": "1.0",
+  "thresholds": {
+    "high": 99,
+    "low": 98,
+    "break": 98
+  },
+  "files": {
+    "src/orphan.ts": {
+      "language": "typescript",
+      "mutants": [
+        {
+          "id": "4",
+          "mutatorName": "BooleanLiteral",
+          "replacement": "false",
+          "status": "NoCoverage",
+          "static": false,
+          "coveredBy": [],
+          "location": {
+            "end": {
+              "column": 27,
+              "line": 1
+            },
+            "start": {
+              "column": 23,
+              "line": 1
+            }
+          }
+        }
+      ],
+      "source": "export const orphan = true;\n"
+    },
+    "src/explained.ts": {
+      "language": "typescript",
+      "mutants": [
+        {
+          "id": "2",
+          "mutatorName": "BooleanLiteral",
+          "replacement": "false",
+          "statusReason": "this is a recorded directive example",
+          "status": "Ignored",
+          "static": false,
+          "location": {
+            "end": {
+              "column": 30,
+              "line": 2
+            },
+            "start": {
+              "column": 26,
+              "line": 2
+            }
+          }
+        }
+      ],
+      "source": "// Stryker disable next-line all: this is a recorded directive example\nexport const explained = true;\n"
+    },
+    "src/ignored.ts": {
+      "language": "typescript",
+      "mutants": [
+        {
+          "id": "3",
+          "mutatorName": "BooleanLiteral",
+          "replacement": "false",
+          "statusReason": "Ignored using a comment",
+          "status": "Ignored",
+          "static": false,
+          "location": {
+            "end": {
+              "column": 28,
+              "line": 2
+            },
+            "start": {
+              "column": 24,
+              "line": 2
+            }
+          }
+        }
+      ],
+      "source": "// Stryker disable next-line all\nexport const ignored = true;\n"
+    },
+    "src/covered.ts": {
+      "language": "typescript",
+      "mutants": [
+        {
+          "id": "1",
+          "mutatorName": "BooleanLiteral",
+          "replacement": "value",
+          "statusReason": "expected true to be false // Object.is equality",
+          "status": "Killed",
+          "static": false,
+          "testsCompleted": 1,
+          "killedBy": ["0"],
+          "coveredBy": ["0"],
+          "location": {
+            "end": {
+              "column": 49,
+              "line": 1
+            },
+            "start": {
+              "column": 43,
+              "line": 1
+            }
+          }
+        },
+        {
+          "id": "0",
+          "mutatorName": "ArrowFunction",
+          "replacement": "() => undefined",
+          "statusReason": "expected undefined to be false // Object.is equality",
+          "status": "Killed",
+          "static": true,
+          "testsCompleted": 1,
+          "killedBy": ["0"],
+          "coveredBy": [],
+          "location": {
+            "end": {
+              "column": 49,
+              "line": 1
+            },
+            "start": {
+              "column": 23,
+              "line": 1
+            }
+          }
+        }
+      ],
+      "source": "export const negate = (value: boolean) => !value;\n"
+    },
+    "src/survived.ts": {
+      "language": "typescript",
+      "mutants": [
+        {
+          "id": "6",
+          "mutatorName": "ConditionalExpression",
+          "replacement": "true",
+          "status": "Survived",
+          "static": false,
+          "testsCompleted": 1,
+          "coveredBy": ["1"],
+          "location": {
+            "end": {
+              "column": 41,
+              "line": 1
+            },
+            "start": {
+              "column": 36,
+              "line": 1
+            }
+          }
+        },
+        {
+          "id": "7",
+          "mutatorName": "ConditionalExpression",
+          "replacement": "false",
+          "status": "Survived",
+          "static": false,
+          "testsCompleted": 1,
+          "coveredBy": ["1"],
+          "location": {
+            "end": {
+              "column": 41,
+              "line": 1
+            },
+            "start": {
+              "column": 36,
+              "line": 1
+            }
+          }
+        },
+        {
+          "id": "8",
+          "mutatorName": "EqualityOperator",
+          "replacement": "n >= 0",
+          "status": "Survived",
+          "static": false,
+          "testsCompleted": 1,
+          "coveredBy": ["1"],
+          "location": {
+            "end": {
+              "column": 41,
+              "line": 1
+            },
+            "start": {
+              "column": 36,
+              "line": 1
+            }
+          }
+        },
+        {
+          "id": "9",
+          "mutatorName": "EqualityOperator",
+          "replacement": "n <= 0",
+          "status": "Survived",
+          "static": false,
+          "testsCompleted": 1,
+          "coveredBy": ["1"],
+          "location": {
+            "end": {
+              "column": 41,
+              "line": 1
+            },
+            "start": {
+              "column": 36,
+              "line": 1
+            }
+          }
+        },
+        {
+          "id": "5",
+          "mutatorName": "ArrowFunction",
+          "replacement": "() => undefined",
+          "statusReason": "expected undefined to be defined",
+          "status": "Killed",
+          "static": true,
+          "testsCompleted": 2,
+          "killedBy": ["1"],
+          "coveredBy": [],
+          "location": {
+            "end": {
+              "column": 49,
+              "line": 1
+            },
+            "start": {
+              "column": 21,
+              "line": 1
+            }
+          }
+        }
+      ],
+      "source": "export const pick = (n: number) => n > 0 ? 1 : 0;\n"
+    }
+  },
+  "testFiles": {
+    "tests/units.test.ts": {
+      "tests": [
+        {
+          "id": "0",
+          "name": "negates"
+        },
+        {
+          "id": "1",
+          "name": "picks"
+        }
+      ],
+      "source": "import { expect, it } from 'vitest';\nimport { negate } from '../src/covered';\nimport { pick } from '../src/survived';\nit('negates', () => { expect(negate(true)).toBe(false); expect(negate(false)).toBe(true); });\nit('picks', () => { expect(pick(1)).toBeDefined(); });\n"
+    }
+  },
+  "filesRead": {
+    "package.json": false,
+    "src/covered.ts": true,
+    "src/explained.ts": true,
+    "src/ignored.ts": true,
+    "src/orphan.ts": true,
+    "src/survived.ts": true,
+    "src/types.ts": true,
+    "src/unrelated.test.ts": false,
+    "stryker.config.json": false,
+    "tests/units.test.ts": false,
+    "vitest.config.mjs": false
+  }
+}

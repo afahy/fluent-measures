@@ -175,13 +175,18 @@ pnpm lint:format:fix
 
 ### Automated Reviews
 
-Codex reviews each push to a pull request. Claude reviews once, when a pull request opens or
-becomes ready for review (`.github/workflows/claude-review.yml`). The Claude review posts comments
+Codex reviews each push to a pull request. Claude reviews when a pull request opens, and each time
+it becomes ready for review (`.github/workflows/claude-review.yml`). The Claude review posts comments
 only and blocks no merge. Claude posts its inline comments, and `github-actions` posts its summary.
 
-The Claude review doesn't run on a pull request that changes `claude-review.yml`, because the
-action stops when that file differs from the one on `main`. The check stays green. Put a change to
-the workflow in its own pull request, so that the other changes get a review.
+A pull request from a fork or from Dependabot gets no Claude review because the required secret
+isn't available; the check stays green.
+
+<!-- cspell:ignore anthropics -->
+
+The Claude review doesn't run on a pull request that changes `claude-review.yml`, because
+`anthropics/claude-code-action` stops when that file differs from the one on `main`. The check stays
+green. Put a change to the workflow in its own pull request, so that the other changes get a review.
 
 ## Key Modules
 
@@ -246,9 +251,11 @@ differ from a full run. A change to the packages, or to a file that tests read, 
 Such files are `README.md`, `PARSING.md` and the corpus.
 
 A push to `main` starts from no results and runs every mutant, except as the next paragraph says.
-It saves the results that pull requests reuse. A re-run of the job also runs every mutant. For a
-full run on a pull request, re-run this job or all jobs. "Re-run failed jobs" doesn't run this job
-again when it passed.
+It saves the results that pull requests reuse. For a
+full run on a pull request, re-run all jobs. Re-running a mutation shard runs all of its mutants;
+"Re-run failed jobs" keeps artifacts from successful shards of that same workflow run and commit.
+Artifacts from another workflow run or commit cannot be reused as current results. Repeated
+attempts ignore the shared incremental input, and replace their own shard artifacts.
 
 A run that takes more than 27 minutes stops and fails, but it saves its results so far. On a pull
 request, the next push goes on from them. On `main`, each push looks at the newest results that a
@@ -258,15 +265,51 @@ read doesn't reset them. So they aren't exact, and a run that goes on from them 
 results for pull requests. When runs on `main` overlap, the newest results can come from an older
 commit than the last run that ended.
 
-A second job, "Mutants on changed lines are killed", runs Stryker on the files that a pull
-request changes under `src/`. It fails when a mutant whose code overlaps a line that the pull
-request adds or changes survives, or no test covers it. So the tests must catch every change to
-the code that a pull request adds. To run it on your committed changes, use
-`node .github/scripts/mutation-check.mjs --base origin/main`.
+CI runs four mutation shards: two line ranges in `parseMeasurement.ts`, `tokenize.ts`, and the
+remaining source files, including new files. The parser ranges meet at its top-level exported
+function, so edits to the helpers above it move the boundary automatically. Each shard receives
+the same restored and refreshed incremental cache. A separate cold dry run supplies the actual
+full file selection and an independently instrumented inventory of current mutants. The
+`mutation-report` job checks that the shards cover that inventory exactly once, proves whole-file
+selection from their actual ranges, remaps their test references and checks one aggregate score
+against `break`. Missing, duplicate, incomplete or stale artifacts fail the check. Shards do not
+check their individual scores against `break`. Their reports and the merged report are run artifacts.
 
-The job also fails for a changed source file that it can't check. It can't check a file in a
-folder that Stryker never reads, such as `node_modules`. It also can't check a file whose path has
-a backslash or a control character, or whose name isn't valid UTF-8. Rename or move such a file.
+The `mutation-report` job also checks the JSON report for mutants whose code overlaps a line that
+the pull request adds or changes under `src/`. The step "Mutants on changed lines are killed" fails
+when one survives or no test covers it. It runs even when the full score is below the threshold,
+so its annotations still appear. `ci-ok` requires both the shards and `mutation-report`. A stopped
+shard fails CI but can contribute its validated partial results to the saved incremental cache;
+it cannot produce a complete merged report or pass the changed-lines check.
+
+Before Stryker runs, CI removes changed source files from its restored incremental report.
+Stryker normally compares individual mutant code spans, so an edit elsewhere on the same git
+line could reuse a result. Removing the whole changed file gives every mutant on its changed
+lines a fresh result, including on later pushes to the pull request. Unchanged files can still
+reuse results as described above.
+
+For a local check of committed changes, first run `pnpm test:mutation`, then run:
+
+```bash
+node .github/scripts/mutation-check.mjs --base origin/main --report reports/mutation/mutation.json
+```
+
+Use a report from the same source and tests as the commits being checked. To reuse an incremental
+report locally, prepare it before running Stryker:
+
+```bash
+node .github/scripts/mutation-check.mjs --base origin/main --prepare reports/stryker-incremental.json
+pnpm test:mutation --incremental
+```
+
+The project's `mutation-json` reporter writes Stryker's results with its actual file inventory.
+Stryker 10 omits files with no mutants from its normal report. The inventory lets a type-only
+file pass while a changed source file that Stryker never read, such as one under `node_modules`,
+fails. Changed source files must be selected in full: a report with only selected line ranges
+fails because it cannot establish that every changed line was checked. Explicitly excluded
+source tests stay out of the check. The check also fails for a source
+path with a backslash or control character, a name that isn't valid UTF-8, a symbolic link, or a
+code extension outside the project's `.ts` mutation scope. Rename or move such a file.
 
 If a mutant can't change behavior, put `// Stryker disable next-line <mutator>: <reason>` on
 the line above it. The reason must say why behavior can't change, and the job fails on a disable
@@ -384,6 +427,37 @@ revision, command, seed and small counterexample, and confirm failure before the
 after it. Some later contracts don't apply to old revisions; isolate the relevant property or
 use an isolated deliberate defect instead. Historical sources and network access are not needed
 for normal tests.
+
+### PR workflow models
+
+`tests/prReview.model.test.ts` checks review obligations after every event against the small
+ledger in `tests/reviewModel.ts`. The ledger uses typed answer targets, reviewer identities and
+logical time; a separate adapter writes GitHub snapshots and links. It does not parse comments
+or call production helpers for expected results. Thread replies, review-body answers and Claude
+summary answers have separate obligations. Late reviews use submission time for change requests
+and commit identity for head completion, as the existing policy requires.
+
+`tests/prPolling.model.test.ts` drives the CLI's extracted polling loop and real API error
+classification with fake fetch and time. Its independent transition model checks each API call,
+wait and terminal result, including the last result at timeout and the five-consecutive-error
+budget. It preserves the current final poll on the deadline; a retry scheduled after it cannot
+start. The real CLI fixture tests remain in `tests/prStatus.test.ts`.
+
+Run `pnpm test:unit tests/prReview.model.test.ts tests/prPolling.model.test.ts`. Each generated
+suite uses 200 runs, with seeds `199202611` (reviews) and `199202612` (polling). Review tails have
+1–50 events; polling schedules have 1–20 responses, bounded further by their fake deadlines.
+Assertions count executed command families and multi-event runs, including real edits and
+deletions. On failure, fast-check reports a reduced sequence, seed and path. Replay with the
+test name (`-t`) and those `fc.assert` options, as for the parser properties above.
+
+Stryker mutates `src/`, so its score does not establish sensitivity of these tooling tests.
+For that, copy `pr-state.mjs` and `pr-poll.mjs` into a temporary directory and use a temporary
+Vitest alias to redirect the two test imports there. First run unchanged copies. Then make one
+isolated defect at a time, for example remove the specific-link check in `answered`, or replace
+the polling deadline's `ending(error)` with `throw error` to lose the last successful result.
+Run the same model tests and record the edit, command, seed, reduced sequence and failure before
+restoring the unchanged copies and confirming success. Do not modify fixtures, weaken assertions
+or require historical checkouts or network access in ordinary CI.
 
 ### Tests against the package
 

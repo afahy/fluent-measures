@@ -1,4 +1,4 @@
-<!-- Rubric: v2. Change this version when you change the scoring scale or the reply format, so
+<!-- Rubric: v4. Change this version when you change the scoring scale or the reply format, so
 that the next run calibrates again (calibration.md). Fill this file with fill.mjs, as SKILL.md
 says. Don't fill it by hand. -->
 
@@ -54,6 +54,22 @@ Zod or Vite docs. Use this scale:
   while you still have suggestions.
 - 8 = very good, but at least one specific, meaningful issue clearly holds it back.
 - 7 and below = noticeable problems.
+
+Respect the scope stated in the page description or settled decisions. Judge observable effects
+on readers, not the age of the implementation or a preference for a different visual style.
+Missing optional icons or a dark theme are not defects unless the task requires them. Report
+measured contrast failures as concrete defects. Overall is a judgment of the whole design within
+scope, not the lowest sub-score: explain why a local problem materially lowers it. Do not force
+a reference site to reach a particular score.
+
+Separate design scoring from the workflow's mandatory accessibility and behavior gates.
+Record every measured gate failure in a separate "Gate findings" list, even on a reference
+site. Those findings must be fixed before the docs can ship, regardless of the scores.
+Score the visual design system: its palette, hierarchy, rhythm and coherence. A local token,
+focus rule or accessible-name repair does not by itself cap an otherwise excellent design at 8. Lower a design score when the visual problem needs a design decision, and explain the
+effect on the reading experience. A repeated structural problem such as clipped navigation
+or disconnected labels still affects the design score. Do not erase or relabel a gate failure
+as a nit simply because the visual design scores 9.
 
 Criteria:
 

@@ -11,6 +11,7 @@ don't become units.
 - Labels: `Height (in): 72`, `kg=72`, `in. 5`, `m: 1.8`, also after non-ASCII letters.
 - A unit before a number in words: `kg seventy`.
 - Commas, semicolons and long runs of periods between fields: `age=28, kg=72`, `180;lbs`.
+- A label ending in a number word before a comma and digits: `phase twenty, 5 cm` gives 5 cm.
 - `import` and `require`.
 
 ## Where the rules are
@@ -22,7 +23,9 @@ don't become units.
 ## How to verify it
 
 - Source: `src/tokenize.ts`, `src/parseMeasurement.ts`
-- Tests: `tests/parseMeasurement.commaLabels.test.ts`, `tests/parseMeasurement.inPreposition.test.ts`,
+- Tests: `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.commaLabels.test.ts`, `tests/parseMeasurement.inPreposition.test.ts`,
+  `tests/parseMeasurement.numberWordCommas.test.ts`,
+  `tests/parseMeasurement.commaWeightOwnership.test.ts`,
   `tests/parseMeasurement.labelValues.test.ts`, `tests/parseMeasurement.longRuns.test.ts`,
   `tests/parseMeasurement.unicodeLabels.test.ts`, `tests/parseMeasurement.unitFirstPhrases.test.ts`,
   `tests/parseMeasurement.unitLabels.test.ts`, `tests/tokenize.test.ts`

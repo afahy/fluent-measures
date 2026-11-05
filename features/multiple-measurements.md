@@ -11,7 +11,8 @@ be either one, or `null`.
 
 - A measurement and its conversion: `70 kg (154 lbs)`, `180 cm (5'11")`.
 - Measurements that disagree: `210 lbs to 180 lbs`.
-- Ranges: `150-180 lbs`, `kg 50-70`.
+- Ranges: `150-180 lbs`, `kg 50-70`. A separate measurement keeps its own unit, as in
+  `150-180 lbs 70 kg` (70 kg).
 - A height and a weight, with `type` to choose one: `5'11", 180 lbs`.
 - `import` and `require`.
 
@@ -23,7 +24,9 @@ be either one, or `null`.
 
 ## How to verify it
 
-- Source: `src/parseMeasurement.ts`
-- Tests: `tests/parseMeasurement.separateMeasurements.test.ts`
+- Source: `src/parseMeasurement.ts`, `src/tokenize.ts`
+- Tests: `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.separateMeasurements.test.ts`,
+  `tests/parseMeasurement.numberWordCommas.test.ts`,
+  `tests/parseMeasurement.commaWeightOwnership.test.ts`
 - Properties: "generated pairs of measurements" in `tests/properties.test.ts`
 - Corpus categories: `multiple-measurements`
