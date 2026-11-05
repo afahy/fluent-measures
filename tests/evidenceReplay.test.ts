@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { delimiter, dirname, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import { replayCorpus } from '../.github/scripts/evidence.mjs';
 import { git, withoutGitRepository } from './gitEnvironment';
 
 const script = resolve('.github/scripts/evidence.mjs');
@@ -269,6 +270,26 @@ describe('Evidence corpus replay regressions', () => {
     expect(result.text).toContain('module load failed');
     expect(result.text).not.toContain('Actual results for');
   });
+
+  it('reports a stalled replay worker as unavailable', () => {
+    const root = fixture('', entry());
+    // Simulate a stalled revision without leaving an infinite child process on a broken rule.
+    write(
+      root,
+      'base-build/dist/index.js',
+      'export function parseMeasurement() { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 3000); return null; }'
+    );
+    const result = replayCorpus(
+      [entry()],
+      resolve(root, 'base-build/dist/index.js'),
+      resolve(root, 'head-build/dist/index.js'),
+      1000
+    );
+    expect(result.changed).toEqual([]);
+    expect(result.unavailable).toHaveLength(1);
+    expect(result.unavailable[0]).toContain('main: corpus replay unavailable; worker');
+    expect(result.unavailable[0]).toContain('ETIMEDOUT');
+  }, 15_000);
 
   it('reports malformed replay output instead of treating it as no result change', () => {
     const root = fixture('', entry());

@@ -96,5 +96,6 @@ export function corpusReplayInputs(base: string | null, head: string | null): st
 export function replayCorpus(
   inputs: string[],
   baseModule?: string,
-  headModule?: string
+  headModule?: string,
+  timeoutMs?: number
 ): CorpusReplay;

@@ -223,9 +223,10 @@ export function corpusReplayInputs(base, head) {
  * @param {string[]} inputs
  * @param {string | undefined} baseModule
  * @param {string | undefined} headModule
+ * @param {number} [timeoutMs] Worker deadline, independently applied to each revision.
  * @returns {import('./evidence.d.mts').CorpusReplay}
  */
-export function replayCorpus(inputs, baseModule, headModule) {
+export function replayCorpus(inputs, baseModule, headModule, timeoutMs = 30_000) {
   /** @type {import('./evidence.d.mts').CorpusReplay} */
   const replay = { changed: [], unavailable: [] };
   if (inputs.length === 0) return replay;
@@ -242,6 +243,8 @@ export function replayCorpus(inputs, baseModule, headModule) {
         input: inputs.join('\n'),
         encoding: 'utf8',
         maxBuffer: BUFFER,
+        timeout: timeoutMs,
+        killSignal: 'SIGKILL',
       }
     );
     if (run.error || run.status !== 0) {
