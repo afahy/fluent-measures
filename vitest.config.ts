@@ -13,6 +13,10 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['tests/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    // Integration files start their own Node/Git processes, and gitEnvironment starts another
+    // Vitest run. Give each file the runner's resources, at both levels, instead of multiplying
+    // the default worker pools and competing with the five-second per-test deadlines.
+    fileParallelism: false,
     // A test that runs no expect fails (AGENTS.md rule 10, AFA-70). This also catches a loop
     // that runs zero times when the lint doesn't see it.
     expect: { requireAssertions: true },

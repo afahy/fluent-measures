@@ -1,0 +1,21 @@
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { basename, dirname, join } from 'node:path';
+import { setTimeout } from 'node:timers/promises';
+import { fileURLToPath } from 'node:url';
+import { expect, it } from 'vitest';
+
+const file = fileURLToPath(import.meta.url);
+const level = basename(dirname(file));
+const slot = `${level}-active`;
+
+it('has the worker slot to itself', async () => {
+  expect(() => mkdirSync(slot)).not.toThrow();
+  try {
+    // Yield long enough for competing files to enter their tests. No elapsed-time assertion
+    // or CPU load is needed: creating the same directory concurrently is the failure.
+    await setTimeout(250);
+    writeFileSync(join('completed', `${level}-${basename(file)}`), 'finished');
+  } finally {
+    rmSync(slot, { recursive: true });
+  }
+});
