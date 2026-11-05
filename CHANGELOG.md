@@ -8,21 +8,29 @@ Many inputs now give a different result. The entries below describe each change.
 "before" is the result just before that change, which can differ from the 0.1.1 result. These
 changes are the most likely to need a code change:
 
-- `import` from an ES module now works. In 0.1.1, only `require` could load the package.
+- `import` from an ES module now works. In 0.1.1, `import` failed, and `require` worked only on
+  Node.js versions that can `require` an ES module.
 - Each result now has `matches`, a list of `{ value, unit }` for the parts that the parser read.
   It replaces `components` and the `returnComponents` option, which are gone. A match has no
   `match` text.
+- Some results change with no error. With
+  `{ type: 'height', allowUnqualified: true, inferUnit: 'metric' }`, a lone number below 3 is now
+  meters, so `1.75` returns 1.75 m, not 1.75 cm. `5-11` with `{ type: 'height' }` returns 71 in,
+  not `null`.
 - `parseMeasurement` returns `null` where 0.1.1 threw for input that isn't a string, or for a
   `normalizedUnit` of the other type. So `parseMeasurement(123)` and
   `parseMeasurement('6 ft', { normalizedUnit: 'kg' })` return `null`.
 - Heights convert between meters and feet or inches. In 0.1.1,
   `parseMeasurement('1.8 m', { normalizedUnit: 'in' })`,
   `parseMeasurement('6 ft', { normalizedUnit: 'm' })` and `parseMeasurement('1 m 80 cm')` threw.
-- Two new cases throw. A `type` that contradicts `normalizedUnit` throws, even when the input has
-  no measurement, as in `parseMeasurement('hello', { type: 'weight', normalizedUnit: 'cm' })`. A
-  `maxLength` below 1, or one that isn't a number, throws. `maxLength: Infinity` turns the limit
-  off.
-- Input longer than 1,000 characters returns `null`. The new `maxLength` option changes the limit.
+- Two new cases throw for string input. A `type` that contradicts `normalizedUnit` throws, as in
+  `parseMeasurement('hello', { type: 'weight', normalizedUnit: 'cm' })`, where 0.1.1 returned
+  `null`. The 0.2.0 entry for ca886bd lists the inputs that don't throw. A `maxLength` below 1, or
+  one that isn't a number, throws. `maxLength: Infinity` turns the limit off.
+- Error messages changed. For example, `allowUnqualified` without `type` now throws
+  "allowUnqualified requires type".
+- Input longer than 1,000 characters returns `null`. The limit counts UTF-16 code units of the
+  input as given, before spaces are trimmed. The new `maxLength` option changes the limit.
 - Separate measurements are no longer added together. `70 kg (154 lbs)` returns 70 kg, and
   `210 lbs to 180 lbs` returns `null`.
 - A weight with a part in stone, ounces or grams returns `null`, as in `12st 4lb`.
