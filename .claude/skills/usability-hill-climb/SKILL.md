@@ -127,7 +127,8 @@ baseline.
    report or the key: a reviewer who knows what changed isn't a first-time user. If a model
    family can't run, stop and tell the maintainer. Don't put a second model of the same family in
    its place.
-4. Grade each reviewer with `grade.mjs reviewer --key $R/private/answer-key.json --dir <folder>`,
+4. Save each reviewer's reply as `<folder>/report.md`. Claude subagents can't write report
+   files, so the brief asks for the report in the reply. Grade each reviewer with `grade.mjs reviewer --key $R/private/answer-key.json --dir <folder>`,
    then the round with `grade.mjs round --round $R/round-<n>`. It writes `metrics.md`.
 5. Write `$R/round-<n>/synthesis.md` from `synthesis.md.tmpl`. Act only on findings that the
    trace or the grade backs. A finding without such evidence is an opinion.
@@ -199,7 +200,9 @@ what waits on the maintainer. Put each report in the same message as your next t
 - Four reviewers a round is a small sample. The blocker rules act only on an S1, or on a
   problem that two reviewers hit.
 - The viewer names a view's section from the last heading in the top third of the viewport, so
-  a view across two sections counts as the upper one.
+  a view across two sections counts as the last heading in that third. A view at `#usage` is
+  named `ex-basic`, because that heading follows at once, so a path that has `usage` also needs
+  `ex-basic`.
 - The viewer reloads the page on each call, so a reviewer repeats `--click` to open a panel.
 - The trace shows what a reviewer looked at, not what it read. The `misled` and `--note` text
   fill that gap, and they are self-report.

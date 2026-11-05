@@ -1,4 +1,4 @@
-<!-- Usability reviewer brief, protocol v1. Fill it with the repository's
+<!-- Usability reviewer brief, protocol v2. Fill it with the repository's
 .claude/skills/design-hill-climb/fill.mjs, as SKILL.md "6. Review round" says. Don't fill it by
 hand. Never add the score history, the decisions log, the changelog or the answer key: a
 usability reviewer must meet the page with fresh eyes. -->
@@ -48,8 +48,9 @@ task files there.
 
 ## When you finish
 
-Check that `{DIR}/answers.json` is valid JSON with an entry for each task. Then write
-`{DIR}/report.md`:
+Check that `{DIR}/answers.json` is valid JSON with an entry for each task. Then reply with
+your report as text. Don't write it to a file: the organizer saves it as `report.md`. The report
+has:
 
 - One line for each task: done or gave up, and the moment where you were most unsure.
 - The three places on the page that cost you the most time or led you wrong. For each, give
@@ -57,5 +58,4 @@ Check that `{DIR}/answers.json` is valid JSON with an entry for each task. Then 
   would have helped.
 - Anything that you did against rule 3, and why.
 
-Reply with the path of `report.md` and one line:
-`DONE: tasks=<number done> gaveUp=<number given up>`
+End the reply with one line: `DONE: tasks=<number done> gaveUp=<number given up>`

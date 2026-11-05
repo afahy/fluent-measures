@@ -1,4 +1,4 @@
-<!-- Reviewer-facing task cards, protocol v1. Don't put answers, option names or section names
+<!-- Reviewer-facing task cards, protocol v2. Don't put answers, option names or section names
 here: the cards say what the user wants, not how the page says to do it. Change the version
 when you change a card, and pilot it again (SKILL.md, "4. Pilot"). -->
 <!-- cspell:ignore inchs -->
