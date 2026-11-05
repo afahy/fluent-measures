@@ -30,7 +30,7 @@ export interface ParseOptions {
 
 export interface Match {
   value: number;
-  unit: Unit | null;
+  unit: Unit;
 }
 
 export interface ParsedValue {

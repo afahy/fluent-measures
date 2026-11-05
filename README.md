@@ -162,7 +162,7 @@ interface ParsedValue {
   // Each part of the measurement in its unit from the text, as 5 ft and 11 in for 5' 11"
   matches: Array<{
     value: number;
-    unit: 'ft' | 'in' | 'cm' | 'm' | 'lb' | 'kg' | null;
+    unit: 'ft' | 'in' | 'cm' | 'm' | 'lb' | 'kg';
   }>;
 
   // The input text

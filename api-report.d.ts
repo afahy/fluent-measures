@@ -10,7 +10,7 @@ interface ParseOptions {
 }
 interface Match {
   value: number;
-  unit: Unit | null;
+  unit: Unit;
 }
 interface ParsedValue {
   value: number;

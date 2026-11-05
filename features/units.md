@@ -22,17 +22,18 @@ in `I drink 8 oz of water, weight 180 lbs`, which gives 180 lb.
 ## Where the rules are
 
 - README.md, "Usage"
+- README.md, "API reference", `ParsedValue`
 - README.md, "Supported units"
 - README.md, "Limits"
 - PARSING.md, "Unsupported Units"
 
 ## How to verify it
 
-- Source: `src/units.ts`, `src/matchUnit.ts`, `src/tokenize.ts`, `src/parseMeasurement.ts`
+- Source: `src/units.ts`, `src/matchUnit.ts`, `src/tokenize.ts`, `src/parseMeasurement.ts`, `src/types.ts`
 - Tests: `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.test.ts`, `tests/parseMeasurement.britishUnits.test.ts`,
   `tests/parseMeasurement.numberWordCommas.test.ts`,
   `tests/parseMeasurement.commaWeightOwnership.test.ts`,
   `tests/parseMeasurement.inAfterNumber.test.ts`, `tests/parseMeasurement.unsupportedUnits.test.ts`,
-  `tests/units.test.ts`, `tests/matchUnit.test.ts`
+  `tests/units.test.ts`, `tests/matchUnit.test.ts`, `tests/parseMeasurement.types.test.ts`
 - Properties: "generated single measurements" in `tests/properties.test.ts`
 - Corpus categories: `compact`, `unicode`, `unsupported`
