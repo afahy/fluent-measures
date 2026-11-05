@@ -223,6 +223,27 @@ describe('the lint for tests that skip or are expected to fail', () => {
 // AFA-180: stored members, aliases and constant expressions must enforce the same policy as
 // direct Vitest calls. These expectations follow rule 3, not the rule's previous output.
 describe('the additional Vitest chain forms', () => {
+  // Reassignment must not erase policy enforcement before the write or on another test alias.
+  it.each([
+    ["t.skip('x', () => {});", skip],
+    ["t('x', { fails: true }, () => {});", fails],
+    ["t.skipIf(!0)('x', () => {});", constant],
+    ["const marked = t.fails;\nmarked('x', () => {});", fails],
+    ["t('x', ({ skip }) => { skip(); });", skip],
+  ])('preserves a policy violation before a later reassignment in %s', async (use, diagnostic) => {
+    expect(await problems('let t = it;\n' + use + '\nt = it;\nvoid t;')).toEqual([diagnostic]);
+  });
+
+  it.each([
+    ["t.skip('x', () => {});", skip],
+    ["t('x', { fails: true }, () => {});", fails],
+    ["t.skipIf(!0)('x', () => {});", constant],
+    ["const marked = t.fails;\nmarked('x', () => {});", fails],
+    ["t('x', ({ skip }) => { skip(); });", skip],
+  ])('preserves a policy violation on a reassigned test alias in %s', async (use, diagnostic) => {
+    expect(await problems('let t = it;\nvoid t;\nt = test;\n' + use)).toEqual([diagnostic]);
+  });
+
   // Reassigned calls and inherited getters can mutate an otherwise inactive option.
   it.each([
     'let invoke = it;\nvoid invoke;\ninvoke = (target): void => { target.fails = true; };\ninvoke(options);',

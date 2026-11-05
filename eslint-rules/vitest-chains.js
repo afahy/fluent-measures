@@ -129,10 +129,6 @@ function resolveChain(node, scope, seen = new Set()) {
   seen.add(root);
   const unknown = { unknown: true, name: root.name, names };
   const variable = findVariable(scope, root.name);
-  // An initializer no longer identifies a call after the binding has been reassigned.
-  if (variable?.references.some(reference => reference.isWrite() && !reference.init)) {
-    return unknown;
-  }
   // A global, as the .cjs tests get from vitest.config.ts.
   if (!variable || variable.defs.length === 0) {
     return TEST_FUNCTIONS.has(root.name) ? { fn: root.name, names } : undefined;
@@ -729,8 +725,9 @@ export default {
         // A call to extend, scoped or override takes fixtures, not test options.
         if (!chain || FIXTURES.has(chain.names.at(-1))) return;
 
-        // The fails and todo options, unless their value is always false.
-        for (const argument of node.arguments) {
+        // Test options follow the name. A one-argument call through a reassigned alias may
+        // mutate an object, but its first argument isn't a test-options position.
+        for (const argument of node.arguments.slice(1)) {
           for (const [key, { property, scope: at, uncertain }] of optionProperties(
             argument,
             scope
