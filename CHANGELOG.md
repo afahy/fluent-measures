@@ -20,7 +20,8 @@ changes are the most likely to need a code change:
   `parseMeasurement('6 ft', { normalizedUnit: 'm' })` and `parseMeasurement('1 m 80 cm')` threw.
 - Two new cases throw. A `type` that contradicts `normalizedUnit` throws, even when the input has
   no measurement, as in `parseMeasurement('hello', { type: 'weight', normalizedUnit: 'cm' })`. A
-  `maxLength` that isn't a number of at least 1, or `Infinity`, throws.
+  `maxLength` below 1, or one that isn't a number, throws. `maxLength: Infinity` turns the limit
+  off.
 - Input longer than 1,000 characters returns `null`. The new `maxLength` option changes the limit.
 - Separate measurements are no longer added together. `70 kg (154 lbs)` returns 70 kg, and
   `210 lbs to 180 lbs` returns `null`.
