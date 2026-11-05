@@ -62,7 +62,7 @@ function verifyGitIsolation(): void {
       ...developerGitEnvironment(),
       GIT_DIR: resolve(sentinel, '.git'),
     },
-    timeout: 90_000,
+    timeout: 180_000,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   // A null status alone hid the cause of the 90-second failure on main (AFA-204). Print a
@@ -174,23 +174,27 @@ describe('withoutGitRepository', () => {
 
   // A linked worktree's pre-push hook runs the tests with GIT_DIR set. The tests that start git
   // must pass and must not change the repository that GIT_DIR names.
-  it('keeps the tests that run git off the repository in GIT_DIR', { timeout: 120_000 }, () => {
+  // Hosted Node 24 needed 84s and Node 22 hit the 90s child bound with a suite still running.
+  // Allow a bounded completion measurement; the parent test leaves 60s for teardown.
+  it('keeps the tests that run git off the repository in GIT_DIR', { timeout: 240_000 }, () => {
     verifyGitIsolation();
     expect(vi.mocked(spawnSync).mock.lastCall?.[0]).toBe(process.execPath);
   });
 
   // Reproduce main's null-status/90,074ms failure shape without another nested suite or a
-  // 90-second wait. The injected error and signal are test cases, not a claim about that run.
+  // 90-second wait. The final case is the observed hosted diagnostic; the other signals are
+  // injected failure cases, not claims about the original run.
   it.each([
-    { status: null, signal: 'SIGTERM', code: 'ETIMEDOUT' },
-    { status: null, signal: 'SIGKILL', code: null },
-    { status: 1, signal: null, code: null },
-    { status: 0, signal: null, code: 'ETIMEDOUT' },
+    { status: null, signal: 'SIGTERM', code: 'ETIMEDOUT', elapsedMs: 90_074 },
+    { status: null, signal: 'SIGKILL', code: null, elapsedMs: 90_074 },
+    { status: 1, signal: null, code: null, elapsedMs: 90_074 },
+    { status: 0, signal: null, code: 'ETIMEDOUT', elapsedMs: 90_074 },
+    { status: 143, signal: null, code: 'ETIMEDOUT', elapsedMs: 90_073 },
   ] as const)('reports a nested failure with %j', failure => {
     const clock = vi.spyOn(performance, 'now').mockReturnValue(100);
     const log = vi.spyOn(process.stdout, 'write').mockReturnValue(true);
     const execute = vi.mocked(spawnSync).mockImplementationOnce(() => {
-      clock.mockReturnValue(90_174);
+      clock.mockReturnValue(100 + failure.elapsedMs);
       const result: SpawnSyncReturns<string> = {
         pid: 1,
         output: [null, 'nested stdout', 'nested stderr'],
@@ -214,7 +218,7 @@ describe('withoutGitRepository', () => {
       platform: process.platform,
       arch: process.arch,
       availableParallelism: availableParallelism(),
-      elapsedMs: 90_074,
+      elapsedMs: failure.elapsedMs,
       status: failure.status,
       signal: failure.signal,
       error: failure.code ? { message: 'nested spawn failed', code: failure.code } : null,
@@ -229,7 +233,7 @@ describe('withoutGitRepository', () => {
       ])
     );
     expect(execute.mock.lastCall?.[2]).toMatchObject({
-      timeout: 90_000,
+      timeout: 180_000,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
   });
