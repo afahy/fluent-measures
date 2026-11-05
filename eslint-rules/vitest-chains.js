@@ -416,7 +416,8 @@ function objectMayChange(variable, seen = new Set()) {
         objectMayChange(findVariable(reference.from, parent.id.name), seen)
       );
     }
-    if (parent.type === 'SpreadElement') return false;
+    // Object spreads copy properties; array/call spreads execute the object's iterator.
+    if (parent.type === 'SpreadElement') return parent.parent.type !== 'ObjectExpression';
     if (parent.type === 'CallExpression') {
       // Passing options to a recognized Vitest call reads them. Other calls may mutate them.
       return !resolveChain(parent.callee, reference.from)?.fn;
@@ -446,6 +447,18 @@ function getterMayChange(property) {
   if (statements.length !== 1 || statements[0].type !== 'ReturnStatement') return true;
   const returned = statements[0].argument;
   return returned !== null && unwrap(returned).type !== 'Literal';
+}
+
+/** A custom prototype can supply an inherited getter; null and primitives cannot. */
+function prototypeMayChange(property, scope, seen) {
+  return (
+    property.type === 'Property' &&
+    !property.computed &&
+    !property.method &&
+    property.kind === 'init' &&
+    keyName(property) === '__proto__' &&
+    staticValue(property.value, scope, seen) === UNKNOWN
+  );
 }
 
 /** Resolve an options object, its const aliases and spreads, respecting the last known key. */
@@ -478,8 +491,12 @@ function optionProperties(node, scope, seen = new Set()) {
       else properties.set(String(key), { property, scope });
     }
   }
-  // A getter may already have run through a const reference, and spreading invokes it.
-  if (node.properties.some(getterMayChange)) {
+  // Reads may invoke own or inherited getters; spreading invokes own getters too.
+  if (
+    node.properties.some(
+      property => getterMayChange(property) || prototypeMayChange(property, scope, seen)
+    )
+  ) {
     uncertainProperties(properties, node, scope);
   }
   return properties;

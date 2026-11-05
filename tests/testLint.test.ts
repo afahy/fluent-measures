@@ -223,6 +223,46 @@ describe('the lint for tests that skip or are expected to fail', () => {
 // AFA-180: stored members, aliases and constant expressions must enforce the same policy as
 // direct Vitest calls. These expectations follow rule 3, not the rule's previous output.
 describe('the additional Vitest chain forms', () => {
+  // Custom prototypes can supply getters, and iterable spreads run iterator methods.
+  it.each([
+    'const options = { __proto__: { get activate(): boolean { this.fails = true; return true; } }, fails: false };\nvoid options.activate;',
+    'const parent = { get activate(): boolean { this.fails = true; return true; } };\nconst options = { __proto__: parent, fails: false };\nvoid options.activate;',
+    'const options = { __proto__: { __proto__: { get activate(): boolean { this.fails = true; return true; } } }, fails: false };\nvoid options.activate;',
+    "const options = { '__proto__': { get activate(): boolean { this.fails = true; return true; } }, fails: false };\nvoid options.activate;",
+    'const options = { *[Symbol.iterator](): Generator<number> { this.fails = true; yield 1; }, fails: false };\nvoid [...options];',
+    'const options = { *[Symbol.iterator](): Generator<number> { this.fails = true; yield 1; }, fails: false };\nvoid Math.max(...options);',
+    'const options = { *[Symbol.iterator](): Generator<number> { this.fails = true; yield 1; }, fails: false };\nconst alias = options;\nvoid [...alias];',
+  ])('rejects an active flag after prototype access or iteration in %s', async setup => {
+    expect(await problems(setup + "\nit('x', { fails: true, ...options }, " + pass + ');')).toEqual(
+      [fails]
+    );
+  });
+
+  it.each([
+    'const options = { metadata: { get activate(): boolean { this.fails = true; return true; } }, fails: false };',
+    'const options = { __proto__: null, fails: false };',
+    // A primitive prototype setter value is ignored by JavaScript.
+    'const options = { __proto__: 1, fails: false };',
+    // Computed keys, methods and accessors named __proto__ are ordinary own properties.
+    'const options = { ["__proto__"]: { get activate(): boolean { this.fails = true; return true; } }, fails: false };',
+    'const options = { __proto__(): void { this.fails = true; }, fails: false };',
+    'const options = { get __proto__(): number { return 1; }, fails: false };',
+    'const options = { *[Symbol.iterator](): Generator<number> { this.fails = true; yield 1; }, fails: false };\nvoid { ...options };',
+  ])('preserves an inactive flag without prototype or iteration effects in %s', async setup => {
+    expect(await problems(setup + "\nit('x', { fails: true, ...options }, " + pass + ');')).toEqual(
+      []
+    );
+  });
+
+  it.each([
+    'const options = { __proto__: { get activate(): boolean { this.fails = true; return true; } }, fails: false };\nvoid options.activate;',
+    'const options = { *[Symbol.iterator](): Generator<number> { this.fails = true; yield 1; }, fails: false };\nvoid [...options];',
+  ])('preserves a final false override after prototype access or iteration in %s', async setup => {
+    expect(
+      await problems(setup + "\nit('x', { ...options, fails: false }, " + pass + ');')
+    ).toEqual([]);
+  });
+
   // Converting an options object can invoke user code that reactivates a test flag.
   it.each(['+options', '-options', '~options', 'options + 1', 'options < 2', 'options == 1'])(
     'keeps coercive numeric reads uncertain in %s',
