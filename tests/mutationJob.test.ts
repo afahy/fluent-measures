@@ -100,16 +100,18 @@ describe('the mutation job in CI', () => {
       'actions/cache/save',
     ]);
     expect(job.match(/path: reports\/stryker-incremental\.json/g)).toHaveLength(4);
-    for (const step of [restore, save]) {
-      expect(field(step, 'key')).toMatch(
-        /^stryker-incremental-\$\{\{ (?:steps\.inputs|needs\.mutation-inventory)\.outputs\.hash \}\}-\$\{\{ github\.sha \}\}/
-      );
-    }
-    for (const step of [restoreMain, saveMain]) {
-      expect(field(step, 'key')).toMatch(
-        /^stryker-main-\$\{\{ (?:steps\.inputs|needs\.mutation-inventory)\.outputs\.tools \}\}-\$\{\{ github\.sha \}\}/
-      );
-    }
+    expect(field(restore, 'key')).toMatch(
+      /^stryker-incremental-\$\{\{ steps\.inputs\.outputs\.hash \}\}-\$\{\{ github\.sha \}\}/
+    );
+    expect(field(save, 'key')).toMatch(
+      /^stryker-incremental-\$\{\{ needs\.mutation-inventory\.outputs\.hash \}\}-\$\{\{ github\.sha \}\}/
+    );
+    expect(field(restoreMain, 'key')).toMatch(
+      /^stryker-main-\$\{\{ steps\.inputs\.outputs\.tools \}\}-\$\{\{ github\.sha \}\}/
+    );
+    expect(field(saveMain, 'key')).toMatch(
+      /^stryker-main-\$\{\{ needs\.mutation-inventory\.outputs\.tools \}\}-\$\{\{ github\.sha \}\}/
+    );
     // A key can't be saved twice, so each run and attempt saves under its own (AFA-139: a
     // reopened pull request has the same commit as its last run).
     for (const step of [save, saveMain]) {
