@@ -447,3 +447,78 @@ describe('the docs page', () => {
     expect(toasts['success-toast'].dataset.visible).toBe('false');
   });
 });
+
+// Quick start owns the contract; Usage teaches four configuration tasks. Legacy deep links
+// still land beside the corresponding explanation after the repeated cards are removed.
+describe('the docs lessons', () => {
+  const quick = page.slice(
+    page.indexOf('<h3 id="quick-start">'),
+    page.indexOf('aria-labelledby="usage"')
+  );
+  const usage = page.slice(
+    page.indexOf('aria-labelledby="usage"'),
+    page.indexOf('aria-labelledby="api"')
+  );
+
+  it('shows the full result and null handling in Quick start', () => {
+    expect(quick).toContain('data-full-object');
+    expect(quick).toContain('Full returned object');
+    expect(quick).toContain('if (result)');
+    expect(quick).toContain('not a measurement');
+    expect(quick).toContain('id="ex-basic"');
+    expect(quick).toContain('id="ex-null"');
+    expect(quick).not.toContain('href="#ex-basic"');
+  });
+
+  it('gives each Usage task one lesson and preserves the compound-height anchor', () => {
+    expect(
+      [...usage.matchAll(/<article class="example" aria-labelledby="([^"]+)"/g)].map(
+        match => match[1]
+      )
+    ).toEqual(['ex-type', 'ex-convert', 'ex-unqualified', 'ex-fuzzy']);
+    expect(usage).toContain('id="ex-feet-inches"');
+    expect(usage).not.toContain('data-full-object');
+    expect(usage).not.toContain('class="ex-opts"');
+  });
+
+  it('keeps every local navigation link attached to a unique destination', () => {
+    const ids = [...page.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
+    const links = [...page.matchAll(/<a\b[^>]*\bhref="#([^"]+)"/g)].map(match => match[1]);
+    expect(links.length).toBeGreaterThan(0);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(links.filter(link => !ids.includes(link))).toEqual([]);
+  });
+});
+
+it('reveals the Quick start result beside either module format', () => {
+  const script = page
+    .split('<script>')
+    .map(part => part.split('</script>')[0])
+    .find(code => code.includes("querySelectorAll('pre[data-returns]"));
+  const snippet = /data-returns\s*><code class="language-typescript">([\s\S]*?)<\/code>/.exec(
+    page
+  )?.[1];
+  expect(script).toBeDefined();
+  expect(snippet).toBeDefined();
+  const output = { textContent: '' };
+  const full = { hidden: true, querySelector: (): typeof output => output };
+  const panel = { querySelector: (): null => null };
+  const card = { querySelector: (): typeof full => full };
+  const code = {
+    textContent: snippet ?? '',
+    closest: (selector: string): typeof card | typeof panel =>
+      selector === '.code' ? card : panel,
+  };
+  runInNewContext(script ?? '', { document: { querySelectorAll: (): (typeof code)[] => [code] } });
+  expect(full.hidden).toBe(false);
+  // README Usage defines this complete result, independently of the page's extraction script.
+  expect(new Function(`return (${output.textContent});`)()).toEqual({
+    value: 6,
+    unit: 'ft',
+    type: 'height',
+    matches: [{ value: 6, unit: 'ft' }],
+    raw: '6 ft',
+  });
+  expect(code.textContent).toContain('if (result)');
+  expect(code.textContent).not.toContain('✓ Returns');
+});

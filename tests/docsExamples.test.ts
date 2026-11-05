@@ -191,3 +191,66 @@ describe('the short results on the docs page', () => {
     expect(short(item.input, item.options)).toEqual(item.shown);
   });
 });
+
+/** Compact input/output rows show their literal input and any options beside the result. */
+function compactRows(html: string): ShownCase[] {
+  const lists = [...html.matchAll(/<dl class="input-results"[^>]*>([\s\S]*?)<\/dl>/g)];
+  const row =
+    /<dt>\s*<code class="input-text">([^<]*)<\/code\s*>\s*(?:<code class="input-options">([^<]*)<\/code>)?\s*<\/dt>\s*<dd( class="is-null")?>([\s\S]*?)<\/dd>/g;
+  return lists.flatMap(([, list]) =>
+    [...list.matchAll(row)].map(([, input, options, isNull, result]) =>
+      shownCase(
+        input,
+        options ? (new Function(`return (${options});`)() as ParseOptions) : undefined,
+        shownResult(Boolean(isNull), result)
+      )
+    )
+  );
+}
+
+const compact = compactRows(page);
+
+describe('compact docs examples', () => {
+  it('checks every displayed compact result', () => {
+    expect(compact.length).toBeGreaterThan(0);
+    expect(compact).toHaveLength(page.split('class="input-text"').length - 1);
+  });
+
+  it.each(compact.map(row => [row.label, row]))('shows %s', (_, row) => {
+    expect(short(row.input, row.options)).toEqual(row.shown);
+  });
+
+  // README Usage supplies these complete objects. Keep checking all their fields even though
+  // the page now displays these format variants as compact rows instead of full code cards.
+  it.each([
+    {
+      input: '150 lbs',
+      options: undefined,
+      expected: {
+        value: 150,
+        unit: 'lb',
+        type: 'weight',
+        matches: [{ value: 150, unit: 'lb' }],
+        raw: '150 lbs',
+      },
+    },
+    {
+      input: 'five foot ten',
+      options: { type: 'height' } as const,
+      expected: {
+        value: 70,
+        unit: 'in',
+        type: 'height',
+        matches: [
+          { value: 5, unit: 'ft' },
+          { value: 10, unit: 'in' },
+        ],
+        raw: 'five foot ten',
+      },
+    },
+    { input: 'not a measurement', options: undefined, expected: null },
+  ])('preserves the complete documented result for $input', ({ input, options, expected }) => {
+    expect(compact.some(row => row.input === input)).toBe(true);
+    expect(parseMeasurement(input, options)).toEqual(expected);
+  });
+});
