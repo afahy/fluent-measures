@@ -1478,7 +1478,8 @@ if (result) {
                   and <code>type</code> to say whether it is a height or a weight. Without
                   <code>type</code>, the call throws an error for almost any input.
                   <a href="#parse-options"><code>inferUnit</code></a> chooses metric or imperial
-                  units, and imperial is the default.
+                  units, and imperial is the default. With <code>'metric'</code>, a weight is in
+                  kilograms, a height below 3 in meters, and any other height in centimeters.
                 </p>
                 <div class="code on-code">
                   <div class="code-head">
@@ -1551,8 +1552,9 @@ if (result) {
                 <p>
                   Set <a href="#parse-options"><code>fuzziness</code></a> to read unit names that
                   have spelling errors. Without it, a unit name must be exact, so the same text
-                  returns <code>null</code>. <a href="#limits">Limits</a> says what fuzzy matching
-                  can get wrong.
+                  returns <code>null</code>. Each letter that is added, removed or changed is one
+                  error, and <code>fuzziness</code> is the largest number of errors in a word.
+                  <a href="#limits">Limits</a> says what fuzzy matching can get wrong.
                 </p>
                 <div class="code on-code">
                   <div class="code-head">
@@ -1717,7 +1719,14 @@ const strict = parseMeasurement(
               ></a>
             </div>
             <div class="stack">
-              <p class="measure">Reads one height or weight from a string.</p>
+              <p class="measure">
+                Reads one height or weight from a string. It returns <code>null</code> for each
+                cause that <a href="#troubleshooting">Troubleshooting</a> lists, including input
+                longer than <code>maxLength</code>. It throws an error for an invalid
+                <code>maxLength</code> and for a <code>type</code> that contradicts
+                <code>normalizedUnit</code>, and almost always for
+                <code>allowUnqualified</code> without <code>type</code>.
+              </p>
               <div class="api-card">
                 <p class="decl">
                   <span class="decl-wide"
