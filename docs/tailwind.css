@@ -1505,8 +1505,8 @@ a:hover {
 }
 
 /*
- * Long groups (examples, API) fold behind a toggle. The group holding the
- * current section opens itself. Without JavaScript every group stays expanded.
+ * Long groups (examples, API) fold behind a reader-controlled toggle. Scrolling
+ * leaves their state alone. Without JavaScript every group stays expanded.
  */
 
 .toc-row {
