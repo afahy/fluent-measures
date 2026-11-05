@@ -6,13 +6,17 @@
 //   PR_BODY    The PR's description.
 //   SIZE_BASE  Optional. A file with `size-limit --json` output for the base branch.
 //   SIZE_HEAD  Optional. The same for the PR.
+//   CORPUS_BASE_MODULE / CORPUS_HEAD_MODULE  Built ESM entry points for corpus replay.
+//   BUILD_BASE / BUILD_HEAD  JSON diagnostics from evidence-build.mjs.
 //
 // Writes the summary to $GITHUB_STEP_SUMMARY. Fails when results change and the PR body has no
 // "Changed results" list.
 
 import { execFileSync, spawnSync } from 'node:child_process';
 import { appendFileSync, existsSync, readFileSync } from 'node:fs';
-import { pathToFileURL } from 'node:url';
+import { resolve } from 'node:path';
+import { isDeepStrictEqual } from 'node:util';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { escapeData } from './workflow-commands.mjs';
 
 // HEAD is the merge of the PR into the base branch, so its first parent is the base branch.
@@ -184,6 +188,127 @@ export function corpusChanges(base, head) {
     if (before !== after) changes.rows.push({ name, before, after });
   }
   return changes;
+}
+
+/**
+ * Selects the head's new or semantically edited entries. Keep the original JSON lines so that
+ * options such as 1e999 (Infinity) survive transport to each parser process. Expectations select
+ * entries for replay, but never supply their actual results. Metadata doesn't select an entry.
+ *
+ * @param {string | null} base
+ * @param {string | null} head
+ * @returns {string[]}
+ */
+export function corpusReplayInputs(base, head) {
+  const lines = (/** @type {string | null} */ text) => (text ?? '').split('\n').filter(Boolean);
+  const semantics = (
+    /** @type {{ input: string, options?: Record<string, unknown>, expected: unknown }} */ entry
+  ) => [entry.input, entry.options ?? {}, entry.expected];
+  const before = new Map(
+    lines(base).map(line => {
+      const entry = JSON.parse(line);
+      return [entry.id, semantics(entry)];
+    })
+  );
+  return lines(head).filter(line => {
+    const entry = JSON.parse(line);
+    return !isDeepStrictEqual(before.get(entry.id), semantics(entry));
+  });
+}
+
+/**
+ * Replays the same head inputs/options on both built revisions in isolated processes. Parser
+ * exceptions are results; an unavailable build or failed worker is missing evidence.
+ *
+ * @param {string[]} inputs
+ * @param {string | undefined} baseModule
+ * @param {string | undefined} headModule
+ * @param {number} [timeoutMs] Worker deadline, independently applied to each revision.
+ * @returns {import('./evidence.d.mts').CorpusReplay}
+ */
+export function replayCorpus(inputs, baseModule, headModule, timeoutMs = 30_000) {
+  /** @type {import('./evidence.d.mts').CorpusReplay} */
+  const replay = { changed: [], unavailable: [] };
+  if (inputs.length === 0) return replay;
+  const outputs = [baseModule, headModule].map((module, index) => {
+    const label = index === 0 ? 'main' : 'This PR';
+    if (!module || !existsSync(module)) {
+      replay.unavailable.push(`${label}: corpus replay unavailable; the built module is missing.`);
+      return null;
+    }
+    const run = spawnSync(
+      process.execPath,
+      [fileURLToPath(import.meta.url), '--replay', resolve(module)],
+      {
+        input: inputs.join('\n'),
+        encoding: 'utf8',
+        maxBuffer: BUFFER,
+        timeout: timeoutMs,
+        killSignal: 'SIGKILL',
+      }
+    );
+    if (run.error || run.status !== 0) {
+      replay.unavailable.push(
+        `${label}: corpus replay unavailable; worker ${run.error?.message ?? `exited ${run.status} (${run.signal ?? 'no signal'})`}. ${run.stderr?.trim().slice(0, 2000) ?? ''}`
+      );
+      return null;
+    }
+    try {
+      const results = JSON.parse(run.stdout);
+      if (
+        !Array.isArray(results) ||
+        results.length !== inputs.length ||
+        results.some(value => typeof value !== 'string')
+      )
+        throw new Error('invalid replay output');
+      return results;
+    } catch {
+      replay.unavailable.push(
+        `${label}: corpus replay unavailable; the worker returned invalid output.`
+      );
+      return null;
+    }
+  });
+  const [before, after] = outputs;
+  if (before && after)
+    inputs.forEach((line, index) => {
+      if (before[index] === after[index]) return;
+      const { id, input, options } = JSON.parse(line);
+      replay.changed.push({
+        id,
+        input: JSON.stringify(input),
+        options: lineOptions(options),
+        before: before[index],
+        after: after[index],
+      });
+    });
+  return replay;
+}
+
+/** @param {unknown} options */
+function lineOptions(options) {
+  // JSON.stringify normally changes Infinity to null, hiding an option the corpus supports.
+  return JSON.stringify(options ?? {}, (_key, value) =>
+    typeof value === 'number' && !Number.isFinite(value) ? String(value) : value
+  );
+}
+
+/** Executes one built parser without consulting expected outputs. */
+async function replayWorker() {
+  const { parseMeasurement } = await import(pathToFileURL(process.argv[3]).href);
+  const results = readFileSync(0, 'utf8')
+    .split('\n')
+    .filter(Boolean)
+    .map(line => {
+      const { input, options } = JSON.parse(line);
+      try {
+        const actual = parseMeasurement(input, options);
+        return actual === null ? 'null' : `${actual.value} ${String(actual.unit)} (${actual.type})`;
+      } catch (error) {
+        return `throws ${String(error)}`;
+      }
+    });
+  process.stdout.write(JSON.stringify(results));
 }
 
 /**
@@ -436,7 +561,8 @@ export function listsChangedResults(body) {
 /**
  * The number of results that the PR changes: the changed lines of the result snapshot, and the
  * corpus entries whose outcome changes although the PR doesn't edit them. An edited entry's
- * outcome can change with no change to a result, as when the PR adds an expected output.
+ * outcome can change with no change to a result, as when the PR adds an expected output. Actual
+ * changes found by replaying new/edited head inputs count independently of these expectations.
  *
  * @param {import('./evidence.d.mts').Facts} facts
  * @returns {number}
@@ -444,7 +570,7 @@ export function listsChangedResults(body) {
 export function changedResults(facts) {
   const edited = new Set(facts.corpus.edited);
   const outcomes = facts.corpus.outcomes.filter(({ id }) => !edited.has(id));
-  return facts.results.changed.length + outcomes.length;
+  return facts.results.changed.length + outcomes.length + facts.corpusReplay.changed.length;
 }
 
 /**
@@ -594,6 +720,23 @@ export function summary(facts, risk) {
       ''
     );
   }
+  const replay = facts.corpusReplay;
+  if (replay.changed.length > 0) {
+    lines.push(
+      'Actual results for new or edited head corpus inputs (same input/options on both revisions):',
+      ''
+    );
+    lines.push('| Entry | Input | Options | main | This PR |', '| --- | --- | --- | --- | --- |');
+    lines.push(
+      ...limited(
+        replay.changed,
+        ({ id, input, options, before, after }) =>
+          `| ${code(id)} | ${code(input)} | ${code(options)} | ${code(before)} | ${code(after)} |`
+      ),
+      ''
+    );
+  }
+  lines.push(...replay.unavailable.map(message => `- ${code(message)}`));
   lines.push(`New entries: ${corpus.added}.`);
   if (corpus.edited.length > 0)
     lines.push(`Edited entries: ${corpus.edited.map(code).join(', ')}.`);
@@ -636,6 +779,8 @@ export function summary(facts, risk) {
       })
     );
   }
+  if (facts.buildDiagnostics.length > 0)
+    lines.push('', ...facts.buildDiagnostics.map(message => `- ${code(message)}`));
   return `${lines.join('\n')}\n`;
 }
 
@@ -757,6 +902,11 @@ function collect() {
   const [baseCorpus, headCorpus] = both(CORPUS);
   const [baseReport, headReport] = both(CORPUS_REPORT);
   const examples = EXAMPLES.map(path => both(path).map(exampleLines));
+  const corpusReplay = replayCorpus(
+    corpusReplayInputs(baseCorpus, headCorpus),
+    process.env.CORPUS_BASE_MODULE,
+    process.env.CORPUS_HEAD_MODULE
+  );
   const [baseLimits, headLimits] = [BASE, 'HEAD'].map(rev =>
     testLimits(fileAt(rev, 'stryker.config.json'), fileAt(rev, 'vitest.config.ts'))
   );
@@ -775,6 +925,16 @@ function collect() {
 
   return {
     results: resultChanges(parseResults(baseResults), parseResults(headResults)),
+    corpusReplay,
+    buildDiagnostics: paths.some(path =>
+      /^(?:src\/|package\.json$|pnpm-lock\.yaml$|tsup\.config\.ts$|tests\/corpus\/measurements\.jsonl$)/.test(
+        path
+      )
+    )
+      ? buildDiagnostics(process.env.BUILD_BASE, 'main').concat(
+          buildDiagnostics(process.env.BUILD_HEAD, 'This PR')
+        )
+      : [],
     corpus: corpusChanges(
       { entries: parseCorpus(baseCorpus), report: parseCorpusReport(baseReport) },
       { entries: parseCorpus(headCorpus), report: parseCorpusReport(headReport) }
@@ -811,6 +971,21 @@ function collect() {
   };
 }
 
+/** @param {string | undefined} path @param {string} label */
+function buildDiagnostics(path, label) {
+  if (!path) return [];
+  try {
+    const evidence = JSON.parse(readFileSync(path, 'utf8'));
+    if (!Array.isArray(evidence) || evidence.some(message => typeof message !== 'string'))
+      throw new Error('invalid diagnostics');
+    return evidence.map(message => `${label}: ${message}`);
+  } catch {
+    return [
+      `${label}: setup/install/build/measurement evidence unavailable; no valid diagnostics were recorded.`,
+    ];
+  }
+}
+
 function main() {
   const facts = collect();
   const risk = assessRisk(facts);
@@ -834,5 +1009,6 @@ function main() {
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
-  main();
+  if (process.argv[2] === '--replay') await replayWorker();
+  else main();
 }

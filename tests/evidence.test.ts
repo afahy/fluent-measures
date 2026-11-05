@@ -70,6 +70,8 @@ const BASE_REPORT = report([
 function facts(change: Partial<Facts> = {}): Facts {
   return {
     results: { changed: [], added: 0, removed: 0 },
+    corpusReplay: { changed: [], unavailable: [] },
+    buildDiagnostics: [],
     corpus: { outcomes: [], edited: [], removed: [], added: 0, rows: [] },
     examples: { removed: [], added: [] },
     snapshotTestChanged: false,
