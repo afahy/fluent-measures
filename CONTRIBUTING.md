@@ -175,13 +175,18 @@ pnpm lint:format:fix
 
 ### Automated Reviews
 
-Codex reviews each push to a pull request. Claude reviews once, when a pull request opens or
-becomes ready for review (`.github/workflows/claude-review.yml`). The Claude review posts comments
+Codex reviews each push to a pull request. Claude reviews when a pull request opens, and each time
+it becomes ready for review (`.github/workflows/claude-review.yml`). The Claude review posts comments
 only and blocks no merge. Claude posts its inline comments, and `github-actions` posts its summary.
 
-The Claude review doesn't run on a pull request that changes `claude-review.yml`, because the
-action stops when that file differs from the one on `main`. The check stays green. Put a change to
-the workflow in its own pull request, so that the other changes get a review.
+A pull request from a fork or from Dependabot gets no Claude review because the required secret
+isn't available; the check stays green.
+
+<!-- cspell:ignore anthropics -->
+
+The Claude review doesn't run on a pull request that changes `claude-review.yml`, because
+`anthropics/claude-code-action` stops when that file differs from the one on `main`. The check stays
+green. Put a change to the workflow in its own pull request, so that the other changes get a review.
 
 ## Key Modules
 
