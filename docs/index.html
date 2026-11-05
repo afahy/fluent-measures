@@ -619,34 +619,24 @@
             </figure>
           </div>
 
-          <ul class="features features-hero">
+          <ul class="features" aria-label="Parsing capabilities">
             <li>
               <span class="feature-icon" aria-hidden="true"
                 ><svg class="icon"><use href="#i-measure" /></svg
               ></span>
-              <p class="feature-title">Metric and imperial units</p>
               <p>
-                Heights and weights in ft, in, cm, m, lb and kg. Set <code>normalizedUnit</code> to
-                convert the result to one unit.
+                <strong class="feature-title">Metric and imperial.</strong>
+                ft, in, cm, m, lb and kg; convert with <code>normalizedUnit</code>.
               </p>
             </li>
             <li>
               <span class="feature-icon" aria-hidden="true"
                 ><svg class="icon"><use href="#i-numbers" /></svg
               ></span>
-              <p class="feature-title">Numbers in digits or words</p>
               <p>
-                Thousands separators and decimal commas work too. Set <code>fuzziness</code> to read
-                unit names with spelling errors.
-              </p>
-            </li>
-            <li>
-              <span class="feature-icon" aria-hidden="true"
-                ><svg class="icon"><use href="#i-package-check" /></svg
-              ></span>
-              <p class="feature-title">No dependencies</p>
-              <p>
-                At most 5 kB, minified and compressed with Brotli. Supports ES modules and CommonJS.
+                <strong class="feature-title">Flexible input.</strong>
+                Digits or words, thousands separators and decimal commas; allow unit typos with
+                <code>fuzziness</code>.
               </p>
             </li>
           </ul>
@@ -745,6 +735,13 @@
                   ><code class="language-bash code-cmd">pnpm add @afahy/fluent-measures</code></pre>
                 </div>
               </div>
+              <p class="code-note">
+                <svg class="icon icon-sm" aria-hidden="true"><use href="#i-package-check" /></svg>
+                <span
+                  ><strong>Small footprint.</strong> No runtime dependencies. At most 5 kB, minified
+                  and compressed with Brotli.</span
+                >
+              </p>
             </div>
 
             <div class="hd hd-3">
@@ -904,38 +901,6 @@ if (result) {
                   <dd class="is-null">null</dd>
                 </div>
               </dl>
-              <ul class="features features-docs" aria-label="Features">
-                <li>
-                  <span class="feature-icon" aria-hidden="true"
-                    ><svg class="icon"><use href="#i-measure" /></svg
-                  ></span>
-                  <p class="feature-title">Metric and imperial units</p>
-                  <p>
-                    Heights and weights in ft, in, cm, m, lb and kg. Set <code>normalizedUnit</code>
-                    to convert the result to one unit.
-                  </p>
-                </li>
-                <li>
-                  <span class="feature-icon" aria-hidden="true"
-                    ><svg class="icon"><use href="#i-numbers" /></svg
-                  ></span>
-                  <p class="feature-title">Numbers in digits or words</p>
-                  <p>
-                    Thousands separators and decimal commas work too. Set <code>fuzziness</code> to
-                    read unit names with spelling errors.
-                  </p>
-                </li>
-                <li>
-                  <span class="feature-icon" aria-hidden="true"
-                    ><svg class="icon"><use href="#i-package-check" /></svg
-                  ></span>
-                  <p class="feature-title">No dependencies</p>
-                  <p>
-                    At most 5 kB, minified and compressed with Brotli. Supports ES modules and
-                    CommonJS.
-                  </p>
-                </li>
-              </ul>
             </div>
           </section>
 

@@ -1295,93 +1295,64 @@ a:hover {
   transform: rotate(180deg);
 }
 
-/* Features */
+/* One compact capability list near the introduction at every width. */
 
 .features {
   list-style: none;
-  padding: 0 0 56px;
+  padding: 0 0 28px;
   display: grid;
-  gap: 24px;
+  gap: 12px;
 }
 
 @media (min-width: 768px) {
   .features {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 32px;
-    padding-bottom: 44px;
+    padding-bottom: 36px;
   }
 }
 
 .features li {
-  display: grid;
-  grid-template-columns: 40px minmax(0, 1fr);
-  align-content: start;
-  gap: 4px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
 }
 
 .feature-icon {
-  grid-row: span 2;
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
+  flex: 0 0 32px;
+  height: 32px;
+  border-radius: 8px;
   display: grid;
   place-items: center;
   background: var(--accent-soft);
   color: var(--accent);
 }
 
-.features .feature-title {
-  color: var(--heading);
-  font-size: 1rem;
-  line-height: 1.5;
-  font-weight: 600;
-  letter-spacing: -0.005em;
+.feature-icon .icon {
+  width: 18px;
+  height: 18px;
 }
 
-.features p:not(.feature-title) {
+.features p {
   font-size: 0.9375rem;
   line-height: 1.6;
   color: var(--text-muted);
 }
 
-/* Phones show the feature list after Quick start, so the install steps come first. */
-
-.features-docs {
-  display: none;
+.feature-title {
+  color: var(--heading);
+  font-weight: 600;
 }
 
+/* Inline titles and no decorative icons keep the phone introduction short. */
+
 @media (max-width: 639px) {
-  .features-hero {
+  .feature-icon {
     display: none;
   }
 
-  .stack > .features-docs {
-    display: grid;
-    gap: 16px;
-    margin-top: 32px;
-    padding: 24px 0 0;
-    border-top: 1px solid var(--border);
-  }
-
-  .features li {
-    grid-template-columns: 32px minmax(0, 1fr);
-    gap: 2px 14px;
-  }
-
-  .feature-icon {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-  }
-
-  .feature-icon .icon {
-    width: 18px;
-    height: 18px;
-  }
-
-  .features .feature-title {
-    line-height: 1.4;
-    padding-top: 5px;
+  .features p {
+    font-size: 0.875rem;
   }
 }
 
