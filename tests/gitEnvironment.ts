@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { devNull } from 'node:os';
 import { env } from 'node:process';
 
 // The variables that tell git which repository to use, as `git rev-parse --local-env-vars` lists
@@ -24,19 +25,29 @@ const REPOSITORY_VARIABLES = new Set([
 ]);
 
 /**
- * Returns `base` without the variables that tell git which repository to use. Use it for each
- * child process that runs git, a git hook or a package manager.
+ * Returns `base` without the variables that tell git which repository to use, and isolates it
+ * from developer global and system config. Repository-local config and hooks still apply. Use
+ * it for each child process that runs git, a git hook or a package manager.
  */
 export function withoutGitRepository(base: typeof env = env): typeof env {
-  return Object.fromEntries(
-    Object.entries(base).filter(
-      // GIT_CONFIG_KEY_n and GIT_CONFIG_VALUE_n go with GIT_CONFIG_COUNT.
-      ([name]) => !REPOSITORY_VARIABLES.has(name) && !/^GIT_CONFIG_(?:KEY|VALUE)_\d+$/.test(name)
-    )
-  );
+  return {
+    ...Object.fromEntries(
+      Object.entries(base).filter(
+        // GIT_CONFIG_KEY_n and GIT_CONFIG_VALUE_n go with GIT_CONFIG_COUNT.
+        ([name]) => !REPOSITORY_VARIABLES.has(name) && !/^GIT_CONFIG_(?:KEY|VALUE)_\d+$/.test(name)
+      )
+    ),
+    GIT_CONFIG_GLOBAL: devNull,
+    GIT_CONFIG_NOSYSTEM: '1',
+  };
 }
 
 /** Runs git in `cwd` without the repository variables, and returns what it prints. */
 export function git(cwd: string, ...args: string[]): string {
-  return execFileSync('git', args, { cwd, encoding: 'utf8', env: withoutGitRepository() });
+  return execFileSync('git', args, {
+    cwd,
+    encoding: 'utf8',
+    env: withoutGitRepository(),
+    timeout: 10_000,
+  });
 }
