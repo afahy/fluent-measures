@@ -119,6 +119,10 @@ if (mode === 'selfcheck') {
   }
   const p18 = call(lib, '1.8', t.T5.reference.options).result;
   check('T5 1.8', p18, sameValue(p18, t.T5.predict1_8.withAllowUnqualified));
+  for (const [unit, want] of Object.entries(t.T5.predict1_8.byNormalizedUnit ?? {})) {
+    const got = call(lib, '1.8', { ...t.T5.reference.options, normalizedUnit: unit }).result;
+    check(`T5 1.8 in ${unit}`, got, near(got?.value, want.value, 1e-9) && got?.unit === want.unit);
+  }
   console.log(
     problems.length
       ? `\n${problems.length} mismatches. Don't run reviewers on this sandbox.`
@@ -241,8 +245,10 @@ if (mode === 'reviewer') {
       }
       if (id === 'T5') {
         const unqualified = Boolean(a.options?.allowUnqualified);
+        // With normalizedUnit, the prediction is the converted value (1.8 m is 180 cm).
+        const converted = spec.predict1_8.byNormalizedUnit?.[a.options?.normalizedUnit];
         const want18 = unqualified
-          ? spec.predict1_8.withAllowUnqualified
+          ? (converted ?? spec.predict1_8.withAllowUnqualified)
           : spec.predict1_8.withCmAppended;
         comprehension.predict1_8Right = sameValue(a.predict1_8, want18);
         comprehension.predict1_8Confidence = a.predict1_8Confidence ?? null;

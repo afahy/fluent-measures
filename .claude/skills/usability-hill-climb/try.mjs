@@ -21,7 +21,8 @@ if (!/^[TH][0-9]+$/.test(values.task ?? '') || positionals.length !== 1) {
   console.error('try.mjs: usage: node try.mjs --task T2 <file> (T1 ... T7, H1 or H2)');
   process.exit(2);
 }
-const file = resolve(SANDBOX, positionals[0]);
+// Reviewers often name the file from their folder, as sandbox/t1.mjs. Accept that form too.
+const file = resolve(SANDBOX, positionals[0].replace(/^(\.\/)?sandbox\//, ''));
 const started = Date.now();
 const run = spawnSync(process.execPath, [file], { cwd: SANDBOX, encoding: 'utf8', timeout: 20000 });
 const ok = run.status === 0 && !run.error;

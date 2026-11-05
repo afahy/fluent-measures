@@ -131,8 +131,10 @@ baseline.
    files, so the brief asks for the report in the reply. Grade each reviewer with `grade.mjs reviewer --key $R/private/answer-key.json --dir <folder>`,
    then the round with `grade.mjs round --round $R/round-<n>`. It writes `metrics.md`.
 5. Write `$R/round-<n>/synthesis.md` from `synthesis.md.tmpl`. Act only on findings that the
-   trace or the grade backs. A finding without such evidence is an opinion. The wrong-turn count misses a run that exits 0 with a wrong value, so
-   read each task's `runLog` in `grade.json` too. The control of AFA-207 showed the gap.
+   trace or the grade backs. A finding without such evidence is an opinion. The wrong-turn count
+   misses a run that exits 0 with a wrong value, so read each task's `runLog` in `grade.json`
+   too. It also counts views that the viewer names after the wrong section (see "Limits"), so
+   check each counted wrong turn against its note before you call it page-caused.
 
 ## Acceptance criteria
 
@@ -203,7 +205,8 @@ what waits on the maintainer. Put each report in the same message as your next t
 - The viewer names a view's section from the last heading in the top third of the viewport, so
   a view across two sections counts as the last heading in that third. A view at `#usage` is
   named `ex-basic`, because that heading follows at once, so a path that has `usage` also needs
-  `ex-basic`.
+  `ex-basic`. In the same way, a view at `#api` is named `parse-measurement`, and a Find match near
+  the top of a section is often named after the section above it.
 - The viewer reloads the page on each call, so a reviewer repeats `--click` to open a panel.
 - The trace shows what a reviewer looked at, not what it read. The `misled` and `--note` text
   fill that gap, and they are self-report.
