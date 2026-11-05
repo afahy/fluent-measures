@@ -114,7 +114,7 @@ parseMeasurement('record 0; kg 70'); // { value: 70, unit: 'kg', ... }
 
 ## Ranges
 
-A range returns `null`. This applies to a range of numbers that share one unit, with the unit
+A range of digits returns `null`. This applies to numbers that share one unit, with the unit
 before or after the numbers:
 
 ```typescript
@@ -126,15 +126,15 @@ parseMeasurement('1,250-1,500 lbs'); // null: thousands groups can also make a r
 parseMeasurement('kg-70.5'); // null: a hyphen directly after a unit is a minus sign
 ```
 
-A range with its unit at each end, such as `150 lbs - 180 lbs`, also returns `null`. Its two
-ends are separate measurements that disagree.
+A range of digits with its unit at each end, such as `150 lbs - 180 lbs`, also returns `null`.
+Its two ends are separate measurements that disagree.
 
-The parser leaves out the numbers of a range. A number before the range doesn't take a unit after
-it, and a unit before the range doesn't reach a number after it:
+The parser leaves out the numbers of a range of digits. A unit after the range doesn't attach to
+a number before it, and a unit before the range doesn't attach to a number after it:
 
 ```typescript
-parseMeasurement('6 1-2 ft'); // null: 6 doesn't take "ft" across the range
-parseMeasurement('ft 1-2 6'); // null: "ft" doesn't reach 6 across the range
+parseMeasurement('6 1-2 ft'); // null: "ft" doesn't attach to 6 across the range
+parseMeasurement('ft 1-2 6'); // null: "ft" doesn't attach to 6 across the range
 parseMeasurement('6ft1-2in'); // { value: 6, unit: 'ft', ... }: the range's numbers are left out
 ```
 

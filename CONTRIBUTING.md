@@ -466,6 +466,21 @@ once through `require` (`vitest.package.config.ts`). An alias gives the tests th
 of `src/`. Run `pnpm build` first. In CI, the `package` job runs them against the packed tarball,
 installed in an empty project.
 
+The separate `Registry examples` workflow checks npm's `latest` against the README and docs-page
+examples on `main` every Monday and on `workflow_dispatch`. It installs the release in an empty
+consumer project and runs `pnpm test:package tests/readme.test.ts tests/docsExamples.test.ts`
+with `FLUENT_MEASURES_PACKAGE_DIR` pointing to that project. It is outside the required checks:
+unreleased changes on `main` can make it fail until a matching release is published. A failure
+names the installed npm version and the checked-out `main` commit. The package test configuration
+also supports 0.1.1's string exports and unexported manifest, checked with local fixtures in
+`tests/packageConfig.test.ts`.
+
+`tests/registryExamplesWorkflow.test.ts` runs the workflow's shell step with offline stand-ins
+to check the consumer install, test command, failure status and release-gap message. These tests
+need no registry access. Stryker covers `src/`, so validate this workflow's sensitivity with
+isolated edits to its shell step, such as swallowing the failing test status or dropping the
+consumer alias, and confirm that the focused tests fail before restoring the workflow.
+
 ### Exported types
 
 `api-report.d.ts` holds the types that the package exports, from the build, without comments.
