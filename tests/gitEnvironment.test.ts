@@ -1,6 +1,6 @@
 import { execFileSync, spawnSync, type SpawnSyncReturns } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { devNull, tmpdir } from 'node:os';
+import { availableParallelism, devNull, tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -72,6 +72,7 @@ function verifyGitIsolation(): void {
     execPath: process.execPath,
     platform: process.platform,
     arch: process.arch,
+    availableParallelism: availableParallelism(),
     elapsedMs: Math.round(performance.now() - started),
     status: result.status,
     signal: result.signal,
@@ -212,6 +213,7 @@ describe('withoutGitRepository', () => {
       execPath: process.execPath,
       platform: process.platform,
       arch: process.arch,
+      availableParallelism: availableParallelism(),
       elapsedMs: 90_074,
       status: failure.status,
       signal: failure.signal,
