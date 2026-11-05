@@ -129,6 +129,10 @@ function resolveChain(node, scope, seen = new Set()) {
   seen.add(root);
   const unknown = { unknown: true, name: root.name, names };
   const variable = findVariable(scope, root.name);
+  // An initializer no longer identifies a call after the binding has been reassigned.
+  if (variable?.references.some(reference => reference.isWrite() && !reference.init)) {
+    return unknown;
+  }
   // A global, as the .cjs tests get from vitest.config.ts.
   if (!variable || variable.defs.length === 0) {
     return TEST_FUNCTIONS.has(root.name) ? { fn: root.name, names } : undefined;
@@ -383,6 +387,73 @@ function isWrite(node) {
   );
 }
 
+/** Only immutable Vitest imports and unchanged direct aliases are proven read-only calls. */
+function readOnlyTestCall(node, scope, seen = new Set()) {
+  const { root, names } = chainOf(node);
+  if (root.type !== 'Identifier') return false;
+  const variable = findVariable(scope, root.name);
+  if (seen.has(variable)) return false;
+  if (variable?.references.some(reference => reference.isWrite() && !reference.init)) {
+    return false;
+  }
+  if (!variable || variable.defs.length === 0) {
+    return names.length === 0 && TEST_FUNCTIONS.has(root.name);
+  }
+  seen.add(variable);
+  const [definition] = variable.defs;
+  if (definition.type === 'ImportBinding' && definition.parent.source?.value === 'vitest') {
+    if (definition.node.type === 'ImportNamespaceSpecifier') {
+      return names.length === 1 && TEST_FUNCTIONS.has(names[0]);
+    }
+    const imported = definition.node.imported?.name ?? definition.node.imported?.value;
+    return names.length === 0 && TEST_FUNCTIONS.has(imported);
+  }
+  return (
+    names.length === 0 &&
+    definition.type === 'Variable' &&
+    definition.node.id.type === 'Identifier' &&
+    Boolean(definition.node.init) &&
+    readOnlyTestCall(definition.node.init, variable.scope, seen)
+  );
+}
+
+/** A prototype setter isn't an own property, unlike a computed key, method or accessor. */
+function isPrototypeSetter(property) {
+  return (
+    property.type === 'Property' &&
+    !property.computed &&
+    !property.method &&
+    property.kind === 'init' &&
+    keyName(property) === '__proto__'
+  );
+}
+
+/** Whether a known own property reads a primitive without invoking an effectful getter. */
+function safeOwnRead(node, key, scope, seen = new Set()) {
+  if (typeof key !== 'string') return false;
+  node = unwrap(node);
+  const binding = constantBinding(node, scope, seen);
+  if (binding) return safeOwnRead(binding.node, key, binding.scope, binding.seen);
+  if (node.type !== 'ObjectExpression') return false;
+  let safe;
+  for (const property of node.properties) {
+    if (property.type === 'SpreadElement') {
+      const spread = safeOwnRead(property.argument, key, scope, seen);
+      if (spread !== undefined) safe = spread;
+    } else if (property.type === 'Property' && !isPrototypeSetter(property)) {
+      const name = keyName(property) ?? staticValue(property.key, scope, seen);
+      if (name === UNKNOWN) safe = false;
+      else if (String(name) === key) {
+        safe =
+          property.kind === 'get'
+            ? !getterMayChange(property)
+            : staticValue(property.value, scope, seen) !== UNKNOWN;
+      }
+    }
+  }
+  return safe;
+}
+
 /** An object's const binding can still be written through a member, an alias or an escape. */
 function objectMayChange(variable, seen = new Set()) {
   if (!variable) return true;
@@ -404,7 +475,9 @@ function objectMayChange(variable, seen = new Set()) {
       let member = parent;
       while (WRAPPERS.has(member.parent.type)) member = member.parent;
       const use = member.parent;
+      const key = propertyName(parent) ?? staticValue(parent.property, reference.from);
       return (
+        !safeOwnRead(variable.defs[0].node.init, key, variable.scope) ||
         isWrite(member) ||
         (use.type === 'CallExpression' && use.callee === member) ||
         use.type === 'TaggedTemplateExpression'
@@ -419,8 +492,8 @@ function objectMayChange(variable, seen = new Set()) {
     // Object spreads copy properties; array/call spreads execute the object's iterator.
     if (parent.type === 'SpreadElement') return parent.parent.type !== 'ObjectExpression';
     if (parent.type === 'CallExpression') {
-      // Passing options to a recognized Vitest call reads them. Other calls may mutate them.
-      return !resolveChain(parent.callee, reference.from)?.fn;
+      // A recognized chain can be reassigned or customized; only proven calls read options.
+      return !readOnlyTestCall(parent.callee, reference.from);
     }
     // Numeric/string coercion can invoke valueOf, toString or Symbol.toPrimitive.
     if (parent.type === 'UnaryExpression') {
@@ -451,14 +524,7 @@ function getterMayChange(property) {
 
 /** A custom prototype can supply an inherited getter; null and primitives cannot. */
 function prototypeMayChange(property, scope, seen) {
-  return (
-    property.type === 'Property' &&
-    !property.computed &&
-    !property.method &&
-    property.kind === 'init' &&
-    keyName(property) === '__proto__' &&
-    staticValue(property.value, scope, seen) === UNKNOWN
-  );
+  return isPrototypeSetter(property) && staticValue(property.value, scope, seen) === UNKNOWN;
 }
 
 /** Resolve an options object, its const aliases and spreads, respecting the last known key. */

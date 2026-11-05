@@ -223,6 +223,72 @@ describe('the lint for tests that skip or are expected to fail', () => {
 // AFA-180: stored members, aliases and constant expressions must enforce the same policy as
 // direct Vitest calls. These expectations follow rule 3, not the rule's previous output.
 describe('the additional Vitest chain forms', () => {
+  // Reassigned calls and inherited getters can mutate an otherwise inactive option.
+  it.each([
+    'let invoke = it;\nvoid invoke;\ninvoke = (target): void => { target.fails = true; };\ninvoke(options);',
+    'let invoke = it;\nconst alias = invoke;\nvoid invoke;\ninvoke = (target): void => { target.fails = true; };\ninvoke(options);\nvoid alias;',
+    'let invoke = it;\nvoid invoke;\ninvoke = (target): void => { target.fails = true; };\nconst alias = invoke;\nalias(options);',
+    "Object.defineProperty(Object.prototype, 'activate', { get(): boolean { this.fails = true; return true; }, configurable: true });\nvoid options.activate;",
+    "Object.defineProperty(Object.prototype, 'activate', { get(): boolean { this.fails = true; return true; }, configurable: true });\nconst alias = options;\nvoid alias['activate'];",
+    "Object.defineProperty(Object.prototype, 'activate', { get(): boolean { this.fails = true; return true; }, configurable: true });\nconst key = 'activate';\nvoid options[key];",
+  ])('keeps unproven calls and member reads uncertain in %s', async use => {
+    expect(
+      await problems(
+        'const options = { fails: false };\n' +
+          use +
+          "\nit('x', { fails: true, ...options }, " +
+          pass +
+          ');'
+      )
+    ).toEqual([fails]);
+  });
+
+  it.each([
+    'void options.fails;',
+    "const key = 'fails';\nvoid options[key];",
+    'void options[`fails`];',
+    'const alias = options;\nvoid alias.fails;',
+    "it('first', options, " + pass + ');',
+    "const invoke = it;\ninvoke('first', options, " + pass + ');',
+    "const invoke = it;\nconst alias = invoke;\nalias('first', options, " + pass + ');',
+    "const invoke = it as typeof it;\ninvoke('first', options, " + pass + ');',
+  ])('preserves proven calls and own primitive reads in %s', async use => {
+    expect(
+      await problems(
+        'const options = { fails: false };\n' +
+          use +
+          "\nit('x', { fails: true, ...options }, " +
+          pass +
+          ');'
+      )
+    ).not.toContain(fails);
+  });
+
+  it.each([
+    'const source = { fails: false };\nconst options = { ...source };\nvoid options.fails;',
+    'const options = { fails: false, get timeout(): number { return 1000; } };\nvoid options.timeout;',
+    "const options = { fails: false, ['__proto__']: 1 };\nvoid options.__proto__;",
+  ])('preserves a proven own value from a spread or literal getter in %s', async setup => {
+    expect(await problems(setup + "\nit('x', { fails: true, ...options }, " + pass + ');')).toEqual(
+      []
+    );
+  });
+
+  it.each([
+    'let invoke = it;\nvoid invoke;\ninvoke = (target): void => { target.fails = true; };\ninvoke(options);',
+    "Object.defineProperty(Object.prototype, 'activate', { get(): boolean { this.fails = true; return true; }, configurable: true });\nvoid options.activate;",
+  ])('preserves a final inactive override after an unproven use in %s', async use => {
+    expect(
+      await problems(
+        'const options = { fails: false };\n' +
+          use +
+          "\nit('x', { ...options, fails: false }, " +
+          pass +
+          ');'
+      )
+    ).not.toContain(fails);
+  });
+
   // Custom prototypes can supply getters, and iterable spreads run iterator methods.
   it.each([
     'const options = { __proto__: { get activate(): boolean { this.fails = true; return true; } }, fails: false };\nvoid options.activate;',
