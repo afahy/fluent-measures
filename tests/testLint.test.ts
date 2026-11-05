@@ -223,6 +223,79 @@ describe('the lint for tests that skip or are expected to fail', () => {
 // AFA-180: stored members, aliases and constant expressions must enforce the same policy as
 // direct Vitest calls. These expectations follow rule 3, not the rule's previous output.
 describe('the additional Vitest chain forms', () => {
+  // A later spread, computed key or getter can reactivate a known false option.
+  it.each([
+    'const options = { fails: false };\n' +
+      'const runtime = JSON.parse(\'{"fails":true}\') as { fails: boolean };\n' +
+      "it('x', { fails: true, ...options, ...runtime }, " +
+      pass +
+      ');',
+    "const options = { fails: false };\nconst key = 'fails';\n" +
+      "it('x', { fails: true, ...options, [key]: true }, " +
+      pass +
+      ');',
+    'const options = { fails: false };\nconst key = JSON.parse(\'"fails"\') as string;\n' +
+      "it('x', { fails: true, ...options, [key]: true }, " +
+      pass +
+      ');',
+    'const runtime = JSON.parse(\'{"fails":true}\') as { fails: boolean };\n' +
+      'const options = { fails: false, ...runtime };\n' +
+      "it('x', { fails: true, ...options }, " +
+      pass +
+      ');',
+    'const options = { fails: false, get activate(): boolean { this.fails = true; return true; } };\n' +
+      'void options.activate;\n' +
+      "it('x', { fails: true, ...options }, " +
+      pass +
+      ');',
+    'const options = { fails: false, get activate(): boolean { this.fails = true; return true; } };\n' +
+      'const alias = options;\nvoid alias.activate;\n' +
+      "it('x', { fails: true, ...options }, " +
+      pass +
+      ');',
+    'const options = { get activate(): boolean { this.fails = true; return true; }, fails: false };\n' +
+      "it('x', { fails: true, ...options }, " +
+      pass +
+      ');',
+  ])('does not trust an overridden or getter-backed option in %s', async body => {
+    expect(await problems(body)).toEqual([fails]);
+  });
+
+  it.each([
+    "it('x', { fails: false, get timeout(): number { return 1000; } }, " + pass + ');',
+    'const options = { fails: false, get timeout(): number { return 1000; } };\n' +
+      "it('x', options, " +
+      pass +
+      ');',
+    'const runtime = JSON.parse(\'{"fails":true}\') as { fails: boolean };\n' +
+      'const options = { fails: true, ...runtime, fails: false };\n' +
+      "it('x', { fails: true, ...options }, " +
+      pass +
+      ');',
+    'const runtime = JSON.parse(\'{"fails":true}\') as { fails: boolean };\n' +
+      "it('x', { fails: true, ...runtime, fails: false }, " +
+      pass +
+      ');',
+    'const options = { get activate(): boolean { this.fails = true; return true; }, fails: false };\n' +
+      "it('x', { ...options, fails: false }, " +
+      pass +
+      ');',
+    "const options = { fails: false };\nconst key = 'timeout';\n" +
+      "it('x', { fails: true, ...options, [key]: 1000 }, " +
+      pass +
+      ');',
+    'const options = { fails: false };\n' +
+      "it('x', { fails: true, ...options, ...{} }, " +
+      pass +
+      ');',
+    'const options = { fails: false };\n' +
+      "it('x', { fails: true, ...options, ...null }, " +
+      pass +
+      ');',
+  ])('preserves a final inactive value after uncertain options in %s', async body => {
+    expect(await problems(body)).toEqual([]);
+  });
+
   // AFA-180 re-review: these all write the same object used by the false spread override.
   it.each([
     'const alias = options || {}; alias.fails = true;',

@@ -425,6 +425,22 @@ function objectMayChange(variable, seen = new Set()) {
   });
 }
 
+/** Unknown keys or getter effects can replace any earlier value. */
+function uncertainProperties(properties, property, scope) {
+  for (const [key, entry] of properties) properties.set(key, { ...entry, uncertain: true });
+  // Keep uncertainty through a const alias or a containing spread, even with no known keys.
+  properties.set(UNKNOWN, { property, scope, uncertain: true });
+}
+
+/** A literal return cannot mutate options; other getter bodies may have side effects. */
+function getterMayChange(property) {
+  if (property.type !== 'Property' || property.kind !== 'get') return false;
+  const statements = property.value.body.body;
+  if (statements.length !== 1 || statements[0].type !== 'ReturnStatement') return true;
+  const returned = statements[0].argument;
+  return returned !== null && unwrap(returned).type !== 'Literal';
+}
+
 /** Resolve an options object, its const aliases and spreads, respecting the last known key. */
 function optionProperties(node, scope, seen = new Set()) {
   node = unwrap(node);
@@ -437,16 +453,27 @@ function optionProperties(node, scope, seen = new Set()) {
     return properties;
   }
   const properties = new Map();
-  if (node.type !== 'ObjectExpression') return properties;
+  if (node.type !== 'ObjectExpression') {
+    if (staticValue(node, scope, seen) === UNKNOWN) uncertainProperties(properties, node, scope);
+    return properties;
+  }
   for (const property of node.properties) {
     if (property.type === 'SpreadElement') {
-      for (const [key, entry] of optionProperties(property.argument, scope, seen)) {
-        properties.set(key, entry);
+      const spread = optionProperties(property.argument, scope, seen);
+      if (spread.has(UNKNOWN)) uncertainProperties(properties, property, scope);
+      // Known final keys in the spread override its unknown keys, regardless of Map order.
+      for (const [key, entry] of spread) {
+        if (key !== UNKNOWN) properties.set(key, entry);
       }
     } else if (property.type === 'Property') {
-      const key = keyName(property);
-      if (key !== undefined) properties.set(key, { property, scope });
+      const key = keyName(property) ?? staticValue(property.key, scope, seen);
+      if (key === UNKNOWN) uncertainProperties(properties, property, scope);
+      else properties.set(String(key), { property, scope });
     }
+  }
+  // A getter may already have run through a const reference, and spreading invokes it.
+  if (node.properties.some(getterMayChange)) {
+    uncertainProperties(properties, node, scope);
   }
   return properties;
 }
@@ -618,6 +645,7 @@ export default {
             argument,
             scope
           )) {
+            if (key === UNKNOWN) continue;
             if (!uncertain && truthiness(property.value, at) === false) continue;
             if (MARKS.has(key)) {
               context.report({ node: property, messageId: 'mark' });
