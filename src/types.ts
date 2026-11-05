@@ -3,6 +3,11 @@ export type Unit = 'ft' | 'in' | 'cm' | 'm' | 'lb' | 'kg';
 export type MeasurementType = 'height' | 'weight';
 
 export interface ParseOptions {
+  /**
+   * Maximum raw input.length before trimming or parsing; defaults to 1000.
+   * Must be a number of at least 1. Use Infinity for no limit; invalid values throw.
+   */
+  maxLength?: number;
   type?: MeasurementType;
   fuzziness?: number;
   allowUnqualified?: boolean;

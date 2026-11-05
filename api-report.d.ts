@@ -1,6 +1,7 @@
 type Unit = 'ft' | 'in' | 'cm' | 'm' | 'lb' | 'kg';
 type MeasurementType = 'height' | 'weight';
 interface ParseOptions {
+  maxLength?: number;
   type?: MeasurementType;
   fuzziness?: number;
   allowUnqualified?: boolean;

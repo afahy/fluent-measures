@@ -152,7 +152,7 @@ describe('unit labels before a number', () => {
   it('reads a bracket label padded with many spaces in linear time', () => {
     const raw = `(${' '.repeat(200000)}in) 72`;
     const start = performance.now();
-    expect(parseMeasurement(raw)?.value).toBe(72);
+    expect(parseMeasurement(raw, { maxLength: Infinity })?.value).toBe(72);
     // A quadratic pattern takes seconds here on Node 22, and this takes milliseconds.
     expect(performance.now() - start).toBeLessThan(1000);
   });

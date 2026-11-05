@@ -36,3 +36,4 @@ These tests check every feature, so no feature file lists them: `tests/corpus.te
 - [Conversion to one unit](conversion.md)
 - [Numbers with no unit](unqualified.md)
 - [Unit names with spelling errors](fuzzy-matching.md)
+- [Input type and length limits](input-limits.md)

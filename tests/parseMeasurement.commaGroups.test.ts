@@ -34,6 +34,6 @@ describe('complete comma group validation', () => {
   });
 
   it('rejects a long invalid leading group without extracting a suffix', () => {
-    expect(parseMeasurement(`${'9'.repeat(10000)},567 kg`)).toBeNull();
+    expect(parseMeasurement(`${'9'.repeat(10000)},567 kg`, { maxLength: Infinity })).toBeNull();
   });
 });

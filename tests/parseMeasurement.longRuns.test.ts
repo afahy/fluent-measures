@@ -17,12 +17,15 @@ describe('long runs of periods and semicolons', () => {
 
   // The input from AFA-36. It has no number, so it has no measurement.
   it('returns null for a long run of periods before a letter', () => {
-    expect(parseWithin(`${run('.')}a`, 500)).toBeNull();
+    expect(parseWithin(`${run('.')}a`, 500, { maxLength: Infinity })).toBeNull();
   });
 
   // A token without a number after a measurement doesn't change it.
   it('reads 5 ft before a long run of periods', () => {
-    expect(parseWithin(`5 ft ${run('.')}a`, 500)).toMatchObject({ value: 5, unit: 'ft' });
+    expect(parseWithin(`5 ft ${run('.')}a`, 500, { maxLength: Infinity })).toMatchObject({
+      value: 5,
+      unit: 'ft',
+    });
   });
 
   // The hyphen joiner removes the semicolons at the end of the text before a unit. Here the run
@@ -32,7 +35,9 @@ describe('long runs of periods and semicolons', () => {
   // 130 ms of CPU time, or 300 ms with coverage. In CI's coverage runs it took 540 to 740 ms of CPU
   // time (AFA-171), so the 4 s limit is more than 5 times that.
   it.skipIf(underStryker)('returns null for a long run of semicolons before x kg-70.5', () => {
-    expect(parseWithin(`${';'.repeat(200_000)}x kg-70.5`, 4000)).toBeNull();
+    expect(
+      parseWithin(`${';'.repeat(200_000)}x kg-70.5`, 4000, { maxLength: Infinity })
+    ).toBeNull();
   });
 
   // AFA-91: at each word before a hyphen and a digit, the hyphen joiner read back over the whole
@@ -62,7 +67,7 @@ describe('long runs of periods and semicolons', () => {
     'returns null for a long token of %s repeated %i times',
     { timeout: 30_000 },
     (part, count) => {
-      expect(parseWithin(part.repeat(count), 12_000)).toBeNull();
+      expect(parseWithin(part.repeat(count), 12_000, { maxLength: Infinity })).toBeNull();
     }
   );
 });

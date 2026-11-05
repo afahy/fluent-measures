@@ -84,7 +84,7 @@ describe('fractions', () => {
   // pattern must still fail on it quickly.
   it('rejects a very long number in under a second', () => {
     const start = Date.now();
-    expect(parseMeasurement(`1${'0'.repeat(100_000)} lbs`)).toBeNull();
+    expect(parseMeasurement(`1${'0'.repeat(100_000)} lbs`, { maxLength: Infinity })).toBeNull();
     expect(Date.now() - start).toBeLessThan(1000);
   });
 
