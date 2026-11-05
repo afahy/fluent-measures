@@ -131,7 +131,8 @@ baseline.
    files, so the brief asks for the report in the reply. Grade each reviewer with `grade.mjs reviewer --key $R/private/answer-key.json --dir <folder>`,
    then the round with `grade.mjs round --round $R/round-<n>`. It writes `metrics.md`.
 5. Write `$R/round-<n>/synthesis.md` from `synthesis.md.tmpl`. Act only on findings that the
-   trace or the grade backs. A finding without such evidence is an opinion.
+   trace or the grade backs. A finding without such evidence is an opinion. The wrong-turn count misses a run that exits 0 with a wrong value, so
+   read each task's `runLog` in `grade.json` too. The control of AFA-207 showed the gap.
 
 ## Acceptance criteria
 

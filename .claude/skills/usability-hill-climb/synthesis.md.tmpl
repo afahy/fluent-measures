@@ -20,7 +20,10 @@ Merge rows that name the same problem in the same section, even in other words.
 | - | ------- | ------- | -------- | -------------------- | -------- | ----- | ------ |
 
 - **Evidence** cites the trace or the grade: a failed run and its error, a wrong answer and the
-  key, an off-path view with its note, or a `misled` line. A finding with no such evidence is
+  key, an off-path view with its note, or a `misled` line. Read each task's `runLog` in
+  `grade.json`: a run that exits 0 but prints a wrong value, which the reviewer then changes, is
+  a wrong turn that `grade.mjs` doesn't count. Cite it here, and treat it as a page-caused wrong
+  turn when the reviewer copied the page. A finding with no such evidence is
   an opinion. List it under "Opinions", never as a blocker.
 - **Severity**
   - S1: a wrong answer or a confident-wrong prediction that the page's text caused.

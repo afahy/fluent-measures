@@ -276,6 +276,9 @@ if (mode === 'reviewer') {
       offPathExcursions: excursions,
       offPath,
       wrongTurns: excursions + failedRuns,
+      // A run that exits 0 with a wrong value isn't counted above. The organizer reads this log and
+      // counts such a run as a wrong turn in synthesis.md (SKILL.md, "6. Review round").
+      runLog: runs.map(r => ({ file: r.file, ok: r.ok, stdout: (r.stdout ?? '').slice(0, 160) })),
       seconds:
         times.length > 1 ? Math.round((Math.max(...times) - Math.min(...times)) / 1000) : null,
       checks,
