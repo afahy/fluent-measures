@@ -140,28 +140,62 @@ export function hunkRanges(diff) {
  */
 
 /**
- * @typedef {{ files: Record<string, { mutants: ReportMutant[] }> }} Report
+ * @typedef {{ files: Record<string, { source?: string, mutants: ReportMutant[] }> }} Report
  */
 
 /**
- * Returns each mutant in the report whose code overlaps a changed line, with its file. Stryker
- * mutates whole files, so a mutant whose code spans more lines than the change, such as an
- * operator in a multi-line expression, still counts.
+ * Maps Stryker's one-based Babel positions to git's one-based LF-only positions. CRLF is one
+ * line break in both systems; a lone CR, U+2028 or U+2029 starts only a Babel line. Each Babel
+ * line start records its git line and column offset. Columns count UTF-16 units, as Babel does.
+ * One scan per file keeps mapping many mutants linear in the source size plus mutant count.
+ *
+ * @param {string} source
+ * @returns {(point: { line: number, column: number }) => { line: number, column: number }}
+ */
+function gitPositions(source) {
+  const starts = [{ line: 1, column: 0 }];
+  let line = 1;
+  let gitStart = 0;
+  for (const match of source.matchAll(/\r\n|[\r\n\u2028\u2029]/g)) {
+    const at = match.index + match[0].length;
+    if (match[0].endsWith('\n')) {
+      line++;
+      gitStart = at;
+    }
+    starts.push({ line, column: at - gitStart });
+  }
+  return point => {
+    const start = starts[point.line - 1];
+    // Older callers can omit source; keep their existing coordinates in that case.
+    return start ? { line: start.line, column: start.column + point.column } : point;
+  };
+}
+
+/**
+ * Returns each mutant in the report whose code overlaps a changed line, with its file and git
+ * coordinates. Stryker mutates whole files, so a mutant whose code spans more lines than the
+ * change, such as an operator in a multi-line expression, still counts. Keep the original
+ * report's parser coordinates intact for incremental reuse and shard identities.
  *
  * @param {Report} report
  * @param {Map<string, Array<[number, number]>>} changed
  * @returns {Array<{ file: string, mutant: ReportMutant }>}
  */
 function changedMutants(report, changed) {
-  return Object.entries(report.files).flatMap(([file, { mutants }]) =>
-    mutants
-      .filter(({ location }) =>
-        (changed.get(file) ?? []).some(
-          ([from, to]) => location.start.line <= to && location.end.line >= from
-        )
-      )
-      .map(mutant => ({ file, mutant }))
-  );
+  return Object.entries(report.files).flatMap(([file, { source = '', mutants }]) => {
+    const ranges = changed.get(file) ?? [];
+    if (ranges.length === 0) return [];
+    const position = gitPositions(source);
+    return mutants.flatMap(mutant => {
+      const location = {
+        start: position(mutant.location.start),
+        end: position(mutant.location.end),
+      };
+      return ranges.some(([from, to]) => location.start.line <= to && location.end.line >= from)
+        ? [{ file, mutant: { ...mutant, location } }]
+        : [];
+    });
+  });
 }
 
 /**

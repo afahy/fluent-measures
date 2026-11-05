@@ -239,6 +239,133 @@ describe('unkilledMutants', () => {
   });
 });
 
+// AFA-131: Babel counts all JavaScript line terminators; git counts only LF. The
+// nullish expression starts at column 11 of Babel line 2, after 13 UTF-16 units on git line 1.
+describe('mutant git coordinates', () => {
+  it.each(['\r', '\u2028', '\u2029'])(
+    'finds changed mutants after %j and leaves the report untouched',
+    separator => {
+      const report = {
+        files: {
+          'src/a.ts': {
+            source: `const a = 1;${separator}const b = a ?? 2;\nexport const c = 3;\n`,
+            mutants: ['Survived', 'NoCoverage', 'Ignored'].map(status => ({
+              ...mutant(status, [2, 2]),
+              mutatorName: 'LogicalOperator',
+              replacement: 'a && 2',
+              location: { start: { line: 2, column: 11 }, end: { line: 2, column: 17 } },
+            })),
+          },
+        },
+      };
+      const original = structuredClone(report);
+      expect(
+        unkilledMutants(report, new Map([['src/a.ts', [[1, 1]]]])).map(
+          ({ line, column, status }) => ({ line, column, status })
+        )
+      ).toEqual([
+        { line: 1, column: 24, status: 'Survived' },
+        { line: 1, column: 24, status: 'NoCoverage' },
+      ]);
+      // Babel line 2 isn't git line 2: changing only the latter must not count these mutants.
+      expect(unkilledMutants(report, new Map([['src/a.ts', [[2, 2]]]]))).toEqual([]);
+      expect(unexplainedIgnores(report, new Map([['src/a.ts', [[1, 1]]]]))).toEqual([
+        { file: 'src/a.ts', line: 1, column: 24, mutator: 'LogicalOperator' },
+      ]);
+      expect(unexplainedIgnores(report, new Map([['src/a.ts', [[2, 2]]]]))).toEqual([]);
+      expect(report).toEqual(original);
+    }
+  );
+
+  it('maps both ends of a spanning mutant across mixed terminators', () => {
+    // Babel lines 2 through 5 share git line 2. Babel line 6 is git line 3.
+    const report = {
+      files: {
+        'src/a.ts': {
+          source: 'a\r\nb\rc\u2028d\u2029e\nf\n',
+          mutants: [
+            {
+              ...mutant('Survived', [3, 6]),
+              location: { start: { line: 3, column: 1 }, end: { line: 6, column: 2 } },
+            },
+          ],
+        },
+      },
+    };
+    const found = [{ file: 'src/a.ts', line: 2, column: 3 }];
+    expect(
+      unkilledMutants(report, new Map([['src/a.ts', [[2, 2]]]])).map(({ file, line, column }) => ({
+        file,
+        line,
+        column,
+      }))
+    ).toEqual(found);
+    expect(
+      unkilledMutants(report, new Map([['src/a.ts', [[3, 3]]]])).map(({ file, line, column }) => ({
+        file,
+        line,
+        column,
+      }))
+    ).toEqual(found);
+    expect(unkilledMutants(report, new Map([['src/a.ts', [[4, 4]]]]))).toEqual([]);
+  });
+
+  it('resets columns after LF and counts a supplementary character as two UTF-16 units', () => {
+    const report = {
+      files: {
+        'src/a.ts': {
+          source: '// 😀\u2028a;\r\nb;\u2029c;',
+          mutants: [
+            {
+              ...mutant('Survived', [2, 2]),
+              location: { start: { line: 2, column: 1 }, end: { line: 2, column: 2 } },
+            },
+            {
+              ...mutant('Survived', [4, 4]),
+              location: { start: { line: 4, column: 1 }, end: { line: 4, column: 2 } },
+            },
+          ],
+        },
+      },
+    };
+    expect(
+      unkilledMutants(report, new Map([['src/a.ts', [[1, 2]]]])).map(({ line, column }) => [
+        line,
+        column,
+      ])
+    ).toEqual([
+      [1, 7],
+      [2, 4],
+    ]);
+  });
+
+  it.each(['\n', '\r\n'])(
+    'preserves ordinary %j line and column coordinates, including end-line overlap',
+    separator => {
+      const report = {
+        files: {
+          'src/a.ts': {
+            source: `first${separator}second${separator}third${separator}`,
+            mutants: [
+              {
+                ...mutant('Survived', [2, 3]),
+                location: { start: { line: 2, column: 2 }, end: { line: 3, column: 1 } },
+              },
+            ],
+          },
+        },
+      };
+      expect(
+        unkilledMutants(report, new Map([['src/a.ts', [[3, 3]]]])).map(({ line, column }) => [
+          line,
+          column,
+        ])
+      ).toEqual([[2, 2]]);
+      expect(unkilledMutants(report, new Map([['src/a.ts', [[1, 1]]]]))).toEqual([]);
+    }
+  );
+});
+
 describe('unexplainedIgnores', () => {
   it('returns the mutants on changed lines that a disable comment ignores without a reason', () => {
     const changed = new Map<string, Array<[number, number]>>([['src/a.ts', [[7, 7]]]]);
