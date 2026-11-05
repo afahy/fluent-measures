@@ -219,3 +219,544 @@ describe('the lint for tests that skip or are expected to fail', () => {
     ]);
   });
 });
+
+// AFA-180: stored members, aliases and constant expressions must enforce the same policy as
+// direct Vitest calls. These expectations follow rule 3, not the rule's previous output.
+describe('the additional Vitest chain forms', () => {
+  // Mutation can add keys that are absent from the initializer, including an empty object.
+  it.each([
+    'const update = {};\nObject.assign(update, { fails: true });',
+    'const update = {};\nupdate.fails = true;',
+    "const update = {};\nObject.defineProperty(update, 'fails', { value: true, enumerable: true });",
+    'const update = {};\nconst alias = update;\nalias.fails = true;',
+    'const update = { timeout: 1000 };\nupdate.fails = true;',
+    'const original = {};\nObject.assign(original, { fails: true });\nconst update = { ...original };',
+  ])('keeps added keys from a mutated const spread uncertain in %s', async setup => {
+    expect(
+      await problems(
+        setup +
+          '\nconst options = { fails: false, ...update };\n' +
+          "it('x', { fails: true, ...options }, " +
+          pass +
+          ');'
+      )
+    ).toEqual([fails]);
+  });
+
+  it.each([
+    'const update = {};\nObject.assign(update, { fails: true });',
+    'const update = {};\nupdate.fails = true;',
+    "const update = {};\nObject.defineProperty(update, 'fails', { value: true, enumerable: true });",
+    'const update = {};\nconst alias = update;\nalias.fails = true;',
+  ])('allows a final false flag after a mutated const spread in %s', async setup => {
+    expect(
+      await problems(
+        setup +
+          '\nconst options = { ...update, fails: false };\n' +
+          "it('x', { fails: true, ...options }, " +
+          pass +
+          ');'
+      )
+    ).toEqual([]);
+  });
+
+  it.each(['const update = {};', 'const update = { timeout: 1000 };'])(
+    'allows an unchanged const spread without added keys in %s',
+    async setup => {
+      expect(
+        await problems(
+          setup +
+            '\nconst options = { fails: false, ...update };\n' +
+            "it('x', { fails: true, ...options }, " +
+            pass +
+            ');'
+        )
+      ).toEqual([]);
+    }
+  );
+
+  // Reassignment must not erase policy enforcement before the write or on another test alias.
+  it.each([
+    ["t.skip('x', () => {});", skip],
+    ["t('x', { fails: true }, () => {});", fails],
+    ["t.skipIf(!0)('x', () => {});", constant],
+    ["const marked = t.fails;\nmarked('x', () => {});", fails],
+    ["t('x', ({ skip }) => { skip(); });", skip],
+  ])('preserves a policy violation before a later reassignment in %s', async (use, diagnostic) => {
+    expect(await problems('let t = it;\n' + use + '\nt = it;\nvoid t;')).toEqual([diagnostic]);
+  });
+
+  it.each([
+    ["t.skip('x', () => {});", skip],
+    ["t('x', { fails: true }, () => {});", fails],
+    ["t.skipIf(!0)('x', () => {});", constant],
+    ["const marked = t.fails;\nmarked('x', () => {});", fails],
+    ["t('x', ({ skip }) => { skip(); });", skip],
+  ])('preserves a policy violation on a reassigned test alias in %s', async (use, diagnostic) => {
+    expect(await problems('let t = it;\nvoid t;\nt = test;\n' + use)).toEqual([diagnostic]);
+  });
+
+  // Reassigned calls and inherited getters can mutate an otherwise inactive option.
+  it.each([
+    'let invoke = it;\nvoid invoke;\ninvoke = (target): void => { target.fails = true; };\ninvoke(options);',
+    'let invoke = it;\nconst alias = invoke;\nvoid invoke;\ninvoke = (target): void => { target.fails = true; };\ninvoke(options);\nvoid alias;',
+    'let invoke = it;\nvoid invoke;\ninvoke = (target): void => { target.fails = true; };\nconst alias = invoke;\nalias(options);',
+    "Object.defineProperty(Object.prototype, 'activate', { get(): boolean { this.fails = true; return true; }, configurable: true });\nvoid options.activate;",
+    "Object.defineProperty(Object.prototype, 'activate', { get(): boolean { this.fails = true; return true; }, configurable: true });\nconst alias = options;\nvoid alias['activate'];",
+    "Object.defineProperty(Object.prototype, 'activate', { get(): boolean { this.fails = true; return true; }, configurable: true });\nconst key = 'activate';\nvoid options[key];",
+  ])('keeps unproven calls and member reads uncertain in %s', async use => {
+    expect(
+      await problems(
+        'const options = { fails: false };\n' +
+          use +
+          "\nit('x', { fails: true, ...options }, " +
+          pass +
+          ');'
+      )
+    ).toEqual([fails]);
+  });
+
+  it.each([
+    'void options.fails;',
+    "const key = 'fails';\nvoid options[key];",
+    'void options[`fails`];',
+    'const alias = options;\nvoid alias.fails;',
+    "it('first', options, " + pass + ');',
+    "const invoke = it;\ninvoke('first', options, " + pass + ');',
+    "const invoke = it;\nconst alias = invoke;\nalias('first', options, " + pass + ');',
+    "const invoke = it as typeof it;\ninvoke('first', options, " + pass + ');',
+  ])('preserves proven calls and own primitive reads in %s', async use => {
+    expect(
+      await problems(
+        'const options = { fails: false };\n' +
+          use +
+          "\nit('x', { fails: true, ...options }, " +
+          pass +
+          ');'
+      )
+    ).not.toContain(fails);
+  });
+
+  it.each([
+    'const source = { fails: false };\nconst options = { ...source };\nvoid options.fails;',
+    'const options = { fails: false, get timeout(): number { return 1000; } };\nvoid options.timeout;',
+    "const options = { fails: false, ['__proto__']: 1 };\nvoid options.__proto__;",
+  ])('preserves a proven own value from a spread or literal getter in %s', async setup => {
+    expect(await problems(setup + "\nit('x', { fails: true, ...options }, " + pass + ');')).toEqual(
+      []
+    );
+  });
+
+  it.each([
+    'let invoke = it;\nvoid invoke;\ninvoke = (target): void => { target.fails = true; };\ninvoke(options);',
+    "Object.defineProperty(Object.prototype, 'activate', { get(): boolean { this.fails = true; return true; }, configurable: true });\nvoid options.activate;",
+  ])('preserves a final inactive override after an unproven use in %s', async use => {
+    expect(
+      await problems(
+        'const options = { fails: false };\n' +
+          use +
+          "\nit('x', { ...options, fails: false }, " +
+          pass +
+          ');'
+      )
+    ).not.toContain(fails);
+  });
+
+  // Custom prototypes can supply getters, and iterable spreads run iterator methods.
+  it.each([
+    'const options = { __proto__: { get activate(): boolean { this.fails = true; return true; } }, fails: false };\nvoid options.activate;',
+    'const parent = { get activate(): boolean { this.fails = true; return true; } };\nconst options = { __proto__: parent, fails: false };\nvoid options.activate;',
+    'const options = { __proto__: { __proto__: { get activate(): boolean { this.fails = true; return true; } } }, fails: false };\nvoid options.activate;',
+    "const options = { '__proto__': { get activate(): boolean { this.fails = true; return true; } }, fails: false };\nvoid options.activate;",
+    'const options = { *[Symbol.iterator](): Generator<number> { this.fails = true; yield 1; }, fails: false };\nvoid [...options];',
+    'const options = { *[Symbol.iterator](): Generator<number> { this.fails = true; yield 1; }, fails: false };\nvoid Math.max(...options);',
+    'const options = { *[Symbol.iterator](): Generator<number> { this.fails = true; yield 1; }, fails: false };\nconst alias = options;\nvoid [...alias];',
+  ])('rejects an active flag after prototype access or iteration in %s', async setup => {
+    expect(await problems(setup + "\nit('x', { fails: true, ...options }, " + pass + ');')).toEqual(
+      [fails]
+    );
+  });
+
+  it.each([
+    'const options = { metadata: { get activate(): boolean { this.fails = true; return true; } }, fails: false };',
+    'const options = { __proto__: null, fails: false };',
+    // A primitive prototype setter value is ignored by JavaScript.
+    'const options = { __proto__: 1, fails: false };',
+    // Computed keys, methods and accessors named __proto__ are ordinary own properties.
+    'const options = { ["__proto__"]: { get activate(): boolean { this.fails = true; return true; } }, fails: false };',
+    'const options = { __proto__(): void { this.fails = true; }, fails: false };',
+    'const options = { get __proto__(): number { return 1; }, fails: false };',
+    'const options = { *[Symbol.iterator](): Generator<number> { this.fails = true; yield 1; }, fails: false };\nvoid { ...options };',
+  ])('preserves an inactive flag without prototype or iteration effects in %s', async setup => {
+    expect(await problems(setup + "\nit('x', { fails: true, ...options }, " + pass + ');')).toEqual(
+      []
+    );
+  });
+
+  it.each([
+    'const options = { __proto__: { get activate(): boolean { this.fails = true; return true; } }, fails: false };\nvoid options.activate;',
+    'const options = { *[Symbol.iterator](): Generator<number> { this.fails = true; yield 1; }, fails: false };\nvoid [...options];',
+  ])('preserves a final false override after prototype access or iteration in %s', async setup => {
+    expect(
+      await problems(setup + "\nit('x', { ...options, fails: false }, " + pass + ');')
+    ).toEqual([]);
+  });
+
+  // Converting an options object can invoke user code that reactivates a test flag.
+  it.each(['+options', '-options', '~options', 'options + 1', 'options < 2', 'options == 1'])(
+    'keeps coercive numeric reads uncertain in %s',
+    async expression => {
+      expect(
+        await problems(
+          'const options = { fails: false, valueOf(): number { this.fails = true; return 1; } };\n' +
+            `void (${expression});\n` +
+            "it('x', { fails: true, ...options }, " +
+            pass +
+            ');'
+        )
+      ).toEqual([fails]);
+    }
+  );
+
+  it.each(["'x' + options", 'options in { active: true }'])(
+    'keeps coercive string reads uncertain in %s',
+    async expression => {
+      expect(
+        await problems(
+          "const options = { fails: false, toString(): string { this.fails = true; return 'active'; } };\n" +
+            `void (${expression});\n` +
+            "it('x', { fails: true, ...options }, " +
+            pass +
+            ');'
+        )
+      ).toEqual([fails]);
+    }
+  );
+
+  it('keeps a coercive Symbol.toPrimitive call uncertain', async () => {
+    expect(
+      await problems(
+        'const options = { fails: false, [Symbol.toPrimitive](): number { this.fails = true; return 1; } };\n' +
+          "void +options;\nit('x', { fails: true, ...options }, " +
+          pass +
+          ');'
+      )
+    ).toEqual([fails]);
+  });
+
+  it.each(['void options', '!options', 'typeof options', 'options === other', 'options !== other'])(
+    'allows a non-coercive read of options in %s',
+    async expression => {
+      expect(
+        await problems(
+          'const options = { fails: false, valueOf(): number { this.fails = true; return 1; } };\n' +
+            'const other = JSON.parse("{}");\nvoid other;\n' +
+            `void (${expression});\n` +
+            "it('x', { fails: true, ...options }, " +
+            pass +
+            ');'
+        )
+      ).toEqual([]);
+    }
+  );
+
+  it('allows an explicit inactive flag after a coercive read', async () => {
+    expect(
+      await problems(
+        'const options = { fails: false, valueOf(): number { this.fails = true; return 1; } };\n' +
+          "void +options;\nit('x', { ...options, fails: false }, " +
+          pass +
+          ');'
+      )
+    ).toEqual([]);
+  });
+
+  // A later spread, computed key or getter can reactivate a known false option.
+  it.each([
+    'const options = { fails: false };\n' +
+      'const runtime = JSON.parse(\'{"fails":true}\') as { fails: boolean };\n' +
+      "it('x', { fails: true, ...options, ...runtime }, " +
+      pass +
+      ');',
+    "const options = { fails: false };\nconst key = 'fails';\n" +
+      "it('x', { fails: true, ...options, [key]: true }, " +
+      pass +
+      ');',
+    'const options = { fails: false };\nconst key = JSON.parse(\'"fails"\') as string;\n' +
+      "it('x', { fails: true, ...options, [key]: true }, " +
+      pass +
+      ');',
+    'const runtime = JSON.parse(\'{"fails":true}\') as { fails: boolean };\n' +
+      'const options = { fails: false, ...runtime };\n' +
+      "it('x', { fails: true, ...options }, " +
+      pass +
+      ');',
+    'const options = { fails: false, get activate(): boolean { this.fails = true; return true; } };\n' +
+      'void options.activate;\n' +
+      "it('x', { fails: true, ...options }, " +
+      pass +
+      ');',
+    'const options = { fails: false, get activate(): boolean { this.fails = true; return true; } };\n' +
+      'const alias = options;\nvoid alias.activate;\n' +
+      "it('x', { fails: true, ...options }, " +
+      pass +
+      ');',
+    'const options = { get activate(): boolean { this.fails = true; return true; }, fails: false };\n' +
+      "it('x', { fails: true, ...options }, " +
+      pass +
+      ');',
+  ])('does not trust an overridden or getter-backed option in %s', async body => {
+    expect(await problems(body)).toEqual([fails]);
+  });
+
+  it.each([
+    "it('x', { fails: false, get timeout(): number { return 1000; } }, " + pass + ');',
+    'const options = { fails: false, get timeout(): number { return 1000; } };\n' +
+      "it('x', options, " +
+      pass +
+      ');',
+    'const runtime = JSON.parse(\'{"fails":true}\') as { fails: boolean };\n' +
+      'const options = { fails: true, ...runtime, fails: false };\n' +
+      "it('x', { fails: true, ...options }, " +
+      pass +
+      ');',
+    'const runtime = JSON.parse(\'{"fails":true}\') as { fails: boolean };\n' +
+      "it('x', { fails: true, ...runtime, fails: false }, " +
+      pass +
+      ');',
+    'const options = { get activate(): boolean { this.fails = true; return true; }, fails: false };\n' +
+      "it('x', { ...options, fails: false }, " +
+      pass +
+      ');',
+    "const options = { fails: false };\nconst key = 'timeout';\n" +
+      "it('x', { fails: true, ...options, [key]: 1000 }, " +
+      pass +
+      ');',
+    'const options = { fails: false };\n' +
+      "it('x', { fails: true, ...options, ...{} }, " +
+      pass +
+      ');',
+    'const options = { fails: false };\n' +
+      "it('x', { fails: true, ...options, ...null }, " +
+      pass +
+      ');',
+  ])('preserves a final inactive value after uncertain options in %s', async body => {
+    expect(await problems(body)).toEqual([]);
+  });
+
+  // AFA-180 re-review: these all write the same object used by the false spread override.
+  it.each([
+    'const alias = options || {}; alias.fails = true;',
+    'const alias = process.env.CI && options; alias.fails = true;',
+    'const alias = options ?? {}; alias.fails = true;',
+    '({ fails: options.fails } = { fails: true });',
+    '[options.fails] = [true];',
+    '[options.fails = true] = [];',
+    '[...options.fails] = [true];',
+    'for (options.fails of [true]) { void options.fails; }',
+    'for (options.fails in { active: true }) { void options.fails; }',
+  ])('detects an aliased or destructured option write in %s', async write => {
+    expect(
+      await problems(
+        'const options = { fails: false };\n' +
+          write +
+          "\nit('x', { fails: true, ...options }, " +
+          pass +
+          ');'
+      )
+    ).toEqual([fails]);
+  });
+
+  it('keeps a discarded logical value as a read of the options', async () => {
+    expect(
+      await problems(
+        'const options = { fails: false };\nvoid (options || {});\n' +
+          "it('x', { fails: true, ...options }, " +
+          pass +
+          ');'
+      )
+    ).toEqual([]);
+  });
+
+  // AFA-180 review: a falsy value can be nullish, and a const object can still change.
+  it.each([
+    "it('x', { fails: (process.env.CI && false) ?? true }, " + pass + ');',
+    "it('x', { todo: (process.env.CI && 0) ?? true }, " + pass + ');',
+    "it('x', { fails: (process.env.CI || {}) ?? false }, " + pass + ');',
+    'const options = { fails: false };\noptions.fails = true;\n' +
+      "it('x', { fails: true, ...options }, " +
+      pass +
+      ');',
+    'const options = { todo: false };\noptions.todo ||= true;\n' +
+      "it('x', { todo: true, ...options }, " +
+      pass +
+      ');',
+    'const options = { fails: false };\nconst alias = options;\nalias.fails = true;\n' +
+      "it('x', { fails: true, ...options }, " +
+      pass +
+      ');',
+    'const options = { fails: false };\nObject.assign(options, { fails: true });\n' +
+      "it('x', { fails: true, ...options }, " +
+      pass +
+      ');',
+    'const options = { fails: false };\ndelete options.fails;\n' +
+      "it('x', { fails: true, ...options }, " +
+      pass +
+      ');',
+    'const options = { fails: false };\noptions.fails = true;\n' +
+      "it('x', options, " +
+      pass +
+      ');',
+    'const options = { fails: false, activate(): void { this.fails = true; } };\n' +
+      "options.activate();\nit('x', { fails: true, ...options }, " +
+      pass +
+      ');',
+  ])('keeps active or uncertain flags rejected in %s', async body => {
+    expect(await problems(body)).toEqual([fails]);
+  });
+
+  it.each([
+    "it.skipIf((process.env.CI && false) ?? true)('x', " + pass + ');',
+    "it.runIf((process.env.CI && false) ?? true)('x', " + pass + ');',
+    "it('x', { fails: (process.env.CI && false) ?? false }, " + pass + ');',
+    'const options = { fails: false };\nconst alias = options;\nvoid options.fails;\n' +
+      "it('x', { fails: true, ...alias }, " +
+      pass +
+      ');',
+    'const options = { fails: false };\n' +
+      "it('x', { fails: true, ...(options as typeof options) }, " +
+      pass +
+      ');',
+    'const options = { fails: false };\noptions.fails = true;\n' +
+      "it('x', { ...options, fails: false }, " +
+      pass +
+      ');',
+  ])('preserves dynamic conditions and final inactive overrides in %s', async body => {
+    expect(await problems(body)).toEqual([]);
+  });
+
+  it('does not mark a known non-nullish false option as active', async () => {
+    // The core lint rule can reject redundant coalescing; this flag is still inactive.
+    expect(await problems("it('x', { fails: false ?? true }, " + pass + ');')).not.toContain(fails);
+  });
+
+  it.each([
+    // 1–3: stored skip, namespace aliases and context aliases through TypeScript wrappers.
+    [`const skipped = it.skip;\nskipped('x', ${pass});`, skip],
+    [
+      `import * as v from 'vitest';\n\nconst w = v;\nw.it.skip('x', () => {\n  v.expect(1).toBe(1);\n});`,
+      skip,
+    ],
+    [`const v = require('vitest');\nconst w = v;\nw.it.fails('x', ${pass});`, fails],
+    [
+      `import * as v from 'vitest';\n\nconst w = v;\nconst { it, expect } = w;\nit.fails('x', ${pass});`,
+      fails,
+    ],
+    [
+      `it('x', ctx => {\n  const other = ctx as typeof ctx;\n  other.skip();\n  expect(1).toBe(1);\n});`,
+      skip,
+    ],
+    [
+      `it('x', ctx => {\n  const other = ctx satisfies typeof ctx;\n  other.skip();\n  expect(1).toBe(1);\n});`,
+      skip,
+    ],
+    [`it('x', ctx => {\n  const other = ctx!;\n  other.skip();\n  expect(1).toBe(1);\n});`, skip],
+    [
+      `it('x', ctx => {\n  const { skip } = (ctx as typeof ctx)!;\n  skip();\n  expect(1).toBe(1);\n});`,
+      skip,
+    ],
+    [`it('x', ctx => {\n  (ctx satisfies typeof ctx).skip();\n  expect(1).toBe(1);\n});`, skip],
+    // 4: the right operand decides truthiness even when the left operand is unknown.
+    [`it.skipIf(process.env.CI || true)('x', ${pass});`, constant],
+    [`it.runIf(process.env.CI && false)('x', ${pass});`, constant],
+    [`it.skipIf(process.env.CI || [])('x', ${pass});`, constant],
+    [`it.runIf(process.env.CI && 0)('x', ${pass});`, constant],
+    [`it.skipIf(true || process.env.CI)('x', ${pass});`, constant],
+    [`it.runIf(false && process.env.CI)('x', ${pass});`, constant],
+    // 5–6: static template keys and options stored in local const objects.
+    [`it[\`fails\`]('x', ${pass});`, fails],
+    [`it('x', { [\`todo\`]: true }, ${pass});`, fails],
+    [`const options = { fails: true };\nit('x', options, ${pass});`, fails],
+    [`const options = { todo: true };\nconst alias = options;\nit('x', alias, ${pass});`, fails],
+    [`const options = { skip: true };\nit('x', options as typeof options, ${pass});`, skip],
+    // 7: unresolved imports, factory returns and object members can still be test functions.
+    [`import { test, expect } from '@/fixtures';\n\ntest.fails('x', ${pass});`, fails],
+    [`const make = () => it;\nconst t = make();\nt.fails('x', ${pass});`, fails],
+    [`const h = { t: it };\nh.t.fails('x', ${pass});`, fails],
+    [`import { test, expect } from 'test-utils';\n\ntest('x', { todo: true }, ${pass});`, fails],
+    // 8: fixture imports aren't necessarily read by the plugin.
+    [`import { test, expect } from './fixtures';\n\ntest.skip('x', ${pass});`, skip],
+    [`import { test, expect } from './fixtures';\n\ntest('x', { skip: true }, ${pass});`, skip],
+    // 9–11: truthy skip options, third-argument options, default context and destructured skip.
+    [`it('x', { skip: 1 }, ${pass});`, skip],
+    [`it('x', { skip: !0 }, ${pass});`, skip],
+    [`it('x', ${pass}, { skip: true });`, skip],
+    [`it('x', (ctx = {} as never) => {\n  ctx.skip();\n  expect(1).toBe(1);\n});`, skip],
+    [`const { skip } = it;\nskip('x', ${pass});`, skip],
+    // 12: constants and options spread from const objects, including nested aliases.
+    [`const c = true;\nit.skipIf(c)('x', ${pass});`, constant],
+    [`const c = false;\nconst alias = c;\nit.runIf(alias)('x', ${pass});`, constant],
+    [`const c = 1;\nit.skipIf(c === 1)('x', ${pass});`, constant],
+    [`const c = 1;\nit.skipIf(\`\${c}\`)('x', ${pass});`, constant],
+    [`const c = {};\nit.skipIf(c)('x', ${pass});`, constant],
+    [`const c = process.env.CI || true;\nit.skipIf(c)('x', ${pass});`, constant],
+    [`const c = null;\nit.skipIf(c ?? [])('x', ${pass});`, constant],
+    [`const o = { todo: true };\nit('x', { ...o }, ${pass});`, fails],
+    [`const o = { skip: true };\nconst options = { ...o };\nit('x', options, ${pass});`, skip],
+    [`const o = { fails: true };\nit('x', { fails: false, ...o }, ${pass});`, fails],
+    // Read a const initializer in its own scope, even when its use shadows a name.
+    [
+      `const c = true;\nconst options = { fails: c };\nfunction run(c: boolean): void {\n  it('x', options, ${pass});\n  void c;\n}\nrun(false);`,
+      fails,
+    ],
+  ])('rejects the additional form %s', async (body, problem) => {
+    expect(await problems(body)).toContain(problem);
+  });
+
+  it.each([
+    `const underStryker = Boolean(process.env.STRYKER);\nit.skipIf(underStryker)('x', ${pass});`,
+    `it.skipIf(process.env.CI || false)('x', ${pass});`,
+    `it.runIf(process.env.CI && true)('x', ${pass});`,
+    `it.skipIf(process.env.CI ?? true)('x', ${pass});`,
+    `const c = Boolean(process.env.CI);\nconst alias = c;\nit.skipIf(alias)('x', ${pass});`,
+    // Don't infer const values from mutable or shadowed bindings.
+    `let c = true;\nc = c && Boolean(process.env.CI);\nit.skipIf(c)('x', ${pass});`,
+    `const c = true;\nfunction run(c: boolean): void {\n  it.skipIf(c)('x', ${pass});\n}\nrun(c);`,
+    `const options = { todo: false };\nit('x', options, ${pass});`,
+    `const off = false;\nit('x', { fails: off }, ${pass});`,
+    `const off = false;\nconst options = { fails: off };\nfunction run(off: boolean): void {\n  it('x', options, ${pass});\n  void off;\n}\nrun(true);`,
+    `const o = { skip: false };\nit('x', { ...o }, ${pass});`,
+    `const o = { fails: true };\nit('x', { ...o, fails: false }, ${pass});`,
+    `const o = { fails: false };\nit('x', { fails: true, ...o }, ${pass});`,
+    `const o = { todo: true };\nexport const custom = test.extend(o);`,
+    `let options = { todo: true };\noptions = { todo: !options.todo };\nit('x', options, ${pass});`,
+    `import * as v from 'vitest';\n\nconst w = v;\nw.expect(1).toBe(1);`,
+    `it('x', ctx => {\n  const other = ctx as typeof ctx;\n  expect(other.task.name).toBe('x');\n});`,
+    // Custom matcher names aren't test modifiers on Vitest's known expect export.
+    `it('x', () => {\n  expect(1).fails();\n});`,
+    `it('x', () => {\n  expect(1).todo();\n});`,
+  ])('allows the dynamic or inactive form %s', async body => {
+    expect(await problems(body)).toEqual([]);
+  });
+
+  // Invalid cyclic initializers can have other lint errors; this rule must terminate without
+  // inventing a constant condition or a marked test from an unresolved cycle.
+  it.each([
+    [`const a = b;\nconst b = a;\nit.skipIf(a)('x', ${pass});`, constant],
+    [`const a = { ...b };\nconst b = { ...a };\nit('x', a, ${pass});`, fails],
+  ])('stops resolving cyclic const bindings in %s', async (body, problem) => {
+    expect(await problems(body)).not.toContain(problem);
+  });
+
+  // 8: use the installed plugin's report, including import aliases, without adding a second one.
+  it.each([
+    `it.skip('x', ${pass});`,
+    `it('x', { skip: true }, ${pass});`,
+    `import { expect, it as t } from 'vitest';\n\nt.skip('x', ${pass});`,
+    `import { expect, it as t } from 'vitest';\n\nt('x', { skip: true }, ${pass});`,
+    `it.concurrent.skip('x', ${pass});`,
+    `it('x', ctx => {\n  ctx.skip();\n  expect(1).toBe(1);\n});`,
+  ])('keeps exactly one plugin error for %s', async body => {
+    expect(await problems(body)).toEqual(['vitest/no-disabled-tests']);
+  });
+});
