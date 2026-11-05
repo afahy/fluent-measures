@@ -12,8 +12,11 @@ const corpusPath = 'tests/corpus/measurements.jsonl';
 const directories: string[] = [];
 const feet = { value: 6, unit: 'ft', type: 'height' };
 const inches = { value: 72, unit: 'in', type: 'height' };
-const parseFeet = `export function parseMeasurement() { return ${JSON.stringify(feet)}; }`;
-const parseInches = `export function parseMeasurement() { return ${JSON.stringify(inches)}; }`;
+// Literal module source keeps the controlled fixtures independent of expected-value objects.
+const feetSource = '{ value: 6, unit: "ft", type: "height" }';
+const inchesSource = '{ value: 72, unit: "in", type: "height" }';
+const parseFeet = `export function parseMeasurement() { return ${feetSource}; }`;
+const parseInches = `export function parseMeasurement() { return ${inchesSource}; }`;
 
 afterEach(() => {
   for (const directory of directories.splice(0))
@@ -118,14 +121,14 @@ describe('Evidence corpus replay regressions', () => {
       root,
       'base-build/dist/index.js',
       `export function parseMeasurement(input, options) {
-      return input === '6 ft' && options?.normalizedUnit === 'in' ? null : ${JSON.stringify(feet)};
+      return input === '6 ft' && options?.normalizedUnit === 'in' ? null : ${feetSource};
     }`
     );
     write(
       root,
       'head-build/dist/index.js',
       `export function parseMeasurement(input, options) {
-      return input === '6 ft' && options?.normalizedUnit === 'in' ? ${JSON.stringify(inches)} : null;
+      return input === '6 ft' && options?.normalizedUnit === 'in' ? ${inchesSource} : null;
     }`
     );
     const result = run(root);
@@ -142,7 +145,7 @@ describe('Evidence corpus replay regressions', () => {
     write(
       root,
       'base-build/dist/index.js',
-      `export function parseMeasurement(input) { return input === '6 ft' ? null : ${JSON.stringify(feet)}; }`
+      `export function parseMeasurement(input) { return input === '6 ft' ? null : ${feetSource}; }`
     );
     const result = run(root);
     expect(result.status).toBe(1);
@@ -154,7 +157,7 @@ describe('Evidence corpus replay regressions', () => {
     write(
       root,
       'base-build/dist/index.js',
-      `export function parseMeasurement(input, options) { return options?.normalizedUnit === 'in' ? null : ${JSON.stringify(feet)}; }`
+      `export function parseMeasurement(input, options) { return options?.normalizedUnit === 'in' ? null : ${feetSource}; }`
     );
     const result = run(root);
     expect(result.status).toBe(1);
@@ -169,7 +172,7 @@ describe('Evidence corpus replay regressions', () => {
     write(
       root,
       'base-build/dist/index.js',
-      `export function parseMeasurement() { return { ...${JSON.stringify(feet)}, raw: 'base' }; }`
+      `export function parseMeasurement() { return { ...${feetSource}, raw: 'base' }; }`
     );
     // The first and last results change; the middle one only changes a field outside the corpus
     // measurement (value/unit/type). Expected outputs have no part in this comparison.
@@ -178,9 +181,9 @@ describe('Evidence corpus replay regressions', () => {
       'head-build/dist/index.js',
       `let calls = 0; export function parseMeasurement() {
       calls += 1;
-      if (calls === 1) return ${JSON.stringify(inches)};
+      if (calls === 1) return ${inchesSource};
       if (calls === 3) throw new TypeError('bad unit');
-      return { ...${JSON.stringify(feet)}, raw: 'head' };
+      return { ...${feetSource}, raw: 'head' };
     }`
     );
     const result = run(root);
@@ -213,7 +216,7 @@ describe('Evidence corpus replay regressions', () => {
     write(
       root,
       'head-build/dist/index.js',
-      `export function parseMeasurement(input, options) { return options?.fuzziness === Infinity ? ${JSON.stringify(inches)} : null; }`
+      `export function parseMeasurement(input, options) { return options?.fuzziness === Infinity ? ${inchesSource} : null; }`
     );
     const result = run(root);
     expect(result.status).toBe(1);
