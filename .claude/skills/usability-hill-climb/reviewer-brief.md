@@ -1,4 +1,4 @@
-<!-- Usability reviewer brief, protocol v2. Fill it with the repository's
+<!-- Usability reviewer brief, protocol v3. Fill it with the repository's
 .claude/skills/design-hill-climb/fill.mjs, as SKILL.md "6. Review round" says. Don't fill it by
 hand. Never add the score history, the decisions log, the changelog or the answer key: a
 usability reviewer must meet the page with fresh eyes. -->

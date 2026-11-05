@@ -32,13 +32,16 @@ reviewer)
 EOF
   (cd "$dir/sandbox" && npm install --no-audit --no-fund --offline "$tarball" >/dev/null 2>&1 ||
     npm install --no-audit --no-fund "$tarball" >/dev/null)
+  # Reviewers may read $KIT, so it holds only the two tools, never the grader or the holdout tasks.
+  mkdir -p "$run/reviewer-kit"
+  cp "$kit/browse.mjs" "$kit/try.mjs" "$run/reviewer-kit/"
   : >"$dir/trace.jsonl"
   cp "$kit/tasks.md" "$dir/tasks.md"
   if [ "${HOLDOUT:-0}" = 1 ]; then cat "$kit/tasks-holdout.md" >>"$dir/tasks.md"; fi
   cat >"$dir/env.sh" <<EOF
 export PAGE_URL='$page'
 export REPO='$repo'
-export KIT='$kit'
+export KIT='$run/reviewer-kit'
 export SANDBOX='$dir/sandbox'
 export TRACE='$dir/trace.jsonl'
 export SHOTS='$dir/shots'

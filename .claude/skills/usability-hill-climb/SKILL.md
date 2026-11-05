@@ -70,9 +70,10 @@ sufficient. Recommend human sessions before anyone calls the page easy to use in
 1. Claim the ticket, fetch, and make the worktree from `origin/main` on the ticket's
    `gitBranchName`, as design skill section 1 says. Run `pnpm install`.
 2. Make a run folder: `R=$(mktemp -d /tmp/fluent-usability-XXXXXX)`. Copy this folder, without
-   `SKILL.md`, to `$R/kit/`, so that each reviewer's `$KIT` holds only the kit. Copy the key to
-   `$R/private/`. Copy `decisions.md.tmpl` to `$R/decisions.md`, and add the entries of the last
-   usability run from its PR body.
+   `SKILL.md`, to `$R/kit/`, for the organizer. `setup.sh reviewer` copies only `browse.mjs` and
+   `try.mjs` to `$R/reviewer-kit/`, which is each reviewer's `$KIT`, so that reviewers can't read
+   the grader or the holdout tasks. Copy the key to `$R/private/`. Copy `decisions.md.tmpl` to
+   `$R/decisions.md`, and add the entries of the last usability run from its PR body.
 3. Check the key against the merged README, `PARSING.md` and page. Each `path` id must be a
    heading id on the page, and each grounding note must still hold. If an id or a rule changed,
    update the key, bump its version, and say so in the PR.

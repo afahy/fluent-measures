@@ -84,8 +84,7 @@ if (mode === 'selfcheck') {
   check(
     'T1',
     r1,
-    JSON.stringify(r1 && { ...r1, matches: r1.matches }) !== undefined &&
-      r1?.value === 6 &&
+    r1?.value === 6 &&
       r1?.unit === 'ft' &&
       r1?.type === 'height' &&
       sameParts(r1?.matches, t.T1.expect.result.matches)
@@ -144,6 +143,8 @@ if (mode === 'reviewer') {
     : [];
   const lib = library(sandbox);
   const out = { dir, tasks: {} };
+  // try.mjs accepts sandbox/<file>, so the grader reads the same form.
+  const taskFile = file => join(sandbox, file.replace(/^(\.\/)?sandbox\//, ''));
 
   for (const [id, spec] of Object.entries(key.tasks)) {
     if (spec.holdout && !answers[id]) continue; // holdout tasks run only in the baseline and final rounds
@@ -182,7 +183,7 @@ if (mode === 'reviewer') {
       checks.install = spec.acceptInstall.includes(cmd);
       checks.import = spec.importMustMention.every(word => (a.importLine ?? '').includes(word));
       const rerun = a.file
-        ? spawnSync(process.execPath, [join(sandbox, a.file)], {
+        ? spawnSync(process.execPath, [taskFile(a.file)], {
             cwd: sandbox,
             encoding: 'utf8',
             timeout: 20000,
@@ -192,7 +193,7 @@ if (mode === 'reviewer') {
       correct = checks.install && checks.import && checks.runs;
       partial = !correct && (checks.install || checks.runs);
     } else if (id === 'T4') {
-      const fileUrl = a.file ? pathToFileURL(join(sandbox, a.file)).href : null;
+      const fileUrl = a.file ? pathToFileURL(taskFile(a.file)).href : null;
       const cases = spec.functionCases.map(c => c.input);
       const script = `import { toKg } from ${JSON.stringify(fileUrl)};
         const out = {};
@@ -219,7 +220,10 @@ if (mode === 'reviewer') {
         got: got[c.input],
         ok: c.expect === null ? got[c.input] === null : near(got[c.input], c.expect, 1e-4),
       }));
-      checks.neverThrows = checks.cases.every(c => !String(c.got).startsWith('THROWS'));
+      // A file that is missing or doesn't load gives no result at all, which isn't "never throws".
+      checks.neverThrows = checks.cases.every(
+        c => c.got !== undefined && !String(c.got).startsWith('THROWS')
+      );
       correct = checks.cases.every(c => c.ok);
       partial = !correct && checks.neverThrows;
       const preds = Object.entries(spec.predictions).map(([input, want]) =>
@@ -239,7 +243,11 @@ if (mode === 'reviewer') {
       checks.reportedOk = near(Number(a.value), want.value, tol.reported) && a.unit === want.unit;
       correct = callOk && checks.reportedOk;
       if (id === 'T3') {
-        checks.partsField = a.partsField === want.partsField;
+        // Accept `matches`, "result.matches" and the like.
+        const field = String(a.partsField ?? '')
+          .replace(/[`'"\s]/g, '')
+          .replace(/^.*\./, '');
+        checks.partsField = field === want.partsField;
         checks.parts = sameParts(a.parts, want.parts);
         correct &&= checks.partsField && checks.parts;
       }

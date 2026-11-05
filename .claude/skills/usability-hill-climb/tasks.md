@@ -1,4 +1,4 @@
-<!-- Reviewer-facing task cards, protocol v2. Don't put answers, option names or section names
+<!-- Reviewer-facing task cards, protocol v3. Don't put answers, option names or section names
 here: the cards say what the user wants, not how the page says to do it. Change the version
 when you change a card, and pilot it again (SKILL.md, "4. Pilot"). -->
 <!-- cspell:ignore inchs -->
@@ -116,11 +116,11 @@ text with no options, and say which part of the docs your prediction comes from.
       "confidence": 1,
       "file": "t4.ts",
       "predictions": {
-        "12st 4lb": null,
-        "150-180 lbs": null,
-        "not a measurement": null,
-        "70 kg (154 lbs)": null,
-        "210 lbs to 180 lbs": null
+        "12st 4lb": "",
+        "150-180 lbs": "",
+        "not a measurement": "",
+        "70 kg (154 lbs)": "",
+        "210 lbs to 180 lbs": ""
       },
       "helped": "",
       "misled": "",
@@ -134,7 +134,7 @@ text with no options, and say which part of the docs your prediction comes from.
       "options": {},
       "value": 0,
       "unit": "",
-      "predict1_8": null,
+      "predict1_8": "",
       "predict1_8Confidence": 1,
       "helped": "",
       "misled": "",
@@ -148,7 +148,7 @@ text with no options, and say which part of the docs your prediction comes from.
       "options": {},
       "value": 0,
       "unit": "",
-      "withoutSetting": null,
+      "withoutSetting": "",
       "helped": "",
       "misled": "",
       "notes": ""
@@ -161,7 +161,7 @@ text with no options, and say which part of the docs your prediction comes from.
       "options": {},
       "value": 0,
       "unit": "",
-      "predictNoOptions": null,
+      "predictNoOptions": "",
       "predictionSource": "",
       "helped": "",
       "misled": "",
@@ -175,6 +175,7 @@ text with no options, and say which part of the docs your prediction comes from.
 - `input` and `options` are the exact first and second arguments of your final call. If you
   changed the text before you passed it, put the text that you passed in `input`.
 - A prediction or a result is `null`, or an object such as `{ "value": 70, "unit": "kg" }`.
+  Replace each `""` in the template with one of these.
 - `parts` is a list such as `[{ "value": 1, "unit": "ft" }]`.
 - `helped` and `misled` name the section of the page (the `Section:` that `browse.mjs` prints)
   and say in one sentence what it did. Write `none` when nothing did.

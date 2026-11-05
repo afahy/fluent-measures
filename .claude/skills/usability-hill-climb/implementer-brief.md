@@ -35,6 +35,8 @@ or took wrong turns, at the places listed below. Your job is to remove those cau
 
 ## Files
 
+- Don't read `.claude/skills/usability-hill-climb/`. It holds the task cards and the holdout
+  tasks, and a fix that knows them can teach to the test.
 - Edit only the files in the folder of `{TARGET}`. Don't touch `README.md`, `PARSING.md`,
   `src/`, `tests/`, `.changeset/`, `.github/`, `package.json` or a config file.
 - If you change `docs/site.css`, build `docs/tailwind.css` again, as `CONTRIBUTING.md` says.
