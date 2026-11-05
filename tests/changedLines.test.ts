@@ -239,6 +239,182 @@ describe('unkilledMutants', () => {
   });
 });
 
+// AFA-131: Babel counts all JavaScript line terminators; git counts only LF. The
+// nullish expression starts at column 11 of Babel line 2, after 13 UTF-16 units on git line 1.
+describe('mutant git coordinates', () => {
+  it.each(['\r', '\u2028', '\u2029'])(
+    'finds changed mutants after %j and leaves the report untouched',
+    separator => {
+      const report = {
+        files: {
+          'src/a.ts': {
+            source: `const a = 1;${separator}const b = a ?? 2;\nexport const c = 3;\n`,
+            mutants: ['Survived', 'NoCoverage', 'Ignored'].map(status => ({
+              ...mutant(status, [2, 2]),
+              mutatorName: 'LogicalOperator',
+              replacement: 'a && 2',
+              location: { start: { line: 2, column: 11 }, end: { line: 2, column: 17 } },
+            })),
+          },
+        },
+      };
+      const original = structuredClone(report);
+      expect(
+        unkilledMutants(report, new Map([['src/a.ts', [[1, 1]]]])).map(
+          ({ line, column, status }) => ({ line, column, status })
+        )
+      ).toEqual([
+        { line: 1, column: 24, status: 'Survived' },
+        { line: 1, column: 24, status: 'NoCoverage' },
+      ]);
+      // Babel line 2 isn't git line 2: changing only the latter must not count these mutants.
+      expect(unkilledMutants(report, new Map([['src/a.ts', [[2, 2]]]]))).toEqual([]);
+      expect(unexplainedIgnores(report, new Map([['src/a.ts', [[1, 1]]]]))).toEqual([
+        { file: 'src/a.ts', line: 1, column: 24, mutator: 'LogicalOperator' },
+      ]);
+      expect(unexplainedIgnores(report, new Map([['src/a.ts', [[2, 2]]]]))).toEqual([]);
+      expect(report).toEqual(original);
+    }
+  );
+
+  // Babel's readEscapedChar keeps its line for escaped Unicode separators in literals.
+  // All these prefixes have no LF: the following nullish expression is git line 2, column 11.
+  for (const separator of ['\u2028', '\u2029']) {
+    it.each([
+      ['single quote', "const a = 'a\\<sep>b';", 2],
+      ['double quote', 'const a = "a\\<sep>b";', 2],
+      ['template', 'const a = `a\\<sep>b`;', 2],
+      ['template head', 'const a = `a\\<sep>${1}b`;', 2],
+      ['template middle', 'const a = `a${1}\\<sep>b${2}c`;', 2],
+      ['template tail', 'const a = `a${1}\\<sep>b`;', 2],
+      ['nested template', 'const a = `a${`b\\<sep>c`}d`;', 2],
+      ['even backslashes', "const a = 'a\\\\<sep>b';", 3],
+      ['odd backslashes', "const a = 'a\\\\\\<sep>b';", 2],
+      ['mixed escapes', "const a = 'a\\<sep>b<sep>c';", 3],
+      ['line comment', "// 'a\\<sep>const a = 1;", 3],
+      ['block comment', "/* 'a\\<sep> */const a = 1;", 3],
+      ['regex before string', "const r = /'/; const a = 'a\\<sep>b';", 2],
+    ] as const)(
+      `maps a %s containing U+${separator.charCodeAt(0).toString(16)}`,
+      (_, prefix, babelLine) => {
+        expect.hasAssertions();
+        const report = {
+          files: {
+            'src/a.ts': {
+              source: prefix.replace(/<sep>/g, separator) + '\nconst b = a ?? 2;\n',
+              mutants: ['Survived', 'NoCoverage', 'Ignored'].map(status => ({
+                ...mutant(status, [babelLine, babelLine]),
+                mutatorName: 'LogicalOperator',
+                replacement: 'a && 2',
+                location: {
+                  start: { line: babelLine, column: 11 },
+                  end: { line: babelLine, column: 17 },
+                },
+              })),
+            },
+          },
+        };
+        expect(unkilledMutants(report, new Map([['src/a.ts', [[2, 2]]]]))).toMatchObject([
+          { line: 2, column: 11, status: 'Survived' },
+          { line: 2, column: 11, status: 'NoCoverage' },
+        ]);
+        expect(unkilledMutants(report, new Map([['src/a.ts', [[1, 1]]]]))).toEqual([]);
+        expect(unexplainedIgnores(report, new Map([['src/a.ts', [[2, 2]]]]))).toEqual([
+          { file: 'src/a.ts', line: 2, column: 11, mutator: 'LogicalOperator' },
+        ]);
+      }
+    );
+  }
+
+  it('maps both ends of a spanning mutant across mixed terminators', () => {
+    // Babel lines 2 through 5 share git line 2. Babel line 6 is git line 3.
+    const report = {
+      files: {
+        'src/a.ts': {
+          source: 'a\r\nb\rc\u2028d\u2029e\nf\n',
+          mutants: [
+            {
+              ...mutant('Survived', [3, 6]),
+              location: { start: { line: 3, column: 1 }, end: { line: 6, column: 2 } },
+            },
+          ],
+        },
+      },
+    };
+    const found = [{ file: 'src/a.ts', line: 2, column: 3 }];
+    expect(
+      unkilledMutants(report, new Map([['src/a.ts', [[2, 2]]]])).map(({ file, line, column }) => ({
+        file,
+        line,
+        column,
+      }))
+    ).toEqual(found);
+    expect(
+      unkilledMutants(report, new Map([['src/a.ts', [[3, 3]]]])).map(({ file, line, column }) => ({
+        file,
+        line,
+        column,
+      }))
+    ).toEqual(found);
+    expect(unkilledMutants(report, new Map([['src/a.ts', [[4, 4]]]]))).toEqual([]);
+  });
+
+  it('resets columns after LF and counts a supplementary character as two UTF-16 units', () => {
+    const report = {
+      files: {
+        'src/a.ts': {
+          source: '// 😀\u2028a;\r\nb;\u2029c;',
+          mutants: [
+            {
+              ...mutant('Survived', [2, 2]),
+              location: { start: { line: 2, column: 1 }, end: { line: 2, column: 2 } },
+            },
+            {
+              ...mutant('Survived', [4, 4]),
+              location: { start: { line: 4, column: 1 }, end: { line: 4, column: 2 } },
+            },
+          ],
+        },
+      },
+    };
+    expect(
+      unkilledMutants(report, new Map([['src/a.ts', [[1, 2]]]])).map(({ line, column }) => [
+        line,
+        column,
+      ])
+    ).toEqual([
+      [1, 7],
+      [2, 4],
+    ]);
+  });
+
+  it.each(['\n', '\r\n'])(
+    'preserves ordinary %j line and column coordinates, including end-line overlap',
+    separator => {
+      const report = {
+        files: {
+          'src/a.ts': {
+            source: `first${separator}second${separator}third${separator}`,
+            mutants: [
+              {
+                ...mutant('Survived', [2, 3]),
+                location: { start: { line: 2, column: 2 }, end: { line: 3, column: 1 } },
+              },
+            ],
+          },
+        },
+      };
+      expect(
+        unkilledMutants(report, new Map([['src/a.ts', [[3, 3]]]])).map(({ line, column }) => [
+          line,
+          column,
+        ])
+      ).toEqual([[2, 2]]);
+      expect(unkilledMutants(report, new Map([['src/a.ts', [[1, 1]]]]))).toEqual([]);
+    }
+  );
+});
+
 describe('unexplainedIgnores', () => {
   it('returns the mutants on changed lines that a disable comment ignores without a reason', () => {
     const changed = new Map<string, Array<[number, number]>>([['src/a.ts', [[7, 7]]]]);
@@ -417,8 +593,8 @@ describe('directiveLines', () => {
 });
 
 // AFA-117: no directive can be on a changed line that has no "Stryker", so the check reads such a
-// file without TypeScript, which is 9 MB, and the other helpers never load it. A process of its own
-// shows which modules this module loads.
+// file without TypeScript, which is 9 MB. A process of its own shows whether directive parsing
+// loads it; coordinate mapping also loads it for escaped Unicode separators in literals.
 describe('loading TypeScript', () => {
   const loads = (call: string): boolean => {
     const script = `
