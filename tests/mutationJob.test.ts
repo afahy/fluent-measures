@@ -1,12 +1,14 @@
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import {
+  copyFileSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -119,10 +121,15 @@ describe('the mutation job in CI', () => {
         /-\$\{\{ github\.sha \}\}-\$\{\{ github\.run_id \}\}-\$\{\{ github\.run_attempt \}\}/
       );
     }
-    // Only the source files and the test files stay out of the hash, because Stryker compares
-    // them itself.
+    // Stryker compares source/test files itself. The package projection keeps execution inputs
+    // while the explicit fixture exclusions remove only audited tooling data (AFA-174).
     expect(hashed).toEqual(
-      expect.arrayContaining(['package.json', 'pnpm-lock.yaml', 'tests/**', '!tests/**/*.test.ts'])
+      expect.arrayContaining([
+        'reports/mutation-cache/package.json',
+        'pnpm-lock.yaml',
+        'tests/**',
+        '!tests/**/*.test.ts',
+      ])
     );
   });
 
@@ -180,7 +187,7 @@ describe('the mutation job in CI', () => {
   // Main's own results aren't exact, so their key leaves out the files that tests read. A change
   // to the corpus doesn't stop a later push from going on from them.
   it.each([
-    ['package.json', true],
+    ['reports/mutation-cache/package.json', true],
     ['pnpm-lock.yaml', true],
     ['stryker.config.json', true],
     ['vitest.config.ts', true],
@@ -340,6 +347,361 @@ describe('the mutation job in CI', () => {
     expect(steps.indexOf(refresh ?? '')).toBeGreaterThan(steps.indexOf(restore ?? ''));
     expect(steps.indexOf(refresh ?? '')).toBeLessThan(steps.indexOf(mutation ?? ''));
   });
+});
+
+// Exercise CI's actual projection command and hash expressions on editable copies. Only the
+// GitHub hashFiles primitive is supplied here: SHA-256 of the sorted matching file digests.
+// This also runs against the old workflow for the regression proof, without a projection step.
+const cacheDirectories: string[] = [];
+afterEach(() => {
+  for (const directory of cacheDirectories.splice(0))
+    rmSync(directory, { recursive: true, force: true });
+});
+const cacheFiles = [
+  'package.json',
+  'pnpm-lock.yaml',
+  'tsconfig.json',
+  'stryker.config.json',
+  'vitest.config.ts',
+  '.github/workflows/ci.yml',
+  '.github/actions/setup/action.yml',
+  'README.md',
+  'PARSING.md',
+  'docs/index.html',
+  ...['tests', '.github/scripts'].flatMap(directory =>
+    readdirSync(directory, { recursive: true, encoding: 'utf8' })
+      .map(file => join(directory, file))
+      .filter(file => statSync(file).isFile())
+  ),
+];
+
+function cacheFixture(): string {
+  const directory = mkdtempSync(join(tmpdir(), 'fluent-measures-cache-'));
+  cacheDirectories.push(directory);
+  for (const file of cacheFiles) {
+    mkdirSync(join(directory, file, '..'), { recursive: true });
+    copyFileSync(file, join(directory, file));
+  }
+  return directory;
+}
+
+function cacheKeys(directory: string): { hash: string; tools: string } {
+  const select = steps.find(
+    step => field(step, 'name') === 'Select the inputs that can change mutation results'
+  );
+  const selected = spawnSync('bash', ['-e', '-c', field(select, 'run') ?? ':'], {
+    cwd: directory,
+    encoding: 'utf8',
+  });
+  if (selected.status !== 0) throw new Error(selected.stderr);
+  const input = steps.find(step => field(step, 'id') === 'inputs');
+  const script = (/^ +run: \|\n((?: {10}.*\n)+)/m.exec(input ?? '')?.[1] ?? '')
+    .replace(/^ {10}/gm, '')
+    .replace(/\$\{\{ hashFiles\(([^)]*)\) \}\}/g, (_, patterns: string) => {
+      const globs = patterns.split(',').map(pattern => pattern.trim().replace(/^'|'$/g, ''));
+      const files = readdirSync(directory, { recursive: true, encoding: 'utf8' })
+        .filter(file => statSync(join(directory, file)).isFile())
+        .filter(
+          file =>
+            globs.some(pattern => !pattern.startsWith('!') && matchesGlob(file, pattern)) &&
+            !globs.some(pattern => pattern.startsWith('!') && matchesGlob(file, pattern.slice(1)))
+        )
+        .sort();
+      const hash = createHash('sha256');
+      for (const file of files)
+        hash.update(
+          createHash('sha256')
+            .update(readFileSync(join(directory, file)))
+            .digest()
+        );
+      return files.length ? hash.digest('hex') : '';
+    });
+  const output = join(directory, 'github-output');
+  writeFileSync(output, '');
+  const result = spawnSync('bash', ['-e', '-c', script], {
+    cwd: directory,
+    env: { ...env, GITHUB_OUTPUT: output },
+    encoding: 'utf8',
+  });
+  if (result.status !== 0) throw new Error(result.stderr);
+  const values = Object.fromEntries(
+    readFileSync(output, 'utf8')
+      .trim()
+      .split('\n')
+      .map(line => line.split('='))
+  );
+  if (!/^[a-f0-9]{64}$/.test(values.hash) || !/^[a-f0-9]{64}$/.test(values.tools))
+    throw new Error('Missing mutation cache keys');
+  return { hash: values.hash, tools: values.tools };
+}
+
+function editManifest(
+  directory: string,
+  edit: (
+    manifest: Record<string, unknown> & {
+      scripts: Record<string, string>;
+    }
+  ) => void
+): void {
+  const file = join(directory, 'package.json');
+  const manifest = JSON.parse(readFileSync(file, 'utf8'));
+  edit(manifest);
+  writeFileSync(file, JSON.stringify(manifest));
+}
+
+function editWorkflow(directory: string, edit: (source: string) => string): void {
+  const file = join(directory, '.github/workflows/ci.yml');
+  writeFileSync(file, edit(readFileSync(file, 'utf8')));
+}
+
+describe('mutation cache key behavior', () => {
+  it('projects inputs before GitHub evaluates the hashes in the following step', () => {
+    const select = steps.findIndex(step =>
+      step.includes('run: node .github/scripts/mutation-cache-inputs.mjs')
+    );
+    const hash = steps.findIndex(step => field(step, 'id') === 'inputs');
+    expect(select).toBeGreaterThanOrEqual(0);
+    expect(select).toBeLessThan(hash);
+  });
+
+  it.each([
+    'release',
+    'release:changeset',
+    'release:publish',
+    'release:validate',
+    'release:version',
+  ])('keeps both keys for the standalone %s script', name => {
+    const directory = cacheFixture();
+    const before = cacheKeys(directory);
+    editManifest(directory, manifest => {
+      manifest.scripts[name] += ' --release-only-change';
+    });
+    expect(cacheKeys(directory)).toEqual(before);
+  });
+
+  it.each(['description', 'keywords', 'author'])(
+    'keeps both keys for package %s metadata',
+    field => {
+      const directory = cacheFixture();
+      const before = cacheKeys(directory);
+      editManifest(directory, manifest => {
+        manifest[field] = ['changed metadata'];
+      });
+      expect(cacheKeys(directory)).toEqual(before);
+    }
+  );
+
+  it.each([
+    'dependencies',
+    'devDependencies',
+    'peerDependencies',
+    'optionalDependencies',
+    'type',
+    'exports',
+    'pnpm',
+    'packageManager',
+    'engines',
+    'main',
+    'module',
+    'types',
+    'unknownField',
+  ])('changes both keys for package execution or uncertain field %s', field => {
+    const directory = cacheFixture();
+    const before = cacheKeys(directory);
+    editManifest(directory, manifest => {
+      manifest[field] = { changed: 'input' };
+    });
+    const after = cacheKeys(directory);
+    expect(after.hash).not.toBe(before.hash);
+    expect(after.tools).not.toBe(before.tools);
+  });
+
+  it.each([
+    'test:mutation',
+    'test:unit',
+    'test:unit:coverage',
+    'test:types',
+    'test',
+    'build',
+    'prepare',
+    'prepack',
+    'prepublishOnly',
+    'release:lifecycle:prepack',
+    'release:lifecycle:prepublish',
+    'unknown:runner',
+  ])('changes both keys for relevant or uncertain script %s', name => {
+    const directory = cacheFixture();
+    const before = cacheKeys(directory);
+    editManifest(directory, manifest => {
+      manifest.scripts[name] = `${manifest.scripts[name] ?? 'runner'} --changed`;
+    });
+    const after = cacheKeys(directory);
+    expect(after.hash).not.toBe(before.hash);
+    expect(after.tools).not.toBe(before.tools);
+  });
+
+  it.each(['direct', 'transitive', 'dynamic'])(
+    'keeps %s release script references hashed',
+    mode => {
+      const directory = cacheFixture();
+      const commands = {
+        direct: 'pnpm release:publish',
+        transitive: 'pnpm release:validate',
+        dynamic: 'pnpm "$RUNNER"',
+      };
+      editManifest(directory, manifest => {
+        manifest.scripts['test:mutation'] = commands[mode as keyof typeof commands];
+        manifest.scripts['release:validate'] = 'pnpm release:publish';
+      });
+      const before = cacheKeys(directory);
+      editManifest(directory, manifest => {
+        manifest.scripts['release:publish'] += ' --changed';
+      });
+      const after = cacheKeys(directory);
+      expect(after.hash).not.toBe(before.hash);
+      expect(after.tools).not.toBe(before.tools);
+    }
+  );
+
+  it.each(['test', 'package', 'ci-ok'])('keeps the key for unrelated CI job %s', name => {
+    const directory = cacheFixture();
+    const before = cacheKeys(directory);
+    editWorkflow(directory, source =>
+      source.replace(`\n  ${name}:\n`, `\n  ${name}:\n    env: { UNRELATED: changed }\n`)
+    );
+    expect(cacheKeys(directory)).toEqual(before);
+  });
+
+  it.each(['mutation-inventory', 'mutation', 'mutation-report'])(
+    'changes the key for CI job %s',
+    name => {
+      const directory = cacheFixture();
+      const before = cacheKeys(directory);
+      editWorkflow(directory, source =>
+        source.replace(`\n  ${name}:\n`, `\n  ${name}:\n    env: { MUTANT_INPUT: changed }\n`)
+      );
+      const after = cacheKeys(directory);
+      expect(after.hash).not.toBe(before.hash);
+      expect(after.tools).toBe(before.tools);
+    }
+  );
+
+  it.each([
+    'env: { NODE_OPTIONS: --no-warnings }\n',
+    'defaults: { run: { shell: sh } }\n',
+    'concurrency: mutation\n',
+  ])('changes the key for shared workflow settings: %s', settings => {
+    const directory = cacheFixture();
+    const before = cacheKeys(directory);
+    editWorkflow(directory, source => `${settings}${source}`);
+    expect(cacheKeys(directory).hash).not.toBe(before.hash);
+  });
+
+  it.each([
+    [
+      'anchor shared with mutation',
+      (source: string): string =>
+        source
+          .replace('\n  test:\n', '\n  test:\n    env: &runner { NODE_OPTIONS: --no-warnings }\n')
+          .replace('\n  mutation-inventory:\n', '\n  mutation-inventory:\n    env: *runner\n'),
+    ],
+    ['quoted job', (source: string): string => source.replace('\n  test:\n', '\n  "test":\n')],
+    [
+      'quoted dependency key',
+      (source: string): string =>
+        source.replace('\n  mutation-inventory:\n', '\n  mutation-inventory:\n    "needs": test\n'),
+    ],
+    [
+      'unfamiliar indentation',
+      (source: string): string =>
+        source.replace('\n  mutation-inventory:\n', '\n  mutation-inventory:\n   needs: test\n'),
+    ],
+    [
+      'external dependency',
+      (source: string): string =>
+        source.replace('\n  mutation-inventory:\n', '\n  mutation-inventory:\n    needs: test\n'),
+    ],
+    [
+      'multiline dependency',
+      (source: string): string =>
+        source.replace(
+          '\n  mutation-inventory:\n',
+          '\n  mutation-inventory:\n    needs:\n      - test\n'
+        ),
+    ],
+  ] as const)('keeps the whole workflow for an uncertain %s', (_name, edit) => {
+    const directory = cacheFixture();
+    editWorkflow(directory, edit);
+    const before = cacheKeys(directory);
+    editWorkflow(directory, source => source.replace('run: pnpm lint', 'run: pnpm lint --changed'));
+    expect(cacheKeys(directory).hash).not.toBe(before.hash);
+  });
+
+  it('keeps a new job hashed until it is audited', () => {
+    const directory = cacheFixture();
+    const before = cacheKeys(directory);
+    editWorkflow(directory, source => `${source}\n  new-job:\n    runs-on: ubuntu-latest\n`);
+    expect(cacheKeys(directory).hash).not.toBe(before.hash);
+  });
+
+  it.each([
+    ...readdirSync('tests/fixtures/pr-status').map(file => `tests/fixtures/pr-status/${file}`),
+    'tests/fixtures/late-bot-findings/comments.json',
+    ...readdirSync('tests/fixtures/mutation', { recursive: true, encoding: 'utf8' })
+      .map(file => `tests/fixtures/mutation/${file}`)
+      .filter(file => statSync(file).isFile()),
+  ])('keeps both keys for the known tooling fixture %s', file => {
+    const directory = cacheFixture();
+    const before = cacheKeys(directory);
+    writeFileSync(join(directory, file), 'changed tooling fixture');
+    expect(cacheKeys(directory)).toEqual(before);
+  });
+
+  it.each([
+    'README.md',
+    'PARSING.md',
+    'docs/index.html',
+    'tests/corpus/measurements.jsonl',
+    'tests/__snapshots__/corpus.test.ts.snap',
+    'tests/__snapshots__/resultSnapshot.txt',
+    'tests/timing.ts',
+    'tests/measurementModel.ts',
+    'tests/fixtures/coverage-config/value.test.ts.txt',
+    'tests/fixtures/unknown-input.json',
+    'tests/future-source-test-input.txt',
+    '.github/actions/setup/action.yml',
+    '.github/scripts/mutation-cache-inputs.mjs',
+    '.github/scripts/mutation-inventory.mjs',
+    '.github/scripts/mutation-shards.mjs',
+    '.github/scripts/mutation-report.mjs',
+    '.github/scripts/mutation-check.mjs',
+    '.github/scripts/stryker-shard.config.mjs',
+    '.github/scripts/changed-lines.mjs',
+    '.github/scripts/workflow-commands.mjs',
+  ])('changes the PR key for source-test or execution input %s', file => {
+    const directory = cacheFixture();
+    const before = cacheKeys(directory);
+    // A comment also leaves executable scripts valid, so this checks the hash rather than a crash.
+    const content = existsSync(join(directory, file))
+      ? readFileSync(join(directory, file), 'utf8')
+      : '';
+    writeFileSync(join(directory, file), `${content}\n// changed cache input\n`);
+    const after = cacheKeys(directory);
+    expect(after.hash).not.toBe(before.hash);
+    expect(after.tools).toBe(before.tools);
+  });
+
+  it.each(['pnpm-lock.yaml', 'tsconfig.json', 'stryker.config.json', 'vitest.config.ts'])(
+    'changes both keys for tool input %s',
+    file => {
+      const directory = cacheFixture();
+      const before = cacheKeys(directory);
+      writeFileSync(join(directory, file), 'changed tool input');
+      const after = cacheKeys(directory);
+      expect(after.hash).not.toBe(before.hash);
+      expect(after.tools).not.toBe(before.tools);
+    }
+  );
 });
 
 // These checks retain the previous cache/timeout contracts above while following the work
