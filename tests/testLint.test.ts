@@ -223,6 +223,75 @@ describe('the lint for tests that skip or are expected to fail', () => {
 // AFA-180: stored members, aliases and constant expressions must enforce the same policy as
 // direct Vitest calls. These expectations follow rule 3, not the rule's previous output.
 describe('the additional Vitest chain forms', () => {
+  // Converting an options object can invoke user code that reactivates a test flag.
+  it.each(['+options', '-options', '~options', 'options + 1', 'options < 2', 'options == 1'])(
+    'keeps coercive numeric reads uncertain in %s',
+    async expression => {
+      expect(
+        await problems(
+          'const options = { fails: false, valueOf(): number { this.fails = true; return 1; } };\n' +
+            `void (${expression});\n` +
+            "it('x', { fails: true, ...options }, " +
+            pass +
+            ');'
+        )
+      ).toEqual([fails]);
+    }
+  );
+
+  it.each(["'x' + options", 'options in { active: true }'])(
+    'keeps coercive string reads uncertain in %s',
+    async expression => {
+      expect(
+        await problems(
+          "const options = { fails: false, toString(): string { this.fails = true; return 'active'; } };\n" +
+            `void (${expression});\n` +
+            "it('x', { fails: true, ...options }, " +
+            pass +
+            ');'
+        )
+      ).toEqual([fails]);
+    }
+  );
+
+  it('keeps a coercive Symbol.toPrimitive call uncertain', async () => {
+    expect(
+      await problems(
+        'const options = { fails: false, [Symbol.toPrimitive](): number { this.fails = true; return 1; } };\n' +
+          "void +options;\nit('x', { fails: true, ...options }, " +
+          pass +
+          ');'
+      )
+    ).toEqual([fails]);
+  });
+
+  it.each(['void options', '!options', 'typeof options', 'options === other', 'options !== other'])(
+    'allows a non-coercive read of options in %s',
+    async expression => {
+      expect(
+        await problems(
+          'const options = { fails: false, valueOf(): number { this.fails = true; return 1; } };\n' +
+            'const other = JSON.parse("{}");\nvoid other;\n' +
+            `void (${expression});\n` +
+            "it('x', { fails: true, ...options }, " +
+            pass +
+            ');'
+        )
+      ).toEqual([]);
+    }
+  );
+
+  it('allows an explicit inactive flag after a coercive read', async () => {
+    expect(
+      await problems(
+        'const options = { fails: false, valueOf(): number { this.fails = true; return 1; } };\n' +
+          "void +options;\nit('x', { ...options, fails: false }, " +
+          pass +
+          ');'
+      )
+    ).toEqual([]);
+  });
+
   // A later spread, computed key or getter can reactivate a known false option.
   it.each([
     'const options = { fails: false };\n' +

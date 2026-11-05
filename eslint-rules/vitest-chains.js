@@ -421,7 +421,14 @@ function objectMayChange(variable, seen = new Set()) {
       // Passing options to a recognized Vitest call reads them. Other calls may mutate them.
       return !resolveChain(parent.callee, reference.from)?.fn;
     }
-    return !['UnaryExpression', 'BinaryExpression'].includes(parent.type);
+    // Numeric/string coercion can invoke valueOf, toString or Symbol.toPrimitive.
+    if (parent.type === 'UnaryExpression') {
+      return !['!', 'typeof', 'void'].includes(parent.operator);
+    }
+    if (parent.type === 'BinaryExpression') {
+      return !['===', '!=='].includes(parent.operator);
+    }
+    return true;
   });
 }
 
