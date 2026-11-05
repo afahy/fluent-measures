@@ -86,7 +86,7 @@ describe('measurement number phrases', () => {
     const raw = prefix.repeat(1000) + '1 pounds';
     const parser = vi.spyOn(numberWords, 'wordsToNumber');
     try {
-      expect(parseMeasurement(raw)?.value).toBe(1);
+      expect(parseMeasurement(raw, { maxLength: Infinity })?.value).toBe(1);
       const parsedCharacters = parser.mock.calls.reduce(
         (total, [phrase]) => total + phrase.length,
         0

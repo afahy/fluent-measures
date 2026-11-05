@@ -340,8 +340,14 @@ function combineParts(
 
 /** Parse a height or weight, optionally inferring its unit or normalizing the result. */
 export function parseMeasurement(input: string, options: ParseOptions = {}): ParsedValue | null {
-  // Stryker disable next-line StringLiteral: the replacement "Stryker was here!" also returns null.
-  const trimmed = normalize(input?.trim() || '');
+  if (typeof input !== 'string') return null;
+  const { maxLength = 1000 } = options ?? {};
+  if (typeof maxLength !== 'number' || !(maxLength >= 1)) {
+    throw new Error('maxLength must be a number of at least 1');
+  }
+  if (input.length > maxLength) return null;
+
+  const trimmed = normalize(input.trim());
   // "false" and an empty block go on with empty text, which gives no tokens, so the steps below
   // return null too. The tests kill "true" (AFA-165).
   // Stryker disable next-line ConditionalExpression,BlockStatement: empty text returns null either way.

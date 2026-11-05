@@ -114,6 +114,10 @@ Reads one height or weight from a string.
 
 ```typescript
 interface ParseOptions {
+  // The largest raw input.length before trimming or parsing; defaults to 1000.
+  // Must be a number >= 1, or Infinity for no limit. Other values throw.
+  maxLength?: number;
+
   // The measurement type to read
   type?: 'height' | 'weight';
 
@@ -202,6 +206,10 @@ If `parseMeasurement` returns `null`, look for these causes:
 3. A number has no unit. Set `allowUnqualified` and `inferUnit`.
 4. A unit name has a spelling error. Set `fuzziness` to 1 or 2.
 5. The text has a range, or measurements that disagree. See [Limits](#limits).
+6. The input isn't a string. Non-string input returns `null` at runtime; the TypeScript parameter
+   remains `string`.
+7. The raw `input.length`, before trimming, exceeds `maxLength` (default 1,000). Set a larger
+   `maxLength` or `Infinity` for no limit. Length counts UTF-16 code units, as JavaScript does.
 
 ## Contributing
 

@@ -60,7 +60,7 @@ describe('commas separating labels from measurements', () => {
 
   it('handles a long digit-suffixed label without merging its measurement', () => {
     const raw = `phase${'2'.repeat(10000)},180 cm`;
-    expect(parseMeasurement(raw)?.value).toBe(180);
+    expect(parseMeasurement(raw, { maxLength: Infinity })?.value).toBe(180);
   });
 });
 

@@ -1,6 +1,6 @@
 import { cpuUsage } from 'node:process';
 import { expect } from 'vitest';
-import { parseMeasurement } from '../src';
+import { parseMeasurement, type ParseOptions } from '../src';
 
 // Whether Stryker runs the tests. Its Vitest setup file sets one of these globals before each
 // test file. The timing tests with large inputs skip themselves there. Stryker's instrumented code
@@ -33,9 +33,13 @@ export const underStryker = '__stryker__' in globalThis || '__stryker2__' in glo
  * of at least twice its limit. Skip a test with a large input under Stryker with
  * `it.skipIf(underStryker)`.
  */
-export function parseWithin(raw: string, limit: number): ReturnType<typeof parseMeasurement> {
+export function parseWithin(
+  raw: string,
+  limit: number,
+  options?: ParseOptions
+): ReturnType<typeof parseMeasurement> {
   const start = cpuUsage();
-  const result = parseMeasurement(raw);
+  const result = parseMeasurement(raw, options);
   const { user, system } = cpuUsage(start);
   const time = (user + system) / 1000;
   console.warn(cpuTimeNote(time, limit));

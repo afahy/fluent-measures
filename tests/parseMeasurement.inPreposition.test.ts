@@ -1,6 +1,6 @@
-import { performance } from 'node:perf_hooks';
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
+import { parseWithin, underStryker } from './timing';
 
 describe('the word "in" before a number', () => {
   it.each([
@@ -149,12 +149,12 @@ describe('unit labels before a number', () => {
     }
   );
 
-  it('reads a bracket label padded with many spaces in linear time', () => {
+  // A quadratic pattern takes seconds here on Node 22, and this takes milliseconds. Keep the
+  // existing 1000 ms limit as CPU time; parseWithin reports it in CI. Skip large-input timing
+  // under Stryker, whose other threads contribute to the process's CPU time.
+  it.skipIf(underStryker)('reads a bracket label padded with many spaces in linear time', () => {
     const raw = `(${' '.repeat(200000)}in) 72`;
-    const start = performance.now();
-    expect(parseMeasurement(raw)?.value).toBe(72);
-    // A quadratic pattern takes seconds here on Node 22, and this takes milliseconds.
-    expect(performance.now() - start).toBeLessThan(1000);
+    expect(parseWithin(raw, 1000, { maxLength: Infinity })?.value).toBe(72);
   });
 
   it.each(['M: 5\'11"', 'M: 5 ft 11 in'])('reads a sex marker label as a letter in %s', raw => {
