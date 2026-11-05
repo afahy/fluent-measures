@@ -1,7 +1,7 @@
 /** Compute character edit distance using a single working row. */
 export function levenshtein(a: string, b: string): number {
   // Each edit-distance row depends only on the preceding row.
-  const row = Array.from({ length: b.length + 1 }, (_, j) => j); // Start from zero.
+  const row = Array.from({ length: b.length + 1 }, (_, j) => j); // Start from zero edits.
   for (let i = 1; i <= a.length; i++) {
     let diagonal = row[0];
     row[0] = i;
