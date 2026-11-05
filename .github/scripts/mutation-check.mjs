@@ -76,7 +76,7 @@ const { names, invalid } = decodeNames(
   )
 );
 // Node opens a file by a UTF-8 name, so this check can't read a file whose name isn't UTF-8.
-const unreadable = invalid.filter(isSourceFile);
+const unreadable = invalid.filter(file => isSourceFile(file) || isUnmutatedCode(file));
 for (const name of unreadable) {
   console.error(
     `::error::Rename ${escapeData(JSON.stringify(name))}. Its name isn't valid UTF-8, so this check can't read the file.`
