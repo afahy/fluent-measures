@@ -25,11 +25,16 @@ export function escapeProperty(text) {
 /**
  * Writes text for a plain log line. CR and LF become `\r` and `\n`, so the text can't start a new
  * line that GitHub could read as a workflow command. A backslash becomes two backslashes, so a
- * name with a backslash and "n" doesn't look like a name with a line break.
+ * name with a backslash and "n" doesn't look like a name with a line break. Escape legacy
+ * command prefixes too: GitHub recognizes `##[...]` anywhere within a line.
  *
  * @param {string} text
  * @returns {string}
  */
 export function logText(text) {
-  return text.replace(/\\/g, '\\\\').replace(/\r/g, '\\r').replace(/\n/g, '\\n');
+  return text
+    .replace(/\\/g, '\\\\')
+    .replace(/\r/g, '\\r')
+    .replace(/\n/g, '\\n')
+    .replace(/##\[/g, '##\\[');
 }
