@@ -1476,8 +1476,8 @@ a:hover {
 }
 
 /*
- * Long groups (examples, API) fold behind a toggle. The group holding the
- * current section opens itself. Without JavaScript every group stays expanded.
+ * Long groups (examples, API) fold behind a reader-controlled toggle. Scrolling
+ * leaves their state alone. Without JavaScript every group stays expanded.
  */
 
 .toc-row {
@@ -1565,7 +1565,10 @@ a:hover {
   padding-top: 48px;
 }
 
-.doc-section :is(h2, h3, h4) {
+.doc-section :is(h2, h3, h4),
+#ex-basic,
+#ex-feet-inches,
+#ex-null {
   scroll-margin-top: var(--anchor-offset);
 }
 
@@ -2356,116 +2359,74 @@ a:hover {
   max-width: var(--measure);
 }
 
-/*
- * The option names each example passes, so a reader can scan for the one they need.
- * Names only: the values are in the code just below.
- */
+/* Compact input/output rows keep spelling variants beside the lesson they illustrate. */
 
-.ex-opts {
+.input-results {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.input-results > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  align-items: baseline;
+  gap: 12px;
+  padding: 12px 16px;
+}
+
+.input-results > div + div {
+  border-top: 1px solid var(--border);
+}
+
+.input-results dt {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 2px 0;
-  margin-top: 6px;
-  padding: 0;
-  list-style: none;
-  font-size: 0.8125rem;
-  line-height: 1.6;
+  gap: 4px 16px;
+}
+
+.input-text {
+  overflow-wrap: anywhere;
+}
+
+.input-options {
   color: var(--text-muted);
+  font-size: var(--mono-sm);
 }
 
-.ex-opts-label {
-  margin-right: 10px;
-  font-weight: 500;
-}
-
-.ex-opts code {
-  padding: 0;
-  background: none;
-  color: var(--heading);
+.input-results dd {
+  margin: 0;
   font-family: var(--font-mono);
-  font-size: var(--mono-md);
-  font-weight: 500;
   white-space: nowrap;
-}
-
-.ex-opts li:not(.ex-opts-label) + li::before {
-  content: '·';
-  margin: 0 8px;
-  color: var(--text-muted);
-}
-
-.ex-opts .is-none {
-  font-style: italic;
-}
-
-/*
- * "Input" picker: chooses which example the code panel shows. Sans pills on the page
- * surface, unlike the underlined tabs on code headers that switch equivalent code.
- */
-
-.picker {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 12px;
-  margin-bottom: 12px;
-}
-
-.picker-label {
-  color: var(--text-muted);
-  font-size: 0.8125rem;
-  font-weight: 600;
-}
-
-.picker-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.pick {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  min-height: 32px;
-  padding: 0 12px;
-  border: 1px solid var(--border-control);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--text);
-  font-family: var(--font-sans);
-  font-size: 0.875rem;
-  font-weight: 500;
-  line-height: 1.2;
-  white-space: nowrap;
-  cursor: pointer;
-  transition:
-    background-color 0.15s ease,
-    border-color 0.15s ease,
-    color 0.15s ease;
-}
-
-.pick:hover {
   color: var(--heading);
-  border-color: var(--text-muted);
 }
 
-.pick[aria-selected='true'] {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-weight: 600;
+.input-results b {
+  font-weight: 650;
 }
 
-/* A taller invisible target on touch screens, without a taller pill. */
+.input-results .is-null {
+  color: var(--text-muted);
+}
 
-@media (pointer: coarse) {
-  .pick::after {
-    content: '';
-    position: absolute;
-    inset: -6px -3px;
-  }
+/* All lesson examples remain readable when scripts are unavailable. */
+
+html:not([data-js]) .code [role='tabpanel'][hidden] {
+  display: block !important;
+}
+
+html:not([data-js]) .code .code-wide {
+  display: block;
+}
+
+html:not([data-js]) .code .code-narrow {
+  display: none;
+}
+
+html:not([data-js]) .code pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 /*
@@ -2630,6 +2591,48 @@ a:hover {
   margin-top: 4px;
   font-size: 0.9375rem;
   line-height: 1.6;
+}
+
+/* Keep option metadata in the same order, with labels that reflow above their values. */
+
+.option-list > div {
+  padding-block: 20px;
+  scroll-margin-top: 100px;
+}
+
+.option-list > div > dd {
+  margin-top: 12px;
+}
+
+.option-facts {
+  display: grid;
+  gap: 10px;
+}
+
+.option-facts > div {
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr);
+  gap: 12px;
+}
+
+.option-facts dt {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.85;
+  color: var(--text-muted);
+}
+
+.option-facts dd {
+  margin: 0;
+}
+
+@container (max-width: 470px) {
+  .option-facts > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
 }
 
 /* Tables */

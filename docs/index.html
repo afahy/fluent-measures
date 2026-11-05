@@ -353,19 +353,16 @@
                         type="button"
                         aria-expanded="true"
                         aria-controls="menu-usage"
-                        aria-label="Usage examples"
+                        aria-label="Usage tasks"
                       >
                         <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chevron" /></svg>
                       </button>
                     </div>
                     <ul id="menu-usage">
-                      <li><a href="#ex-basic">Basic height and weight</a></li>
-                      <li><a href="#ex-feet-inches">Feet and inches</a></li>
                       <li><a href="#ex-type">Read only one type</a></li>
                       <li><a href="#ex-convert">Convert to one unit</a></li>
                       <li><a href="#ex-unqualified">Numbers without a unit</a></li>
                       <li><a href="#ex-fuzzy">Spelling errors in units</a></li>
-                      <li><a href="#ex-null">No match</a></li>
                     </ul>
                   </li>
                   <li class="toc-group">
@@ -617,7 +614,7 @@
               </button>
               <figcaption class="demo-foot" id="demo-caption">
                 Results show <code>value</code> and <code>unit</code>; see
-                <a href="#ex-basic">Usage</a> for the full objects.
+                <a href="#quick-start">Quick start</a> for the returned object.
               </figcaption>
             </figure>
           </div>
@@ -748,7 +745,7 @@
             </div>
 
             <div class="hd hd-3">
-              <h3 id="quick-start">Quick start</h3>
+              <h3 id="quick-start"><span id="ex-basic">Quick start</span></h3>
               <a class="anchor" href="#quick-start" aria-label="Link to Quick start"
                 ><svg class="icon" aria-hidden="true"><use href="#i-link" /></svg
               ></a>
@@ -756,7 +753,8 @@
             <div class="stack">
               <p class="measure">
                 Import <code>parseMeasurement</code> with ES modules or CommonJS, pass it the text
-                to read, and check the result before you use it.
+                to read, and check the result before you use it. The unit in the text identifies a
+                height or weight, so these inputs need no options.
               </p>
               <div class="code on-code">
                 <div class="code-head">
@@ -803,9 +801,21 @@
                   <pre
                     class="code-wide"
                     tabindex="0"
+                    data-returns
                   ><code class="language-typescript">import { parseMeasurement } from '@afahy/fluent-measures';
 
 const result = parseMeasurement('6 ft');
+/* ✓ Returns:
+{
+  value: 6,
+  unit: 'ft',
+  type: 'height',
+  matches: [
+    { value: 6, unit: 'ft' }
+  ],
+  raw: '6 ft'
+}
+*/
 if (result) {
   console.log(result);
 }</code></pre>
@@ -855,20 +865,42 @@ if (result) {
                   <div class="summary-grid">
                     <p class="summary">
                       <span class="summary-key">result</span><span><b>6</b> ft</span
-                      ><span class="summary-note"
-                        >a height; <a href="#ex-basic">see the full object</a></span
-                      >
+                      ><span class="summary-note">a height</span>
                     </p>
                   </div>
+                  <details class="full-object" open data-full-object hidden>
+                    <summary>
+                      <svg class="icon icon-sm chevron" aria-hidden="true">
+                        <use href="#i-chevron" />
+                      </svg>
+                      Full returned object
+                    </summary>
+                    <pre tabindex="0"><code class="language-typescript"></code></pre>
+                  </details>
                 </div>
               </div>
-              <p class="code-note">
+              <p class="measure">
+                <code>value</code> and <code>unit</code> describe the measurement,
+                <code>type</code> identifies height or weight, <code>matches</code> lists the parts
+                found, and <code>raw</code> keeps the original text.
+              </p>
+              <p class="code-note" id="ex-null">
                 <svg class="icon icon-sm" aria-hidden="true"><use href="#i-null" /></svg>
                 <span
-                  >When the text holds no measurement, <code>result</code> is <code>null</code>; see
-                  <a href="#ex-null">No match</a>.</span
+                  >When the text holds no measurement, <code>result</code> is <code>null</code>. The
+                  <code>if (result)</code> guard above checks before using it.</span
                 >
               </p>
+              <dl class="input-results" aria-label="More inputs without options">
+                <div>
+                  <dt><code class="input-text">150 lbs</code></dt>
+                  <dd><b>150</b> lb</dd>
+                </div>
+                <div>
+                  <dt><code class="input-text">not a measurement</code></dt>
+                  <dd class="is-null">null</dd>
+                </div>
+              </dl>
             </div>
           </section>
 
@@ -881,39 +913,24 @@ if (result) {
             </div>
 
             <p class="measure">
-              Each call reads one height or weight and returns an object, or <code>null</code> when
-              the text has no measurement.
+              Adapt the parser to your field: restrict its type, convert the result, accept a number
+              without a unit, or allow spelling errors.
             </p>
-            <nav class="local-index" aria-label="Usage examples">
-              <p class="local-index-label" aria-hidden="true">Examples</p>
+            <nav class="local-index" aria-label="Usage tasks">
+              <p class="local-index-label" aria-hidden="true">Tasks</p>
               <ul>
-                <li><a href="#ex-basic">Basic height and weight</a></li>
-                <li><a href="#ex-feet-inches">Feet and inches</a></li>
                 <li><a href="#ex-type">Read only one type</a></li>
                 <li><a href="#ex-convert">Convert to one unit</a></li>
                 <li><a href="#ex-unqualified">Numbers without a unit</a></li>
                 <li><a href="#ex-fuzzy">Spelling errors in units</a></li>
-                <li><a href="#ex-null">No match</a></li>
               </ul>
             </nav>
             <details class="rules topic-jump">
               <summary>
                 <svg class="icon icon-sm chevron" aria-hidden="true"><use href="#i-chevron" /></svg>
-                Jump to an example
+                Choose a task
               </summary>
-              <ul class="topic-links" aria-label="Usage examples">
-                <li>
-                  <a href="#ex-basic"
-                    >Basic height and weight<svg class="icon icon-sm" aria-hidden="true">
-                      <use href="#i-arrow" /></svg
-                  ></a>
-                </li>
-                <li>
-                  <a href="#ex-feet-inches"
-                    >Feet and inches<svg class="icon icon-sm" aria-hidden="true">
-                      <use href="#i-arrow" /></svg
-                  ></a>
-                </li>
+              <ul class="topic-links" aria-label="Usage tasks">
                 <li>
                   <a href="#ex-type"
                     >Read only one type<svg class="icon icon-sm" aria-hidden="true">
@@ -938,243 +955,10 @@ if (result) {
                       <use href="#i-arrow" /></svg
                   ></a>
                 </li>
-                <li>
-                  <a href="#ex-null"
-                    >No match<svg class="icon icon-sm" aria-hidden="true">
-                      <use href="#i-arrow" /></svg
-                  ></a>
-                </li>
               </ul>
             </details>
 
             <div class="examples">
-              <article class="example" aria-labelledby="ex-basic">
-                <div class="hd hd-3">
-                  <h3 id="ex-basic">Basic height and weight</h3>
-                  <a class="anchor" href="#ex-basic" aria-label="Link to Basic height and weight"
-                    ><svg class="icon" aria-hidden="true"><use href="#i-link" /></svg
-                  ></a>
-                </div>
-                <ul class="ex-opts" aria-label="Options this example passes">
-                  <li class="ex-opts-label" aria-hidden="true">Options</li>
-                  <li class="is-none">none</li>
-                </ul>
-                <p>
-                  The unit in the text shows whether it is a height or a weight, so
-                  <code>6 ft</code> and <code>150 lbs</code> need no options. Pick an input to see
-                  its call and the object it returns.
-                </p>
-                <div class="picker">
-                  <span class="picker-label" id="basic-input-label">Input</span>
-                  <div
-                    class="picker-options"
-                    role="tablist"
-                    aria-labelledby="basic-input-label"
-                    data-tab-group="basic"
-                  >
-                    <button
-                      class="pick"
-                      type="button"
-                      role="tab"
-                      id="tab-basic-height"
-                      aria-controls="panel-basic-height"
-                      aria-selected="true"
-                      data-value="height"
-                    >
-                      6 ft</button
-                    ><button
-                      class="pick"
-                      type="button"
-                      role="tab"
-                      id="tab-basic-weight"
-                      aria-controls="panel-basic-weight"
-                      aria-selected="false"
-                      tabindex="-1"
-                      data-value="weight"
-                    >
-                      150 lbs
-                    </button>
-                  </div>
-                </div>
-                <div class="code on-code">
-                  <div class="code-head">
-                    <span class="code-label">TypeScript</span
-                    ><button
-                      class="copy-button"
-                      type="button"
-                      data-copy
-                      aria-label="Copy basic example"
-                    >
-                      <svg class="icon icon-sm icon-copy" aria-hidden="true">
-                        <use href="#i-copy" />
-                      </svg>
-                      <svg class="icon icon-sm icon-check" aria-hidden="true">
-                        <use href="#i-check" />
-                      </svg>
-                      <span data-copy-label>Copied</span>
-                    </button>
-                  </div>
-                  <div
-                    role="tabpanel"
-                    id="panel-basic-height"
-                    aria-labelledby="tab-basic-height"
-                    data-value="height"
-                  >
-                    <pre
-                      tabindex="0"
-                      data-returns
-                    ><code class="language-typescript">parseMeasurement('6 ft');
-/* ✓ Returns:
-{
-  value: 6,
-  unit: 'ft',
-  type: 'height',
-  matches: [
-    { value: 6, unit: 'ft' }
-  ],
-  raw: '6 ft'
-}
-*/</code></pre>
-                    <div class="returns">
-                      <div class="returns-label">
-                        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-return" /></svg>
-                        Returns
-                      </div>
-                      <p class="summary">
-                        <span><b>6</b> ft</span><span class="summary-note">a height</span>
-                      </p>
-                      <details class="full-object" open data-full-object hidden>
-                        <summary>
-                          <svg class="icon icon-sm chevron" aria-hidden="true">
-                            <use href="#i-chevron" />
-                          </svg>
-                          Full returned object
-                        </summary>
-                        <pre tabindex="0"><code class="language-typescript"></code></pre>
-                      </details>
-                    </div>
-                  </div>
-                  <div
-                    role="tabpanel"
-                    id="panel-basic-weight"
-                    aria-labelledby="tab-basic-weight"
-                    data-value="weight"
-                    hidden
-                  >
-                    <pre
-                      tabindex="0"
-                      data-returns
-                    ><code class="language-typescript">parseMeasurement('150 lbs');
-/* ✓ Returns:
-{
-  value: 150,
-  unit: 'lb',
-  type: 'weight',
-  matches: [
-    { value: 150, unit: 'lb' }
-  ],
-  raw: '150 lbs'
-}
-*/</code></pre>
-                    <div class="returns">
-                      <div class="returns-label">
-                        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-return" /></svg>
-                        Returns
-                      </div>
-                      <p class="summary">
-                        <span><b>150</b> lb</span><span class="summary-note">a weight</span>
-                      </p>
-                      <details class="full-object" open data-full-object hidden>
-                        <summary>
-                          <svg class="icon icon-sm chevron" aria-hidden="true">
-                            <use href="#i-chevron" />
-                          </svg>
-                          Full returned object
-                        </summary>
-                        <pre tabindex="0"><code class="language-typescript"></code></pre>
-                      </details>
-                    </div>
-                  </div>
-                </div>
-              </article>
-              <article class="example" aria-labelledby="ex-feet-inches">
-                <div class="hd hd-3">
-                  <h3 id="ex-feet-inches">Feet and inches</h3>
-                  <a class="anchor" href="#ex-feet-inches" aria-label="Link to Feet and inches"
-                    ><svg class="icon" aria-hidden="true"><use href="#i-link" /></svg
-                  ></a>
-                </div>
-                <ul class="ex-opts" aria-label="Options this example passes">
-                  <li class="ex-opts-label" aria-hidden="true">Options</li>
-                  <li><code>type</code></li>
-                </ul>
-                <p>
-                  A height in feet and inches gives the total in inches, and <code>matches</code>
-                  lists each part.
-                </p>
-                <div class="code on-code">
-                  <div class="code-head">
-                    <span class="code-label">TypeScript</span
-                    ><button
-                      class="copy-button"
-                      type="button"
-                      data-copy
-                      aria-label="Copy feet and inches example"
-                    >
-                      <svg class="icon icon-sm icon-copy" aria-hidden="true">
-                        <use href="#i-copy" />
-                      </svg>
-                      <svg class="icon icon-sm icon-check" aria-hidden="true">
-                        <use href="#i-check" />
-                      </svg>
-                      <span data-copy-label>Copied</span>
-                    </button>
-                  </div>
-                  <pre
-                    class="code-wide"
-                    tabindex="0"
-                    data-returns
-                  ><code class="language-typescript">parseMeasurement('five foot ten', { type: 'height' });
-/* ✓ Returns:
-{
-  value: 70,
-  unit: 'in',
-  type: 'height',
-  matches: [
-    { value: 5, unit: 'ft' },
-    { value: 10, unit: 'in' }
-  ],
-  raw: 'five foot ten'
-}
-*/</code></pre>
-                  <pre
-                    class="code-narrow"
-                    tabindex="0"
-                  ><code class="language-typescript">parseMeasurement(
-  'five foot ten',
-  { type: 'height' },
-);</code></pre>
-                  <div class="returns">
-                    <div class="returns-label">
-                      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-return" /></svg>
-                      Returns
-                    </div>
-                    <p class="summary">
-                      <span><b>70</b> in</span
-                      ><span class="summary-note">5 ft and 10 in in <code>matches</code></span>
-                    </p>
-                    <details class="full-object" open data-full-object hidden>
-                      <summary>
-                        <svg class="icon icon-sm chevron" aria-hidden="true">
-                          <use href="#i-chevron" />
-                        </svg>
-                        Full returned object
-                      </summary>
-                      <pre tabindex="0"><code class="language-typescript"></code></pre>
-                    </details>
-                  </div>
-                </div>
-              </article>
               <article class="example" aria-labelledby="ex-type">
                 <div class="hd hd-3">
                   <h3 id="ex-type">Read only one type</h3>
@@ -1182,14 +966,11 @@ if (result) {
                     ><svg class="icon" aria-hidden="true"><use href="#i-link" /></svg
                   ></a>
                 </div>
-                <ul class="ex-opts" aria-label="Options this example passes">
-                  <li class="ex-opts-label" aria-hidden="true">Options</li>
-                  <li><code>type</code></li>
-                </ul>
                 <p>
                   Set <a href="#parse-options"><code>type</code></a> when a field expects one kind
                   of measurement, such as a weight. The parser then reads only that kind, so a
-                  height typed into a weight field returns <code>null</code>.
+                  height typed into a weight field returns <code>null</code>. Use
+                  <code>type: 'height'</code> for a height field.
                 </p>
                 <div class="code on-code">
                   <div class="code-head">
@@ -1213,7 +994,10 @@ if (result) {
                     class="code-wide"
                     tabindex="0"
                     data-returns
-                  ><code class="language-typescript">parseMeasurement('eighty kilograms', { type: 'weight' });
+                  ><code class="language-typescript">const accepted = parseMeasurement(
+  'eighty kilograms',
+  { type: 'weight' },
+);
 /* ✓ Returns:
 {
   value: 80,
@@ -1224,12 +1008,20 @@ if (result) {
   ],
   raw: 'eighty kilograms'
 }
-*/</code></pre>
+*/
+
+const rejected = parseMeasurement('6 ft', { type: 'weight' });
+/* ✓ Returns: null */</code></pre>
                   <pre
                     class="code-narrow"
                     tabindex="0"
-                  ><code class="language-typescript">parseMeasurement(
+                  ><code class="language-typescript">const accepted = parseMeasurement(
   'eighty kilograms',
+  { type: 'weight' },
+);
+
+const rejected = parseMeasurement(
+  '6 ft',
   { type: 'weight' },
 );</code></pre>
                   <div class="returns">
@@ -1237,74 +1029,64 @@ if (result) {
                       <svg class="icon icon-sm" aria-hidden="true"><use href="#i-return" /></svg>
                       Returns
                     </div>
-                    <p class="summary">
-                      <span><b>80</b> kg</span><span class="summary-note">a weight</span>
-                    </p>
-                    <details class="full-object" data-full-object hidden>
-                      <summary>
-                        <svg class="icon icon-sm chevron" aria-hidden="true">
-                          <use href="#i-chevron" />
-                        </svg>
-                        Full returned object
-                      </summary>
-                      <pre tabindex="0"><code class="language-typescript"></code></pre>
-                    </details>
+                    <div class="summary-grid">
+                      <p class="summary">
+                        <span class="summary-key">accepted</span><span><b>80</b> kg</span
+                        ><span class="summary-note">a weight</span>
+                      </p>
+                      <p class="summary">
+                        <span class="summary-key">rejected</span><span class="is-null">null</span
+                        ><span class="summary-note">a height in a weight field</span>
+                      </p>
+                    </div>
                   </div>
                 </div>
               </article>
               <article class="example" aria-labelledby="ex-convert">
                 <div class="hd hd-3">
-                  <h3 id="ex-convert">Convert to one unit</h3>
+                  <h3 id="ex-convert"><span id="ex-feet-inches">Convert to one unit</span></h3>
                   <a class="anchor" href="#ex-convert" aria-label="Link to Convert to one unit"
                     ><svg class="icon" aria-hidden="true"><use href="#i-link" /></svg
                   ></a>
                 </div>
-                <ul class="ex-opts" aria-label="Options this example passes">
-                  <li class="ex-opts-label" aria-hidden="true">Options</li>
-                  <li><code>type</code></li>
-                  <li><code>normalizedUnit</code></li>
-                </ul>
                 <p>
                   Set <a href="#parse-options"><code>normalizedUnit</code></a> to get the result in
-                  the unit that you store. <code>matches</code> keeps each part in its unit from the
-                  text.
+                  the unit that you store. The compound height below combines 5 ft and 11 in: (5 ×
+                  12 + 11) × 2.54 = 180.34 cm. <code>matches</code> keeps the original parts in
+                  their own units.
                 </p>
-                <div class="picker">
-                  <span class="picker-label" id="convert-input-label">Input</span>
-                  <div
-                    class="picker-options"
-                    role="tablist"
-                    aria-labelledby="convert-input-label"
-                    data-tab-group="convert"
-                  >
-                    <button
-                      class="pick"
-                      type="button"
-                      role="tab"
-                      id="tab-convert-height"
-                      aria-controls="panel-convert-height"
-                      aria-selected="true"
-                      data-value="height"
-                    >
-                      5' 11"</button
-                    ><button
-                      class="pick"
-                      type="button"
-                      role="tab"
-                      id="tab-convert-weight"
-                      aria-controls="panel-convert-weight"
-                      aria-selected="false"
-                      tabindex="-1"
-                      data-value="weight"
-                    >
-                      150 lbs
-                    </button>
-                  </div>
-                </div>
                 <div class="code on-code">
                   <div class="code-head">
-                    <span class="code-label">TypeScript</span
-                    ><button
+                    <div
+                      class="tabs"
+                      role="tablist"
+                      aria-label="Conversion input"
+                      data-tab-group="convert"
+                    >
+                      <button
+                        class="tab"
+                        type="button"
+                        role="tab"
+                        id="tab-convert-height"
+                        aria-controls="panel-convert-height"
+                        aria-selected="true"
+                        data-value="height"
+                      >
+                        5' 11"</button
+                      ><button
+                        class="tab"
+                        type="button"
+                        role="tab"
+                        id="tab-convert-weight"
+                        aria-controls="panel-convert-weight"
+                        aria-selected="false"
+                        tabindex="-1"
+                        data-value="weight"
+                      >
+                        150 lbs
+                      </button>
+                    </div>
+                    <button
                       class="copy-button"
                       type="button"
                       data-copy
@@ -1356,17 +1138,8 @@ if (result) {
                       </div>
                       <p class="summary">
                         <span><b>180.34</b> cm</span
-                        ><span class="summary-note">from 5 ft and 11 in</span>
+                        ><span class="summary-note"><code>matches</code>: 5 ft and 11 in</span>
                       </p>
-                      <details class="full-object" data-full-object hidden>
-                        <summary>
-                          <svg class="icon icon-sm chevron" aria-hidden="true">
-                            <use href="#i-chevron" />
-                          </svg>
-                          Full returned object
-                        </summary>
-                        <pre tabindex="0"><code class="language-typescript"></code></pre>
-                      </details>
                     </div>
                   </div>
                   <div
@@ -1406,20 +1179,25 @@ if (result) {
                       </div>
                       <p class="summary">
                         <span><b>68.0388555</b> kg</span
-                        ><span class="summary-note">from 150 lb</span>
+                        ><span class="summary-note"><code>matches</code>: 150 lb</span>
                       </p>
-                      <details class="full-object" data-full-object hidden>
-                        <summary>
-                          <svg class="icon icon-sm chevron" aria-hidden="true">
-                            <use href="#i-chevron" />
-                          </svg>
-                          Full returned object
-                        </summary>
-                        <pre tabindex="0"><code class="language-typescript"></code></pre>
-                      </details>
                     </div>
                   </div>
                 </div>
+                <p>
+                  Without conversion, feet and inches combine into inches. Written-out numbers work
+                  too:
+                </p>
+                <dl class="input-results" aria-label="Compound height without conversion">
+                  <div>
+                    <dt>
+                      <code class="input-text">five foot ten</code
+                      ><code class="input-options">{ type: 'height' }</code>
+                    </dt>
+                    <dd><b>70</b> in</dd>
+                  </div>
+                </dl>
+                <p><code>matches</code> keeps 5 ft and 10 in, just as it keeps the parts above.</p>
               </article>
               <article class="example" aria-labelledby="ex-unqualified">
                 <div class="hd hd-3">
@@ -1431,19 +1209,14 @@ if (result) {
                     ><svg class="icon" aria-hidden="true"><use href="#i-link" /></svg
                   ></a>
                 </div>
-                <ul class="ex-opts" aria-label="Options this example passes">
-                  <li class="ex-opts-label" aria-hidden="true">Options</li>
-                  <li><code>type</code></li>
-                  <li><code>allowUnqualified</code></li>
-                  <li><code>inferUnit</code></li>
-                </ul>
                 <p>
                   People sometimes type only a number, for example in a field that already names the
                   unit. Set <a href="#parse-options"><code>allowUnqualified</code></a> to read it,
                   and <code>type</code> to say whether it is a height or a weight. Without
                   <code>type</code>, the call throws an error for almost any input.
                   <a href="#parse-options"><code>inferUnit</code></a> chooses metric or imperial
-                  units, and imperial is the default.
+                  units, and imperial is the default. With <code>'metric'</code>, a weight is in
+                  kilograms, a height below 3 is in meters, and any other height is in centimeters.
                 </p>
                 <div class="code on-code">
                   <div class="code-head">
@@ -1490,15 +1263,6 @@ if (result) {
                     <p class="summary">
                       <span><b>72</b> in</span><span class="summary-note">imperial, so inches</span>
                     </p>
-                    <details class="full-object" data-full-object hidden>
-                      <summary>
-                        <svg class="icon icon-sm chevron" aria-hidden="true">
-                          <use href="#i-chevron" />
-                        </svg>
-                        Full returned object
-                      </summary>
-                      <pre tabindex="0"><code class="language-typescript"></code></pre>
-                    </details>
                   </div>
                 </div>
               </article>
@@ -1509,15 +1273,12 @@ if (result) {
                     ><svg class="icon" aria-hidden="true"><use href="#i-link" /></svg
                   ></a>
                 </div>
-                <ul class="ex-opts" aria-label="Options this example passes">
-                  <li class="ex-opts-label" aria-hidden="true">Options</li>
-                  <li><code>fuzziness</code></li>
-                </ul>
                 <p>
                   Set <a href="#parse-options"><code>fuzziness</code></a> to read unit names that
                   have spelling errors. Without it, a unit name must be exact, so the same text
-                  returns <code>null</code>. <a href="#limits">Limits</a> says what fuzzy matching
-                  can get wrong.
+                  returns <code>null</code>. Each letter that is added, removed or changed is one
+                  error, and <code>fuzziness</code> is the largest number of errors in a word.
+                  <a href="#limits">Limits</a> says what fuzzy matching can get wrong.
                 </p>
                 <div class="code on-code">
                   <div class="code-head">
@@ -1587,72 +1348,6 @@ const strict = parseMeasurement(
                         ><span class="summary-note">unit names must be exact</span>
                       </p>
                     </div>
-                    <details class="full-object" data-full-object hidden>
-                      <summary>
-                        <svg class="icon icon-sm chevron" aria-hidden="true">
-                          <use href="#i-chevron" />
-                        </svg>
-                        Full returned object
-                      </summary>
-                      <pre tabindex="0"><code class="language-typescript"></code></pre>
-                    </details>
-                  </div>
-                </div>
-              </article>
-              <article class="example" aria-labelledby="ex-null">
-                <div class="hd hd-3">
-                  <h3 id="ex-null">No match</h3>
-                  <a class="anchor" href="#ex-null" aria-label="Link to No match"
-                    ><svg class="icon" aria-hidden="true"><use href="#i-link" /></svg
-                  ></a>
-                </div>
-                <ul class="ex-opts" aria-label="Options this example passes">
-                  <li class="ex-opts-label" aria-hidden="true">Options</li>
-                  <li class="is-none">none</li>
-                </ul>
-                <p>
-                  Text with no measurement returns <code>null</code>. Check for it before you use
-                  the result.
-                </p>
-                <div class="code on-code">
-                  <div class="code-head">
-                    <span class="code-label">TypeScript</span
-                    ><button
-                      class="copy-button"
-                      type="button"
-                      data-copy
-                      aria-label="Copy no match example"
-                    >
-                      <svg class="icon icon-sm icon-copy" aria-hidden="true">
-                        <use href="#i-copy" />
-                      </svg>
-                      <svg class="icon icon-sm icon-check" aria-hidden="true">
-                        <use href="#i-check" />
-                      </svg>
-                      <span data-copy-label>Copied</span>
-                    </button>
-                  </div>
-                  <pre
-                    class="code-wide"
-                    tabindex="0"
-                    data-returns
-                  ><code class="language-typescript">parseMeasurement('not a measurement');
-/* ✓ Returns: null */</code></pre>
-                  <pre
-                    class="code-narrow"
-                    tabindex="0"
-                  ><code class="language-typescript">parseMeasurement(
-  'not a measurement',
-);</code></pre>
-                  <div class="returns">
-                    <div class="returns-label">
-                      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-return" /></svg>
-                      Returns
-                    </div>
-                    <p class="summary">
-                      <span class="is-null">null</span
-                      ><span class="summary-note">no measurement found</span>
-                    </p>
                   </div>
                 </div>
               </article>
@@ -1682,7 +1377,14 @@ const strict = parseMeasurement(
               ></a>
             </div>
             <div class="stack">
-              <p class="measure">Reads one height or weight from a string.</p>
+              <p class="measure">
+                Reads one height or weight from a string. When it returns <code>null</code>,
+                <a href="#troubleshooting">Troubleshooting</a> lists the causes to look for,
+                including input longer than <code>maxLength</code>. It can throw an error for an
+                invalid <code>maxLength</code>, for a <code>type</code> that contradicts
+                <code>normalizedUnit</code>, and for <code>allowUnqualified</code> without
+                <code>type</code>.
+              </p>
               <div class="api-card">
                 <p class="decl">
                   <span class="decl-wide"
@@ -1731,67 +1433,178 @@ const strict = parseMeasurement(
               <p class="decl">
                 <span class="kw">interface</span> <span class="fn">ParseOptions</span>
               </p>
-              <dl class="props" aria-label="Properties">
-                <div>
-                  <dt><span class="name">maxLength?</span><span class="type">number</span></dt>
-                  <dd>
-                    The largest raw <code>input.length</code> before trimming or parsing; defaults
-                    to 1,000. Must be a number of at least 1, or <code>Infinity</code> for no limit.
-                    Other values throw.
-                  </dd>
-                </div>
-                <div>
+              <dl class="props option-list" aria-label="ParseOptions properties">
+                <div id="option-type">
                   <dt>
-                    <span class="name">type?</span
+                    <a class="name" href="#option-type">type?</a
                     ><span class="type"><a href="#measurement-type">MeasurementType</a></span>
                   </dt>
                   <dd>
-                    The measurement type to read: <code>'height'</code> or <code>'weight'</code>.
-                    See <a href="#ex-type">Read only one type</a>.
+                    <dl class="option-facts">
+                      <div>
+                        <dt>Purpose</dt>
+                        <dd>
+                          The measurement type to read. See
+                          <a href="#ex-type">Read only one type</a>.
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>When omitted</dt>
+                        <dd>
+                          Selected by <code>normalizedUnit</code> when set; otherwise inferred from
+                          the input.
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Constraints</dt>
+                        <dd>
+                          <code>'height'</code> or <code>'weight'</code>. Must agree with
+                          <code>normalizedUnit</code>.
+                        </dd>
+                      </div>
+                    </dl>
                   </dd>
                 </div>
-                <div>
-                  <dt><span class="name">fuzziness?</span><span class="type">number</span></dt>
-                  <dd>
-                    The largest number of spelling errors in a unit name, from 0 to 2. Without it, a
-                    unit name must be exact. See <a href="#ex-fuzzy">Spelling errors in units</a>.
-                  </dd>
-                </div>
-                <div>
+                <div id="option-normalized-unit">
                   <dt>
-                    <span class="name">allowUnqualified?</span><span class="type">boolean</span>
+                    <a class="name" href="#option-normalized-unit">normalizedUnit?</a
+                    ><span class="type"><a href="#unit-type">Unit</a></span>
                   </dt>
                   <dd>
-                    Read a number that has no unit. Without <code>type</code>,
-                    <code>parseMeasurement</code> throws an error for almost any input. See
-                    <a href="#ex-unqualified">Numbers without a unit</a>.
+                    <dl class="option-facts">
+                      <div>
+                        <dt>Purpose</dt>
+                        <dd>
+                          The unit of the result. See <a href="#ex-convert">Convert to one unit</a>.
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>When omitted</dt>
+                        <dd>Uses the parsed or inferred unit.</dd>
+                      </div>
+                      <div>
+                        <dt>Constraints</dt>
+                        <dd>
+                          Also selects the measurement type, so a weight unit reads only a weight. A
+                          <code>type</code> that contradicts it throws an error. Shorthand such as
+                          <code>5-11</code> still needs <code>type</code>, and so does
+                          <code>allowUnqualified</code>.
+                        </dd>
+                      </div>
+                    </dl>
                   </dd>
                 </div>
-                <div>
+                <div id="option-fuzziness">
                   <dt>
-                    <span class="name">inferUnit?</span
+                    <a class="name" href="#option-fuzziness">fuzziness?</a
+                    ><span class="type">number</span>
+                  </dt>
+                  <dd>
+                    <dl class="option-facts">
+                      <div>
+                        <dt>Purpose</dt>
+                        <dd>
+                          The largest number of spelling errors in a unit name. See
+                          <a href="#ex-fuzzy">Spelling errors in units</a>.
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Default</dt>
+                        <dd><code>0</code> — unit names must be exact.</dd>
+                      </div>
+                      <div>
+                        <dt>Constraints</dt>
+                        <dd>From <code>0</code> to <code>2</code>.</dd>
+                      </div>
+                    </dl>
+                  </dd>
+                </div>
+                <div id="option-allow-unqualified">
+                  <dt>
+                    <a class="name" href="#option-allow-unqualified">allowUnqualified?</a
+                    ><span class="type">boolean</span>
+                  </dt>
+                  <dd>
+                    <dl class="option-facts">
+                      <div>
+                        <dt>Purpose</dt>
+                        <dd>
+                          Read a number that has no unit. See
+                          <a href="#ex-unqualified">Numbers without a unit</a>.
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Default</dt>
+                        <dd><code>false</code> — bare-number inference is off.</dd>
+                      </div>
+                      <div>
+                        <dt>Constraints</dt>
+                        <dd>
+                          Requires an explicit <code>type</code> when enabled. Without it,
+                          <code>parseMeasurement</code> throws an error for almost any input.
+                        </dd>
+                      </div>
+                    </dl>
+                  </dd>
+                </div>
+                <div id="option-infer-unit">
+                  <dt>
+                    <a class="name" href="#option-infer-unit">inferUnit?</a
                     ><span class="type"
                       ><span class="str">'metric'</span> | <span class="str">'imperial'</span></span
                     >
                   </dt>
                   <dd>
-                    The unit system for a number that has no unit. Without it, or with
-                    <code>'imperial'</code>, a height is in inches and a weight in pounds. With
-                    <code>'metric'</code>, a weight is in kilograms, a height below 3 in meters, and
-                    any other height in centimeters.
+                    <dl class="option-facts">
+                      <div>
+                        <dt>Purpose</dt>
+                        <dd>
+                          The unit system for a number that has no unit, when
+                          <code>allowUnqualified</code> and <code>type</code> are set.
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>When omitted</dt>
+                        <dd>
+                          Same as <code>'imperial'</code>: a height is in inches and a weight in
+                          pounds.
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Constraints</dt>
+                        <dd>
+                          With <code>'metric'</code>, a weight is in kilograms, a height below 3 in
+                          meters, and any other height in centimeters.
+                        </dd>
+                      </div>
+                    </dl>
                   </dd>
                 </div>
-                <div>
+                <div id="option-max-length">
                   <dt>
-                    <span class="name">normalizedUnit?</span
-                    ><span class="type"><a href="#unit-type">Unit</a></span>
+                    <a class="name" href="#option-max-length">maxLength?</a
+                    ><span class="type">number</span>
                   </dt>
                   <dd>
-                    The unit of the result. It also selects the measurement type, so a weight unit
-                    reads only a weight. A <code>type</code> that contradicts it throws an error.
-                    Shorthand such as <code>5-11</code> still needs <code>type</code>, and so does
-                    <code>allowUnqualified</code>. See
-                    <a href="#ex-convert">Convert to one unit</a>.
+                    <dl class="option-facts">
+                      <div>
+                        <dt>Purpose</dt>
+                        <dd>
+                          The largest raw <code>input.length</code> before trimming or parsing.
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Default</dt>
+                        <dd><code>1000</code>.</dd>
+                      </div>
+                      <div>
+                        <dt>Constraints</dt>
+                        <dd>
+                          A number of at least <code>1</code>, or <code>Infinity</code> for no
+                          limit. Other values throw.
+                        </dd>
+                      </div>
+                    </dl>
                   </dd>
                 </div>
               </dl>
@@ -2210,19 +2023,16 @@ const strict = parseMeasurement(
                     type="button"
                     aria-expanded="true"
                     aria-controls="rail-usage"
-                    aria-label="Usage examples"
+                    aria-label="Usage tasks"
                   >
                     <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chevron" /></svg>
                   </button>
                 </div>
                 <ul id="rail-usage">
-                  <li><a href="#ex-basic">Basic height and weight</a></li>
-                  <li><a href="#ex-feet-inches">Feet and inches</a></li>
                   <li><a href="#ex-type">Read only one type</a></li>
                   <li><a href="#ex-convert">Convert to one unit</a></li>
                   <li><a href="#ex-unqualified">Numbers without a unit</a></li>
                   <li><a href="#ex-fuzzy">Spelling errors in units</a></li>
-                  <li><a href="#ex-null">No match</a></li>
                 </ul>
               </li>
               <li class="toc-group">
@@ -2310,10 +2120,10 @@ const strict = parseMeasurement(
     </p>
 
     <script>
-      // Each example's code ends with a Returns comment that shows its result, and
-      // tests/docsExamples.test.ts checks that result against the library. The comment moves to
-      // the example's Returns panel here, before Prism highlights the code. Without JavaScript,
-      // the comment stays in the code.
+      // Returns comments keep complete results checked by tests/docsExamples.test.ts and
+      // readable without JavaScript. Before highlighting, remove them from the runnable code;
+      // Quick start reveals the full object beside its module tabs, and later lessons use
+      // short summaries to focus on the behavior they teach.
       document.querySelectorAll('pre[data-returns] > code').forEach(code => {
         const results = [];
         code.textContent = code.textContent.replace(
@@ -2324,7 +2134,9 @@ const strict = parseMeasurement(
           }
         );
         const object = results.find(result => result !== 'null');
-        const full = code.closest('[role="tabpanel"], .code').querySelector('[data-full-object]');
+        const full =
+          code.closest('[role="tabpanel"], .code').querySelector('[data-full-object]') ??
+          code.closest('.code').querySelector('[data-full-object]');
         if (full && object) {
           full.querySelector('code').textContent = object;
           full.hidden = false;
@@ -2641,8 +2453,8 @@ const strict = parseMeasurement(
             });
         }
 
-        // Folding navigation groups. The group holding the current section opens itself; a
-        // group the reader toggles stays that way until the current section enters or leaves it.
+        // Start compact, then let the reader choose which groups stay open. Only an explicit
+        // anchor jump (including the initial hash) reveals its group; scrolling never folds it.
         const tocGroups = [...document.querySelectorAll('.toc-group')];
 
         function setGroup(group, open) {
@@ -2653,23 +2465,17 @@ const strict = parseMeasurement(
         }
 
         tocGroups.forEach(group => {
+          setGroup(group, false);
           group.querySelector(':scope > .toc-row > .toc-toggle').addEventListener('click', () => {
-            const open = group.dataset.open !== 'true';
-            group.dataset.pinned = open ? 'open' : 'closed';
-            setGroup(group, open);
+            setGroup(group, group.dataset.open !== 'true');
+            updateCurrent();
           });
         });
 
-        function updateGroups(currentHref) {
+        function revealGroup(href) {
           tocGroups.forEach(group => {
-            const targets = [...group.querySelectorAll('a')].map(a => a.getAttribute('href'));
-            const holds = targets.includes(currentHref);
-            if (holds !== group._holds) {
-              group._holds = holds;
-              delete group.dataset.pinned;
-            }
-            const pinned = group.dataset.pinned;
-            setGroup(group, pinned ? pinned === 'open' : holds);
+            if ([...group.querySelectorAll('a')].some(link => link.getAttribute('href') === href))
+              setGroup(group, true);
           });
         }
 
@@ -2704,12 +2510,16 @@ const strict = parseMeasurement(
           const target = document.getElementById(decodeURIComponent(hash.slice(1)));
           jumpTarget = headings.includes(target) ? target : null;
           jumpSeen = false;
+          if (jumpTarget) revealGroup('#' + jumpTarget.id);
         }
 
         // Clicking the link of the current hash again fires no hashchange, so clicks count too.
         document.addEventListener('click', event => {
           const link = event.target.closest('a[href^="#"]');
-          if (link) noteJump(link.getAttribute('href'));
+          if (link) {
+            noteJump(link.getAttribute('href'));
+            updateCurrent();
+          }
         });
 
         // A section becomes current once its heading passes 35% of the viewport height. At the
@@ -2742,13 +2552,14 @@ const strict = parseMeasurement(
           tocLinks.forEach(link => {
             const href = link.getAttribute('href');
             const inSiteNav = link.closest('[data-section-nav]');
-            const active = inSiteNav ? href === currentSection : href === currentHref;
+            // Keep the current section visible even when its nested link is folded away.
+            const collapsed = link.closest('.toc-group')?.dataset.open === 'false';
+            const active = inSiteNav || collapsed ? href === currentSection : href === currentHref;
             if (active) link.setAttribute('aria-current', 'true');
             else link.removeAttribute('aria-current');
           });
           if (currentHref !== lastHref) {
             lastHref = currentHref;
-            updateGroups(currentHref);
             reveal(sideToc, sideToc?.querySelector('a[aria-current]'));
           }
         }

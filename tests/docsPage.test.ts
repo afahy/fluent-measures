@@ -8,6 +8,94 @@ import { describe, expect, it } from 'vitest';
 // also needs crossorigin="anonymous". A URL that starts with "//" loads from another host too.
 const page = readFileSync(new URL('../docs/index.html', import.meta.url), 'utf8');
 
+// The ticket orders these for lookup, independently of the exported interface's source order.
+// Default and omitted behavior follow the README's ParseOptions and PARSING's Bare Numbers.
+describe('the ParseOptions reference', () => {
+  const reference =
+    page.split('aria-label="ParseOptions properties">')[1]?.split('id="parsed-value"')[0] ?? '';
+  const options = [
+    ...reference.matchAll(/<div id="option-([^"]+)">([\s\S]*?)(?=<div id="option-|$)/g),
+  ];
+  const text = (html: string): string =>
+    html
+      .split(/<[^>]*>/)
+      .join('')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  it('puts common settings before the input-length safeguard', () => {
+    expect(options.map(([, id]) => id)).toEqual([
+      'type',
+      'normalized-unit',
+      'fuzziness',
+      'allow-unqualified',
+      'infer-unit',
+      'max-length',
+    ]);
+  });
+
+  it.each([
+    [
+      'type',
+      'When omitted',
+      'Selected by normalizedUnit when set; otherwise inferred from the input.',
+    ],
+    ['normalized-unit', 'When omitted', 'Uses the parsed or inferred unit.'],
+    ['fuzziness', 'Default', '0 — unit names must be exact.'],
+    ['allow-unqualified', 'Default', 'false — bare-number inference is off.'],
+    [
+      'infer-unit',
+      'When omitted',
+      "Same as 'imperial': a height is in inches and a weight in pounds.",
+    ],
+    ['max-length', 'Default', '1000.'],
+  ])(
+    'labels %s purpose, omitted behavior and constraints in visible markup',
+    (id, label, omitted) => {
+      const option = options.find(([, key]) => key === id)?.[2] ?? '';
+      const facts = [...option.matchAll(/<dt>([^<]+)<\/dt>\s*<dd>([\s\S]*?)<\/dd>/g)];
+      expect(facts.map(([, key]) => key)).toEqual(['Purpose', label, 'Constraints']);
+      expect(text(facts[1]?.[2] ?? '')).toBe(omitted);
+      expect(facts.every(([, , value]) => text(value).length > 0)).toBe(true);
+      expect(option).toContain(`href="#option-${id}"`);
+      expect(option).not.toMatch(/<details|\bhidden\b|aria-hidden/);
+    }
+  );
+
+  it('retains conditional inference, error caveats and practical example links', () => {
+    expect.hasAssertions();
+    const optionText = (id: string): string =>
+      text(options.find(([, key]) => key === id)?.[2] ?? '');
+    expect(optionText('normalized-unit')).toContain('a weight unit reads only a weight');
+    expect(optionText('normalized-unit')).toContain('A type that contradicts it throws an error');
+    expect(optionText('normalized-unit')).toContain(
+      'Shorthand such as 5-11 still needs type, and so does allowUnqualified'
+    );
+    expect(optionText('allow-unqualified')).toContain('Requires an explicit type when enabled');
+    expect(optionText('allow-unqualified')).toContain('throws an error for almost any input');
+    expect(optionText('infer-unit')).toContain('when allowUnqualified and type are set');
+    expect(optionText('infer-unit')).toContain(
+      "With 'metric', a weight is in kilograms, a height below 3 in meters, and any other height in centimeters"
+    );
+    expect(optionText('max-length')).toContain('raw input.length before trimming or parsing');
+    expect(optionText('max-length')).toContain(
+      'A number of at least 1, or Infinity for no limit. Other values throw'
+    );
+    for (const id of [
+      'ex-type',
+      'ex-convert',
+      'ex-fuzzy',
+      'ex-unqualified',
+      'unit-type',
+      'measurement-type',
+    ]) {
+      expect(reference).toContain(`href="#${id}"`);
+      expect(page).toContain(`id="${id}"`);
+    }
+    expect(page).toContain('id="parse-options"');
+  });
+});
+
 /**
  * The external scripts and stylesheets in an HTML page. Prettier checks the page, and it writes
  * each attribute value in double quotes with no spaces around "=". Names and "rel" values in HTML
@@ -358,4 +446,79 @@ describe('the docs page', () => {
     expect(toasts['error-toast'].dataset.visible).toBe('true');
     expect(toasts['success-toast'].dataset.visible).toBe('false');
   });
+});
+
+// Quick start owns the contract; Usage teaches four configuration tasks. Legacy deep links
+// still land beside the corresponding explanation after the repeated cards are removed.
+describe('the docs lessons', () => {
+  const quick = page.slice(
+    page.indexOf('<h3 id="quick-start">'),
+    page.indexOf('aria-labelledby="usage"')
+  );
+  const usage = page.slice(
+    page.indexOf('aria-labelledby="usage"'),
+    page.indexOf('aria-labelledby="api"')
+  );
+
+  it('shows the full result and null handling in Quick start', () => {
+    expect(quick).toContain('data-full-object');
+    expect(quick).toContain('Full returned object');
+    expect(quick).toContain('if (result)');
+    expect(quick).toContain('not a measurement');
+    expect(quick).toContain('id="ex-basic"');
+    expect(quick).toContain('id="ex-null"');
+    expect(quick).not.toContain('href="#ex-basic"');
+  });
+
+  it('gives each Usage task one lesson and preserves the compound-height anchor', () => {
+    expect(
+      [...usage.matchAll(/<article class="example" aria-labelledby="([^"]+)"/g)].map(
+        match => match[1]
+      )
+    ).toEqual(['ex-type', 'ex-convert', 'ex-unqualified', 'ex-fuzzy']);
+    expect(usage).toContain('id="ex-feet-inches"');
+    expect(usage).not.toContain('data-full-object');
+    expect(usage).not.toContain('class="ex-opts"');
+  });
+
+  it('keeps every local navigation link attached to a unique destination', () => {
+    const ids = [...page.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
+    const links = [...page.matchAll(/<a\b[^>]*\bhref="#([^"]+)"/g)].map(match => match[1]);
+    expect(links.length).toBeGreaterThan(0);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(links.filter(link => !ids.includes(link))).toEqual([]);
+  });
+});
+
+it('reveals the Quick start result beside either module format', () => {
+  const script = page
+    .split('<script>')
+    .map(part => part.split('</script>')[0])
+    .find(code => code.includes("querySelectorAll('pre[data-returns]"));
+  const snippet = /data-returns\s*><code class="language-typescript">([\s\S]*?)<\/code>/.exec(
+    page
+  )?.[1];
+  expect(script).toBeDefined();
+  expect(snippet).toBeDefined();
+  const output = { textContent: '' };
+  const full = { hidden: true, querySelector: (): typeof output => output };
+  const panel = { querySelector: (): null => null };
+  const card = { querySelector: (): typeof full => full };
+  const code = {
+    textContent: snippet ?? '',
+    closest: (selector: string): typeof card | typeof panel =>
+      selector === '.code' ? card : panel,
+  };
+  runInNewContext(script ?? '', { document: { querySelectorAll: (): (typeof code)[] => [code] } });
+  expect(full.hidden).toBe(false);
+  // README Usage defines this complete result, independently of the page's extraction script.
+  expect(new Function(`return (${output.textContent});`)()).toEqual({
+    value: 6,
+    unit: 'ft',
+    type: 'height',
+    matches: [{ value: 6, unit: 'ft' }],
+    raw: '6 ft',
+  });
+  expect(code.textContent).toContain('if (result)');
+  expect(code.textContent).not.toContain('✓ Returns');
 });

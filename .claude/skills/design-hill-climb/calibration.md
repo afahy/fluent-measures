@@ -80,6 +80,8 @@ Add one row for each judge and each site. Commit the rows in the PR of the run.
 | 2026-11-05 | v4     | Claude Opus 5.5 | chroma.js  | 7       | Mobile layout and navigation still lower visual scores; gate failures listed separately. |
 | 2026-11-05 | v4     | GPT-6 Astra     | Sonner     | 9       | Visual target reached; local explanation and mandatory gate findings remain.             |
 | 2026-11-05 | v4     | Claude Opus 5.5 | Sonner     | 9       | Visual target reached; local hierarchy and mandatory gate findings remain.               |
+| 2026-11-05 | v4     | GPT-6.1 Sol     | chroma.js  | 8       | Phone navigation offscreen, disconnected result labels, dense changelog; gates separate. |
+| 2026-11-05 | v4     | GPT-6.1 Sol     | Sonner     | 9       | Visual target reached; one clarity gap (Expand) and mandatory gate findings remain.      |
 
 Rubric v4 keeps a separate list of mandatory gate failures and scores the visual design
 system. The v3 Sonner reviews found local token and accessibility fixes in an otherwise
