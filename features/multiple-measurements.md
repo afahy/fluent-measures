@@ -22,6 +22,8 @@ range or for measurements that disagree.
 ## How to verify it
 
 - Source: `src/parseMeasurement.ts`, `src/tokenize.ts`
-- Tests: `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.separateMeasurements.test.ts`
+- Tests: `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.separateMeasurements.test.ts`,
+  `tests/parseMeasurement.numberWordCommas.test.ts`,
+  `tests/parseMeasurement.commaWeightOwnership.test.ts`
 - Properties: "generated pairs of measurements" in `tests/properties.test.ts`
 - Corpus categories: `multiple-measurements`

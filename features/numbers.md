@@ -11,6 +11,7 @@ fractions, decimal commas and thousands groups.
 - Words: `eighty kilograms`, `one hundred and 50 pounds`, `six and a half feet`.
 - Fractions: `5 1/2 ft`, `5½ ft`.
 - Commas: `1,000 lbs`, `72,5 kg`, `1,234,56 kg`.
+- A comma and space after a label's number word: `phase twenty, 5 cm` gives 5 cm.
 - Signs, which give `null` for a negative value: `-70 kg`, Unicode minus signs.
 - A zero before a unit, which isn't a measurement: `0 kg, 80 lb` gives 80 lb.
 - `import` and `require`.
@@ -25,6 +26,8 @@ fractions, decimal commas and thousands groups.
 
 - Source: `src/wordsToNumber.ts`, `src/tokenize.ts`, `src/parseMeasurement.ts`
 - Tests: `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.andAHalf.test.ts`, `tests/parseMeasurement.commaBoundaries.test.ts`,
+  `tests/parseMeasurement.numberWordCommas.test.ts`,
+  `tests/parseMeasurement.commaWeightOwnership.test.ts`,
   `tests/parseMeasurement.commaFractions.test.ts`, `tests/parseMeasurement.commaGroups.test.ts`,
   `tests/parseMeasurement.commaSyntax.test.ts`, `tests/parseMeasurement.commas.test.ts`,
   `tests/parseMeasurement.fractions.test.ts`, `tests/parseMeasurement.numberWords.test.ts`,

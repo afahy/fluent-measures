@@ -13,6 +13,8 @@ in `I drink 8 oz of water, weight 180 lbs`, which gives 180 lb.
 
 - A number and a unit name, with or without a space: `6 ft`, `150lbs`, `72 inches`, `185#`.
 - A unit before its number: `kg 70`.
+- An unsupported unit before its own number, also in words before a comma: `stone twenty, 4 lb`
+  gives `null`.
 - British spellings: `1.8 metres`, `180 centimetres`.
 - `type: 'height'` or `type: 'weight'`, to read only one type.
 - `import` and `require`.
@@ -26,8 +28,10 @@ in `I drink 8 oz of water, weight 180 lbs`, which gives 180 lb.
 
 ## How to verify it
 
-- Source: `src/units.ts`, `src/matchUnit.ts`, `src/tokenize.ts`
+- Source: `src/units.ts`, `src/matchUnit.ts`, `src/tokenize.ts`, `src/parseMeasurement.ts`
 - Tests: `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.test.ts`, `tests/parseMeasurement.britishUnits.test.ts`,
+  `tests/parseMeasurement.numberWordCommas.test.ts`,
+  `tests/parseMeasurement.commaWeightOwnership.test.ts`,
   `tests/parseMeasurement.inAfterNumber.test.ts`, `tests/parseMeasurement.unsupportedUnits.test.ts`,
   `tests/units.test.ts`, `tests/matchUnit.test.ts`
 - Properties: "generated single measurements" in `tests/properties.test.ts`
