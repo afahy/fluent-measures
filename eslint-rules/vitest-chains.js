@@ -239,6 +239,7 @@ function constantBinding(node, scope, seen) {
     return undefined;
   }
   return {
+    variable,
     node: definition.node.init,
     scope: variable.scope,
     seen: new Set([...seen, variable]),
@@ -351,18 +352,68 @@ function truthiness(node, scope, seen = new Set()) {
         return left === false ? right : undefined;
       }
       const first = staticValue(node.left, scope, seen);
-      return first !== UNKNOWN && first == null ? right : left;
+      if (first !== UNKNOWN) return first == null ? right : left;
+      // Falsy does not mean non-nullish: an unknown left side may select the right side.
+      if (left === true) return true;
+      return left === false && right === false ? false : undefined;
     }
     default:
       return undefined;
   }
 }
 
+/** An object's const binding can still be written through a member, an alias or an escape. */
+function objectMayChange(variable, seen = new Set()) {
+  if (!variable) return true;
+  if (seen.has(variable)) return false;
+  seen.add(variable);
+  return variable.references.some(reference => {
+    if (reference.isTypeReference && !reference.isValueReference) return false;
+    let value = reference.identifier;
+    if (value === variable.defs[0]?.node.id) return false;
+    // A TypeScript typeof query is a value reference in the scope manager, but never runs.
+    while (value.parent.type === 'TSQualifiedName') value = value.parent;
+    if (value.parent.type === 'TSTypeQuery') return false;
+    while (WRAPPERS.has(value.parent.type)) value = value.parent;
+    const { parent } = value;
+    if (parent.type === 'MemberExpression' && parent.object === value) {
+      let member = parent;
+      while (WRAPPERS.has(member.parent.type)) member = member.parent;
+      const use = member.parent;
+      return (
+        (use.type === 'AssignmentExpression' && use.left === member) ||
+        use.type === 'UpdateExpression' ||
+        (use.type === 'UnaryExpression' && use.operator === 'delete') ||
+        (use.type === 'CallExpression' && use.callee === member) ||
+        use.type === 'TaggedTemplateExpression'
+      );
+    }
+    if (parent.type === 'VariableDeclarator' && parent.init === value) {
+      return (
+        parent.id.type !== 'Identifier' ||
+        objectMayChange(findVariable(reference.from, parent.id.name), seen)
+      );
+    }
+    if (parent.type === 'SpreadElement') return false;
+    if (parent.type === 'CallExpression') {
+      // Passing options to a recognized Vitest call reads them. Other calls may mutate them.
+      return !resolveChain(parent.callee, reference.from)?.fn;
+    }
+    return !['UnaryExpression', 'BinaryExpression', 'LogicalExpression'].includes(parent.type);
+  });
+}
+
 /** Resolve an options object, its const aliases and spreads, respecting the last known key. */
 function optionProperties(node, scope, seen = new Set()) {
   node = unwrap(node);
   const binding = constantBinding(node, scope, seen);
-  if (binding) return optionProperties(binding.node, binding.scope, binding.seen);
+  if (binding) {
+    const properties = optionProperties(binding.node, binding.scope, binding.seen);
+    if (objectMayChange(binding.variable)) {
+      for (const [key, entry] of properties) properties.set(key, { ...entry, uncertain: true });
+    }
+    return properties;
+  }
   const properties = new Map();
   if (node.type !== 'ObjectExpression') return properties;
   for (const property of node.properties) {
@@ -541,8 +592,11 @@ export default {
 
         // The fails and todo options, unless their value is always false.
         for (const argument of node.arguments) {
-          for (const [key, { property, scope: at }] of optionProperties(argument, scope)) {
-            if (truthiness(property.value, at) === false) continue;
+          for (const [key, { property, scope: at, uncertain }] of optionProperties(
+            argument,
+            scope
+          )) {
+            if (!uncertain && truthiness(property.value, at) === false) continue;
             if (MARKS.has(key)) {
               context.report({ node: property, messageId: 'mark' });
             }

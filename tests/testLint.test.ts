@@ -223,6 +223,68 @@ describe('the lint for tests that skip or are expected to fail', () => {
 // AFA-180: stored members, aliases and constant expressions must enforce the same policy as
 // direct Vitest calls. These expectations follow rule 3, not the rule's previous output.
 describe('the additional Vitest chain forms', () => {
+  // AFA-180 review: a falsy value can be nullish, and a const object can still change.
+  it.each([
+    "it('x', { fails: (process.env.CI && false) ?? true }, " + pass + ');',
+    "it('x', { todo: (process.env.CI && 0) ?? true }, " + pass + ');',
+    "it('x', { fails: (process.env.CI || {}) ?? false }, " + pass + ');',
+    'const options = { fails: false };\noptions.fails = true;\n' +
+      "it('x', { fails: true, ...options }, " +
+      pass +
+      ');',
+    'const options = { todo: false };\noptions.todo ||= true;\n' +
+      "it('x', { todo: true, ...options }, " +
+      pass +
+      ');',
+    'const options = { fails: false };\nconst alias = options;\nalias.fails = true;\n' +
+      "it('x', { fails: true, ...options }, " +
+      pass +
+      ');',
+    'const options = { fails: false };\nObject.assign(options, { fails: true });\n' +
+      "it('x', { fails: true, ...options }, " +
+      pass +
+      ');',
+    'const options = { fails: false };\ndelete options.fails;\n' +
+      "it('x', { fails: true, ...options }, " +
+      pass +
+      ');',
+    'const options = { fails: false };\noptions.fails = true;\n' +
+      "it('x', options, " +
+      pass +
+      ');',
+    'const options = { fails: false, activate(): void { this.fails = true; } };\n' +
+      "options.activate();\nit('x', { fails: true, ...options }, " +
+      pass +
+      ');',
+  ])('keeps active or uncertain flags rejected in %s', async body => {
+    expect(await problems(body)).toEqual([fails]);
+  });
+
+  it.each([
+    "it.skipIf((process.env.CI && false) ?? true)('x', " + pass + ');',
+    "it.runIf((process.env.CI && false) ?? true)('x', " + pass + ');',
+    "it('x', { fails: (process.env.CI && false) ?? false }, " + pass + ');',
+    'const options = { fails: false };\nconst alias = options;\nvoid options.fails;\n' +
+      "it('x', { fails: true, ...alias }, " +
+      pass +
+      ');',
+    'const options = { fails: false };\n' +
+      "it('x', { fails: true, ...(options as typeof options) }, " +
+      pass +
+      ');',
+    'const options = { fails: false };\noptions.fails = true;\n' +
+      "it('x', { ...options, fails: false }, " +
+      pass +
+      ');',
+  ])('preserves dynamic conditions and final inactive overrides in %s', async body => {
+    expect(await problems(body)).toEqual([]);
+  });
+
+  it('does not mark a known non-nullish false option as active', async () => {
+    // The core lint rule can reject redundant coalescing; this flag is still inactive.
+    expect(await problems("it('x', { fails: false ?? true }, " + pass + ');')).not.toContain(fails);
+  });
+
   it.each([
     // 1–3: stored skip, namespace aliases and context aliases through TypeScript wrappers.
     [`const skipped = it.skip;\nskipped('x', ${pass});`, skip],
