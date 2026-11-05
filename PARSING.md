@@ -155,14 +155,22 @@ Two parts are one measurement only when all of these are true:
 Examples are `5 ft 11 in` and `1 m 80 cm`. Other parts are separate measurements. For
 example, `6 ft (72 in)` and `0.5 m (50 cm)` are a height and its conversion.
 
-When the text has more than one measurement, the result is the first one. The others must agree
-with it within 1%. If not, the result is `null`:
+When the text has more than one height, or more than one weight, the result is the first one.
+The others must agree with it within 1%. If not, the result is `null`:
 
 ```typescript
 parseMeasurement('70 kg (154 lbs)'); // { value: 70, unit: 'kg', ... }
 parseMeasurement('180 cm (5\'11")'); // { value: 180, unit: 'cm', ... }
 parseMeasurement('6 ft (72 in)'); // { value: 6, unit: 'ft', ... }
 parseMeasurement('210 lbs to 180 lbs'); // null: two different weights
+```
+
+When the text has both a height and a weight, set `type` to choose which one you get. Without
+`type`, the result can be either one, or `null`:
+
+```typescript
+parseMeasurement('5\'11", 180 lbs', { type: 'height' }); // { value: 71, unit: 'in', ... }
+parseMeasurement('5\'11", 180 lbs', { type: 'weight' }); // { value: 180, unit: 'lb', ... }
 ```
 
 ## Numbers
@@ -199,7 +207,20 @@ letters.
 
 ### Numbers With No Unit
 
-With `allowUnqualified`, `normalizedUnit` also converts a number that has no unit:
+With `allowUnqualified`, a number that has no unit gets its unit from `type` and `inferUnit`. With
+`inferUnit: 'imperial'`, or without `inferUnit`, a height is in inches and a weight is in pounds.
+With `inferUnit: 'metric'`, a weight is in kilograms. A metric height below 3 is in meters,
+because a person's height in meters is always below 3. Any other metric height is in centimeters:
+
+```typescript
+parseMeasurement('72', { type: 'height', allowUnqualified: true }); // { value: 72, unit: 'in', ... }
+parseMeasurement('150', { type: 'weight', allowUnqualified: true }); // { value: 150, unit: 'lb', ... }
+parseMeasurement('1.8', { type: 'height', allowUnqualified: true, inferUnit: 'metric' }); // { value: 1.8, unit: 'm', ... }
+parseMeasurement('180', { type: 'height', allowUnqualified: true, inferUnit: 'metric' }); // { value: 180, unit: 'cm', ... }
+parseMeasurement('70', { type: 'weight', allowUnqualified: true, inferUnit: 'metric' }); // { value: 70, unit: 'kg', ... }
+```
+
+`normalizedUnit` also converts a number that has no unit:
 
 ```typescript
 parseMeasurement('72', {

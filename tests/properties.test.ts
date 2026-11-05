@@ -162,7 +162,7 @@ describe('generated feet and inches', () => {
 describe('generated single measurements', () => {
   it('reads the value and the unit of each unit name', () => {
     expect.hasAssertions();
-    // README, "Supported Units". PARSING.md: after a number, "in" and "m" are units.
+    // README, "Supported units". PARSING.md: after a number, "in" and "m" are units.
     fc.assert(
       fc.property(amount, measurement, fc.boolean(), (value, { unit, name }, space) => {
         const raw = `${value}${space ? ' ' : ''}${name}`;

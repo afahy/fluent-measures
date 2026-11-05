@@ -20,7 +20,7 @@ input length limit. The public TypeScript input parameter stays `string`.
 
 ## Where the rules are
 
-- README.md, "API Reference"
+- README.md, "API reference"
 - README.md, "Troubleshooting"
 
 ## How to verify it
