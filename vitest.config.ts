@@ -6,7 +6,7 @@ import { defineConfig } from 'vitest/config';
 // in the checkout path, and use the same forward slashes as Vitest's coverage matcher.
 const coverageRoot = fileURLToPath(new URL('.', import.meta.url))
   .replace(/\\/g, '/')
-  .replace(/[*?{}()[\]]/g, '\\$&');
+  .replace(/[\\*?{}()[\]]/g, '\\$&');
 
 export default defineConfig({
   test: {
