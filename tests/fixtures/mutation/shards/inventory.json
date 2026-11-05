@@ -1,0 +1,54 @@
+{
+  "run": "fixture-head",
+  "filesRead": {
+    "src/explained.ts": true,
+    "src/new.ts": true,
+    "src/other.ts": true,
+    "src/parseMeasurement.ts": true,
+    "src/tokenize.ts": true,
+    "src/types.ts": true
+  },
+  "files": {
+    "src/explained.ts": {
+      "source": "// Stryker disable next-line all: this is a recorded directive example\nexport const explained = true;\n",
+      "mutants": []
+    },
+    "src/new.ts": {
+      "source": "export const orphan = true;\n",
+      "mutants": []
+    },
+    "src/other.ts": {
+      "source": "export const other = (value: boolean) => !value;\n",
+      "mutants": []
+    },
+    "src/parseMeasurement.ts": {
+      "source": "export const negate = (value: boolean) => !value;\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const edge = true;\nexport function parseMeasurement(n: number) { return n > 0 ? 1 : 0; }\n",
+      "mutants": []
+    },
+    "src/tokenize.ts": {
+      "source": "export const tokenize = (value: boolean) => !value;\n",
+      "mutants": []
+    },
+    "src/types.ts": {
+      "source": "export type Unit = string;\n",
+      "mutants": []
+    }
+  },
+  "mutants": [
+    "[\"src/explained.ts\",2,26,2,30,\"BooleanLiteral\",\"false\"]",
+    "[\"src/new.ts\",1,23,1,27,\"BooleanLiteral\",\"false\"]",
+    "[\"src/other.ts\",1,22,1,48,\"ArrowFunction\",\"() => undefined\"]",
+    "[\"src/other.ts\",1,42,1,48,\"BooleanLiteral\",\"value\"]",
+    "[\"src/parseMeasurement.ts\",1,23,1,49,\"ArrowFunction\",\"() => undefined\"]",
+    "[\"src/parseMeasurement.ts\",1,43,1,49,\"BooleanLiteral\",\"value\"]",
+    "[\"src/parseMeasurement.ts\",341,21,341,25,\"BooleanLiteral\",\"false\"]",
+    "[\"src/parseMeasurement.ts\",342,45,342,70,\"BlockStatement\",\"{}\"]",
+    "[\"src/parseMeasurement.ts\",342,54,342,59,\"ConditionalExpression\",\"true\"]",
+    "[\"src/parseMeasurement.ts\",342,54,342,59,\"ConditionalExpression\",\"false\"]",
+    "[\"src/parseMeasurement.ts\",342,54,342,59,\"EqualityOperator\",\"n >= 0\"]",
+    "[\"src/parseMeasurement.ts\",342,54,342,59,\"EqualityOperator\",\"n <= 0\"]",
+    "[\"src/tokenize.ts\",1,25,1,51,\"ArrowFunction\",\"() => undefined\"]",
+    "[\"src/tokenize.ts\",1,45,1,51,\"BooleanLiteral\",\"value\"]"
+  ],
+  "attempt": 1
+}

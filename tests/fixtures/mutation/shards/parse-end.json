@@ -1,0 +1,170 @@
+{
+  "run": "fixture-head",
+  "inventory": "9f45653ee1828b39b9c2cf1e3d0c751c81b14d0f219da2afa9a7f288ef322de6",
+  "shard": "parse-end",
+  "state": "complete",
+  "report": {
+    "files": {
+      "src/parseMeasurement.ts": {
+        "language": "typescript",
+        "mutants": [
+          {
+            "id": "0",
+            "mutatorName": "BlockStatement",
+            "replacement": "{}",
+            "statusReason": "expected undefined to be defined",
+            "status": "Killed",
+            "static": false,
+            "testsCompleted": 1,
+            "killedBy": ["2"],
+            "coveredBy": ["2"],
+            "location": {
+              "end": {
+                "column": 70,
+                "line": 342
+              },
+              "start": {
+                "column": 45,
+                "line": 342
+              }
+            }
+          },
+          {
+            "id": "1",
+            "mutatorName": "ConditionalExpression",
+            "replacement": "true",
+            "status": "Survived",
+            "static": false,
+            "testsCompleted": 1,
+            "coveredBy": ["2"],
+            "location": {
+              "end": {
+                "column": 59,
+                "line": 342
+              },
+              "start": {
+                "column": 54,
+                "line": 342
+              }
+            }
+          },
+          {
+            "id": "2",
+            "mutatorName": "ConditionalExpression",
+            "replacement": "false",
+            "status": "Survived",
+            "static": false,
+            "testsCompleted": 1,
+            "coveredBy": ["2"],
+            "location": {
+              "end": {
+                "column": 59,
+                "line": 342
+              },
+              "start": {
+                "column": 54,
+                "line": 342
+              }
+            }
+          },
+          {
+            "id": "3",
+            "mutatorName": "EqualityOperator",
+            "replacement": "n >= 0",
+            "status": "Survived",
+            "static": false,
+            "testsCompleted": 1,
+            "coveredBy": ["2"],
+            "location": {
+              "end": {
+                "column": 59,
+                "line": 342
+              },
+              "start": {
+                "column": 54,
+                "line": 342
+              }
+            }
+          },
+          {
+            "id": "4",
+            "mutatorName": "EqualityOperator",
+            "replacement": "n <= 0",
+            "status": "Survived",
+            "static": false,
+            "testsCompleted": 1,
+            "coveredBy": ["2"],
+            "location": {
+              "end": {
+                "column": 59,
+                "line": 342
+              },
+              "start": {
+                "column": 54,
+                "line": 342
+              }
+            }
+          }
+        ],
+        "source": "export const negate = (value: boolean) => !value;\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const edge = true;\nexport function parseMeasurement(n: number) { return n > 0 ? 1 : 0; }\n"
+      }
+    },
+    "schemaVersion": "1.0",
+    "thresholds": {
+      "high": 99,
+      "low": 98,
+      "break": null
+    },
+    "testFiles": {
+      "tests/units.test.ts": {
+        "tests": [
+          {
+            "id": "0",
+            "name": "negates"
+          },
+          {
+            "id": "1",
+            "name": "edge"
+          },
+          {
+            "id": "2",
+            "name": "picks"
+          },
+          {
+            "id": "3",
+            "name": "tokenizes"
+          },
+          {
+            "id": "4",
+            "name": "explains"
+          },
+          {
+            "id": "5",
+            "name": "other"
+          }
+        ],
+        "source": "import { expect, it } from 'vitest';\nimport { negate, edge, parseMeasurement as pick } from '../src/parseMeasurement';\nimport { tokenize } from '../src/tokenize';\nimport { explained } from '../src/explained';\nimport { other } from '../src/other';\nit('negates', () => { expect(negate(true)).toBe(false); expect(negate(false)).toBe(true); });\nit('edge', () => { expect(edge).toBe(true); });\nit('picks', () => { expect(pick(1)).toBeDefined(); });\nit('tokenizes', () => { expect(tokenize(true)).toBe(false); expect(tokenize(false)).toBe(true); });\nit('explains', () => { expect(explained).toBe(true); });\nit('other', () => { expect(other(true)).toBe(false); expect(other(false)).toBe(true); });\n"
+      }
+    },
+    "filesRead": {
+      "src/explained.ts": false,
+      "src/new.ts": false,
+      "src/other.ts": false,
+      "src/parseMeasurement.ts": [
+        {
+          "start": {
+            "line": 341,
+            "column": 0
+          },
+          "end": {
+            "line": 342,
+            "column": 9007199254740991
+          }
+        }
+      ],
+      "src/tokenize.ts": false,
+      "src/types.ts": false
+    }
+  },
+  "attempt": 1
+}

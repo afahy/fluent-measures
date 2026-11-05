@@ -1,0 +1,104 @@
+{
+  "run": "fixture-head",
+  "inventory": "9f45653ee1828b39b9c2cf1e3d0c751c81b14d0f219da2afa9a7f288ef322de6",
+  "shard": "tokenize",
+  "state": "complete",
+  "report": {
+    "files": {
+      "src/tokenize.ts": {
+        "language": "typescript",
+        "mutants": [
+          {
+            "id": "1",
+            "mutatorName": "BooleanLiteral",
+            "replacement": "value",
+            "statusReason": "expected true to be false // Object.is equality",
+            "status": "Killed",
+            "static": false,
+            "testsCompleted": 1,
+            "killedBy": ["3"],
+            "coveredBy": ["3"],
+            "location": {
+              "end": {
+                "column": 51,
+                "line": 1
+              },
+              "start": {
+                "column": 45,
+                "line": 1
+              }
+            }
+          },
+          {
+            "id": "0",
+            "mutatorName": "ArrowFunction",
+            "replacement": "() => undefined",
+            "statusReason": "expected undefined to be false // Object.is equality",
+            "status": "Killed",
+            "static": true,
+            "testsCompleted": 4,
+            "killedBy": ["3"],
+            "coveredBy": [],
+            "location": {
+              "end": {
+                "column": 51,
+                "line": 1
+              },
+              "start": {
+                "column": 25,
+                "line": 1
+              }
+            }
+          }
+        ],
+        "source": "export const tokenize = (value: boolean) => !value;\n"
+      }
+    },
+    "schemaVersion": "1.0",
+    "thresholds": {
+      "high": 99,
+      "low": 98,
+      "break": null
+    },
+    "testFiles": {
+      "tests/units.test.ts": {
+        "tests": [
+          {
+            "id": "0",
+            "name": "negates"
+          },
+          {
+            "id": "1",
+            "name": "edge"
+          },
+          {
+            "id": "2",
+            "name": "picks"
+          },
+          {
+            "id": "3",
+            "name": "tokenizes"
+          },
+          {
+            "id": "4",
+            "name": "explains"
+          },
+          {
+            "id": "5",
+            "name": "other"
+          }
+        ],
+        "source": "import { expect, it } from 'vitest';\nimport { negate, edge, parseMeasurement as pick } from '../src/parseMeasurement';\nimport { tokenize } from '../src/tokenize';\nimport { explained } from '../src/explained';\nimport { other } from '../src/other';\nit('negates', () => { expect(negate(true)).toBe(false); expect(negate(false)).toBe(true); });\nit('edge', () => { expect(edge).toBe(true); });\nit('picks', () => { expect(pick(1)).toBeDefined(); });\nit('tokenizes', () => { expect(tokenize(true)).toBe(false); expect(tokenize(false)).toBe(true); });\nit('explains', () => { expect(explained).toBe(true); });\nit('other', () => { expect(other(true)).toBe(false); expect(other(false)).toBe(true); });\n"
+      }
+    },
+    "filesRead": {
+      "src/explained.ts": false,
+      "src/new.ts": false,
+      "src/other.ts": false,
+      "src/parseMeasurement.ts": false,
+      "src/tokenize.ts": true,
+      "src/types.ts": false
+    }
+  },
+  "attempt": 1
+}

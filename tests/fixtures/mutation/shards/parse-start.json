@@ -1,0 +1,136 @@
+{
+  "run": "fixture-head",
+  "inventory": "9f45653ee1828b39b9c2cf1e3d0c751c81b14d0f219da2afa9a7f288ef322de6",
+  "shard": "parse-start",
+  "state": "complete",
+  "report": {
+    "files": {
+      "src/parseMeasurement.ts": {
+        "language": "typescript",
+        "mutants": [
+          {
+            "id": "1",
+            "mutatorName": "BooleanLiteral",
+            "replacement": "value",
+            "statusReason": "expected true to be false // Object.is equality",
+            "status": "Killed",
+            "static": false,
+            "testsCompleted": 1,
+            "killedBy": ["0"],
+            "coveredBy": ["0"],
+            "location": {
+              "end": {
+                "column": 49,
+                "line": 1
+              },
+              "start": {
+                "column": 43,
+                "line": 1
+              }
+            }
+          },
+          {
+            "id": "0",
+            "mutatorName": "ArrowFunction",
+            "replacement": "() => undefined",
+            "statusReason": "expected undefined to be false // Object.is equality",
+            "status": "Killed",
+            "static": true,
+            "testsCompleted": 1,
+            "killedBy": ["0"],
+            "coveredBy": [],
+            "location": {
+              "end": {
+                "column": 49,
+                "line": 1
+              },
+              "start": {
+                "column": 23,
+                "line": 1
+              }
+            }
+          },
+          {
+            "id": "2",
+            "mutatorName": "BooleanLiteral",
+            "replacement": "false",
+            "statusReason": "expected false to be true // Object.is equality",
+            "status": "Killed",
+            "static": true,
+            "testsCompleted": 2,
+            "killedBy": ["1"],
+            "coveredBy": [],
+            "location": {
+              "end": {
+                "column": 25,
+                "line": 341
+              },
+              "start": {
+                "column": 21,
+                "line": 341
+              }
+            }
+          }
+        ],
+        "source": "export const negate = (value: boolean) => !value;\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nexport const edge = true;\nexport function parseMeasurement(n: number) { return n > 0 ? 1 : 0; }\n"
+      }
+    },
+    "schemaVersion": "1.0",
+    "thresholds": {
+      "high": 99,
+      "low": 98,
+      "break": null
+    },
+    "testFiles": {
+      "tests/units.test.ts": {
+        "tests": [
+          {
+            "id": "0",
+            "name": "negates"
+          },
+          {
+            "id": "1",
+            "name": "edge"
+          },
+          {
+            "id": "2",
+            "name": "picks"
+          },
+          {
+            "id": "3",
+            "name": "tokenizes"
+          },
+          {
+            "id": "4",
+            "name": "explains"
+          },
+          {
+            "id": "5",
+            "name": "other"
+          }
+        ],
+        "source": "import { expect, it } from 'vitest';\nimport { negate, edge, parseMeasurement as pick } from '../src/parseMeasurement';\nimport { tokenize } from '../src/tokenize';\nimport { explained } from '../src/explained';\nimport { other } from '../src/other';\nit('negates', () => { expect(negate(true)).toBe(false); expect(negate(false)).toBe(true); });\nit('edge', () => { expect(edge).toBe(true); });\nit('picks', () => { expect(pick(1)).toBeDefined(); });\nit('tokenizes', () => { expect(tokenize(true)).toBe(false); expect(tokenize(false)).toBe(true); });\nit('explains', () => { expect(explained).toBe(true); });\nit('other', () => { expect(other(true)).toBe(false); expect(other(false)).toBe(true); });\n"
+      }
+    },
+    "filesRead": {
+      "src/explained.ts": false,
+      "src/new.ts": false,
+      "src/other.ts": false,
+      "src/parseMeasurement.ts": [
+        {
+          "start": {
+            "line": 0,
+            "column": 0
+          },
+          "end": {
+            "line": 340,
+            "column": 9007199254740991
+          }
+        }
+      ],
+      "src/tokenize.ts": false,
+      "src/types.ts": false
+    }
+  },
+  "attempt": 1
+}
