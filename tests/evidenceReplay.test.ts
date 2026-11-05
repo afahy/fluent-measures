@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { delimiter, dirname, resolve } from 'node:path';
+import { delimiter, dirname, isAbsolute, join, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { replayCorpus } from '../.github/scripts/evidence.mjs';
 import { git, withoutGitRepository } from './gitEnvironment';
@@ -444,6 +444,64 @@ if [ "$1" = exec ]; then printf '%s' "$EVIDENCE_SIZE_OUTPUT"; exit "\${EVIDENCE_
     }
   );
 
+  it('passes a workspace-relative base package path to the pinned pnpm action', () => {
+    const root = fixture('', entry());
+    write(root, 'package.json', '{"type":"module","packageManager":"pnpm@9.15.9"}');
+    git(root, 'add', 'package.json');
+    git(root, 'commit', '-m', 'test: base package manager');
+    write(root, 'package.json', '{"type":"module","packageManager":"pnpm@10.10.0"}');
+    git(root, 'add', 'package.json');
+    git(root, 'commit', '-m', 'test: head package manager');
+    const runnerTemp = resolve(directory(), 'runner temp');
+    mkdirSync(runnerTemp);
+    const output = write(root, 'step-output', '');
+    const workflow = readFileSync('.github/workflows/evidence.yml', 'utf8');
+    const checkout = workflow.slice(
+      workflow.indexOf('      - name: Check out the base build'),
+      workflow.indexOf("      - name: Set up the PR's pnpm")
+    );
+    const run = checkout.match(/run: (.*)/)?.[1];
+    expect(run).toBeDefined();
+    const command =
+      run === '|'
+        ? checkout
+            .slice(checkout.indexOf('run: |\n') + 'run: |\n'.length)
+            .split('\n')
+            .map(line => line.slice(10))
+            .join('\n')
+        : String(run);
+    const result = spawnSync('bash', ['-e', '-c', command], {
+      cwd: root,
+      encoding: 'utf8',
+      timeout: 10_000,
+      env: {
+        ...withoutGitRepository(),
+        GITHUB_WORKSPACE: root,
+        RUNNER_TEMP: runnerTemp,
+        GITHUB_OUTPUT: output,
+      },
+    });
+    expect(result.status, result.stderr).toBe(0);
+    const emitted = readFileSync(output, 'utf8').match(/^package_json=(.*)$/m)?.[1] ?? '';
+    const baseSetup = workflow.slice(
+      workflow.indexOf("      - name: Set up the base revision's pnpm"),
+      workflow.indexOf('      - name: Build and measure the base revision')
+    );
+    const setting = baseSetup.match(/package_json_file: (.*)/)?.[1] ?? '';
+    const packageJsonFile = setting
+      .replace('${{ runner.temp }}', runnerTemp)
+      .replace('${{ steps.base-checkout.outputs.package_json }}', emitted);
+    expect(isAbsolute(packageJsonFile)).toBe(false);
+    // Pinned pnpm/action-setup run.ts reads path.join(GITHUB_WORKSPACE, packageJsonFile).
+    // Using resolve instead would hide the absolute-path regression in that external contract.
+    const selected = join(root, packageJsonFile);
+    expect(selected).toBe(join(runnerTemp, 'base/package.json'));
+    expect(JSON.parse(readFileSync(selected, 'utf8')).packageManager).toBe('pnpm@9.15.9');
+    expect(JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).packageManager).toBe(
+      'pnpm@10.10.0'
+    );
+  }, 15_000);
+
   it('sets up base pnpm from the base package before installing its lockfile', () => {
     const workflow = readFileSync('.github/workflows/evidence.yml', 'utf8');
     const baseSetup = workflow.slice(
@@ -451,7 +509,9 @@ if [ "$1" = exec ]; then printf '%s' "$EVIDENCE_SIZE_OUTPUT"; exit "\${EVIDENCE_
       workflow.indexOf('      - name: Build and measure the base revision')
     );
     expect(baseSetup).toContain('uses: pnpm/action-setup@');
-    expect(baseSetup).toContain('package_json_file: ${{ runner.temp }}/base/package.json');
+    expect(baseSetup).toContain(
+      'package_json_file: ${{ steps.base-checkout.outputs.package_json }}'
+    );
     expect(baseSetup).toContain('dest: ${{ runner.temp }}/pnpm-base');
     expect(workflow).toContain('tsup.config.ts tests/corpus/measurements.jsonl; then');
     expect(workflow).toContain('CORPUS_BASE_MODULE: ${{ runner.temp }}/base/dist/index.js');

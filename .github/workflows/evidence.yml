@@ -49,7 +49,14 @@ jobs:
         id: base-checkout
         if: steps.inputs.outputs.build == 'true'
         continue-on-error: true
-        run: git worktree add --detach "$RUNNER_TEMP/base" HEAD^1
+        run: |
+          git worktree add --detach "$RUNNER_TEMP/base" HEAD^1
+          node - <<'NODE'
+          const { appendFileSync } = require('node:fs');
+          const { join, relative } = require('node:path');
+          const packageJson = relative(process.env.GITHUB_WORKSPACE, join(process.env.RUNNER_TEMP, 'base/package.json'));
+          appendFileSync(process.env.GITHUB_OUTPUT, `package_json=${packageJson}\n`);
+          NODE
 
       - name: Set up the PR's pnpm
         id: head-pnpm
@@ -69,7 +76,7 @@ jobs:
         continue-on-error: true
         uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
         with:
-          package_json_file: ${{ runner.temp }}/base/package.json
+          package_json_file: ${{ steps.base-checkout.outputs.package_json }}
           dest: ${{ runner.temp }}/pnpm-base
 
       - name: Build and measure the base revision
