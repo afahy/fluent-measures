@@ -2661,6 +2661,48 @@ a:hover {
   line-height: 1.6;
 }
 
+/* Keep option metadata in the same order, with labels that reflow above their values. */
+
+.option-list > div {
+  padding-block: 20px;
+  scroll-margin-top: 100px;
+}
+
+.option-list > div > dd {
+  margin-top: 12px;
+}
+
+.option-facts {
+  display: grid;
+  gap: 10px;
+}
+
+.option-facts > div {
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr);
+  gap: 12px;
+}
+
+.option-facts dt {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.85;
+  color: var(--text-muted);
+}
+
+.option-facts dd {
+  margin: 0;
+}
+
+@container (max-width: 470px) {
+  .option-facts > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+}
+
 /* Tables */
 
 .table-wrap {

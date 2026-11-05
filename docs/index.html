@@ -1766,67 +1766,178 @@ const strict = parseMeasurement(
               <p class="decl">
                 <span class="kw">interface</span> <span class="fn">ParseOptions</span>
               </p>
-              <dl class="props" aria-label="Properties">
-                <div>
-                  <dt><span class="name">maxLength?</span><span class="type">number</span></dt>
-                  <dd>
-                    The largest raw <code>input.length</code> before trimming or parsing; defaults
-                    to 1,000. Must be a number of at least 1, or <code>Infinity</code> for no limit.
-                    Other values throw.
-                  </dd>
-                </div>
-                <div>
+              <dl class="props option-list" aria-label="ParseOptions properties">
+                <div id="option-type">
                   <dt>
-                    <span class="name">type?</span
+                    <a class="name" href="#option-type">type?</a
                     ><span class="type"><a href="#measurement-type">MeasurementType</a></span>
                   </dt>
                   <dd>
-                    The measurement type to read: <code>'height'</code> or <code>'weight'</code>.
-                    See <a href="#ex-type">Read only one type</a>.
+                    <dl class="option-facts">
+                      <div>
+                        <dt>Purpose</dt>
+                        <dd>
+                          The measurement type to read. See
+                          <a href="#ex-type">Read only one type</a>.
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>When omitted</dt>
+                        <dd>
+                          Selected by <code>normalizedUnit</code> when set; otherwise inferred from
+                          the input.
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Constraints</dt>
+                        <dd>
+                          <code>'height'</code> or <code>'weight'</code>. Must agree with
+                          <code>normalizedUnit</code>.
+                        </dd>
+                      </div>
+                    </dl>
                   </dd>
                 </div>
-                <div>
-                  <dt><span class="name">fuzziness?</span><span class="type">number</span></dt>
-                  <dd>
-                    The largest number of spelling errors in a unit name, from 0 to 2. Without it, a
-                    unit name must be exact. See <a href="#ex-fuzzy">Spelling errors in units</a>.
-                  </dd>
-                </div>
-                <div>
+                <div id="option-normalized-unit">
                   <dt>
-                    <span class="name">allowUnqualified?</span><span class="type">boolean</span>
+                    <a class="name" href="#option-normalized-unit">normalizedUnit?</a
+                    ><span class="type"><a href="#unit-type">Unit</a></span>
                   </dt>
                   <dd>
-                    Read a number that has no unit. Without <code>type</code>,
-                    <code>parseMeasurement</code> throws an error for almost any input. See
-                    <a href="#ex-unqualified">Numbers without a unit</a>.
+                    <dl class="option-facts">
+                      <div>
+                        <dt>Purpose</dt>
+                        <dd>
+                          The unit of the result. See <a href="#ex-convert">Convert to one unit</a>.
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>When omitted</dt>
+                        <dd>Uses the parsed or inferred unit.</dd>
+                      </div>
+                      <div>
+                        <dt>Constraints</dt>
+                        <dd>
+                          Also selects the measurement type, so a weight unit reads only a weight. A
+                          <code>type</code> that contradicts it throws an error. Shorthand such as
+                          <code>5-11</code> still needs <code>type</code>, and so does
+                          <code>allowUnqualified</code>.
+                        </dd>
+                      </div>
+                    </dl>
                   </dd>
                 </div>
-                <div>
+                <div id="option-fuzziness">
                   <dt>
-                    <span class="name">inferUnit?</span
+                    <a class="name" href="#option-fuzziness">fuzziness?</a
+                    ><span class="type">number</span>
+                  </dt>
+                  <dd>
+                    <dl class="option-facts">
+                      <div>
+                        <dt>Purpose</dt>
+                        <dd>
+                          The largest number of spelling errors in a unit name. See
+                          <a href="#ex-fuzzy">Spelling errors in units</a>.
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Default</dt>
+                        <dd><code>0</code> — unit names must be exact.</dd>
+                      </div>
+                      <div>
+                        <dt>Constraints</dt>
+                        <dd>From <code>0</code> to <code>2</code>.</dd>
+                      </div>
+                    </dl>
+                  </dd>
+                </div>
+                <div id="option-allow-unqualified">
+                  <dt>
+                    <a class="name" href="#option-allow-unqualified">allowUnqualified?</a
+                    ><span class="type">boolean</span>
+                  </dt>
+                  <dd>
+                    <dl class="option-facts">
+                      <div>
+                        <dt>Purpose</dt>
+                        <dd>
+                          Read a number that has no unit. See
+                          <a href="#ex-unqualified">Numbers without a unit</a>.
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Default</dt>
+                        <dd><code>false</code> — bare-number inference is off.</dd>
+                      </div>
+                      <div>
+                        <dt>Constraints</dt>
+                        <dd>
+                          Requires an explicit <code>type</code> when enabled. Without it,
+                          <code>parseMeasurement</code> throws an error for almost any input.
+                        </dd>
+                      </div>
+                    </dl>
+                  </dd>
+                </div>
+                <div id="option-infer-unit">
+                  <dt>
+                    <a class="name" href="#option-infer-unit">inferUnit?</a
                     ><span class="type"
                       ><span class="str">'metric'</span> | <span class="str">'imperial'</span></span
                     >
                   </dt>
                   <dd>
-                    The unit system for a number that has no unit. Without it, or with
-                    <code>'imperial'</code>, a height is in inches and a weight in pounds. With
-                    <code>'metric'</code>, a weight is in kilograms, a height below 3 in meters, and
-                    any other height in centimeters.
+                    <dl class="option-facts">
+                      <div>
+                        <dt>Purpose</dt>
+                        <dd>
+                          The unit system for a number that has no unit, when
+                          <code>allowUnqualified</code> and <code>type</code> are set.
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>When omitted</dt>
+                        <dd>
+                          Same as <code>'imperial'</code>: a height is in inches and a weight in
+                          pounds.
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Constraints</dt>
+                        <dd>
+                          With <code>'metric'</code>, a weight is in kilograms, a height below 3 in
+                          meters, and any other height in centimeters.
+                        </dd>
+                      </div>
+                    </dl>
                   </dd>
                 </div>
-                <div>
+                <div id="option-max-length">
                   <dt>
-                    <span class="name">normalizedUnit?</span
-                    ><span class="type"><a href="#unit-type">Unit</a></span>
+                    <a class="name" href="#option-max-length">maxLength?</a
+                    ><span class="type">number</span>
                   </dt>
                   <dd>
-                    The unit of the result. It also selects the measurement type, so a weight unit
-                    reads only a weight. A <code>type</code> that contradicts it throws an error.
-                    Shorthand such as <code>5-11</code> still needs <code>type</code>, and so does
-                    <code>allowUnqualified</code>. See
-                    <a href="#ex-convert">Convert to one unit</a>.
+                    <dl class="option-facts">
+                      <div>
+                        <dt>Purpose</dt>
+                        <dd>
+                          The largest raw <code>input.length</code> before trimming or parsing.
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Default</dt>
+                        <dd><code>1000</code>.</dd>
+                      </div>
+                      <div>
+                        <dt>Constraints</dt>
+                        <dd>
+                          A number of at least <code>1</code>, or <code>Infinity</code> for no
+                          limit. Other values throw.
+                        </dd>
+                      </div>
+                    </dl>
                   </dd>
                 </div>
               </dl>
