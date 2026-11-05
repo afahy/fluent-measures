@@ -3,7 +3,8 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { expect, it } from 'vitest';
 
-it('holds the outer slot while the nested suites run', () => {
+// The fixture's deadline must leave room for its bounded ten-second child and teardown.
+it('holds the outer slot while the nested suites run', { timeout: 15_000 }, () => {
   expect(() => mkdirSync('outer-active')).not.toThrow();
   try {
     const result = spawnSync(
