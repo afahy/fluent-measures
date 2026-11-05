@@ -246,9 +246,11 @@ differ from a full run. A change to the packages, or to a file that tests read, 
 Such files are `README.md`, `PARSING.md` and the corpus.
 
 A push to `main` starts from no results and runs every mutant, except as the next paragraph says.
-It saves the results that pull requests reuse. A re-run of the job also runs every mutant. For a
-full run on a pull request, re-run this job or all jobs. "Re-run failed jobs" doesn't run this job
-again when it passed.
+It saves the results that pull requests reuse. For a
+full run on a pull request, re-run all jobs. Re-running a mutation shard runs all of its mutants;
+"Re-run failed jobs" keeps artifacts from successful shards of that same workflow run and commit.
+Artifacts from another workflow run or commit cannot be reused as current results. Repeated
+attempts ignore the shared incremental input, and replace their own shard artifacts.
 
 A run that takes more than 27 minutes stops and fails, but it saves its results so far. On a pull
 request, the next push goes on from them. On `main`, each push looks at the newest results that a
@@ -258,10 +260,22 @@ read doesn't reset them. So they aren't exact, and a run that goes on from them 
 results for pull requests. When runs on `main` overlap, the newest results can come from an older
 commit than the last run that ended.
 
-The same mutation job checks the JSON report for mutants whose code overlaps a line that the
-pull request adds or changes under `src/`. The step "Mutants on changed lines are killed" fails
+CI runs four mutation shards: two line ranges in `parseMeasurement.ts`, `tokenize.ts`, and the
+remaining source files, including new files. The parser ranges meet at its top-level exported
+function, so edits to the helpers above it move the boundary automatically. Each shard receives
+the same restored and refreshed incremental cache. A separate cold dry run supplies the actual
+full file selection and an independently instrumented inventory of current mutants. The
+`mutation-report` job checks that the shards cover that inventory exactly once, proves whole-file
+selection from their actual ranges, remaps their test references and checks one aggregate score
+against `break`. Missing, duplicate, incomplete or stale artifacts fail the check. Shards do not
+check their individual scores against `break`. Their reports and the merged report are run artifacts.
+
+The `mutation-report` job also checks the JSON report for mutants whose code overlaps a line that
+the pull request adds or changes under `src/`. The step "Mutants on changed lines are killed" fails
 when one survives or no test covers it. It runs even when the full score is below the threshold,
-so its annotations still appear. `ci-ok` waits for both checks through the mutation job.
+so its annotations still appear. `ci-ok` requires both the shards and `mutation-report`. A stopped
+shard fails CI but can contribute its validated partial results to the saved incremental cache;
+it cannot produce a complete merged report or pass the changed-lines check.
 
 Before Stryker runs, CI removes changed source files from its restored incremental report.
 Stryker normally compares individual mutant code spans, so an edit elsewhere on the same git
