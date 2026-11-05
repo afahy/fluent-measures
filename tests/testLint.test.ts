@@ -223,6 +223,40 @@ describe('the lint for tests that skip or are expected to fail', () => {
 // AFA-180: stored members, aliases and constant expressions must enforce the same policy as
 // direct Vitest calls. These expectations follow rule 3, not the rule's previous output.
 describe('the additional Vitest chain forms', () => {
+  // AFA-180 re-review: these all write the same object used by the false spread override.
+  it.each([
+    'const alias = options || {}; alias.fails = true;',
+    'const alias = process.env.CI && options; alias.fails = true;',
+    'const alias = options ?? {}; alias.fails = true;',
+    '({ fails: options.fails } = { fails: true });',
+    '[options.fails] = [true];',
+    '[options.fails = true] = [];',
+    '[...options.fails] = [true];',
+    'for (options.fails of [true]) { void options.fails; }',
+    'for (options.fails in { active: true }) { void options.fails; }',
+  ])('detects an aliased or destructured option write in %s', async write => {
+    expect(
+      await problems(
+        'const options = { fails: false };\n' +
+          write +
+          "\nit('x', { fails: true, ...options }, " +
+          pass +
+          ');'
+      )
+    ).toEqual([fails]);
+  });
+
+  it('keeps a discarded logical value as a read of the options', async () => {
+    expect(
+      await problems(
+        'const options = { fails: false };\nvoid (options || {});\n' +
+          "it('x', { fails: true, ...options }, " +
+          pass +
+          ');'
+      )
+    ).toEqual([]);
+  });
+
   // AFA-180 review: a falsy value can be nullish, and a const object can still change.
   it.each([
     "it('x', { fails: (process.env.CI && false) ?? true }, " + pass + ');',

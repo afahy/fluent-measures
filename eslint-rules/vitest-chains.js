@@ -362,6 +362,27 @@ function truthiness(node, scope, seen = new Set()) {
   }
 }
 
+/** A member can be assigned directly or as a leaf of a destructuring target. */
+function isWrite(node) {
+  const { parent } = node;
+  if (
+    WRAPPERS.has(parent.type) ||
+    ['ArrayPattern', 'ObjectPattern', 'RestElement'].includes(parent.type) ||
+    (parent.type === 'Property' &&
+      parent.value === node &&
+      parent.parent.type === 'ObjectPattern') ||
+    (parent.type === 'AssignmentPattern' && parent.left === node)
+  ) {
+    return isWrite(parent);
+  }
+  return (
+    (['AssignmentExpression', 'ForOfStatement', 'ForInStatement'].includes(parent.type) &&
+      parent.left === node) ||
+    parent.type === 'UpdateExpression' ||
+    (parent.type === 'UnaryExpression' && parent.operator === 'delete')
+  );
+}
+
 /** An object's const binding can still be written through a member, an alias or an escape. */
 function objectMayChange(variable, seen = new Set()) {
   if (!variable) return true;
@@ -374,16 +395,17 @@ function objectMayChange(variable, seen = new Set()) {
     // A TypeScript typeof query is a value reference in the scope manager, but never runs.
     while (value.parent.type === 'TSQualifiedName') value = value.parent;
     if (value.parent.type === 'TSTypeQuery') return false;
-    while (WRAPPERS.has(value.parent.type)) value = value.parent;
+    // Logical expressions can return the object itself, so follow that value to its use.
+    while (WRAPPERS.has(value.parent.type) || value.parent.type === 'LogicalExpression') {
+      value = value.parent;
+    }
     const { parent } = value;
     if (parent.type === 'MemberExpression' && parent.object === value) {
       let member = parent;
       while (WRAPPERS.has(member.parent.type)) member = member.parent;
       const use = member.parent;
       return (
-        (use.type === 'AssignmentExpression' && use.left === member) ||
-        use.type === 'UpdateExpression' ||
-        (use.type === 'UnaryExpression' && use.operator === 'delete') ||
+        isWrite(member) ||
         (use.type === 'CallExpression' && use.callee === member) ||
         use.type === 'TaggedTemplateExpression'
       );
@@ -399,7 +421,7 @@ function objectMayChange(variable, seen = new Set()) {
       // Passing options to a recognized Vitest call reads them. Other calls may mutate them.
       return !resolveChain(parent.callee, reference.from)?.fn;
     }
-    return !['UnaryExpression', 'BinaryExpression', 'LogicalExpression'].includes(parent.type);
+    return !['UnaryExpression', 'BinaryExpression'].includes(parent.type);
   });
 }
 
