@@ -42,7 +42,7 @@ describe('the mutation JSON reporter', () => {
       ...report,
       filesRead: {
         'src/types.ts': true,
-        'src/covered.ts': true,
+        'src/covered.ts': [{ start: { line: 0 }, end: { line: 1 } }],
         'src/unrelated.test.ts': false,
       },
     });

@@ -286,7 +286,9 @@ pnpm test:mutation --incremental
 The project's `mutation-json` reporter writes Stryker's results with its actual file inventory.
 Stryker 10 omits files with no mutants from its normal report. The inventory lets a type-only
 file pass while a changed source file that Stryker never read, such as one under `node_modules`,
-fails. Explicitly excluded source tests stay out of the check. The check also fails for a source
+fails. Changed source files must be selected in full: a report with only selected line ranges
+fails because it cannot establish that every changed line was checked. Explicitly excluded
+source tests stay out of the check. The check also fails for a source
 path with a backslash or control character, a name that isn't valid UTF-8, a symbolic link, or a
 code extension outside the project's `.ts` mutation scope. Rename or move such a file.
 

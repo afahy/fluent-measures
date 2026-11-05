@@ -659,6 +659,29 @@ describe('mutation-check.mjs', () => {
     expect(check.stdout).toContain('Tests kill every mutant');
   });
 
+  it('rejects partial mutation selection even when every reported mutant is killed', () => {
+    const repository = createRepository();
+    const file = 'src/covered.ts';
+    const source = recorded.files[file].source;
+    const base = commitFiles(repository, { [file]: source });
+    const changed = source + '\nexport const pick = (n: number) => n > 0 ? 1 : 0;\n';
+    commitFiles(repository, { [file]: changed });
+    writeReport(repository, {
+      ...recorded,
+      files: { ...recorded.files, [file]: { ...recorded.files[file], source: changed } },
+      filesRead: {
+        ...recorded.filesRead,
+        [file]: [{ start: { line: 0 }, end: { line: 1 } }],
+      },
+    });
+
+    const check = runCheck(repository, base);
+
+    expect(check.status).toBe(1);
+    expect(check.stderr).toContain('Select the whole file');
+    expect(check.stdout).not.toContain('Tests kill every mutant');
+  });
+
   it('fails for a changed file absent from the recorded report and Stryker inventory', () => {
     const repository = createRepository();
     const base = commitFiles(repository, { 'README.md': 'fixture\n' });

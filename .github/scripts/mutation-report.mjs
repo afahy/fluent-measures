@@ -12,7 +12,7 @@ export class MutationReport {
     this.filesRead = Object.fromEntries(
       Object.entries(files).map(([file, description]) => [
         relative(process.cwd(), file).split(sep).join('/'),
-        Boolean(description.mutate),
+        description.mutate,
       ])
     );
   }

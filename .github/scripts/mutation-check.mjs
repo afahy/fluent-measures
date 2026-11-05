@@ -200,11 +200,14 @@ for (const file of backslashed) {
 if (backslashed.length > 0) process.exit(1);
 
 // Stryker 10 reports only files with mutants. The reporter also records its actual file
-// inventory: a type-only file was selected (true) but has no mutants; an unread file is absent.
+// inventory: a whole type-only file was selected (true) but has no mutants; an unread file is
+// absent. A range selection cannot establish that every changed line was checked.
 const missing = [...changed.keys()].filter(file => results.filesRead[file] !== true);
 for (const file of missing) {
   console.error(
-    `::error file=${escapeProperty(file)}::Move ${escapeData(file)} or include it in Stryker's mutation scope. The full mutation run never read it for mutation, so this check can't find the file's mutants.`
+    Array.isArray(results.filesRead[file])
+      ? `::error file=${escapeProperty(file)}::Select the whole file ${escapeData(file)} for mutation. The report covers only selected ranges, so this check can't establish that every changed line was checked.`
+      : `::error file=${escapeProperty(file)}::Move ${escapeData(file)} or include it in Stryker's mutation scope. The full mutation run never read it for mutation, so this check can't find the file's mutants.`
   );
 }
 // A new directive can ignore a mutant on a line that didn't change, so check the directives too.
