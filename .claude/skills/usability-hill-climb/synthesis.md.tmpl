@@ -1,0 +1,63 @@
+# Round <n> synthesis
+
+The organizer writes this file after grading. Reviewers never see it. Copy it to
+`<run>/round-<n>/synthesis.md`.
+
+Page: <live URL at commit | file:// of worktree at commit>. Package: <pkg/commit.txt>.
+Reviewers: <id, model family, persona, viewport> for each.
+Evidence type: simulated AI reviewers. Not human usability evidence.
+
+## Metrics
+
+Paste `metrics.md` from `grade.mjs round`.
+
+## Findings
+
+One row for each place on the page where a reviewer failed, took a wrong turn or was misled.
+Merge rows that name the same problem in the same section, even in other words.
+
+| # | Section | Problem | Evidence | Reviewers (families) | Severity | Scope | Action |
+| - | ------- | ------- | -------- | -------------------- | -------- | ----- | ------ |
+
+- **Evidence** cites the trace or the grade: a failed run and its error, a wrong answer and the
+  key, an off-path view with its note, or a `misled` line. A finding with no such evidence is
+  an opinion. List it under "Opinions", never as a blocker.
+- **Severity**
+  - S1: a wrong answer or a confident-wrong prediction that the page's text caused.
+  - S2: a task done only after a wrong turn that the page caused, or a give-up.
+  - S3: friction. The task was done right with no wrong turn, but it took more views than the
+    benchmark, or the reviewer was unsure.
+  - S4: preference.
+- **Scope**: `page` (docs/index.html), `spec` (README or PARSING.md, needs the maintainer),
+  `library` (parser behavior), `release` (npm), `protocol` (the task wording, the sandbox or
+  the tools), or `reviewer` (the reviewer broke a rule or misread a clear sentence).
+- **Action**: blocker <k>, nit, ticket AFA-<n>, comment on AFA-<n>, protocol fix, or none.
+
+## Blockers for the implementer
+
+Rules, in order:
+
+1. Each S1 in scope `page` is a blocker.
+2. An S2 in scope `page` is a blocker when reviewers of both model families hit it, or two
+   reviewers hit it.
+3. An S3 in scope `page` is a blocker only when three or more reviewers hit it and the fix is
+   small and local.
+4. Drop a blocker that reverses an entry in `decisions.md`, unless its execution is broken.
+5. At most 3 blockers per round, S1 first. Carry the rest to the next round.
+
+Write `blockers.md` as a numbered list: location, problem, evidence, fix, reviewers.
+
+## Out-of-scope findings
+
+Spec, library and release findings go to Linear as AGENTS.md "Handle findings and CI" says.
+Protocol findings change `kit/` and bump the protocol version. Don't change a task's wording in
+the middle of a run unless the task is broken for every reviewer, and then re-run the baseline
+for that task.
+
+## Opinions
+
+Suggestions without evidence. They never become blockers.
+
+## Decisions
+
+`- Round <n>: <decision>. Why: <reason>.` Add each one to `decisions.md`.
