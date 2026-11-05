@@ -2488,8 +2488,8 @@ const strict = parseMeasurement(
             });
         }
 
-        // Folding navigation groups. The group holding the current section opens itself; a
-        // group the reader toggles stays that way until the current section enters or leaves it.
+        // Start compact, then let the reader choose which groups stay open. Only an explicit
+        // anchor jump (including the initial hash) reveals its group; scrolling never folds it.
         const tocGroups = [...document.querySelectorAll('.toc-group')];
 
         function setGroup(group, open) {
@@ -2500,23 +2500,17 @@ const strict = parseMeasurement(
         }
 
         tocGroups.forEach(group => {
+          setGroup(group, false);
           group.querySelector(':scope > .toc-row > .toc-toggle').addEventListener('click', () => {
-            const open = group.dataset.open !== 'true';
-            group.dataset.pinned = open ? 'open' : 'closed';
-            setGroup(group, open);
+            setGroup(group, group.dataset.open !== 'true');
+            updateCurrent();
           });
         });
 
-        function updateGroups(currentHref) {
+        function revealGroup(href) {
           tocGroups.forEach(group => {
-            const targets = [...group.querySelectorAll('a')].map(a => a.getAttribute('href'));
-            const holds = targets.includes(currentHref);
-            if (holds !== group._holds) {
-              group._holds = holds;
-              delete group.dataset.pinned;
-            }
-            const pinned = group.dataset.pinned;
-            setGroup(group, pinned ? pinned === 'open' : holds);
+            if ([...group.querySelectorAll('a')].some(link => link.getAttribute('href') === href))
+              setGroup(group, true);
           });
         }
 
@@ -2551,12 +2545,16 @@ const strict = parseMeasurement(
           const target = document.getElementById(decodeURIComponent(hash.slice(1)));
           jumpTarget = headings.includes(target) ? target : null;
           jumpSeen = false;
+          if (jumpTarget) revealGroup('#' + jumpTarget.id);
         }
 
         // Clicking the link of the current hash again fires no hashchange, so clicks count too.
         document.addEventListener('click', event => {
           const link = event.target.closest('a[href^="#"]');
-          if (link) noteJump(link.getAttribute('href'));
+          if (link) {
+            noteJump(link.getAttribute('href'));
+            updateCurrent();
+          }
         });
 
         // A section becomes current once its heading passes 35% of the viewport height. At the
@@ -2589,13 +2587,14 @@ const strict = parseMeasurement(
           tocLinks.forEach(link => {
             const href = link.getAttribute('href');
             const inSiteNav = link.closest('[data-section-nav]');
-            const active = inSiteNav ? href === currentSection : href === currentHref;
+            // Keep the current section visible even when its nested link is folded away.
+            const collapsed = link.closest('.toc-group')?.dataset.open === 'false';
+            const active = inSiteNav || collapsed ? href === currentSection : href === currentHref;
             if (active) link.setAttribute('aria-current', 'true');
             else link.removeAttribute('aria-current');
           });
           if (currentHref !== lastHref) {
             lastHref = currentHref;
-            updateGroups(currentHref);
             reveal(sideToc, sideToc?.querySelector('a[aria-current]'));
           }
         }
