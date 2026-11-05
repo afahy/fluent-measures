@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
+import { findPackageJSON } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { env } from 'node:process';
 import { defineConfig } from 'vitest/config';
@@ -12,11 +12,14 @@ import { defineConfig } from 'vitest/config';
 const NAME = '@afahy/fluent-measures';
 const project = resolve(env.FLUENT_MEASURES_PACKAGE_DIR ?? import.meta.dirname);
 const from = join(project, 'package.json');
-const manifest = createRequire(from).resolve(`${NAME}/package.json`);
+// Older releases don't export package.json (0.1.1), so locate the package's own manifest.
+const manifest = findPackageJSON(NAME, from);
+if (!manifest) throw new Error(`Cannot find ${NAME} from ${from}`);
 const { exports } = JSON.parse(readFileSync(manifest, 'utf8')) as {
-  exports: { '.': { import: { default: string } } };
+  exports: { '.': { import: string | { default: string } } };
 };
-const esmEntry = join(dirname(manifest), exports['.'].import.default);
+const entry = exports['.'].import;
+const esmEntry = join(dirname(manifest), typeof entry === 'string' ? entry : entry.default);
 
 // The tests of results. Each one imports parseMeasurement from '../src'.
 const include = [
