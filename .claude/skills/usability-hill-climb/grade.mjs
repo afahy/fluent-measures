@@ -143,11 +143,15 @@ if (mode === 'reviewer') {
     : [];
   const lib = library(sandbox);
   const out = { dir, tasks: {} };
-  // try.mjs accepts sandbox/<file>, so the grader reads the same form.
-  const taskFile = file => join(sandbox, file.replace(/^(\.\/)?sandbox\//, ''));
+  // try.mjs accepts sandbox/<file> and absolute paths, so the grader reads the same forms.
+  const taskFile = file => resolve(sandbox, file.replace(/^(\.\/)?sandbox\//, ''));
+  // A holdout task counts when the reviewer's tasks.md has it, even if answers.json leaves it out.
+  const cards = existsSync(join(dir, 'tasks.md'))
+    ? readFileSync(join(dir, 'tasks.md'), 'utf8')
+    : '';
 
   for (const [id, spec] of Object.entries(key.tasks)) {
-    if (spec.holdout && !answers[id]) continue; // holdout tasks run only in the baseline and final rounds
+    if (spec.holdout && !answers[id] && !cards.includes(`## ${id}.`)) continue; // baseline and final rounds only
     const a = answers[id] ?? {};
     const events = trace.filter(e => e.task === id);
     const views = events.filter(e => e.kind === 'view');
@@ -201,7 +205,7 @@ if (mode === 'reviewer') {
           try { const v = toKg(input); out[input] = v === undefined ? null : v; }
           catch (e) { out[input] = 'THROWS ' + e.message; }
         }
-        console.log(JSON.stringify(out));`;
+        console.log('GRADE ' + JSON.stringify(out));`;
       const run = fileUrl
         ? spawnSync(process.execPath, ['--input-type=module', '-e', script], {
             cwd: sandbox,
@@ -211,7 +215,9 @@ if (mode === 'reviewer') {
         : null;
       let got = {};
       try {
-        got = JSON.parse(run?.stdout || '{}');
+        // The reviewer's file may print when it is imported, so read only the grader's line.
+        const line = (run?.stdout ?? '').split('\n').findLast(l => l.startsWith('GRADE '));
+        got = JSON.parse(line ? line.slice(6) : '{}');
       } catch {
         got = {};
       }

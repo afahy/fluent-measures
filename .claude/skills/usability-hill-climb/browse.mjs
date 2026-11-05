@@ -115,7 +115,7 @@ const clickByText = (text, at) => `(() => {
   const anchor = ${JSON.stringify(at ?? null)} && document.querySelector(${JSON.stringify(at ?? 'body')});
   const after = el => !anchor || Boolean(anchor.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING);
   const all = [...document.querySelectorAll('button,a,[role=tab],summary,label')].filter(after);
-  const norm = el => (el.textContent || el.getAttribute('aria-label') || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+  const norm = el => (el.textContent.trim() || el.getAttribute('aria-label') || '').replace(/\\s+/g, ' ').trim().toLowerCase();
   const el = all.find(e => norm(e) === want && e.getClientRects().length) ?? all.find(e => norm(e).includes(want) && e.getClientRects().length);
   if (!el) return false;
   el.scrollIntoView({ block: 'center' });
