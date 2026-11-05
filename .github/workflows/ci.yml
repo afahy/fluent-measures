@@ -148,16 +148,21 @@ jobs:
 
       # Stryker's incremental mode reuses the result of each mutant whose code and killing tests
       # haven't changed (AFA-111). It compares the source files and the test files, but not the
-      # files that tests read, the packages or this job. So their hash is part of the cache key,
+      # files that tests read, the packages or these jobs. So their hash is part of the cache key,
       # and a change to one of them starts a full run. A pull request starts from its own last
       # run, or from main's. The key of main's own results hashes only the packages and the tool
       # configs, because those results aren't exact anyway.
+      # Omit only audited release metadata/commands, unrelated jobs and tooling-only fixtures.
+      # Unknown inputs stay hashed. Projection files live outside the shared inventory artifact.
+      - name: Select the inputs that can change mutation results
+        run: node .github/scripts/mutation-cache-inputs.mjs
+
       - name: Hash the inputs that Stryker doesn't compare
         id: inputs
         run: |
           set -euo pipefail
-          echo "hash=${{ hashFiles('package.json', 'pnpm-lock.yaml', 'tsconfig.json', 'stryker.config.json', 'vitest.config.ts', '.github/scripts/mutation-*.mjs', '.github/scripts/stryker-shard.config.mjs', '.github/workflows/ci.yml', '.github/actions/setup/action.yml', 'README.md', 'PARSING.md', 'docs/index.html', 'tests/**', '!tests/**/*.test.ts') }}" >> "$GITHUB_OUTPUT"
-          echo "tools=${{ hashFiles('package.json', 'pnpm-lock.yaml', 'tsconfig.json', 'stryker.config.json', 'vitest.config.ts') }}" >> "$GITHUB_OUTPUT"
+          echo "hash=${{ hashFiles('reports/mutation-cache/package.json', 'pnpm-lock.yaml', 'tsconfig.json', 'stryker.config.json', 'vitest.config.ts', '.github/scripts/mutation-*.mjs', '.github/scripts/stryker-shard.config.mjs', '.github/scripts/changed-lines.mjs', '.github/scripts/workflow-commands.mjs', 'reports/mutation-cache/ci.yml', '.github/actions/setup/action.yml', 'README.md', 'PARSING.md', 'docs/index.html', 'tests/**', '!tests/**/*.test.ts', '!tests/fixtures/pr-status/**', '!tests/fixtures/late-bot-findings/**', '!tests/fixtures/mutation/**') }}" >> "$GITHUB_OUTPUT"
+          echo "tools=${{ hashFiles('reports/mutation-cache/package.json', 'pnpm-lock.yaml', 'tsconfig.json', 'stryker.config.json', 'vitest.config.ts') }}" >> "$GITHUB_OUTPUT"
 
       # Stryker compares only each mutant's own code and the tests that cover it. A change elsewhere
       # in the same source file or in another one can change how the tests treat the mutant.
