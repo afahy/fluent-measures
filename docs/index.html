@@ -1720,12 +1720,12 @@ const strict = parseMeasurement(
             </div>
             <div class="stack">
               <p class="measure">
-                Reads one height or weight from a string. It returns <code>null</code> for each
-                cause that <a href="#troubleshooting">Troubleshooting</a> lists, including input
-                longer than <code>maxLength</code>. It throws an error for an invalid
-                <code>maxLength</code> and for a <code>type</code> that contradicts
-                <code>normalizedUnit</code>, and almost always for
-                <code>allowUnqualified</code> without <code>type</code>.
+                Reads one height or weight from a string. When it returns <code>null</code>,
+                <a href="#troubleshooting">Troubleshooting</a> lists the causes to look for,
+                including input longer than <code>maxLength</code>. It can throw an error for an
+                invalid <code>maxLength</code>, for a <code>type</code> that contradicts
+                <code>normalizedUnit</code>, and for <code>allowUnqualified</code> without
+                <code>type</code>.
               </p>
               <div class="api-card">
                 <p class="decl">
