@@ -5,8 +5,8 @@
 // a code block that needs a sideways scroll, content that a box clips or that runs off the
 // screen, input chips that run into their results or the hero demo's arrows, values that wrap,
 // and navigation that is missing or collides. It runs the checks again with the hero demo
-// expanded, and from 1024px it checks that the expanded card keeps its height (AFA-190). The
-// page defaults to docs/index.html. --touch emulates a touch screen.
+// expanded, checks that all eight rows append in order, then collapses back to the same four
+// curated rows and card height. The page defaults to docs/index.html. --touch emulates a touch screen.
 //
 // It exits 0 when it finds no problem, 1 when it finds one, and 2 when it can't run. The checks
 // use the class names of docs/index.html, so a change to those names needs a change here.
@@ -198,27 +198,34 @@ function probe() {
 }
 
 /**
- * Runs in the page. Presses the hero demo's "More input examples" button and returns the card's
- * height before and after the press, and whether the card is now expanded. Returns a string that
- * names the missing element when the page has no card or no button.
+ * Runs in the page. Capture the visible row identities and card geometry on either side of a
+ * disclosure click. A missing card or button is a failure, not a skipped check.
  */
 async function toggleDemo() {
   const demo = document.querySelector('[data-demo]');
   if (!demo) return '[data-demo]';
   const more = demo.querySelector('[data-demo-more]');
   if (!more) return '[data-demo-more]';
-  const before = demo.getBoundingClientRect().height;
+  const snapshot = () => ({
+    height: demo.getBoundingClientRect().height,
+    rows: [...demo.querySelectorAll('.demo-list > div')]
+      .filter(row => row.getClientRects().length && getComputedStyle(row).visibility !== 'hidden')
+      .map(row => row.querySelector('.demo-input')?.textContent),
+  });
+  const before = snapshot();
   more.click();
   await new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done)));
   return {
     expanded: more.getAttribute('aria-expanded') === 'true',
     before,
-    after: demo.getBoundingClientRect().height,
+    after: snapshot(),
   };
 }
 
-/** Beside the hero copy, the expanded card keeps the collapsed card's height (site.css). */
-const SAME_HEIGHT_FROM = 1024;
+// The ticket preserves these eight examples and their order at every width.
+const CURATED_ROWS = ['5\' 11"', 'eighty kilograms', '5 foots 10 inc', 'not a measurement'];
+const ALL_ROWS = [...CURATED_ROWS, '150 lbs', 'five foot ten', '72,5 kg', '150-180 lbs'];
+const sameRows = (actual, expected) => JSON.stringify(actual) === JSON.stringify(expected);
 
 let options;
 let url;
@@ -255,19 +262,35 @@ try {
       if (typeof open === 'string') {
         found.add('MISSING ' + open);
       } else if (!open.expanded) {
-        found.add('DEMO-TOGGLE the "More input examples" button does not expand the card');
+        found.add('DEMO-TOGGLE the "Show all 8 examples" button does not expand the card');
         broken = true;
       } else {
         for (const problem of await browser.evaluate(`(${probe})()`)) {
           if (!found.has(problem)) found.add(problem + ' [expanded]');
         }
-        if (width >= SAME_HEIGHT_FROM && Math.round(open.after) !== Math.round(open.before)) {
-          found.add('DEMO-HEIGHT the expanded card is not as tall as the collapsed one');
+        if (!sameRows(open.before.rows, CURATED_ROWS)) {
+          found.add('DEMO-ROWS the collapsed card does not show the four curated examples');
+        }
+        if (!sameRows(open.after.rows, ALL_ROWS)) {
+          found.add('DEMO-ROWS expansion does not append the remaining four examples in order');
+        }
+        if (open.after.height <= open.before.height) {
+          found.add('DEMO-HEIGHT appended rows do not increase the card height');
         }
         const shut = await browser.evaluate(`(${toggleDemo})()`);
-        if (shut.expanded) {
+        if (typeof shut === 'string' || shut.expanded) {
           found.add('DEMO-TOGGLE a second press does not collapse the card');
           broken = true;
+        } else {
+          if (!sameRows(shut.after.rows, CURATED_ROWS)) {
+            found.add('DEMO-ROWS collapse does not restore the four curated examples');
+          }
+          if (Math.round(shut.after.height) !== Math.round(open.before.height)) {
+            found.add('DEMO-HEIGHT collapse does not restore the initial card height');
+          }
+          for (const problem of await browser.evaluate(`(${probe})()`)) {
+            if (!found.has(problem)) found.add(problem + ' [collapsed again]');
+          }
         }
       }
       // A card that is stuck open would make the next width's collapsed checks wrong.

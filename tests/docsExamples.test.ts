@@ -169,6 +169,29 @@ describe('the short results on the docs page', () => {
     expect(rows).toHaveLength(page.split('class="demo-input"').length - 1);
   });
 
+  // The disclosure changes only visibility. The accepted design preserves these exact eight
+  // triples from the settled page, including the unrounded conversion and both null cases.
+  it('preserves the eight hero input/options/result triples in their curated order', () => {
+    expect(rows.map(({ input, options, shown }) => ({ input, options, shown }))).toEqual([
+      {
+        input: '5\' 11"',
+        options: { type: 'height', normalizedUnit: 'cm' },
+        shown: { value: 180.34, unit: 'cm' },
+      },
+      { input: 'eighty kilograms', options: { type: 'weight' }, shown: { value: 80, unit: 'kg' } },
+      { input: '5 foots 10 inc', options: { fuzziness: 2 }, shown: { value: 70, unit: 'in' } },
+      { input: 'not a measurement', options: undefined, shown: null },
+      {
+        input: '150 lbs',
+        options: { type: 'weight', normalizedUnit: 'kg' },
+        shown: { value: 68.0388555, unit: 'kg' },
+      },
+      { input: 'five foot ten', options: { type: 'height' }, shown: { value: 70, unit: 'in' } },
+      { input: '72,5 kg', options: undefined, shown: { value: 72.5, unit: 'kg' } },
+      { input: '150-180 lbs', options: undefined, shown: null },
+    ]);
+  });
+
   it.each(rows.map(row => [row.label, row]))('the hero shows %s', (_, row) => {
     expect(short(row.input, row.options)).toEqual(row.shown);
   });

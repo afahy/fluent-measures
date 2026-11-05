@@ -538,7 +538,7 @@
                     <span><b>80</b> kg</span>
                   </dd>
                 </div>
-                <div class="demo-wide">
+                <div>
                   <dt>
                     <span class="demo-input">5 foots 10 inc</span>
                     <span class="demo-opts">fuzziness: 2</span>
@@ -548,7 +548,7 @@
                     <span><b>70</b> in</span>
                   </dd>
                 </div>
-                <div class="demo-wide">
+                <div>
                   <dt>
                     <span class="demo-input">not a measurement</span>
                     <span class="demo-opts is-none">no options</span>
@@ -602,19 +602,28 @@
                   </dd>
                 </div>
               </dl>
-              <button
-                class="demo-more"
-                type="button"
-                aria-expanded="false"
-                aria-controls="demo-list"
-                data-demo-more
-              >
-                <span data-demo-more-label>More input examples</span>
-                <svg class="icon icon-sm chevron" aria-hidden="true"><use href="#i-chevron" /></svg>
-              </button>
               <figcaption class="demo-foot" id="demo-caption">
-                Results show <code>value</code> and <code>unit</code>; see
-                <a href="#quick-start">Quick start</a> for the returned object.
+                <span>Results show <code>value</code> and <code>unit</code>.</span>
+                <div class="demo-links">
+                  <button
+                    class="demo-more"
+                    type="button"
+                    aria-expanded="false"
+                    aria-controls="demo-list"
+                    aria-describedby="demo-help"
+                    data-demo-more
+                  >
+                    <span data-demo-more-label>Show all 8 examples</span>
+                    <svg class="icon icon-sm chevron" aria-hidden="true">
+                      <use href="#i-chevron" />
+                    </svg>
+                  </button>
+                  <a href="#usage">Usage</a>
+                </div>
+                <span class="visually-hidden" id="demo-help"
+                  >Additional examples appear above this button.</span
+                >
+                <span class="visually-hidden" role="status" data-demo-status></span>
               </figcaption>
             </figure>
           </div>
@@ -2271,27 +2280,32 @@ const strict = parseMeasurement(
           details.addEventListener('toggle', () => updateOverflow(details));
         });
 
-        // Hero demo: four rows (two on phones) show until "More input examples" is pressed.
-        // On desktop the next four replace them; narrower layouts add them below.
+        // Four curated examples at every width; append the remaining four on request.
         const demo = document.querySelector('[data-demo]');
         const demoMore = demo?.querySelector('[data-demo-more]');
-        const demoSwaps = matchMedia('(min-width: 1024px)');
-        function labelDemo() {
-          const expanded = demo.dataset.expanded === 'true';
-          demoMore.querySelector('[data-demo-more-label]').textContent = !expanded
-            ? 'More input examples'
-            : demoSwaps.matches
-              ? 'Back to the first examples'
-              : 'Fewer input examples';
-        }
         if (demoMore) {
           demoMore.addEventListener('click', () => {
             const expanded = demo.dataset.expanded !== 'true';
             demo.dataset.expanded = String(expanded);
             demoMore.setAttribute('aria-expanded', String(expanded));
-            labelDemo();
+            demoMore.querySelector('[data-demo-more-label]').textContent = expanded
+              ? 'Show fewer examples'
+              : 'Show all 8 examples';
+            // The new rows precede the focused control in reading order. Announce their location
+            // without moving focus or asking a reader to listen to all eight examples again.
+            demo.querySelector('[data-demo-status]').textContent = expanded
+              ? 'All 8 examples are shown above. The 4 additional examples start with 150 lbs.'
+              : 'Showing the first 4 examples.';
+            if (!expanded) {
+              const rect = demoMore.getBoundingClientRect();
+              const headerBottom = document
+                .querySelector('.site-header')
+                .getBoundingClientRect().bottom;
+              if (rect.top < headerBottom + 12 || rect.bottom > innerHeight - 12) {
+                demoMore.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+              }
+            }
           });
-          demoSwaps.addEventListener('change', labelDemo);
         }
 
         // The hero box keeps the package name on one line, so only the verb changes.

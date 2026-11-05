@@ -97,9 +97,9 @@ argument and defaults to `docs/index.html`. A URL, such as `http://localhost:808
   code block, content that a box clips or that runs off the screen, input chips that run into
   their results or into the hero demo's arrows, values that wrap, and a header or navigation that
   is missing, too tall or collides. It checks each width again with the hero demo expanded, and
-  marks a problem that only the expanded card has with `[expanded]`. From 1024px, it also reports
-  an expanded card that isn't as tall as the collapsed one. Each line names a problem and the
-  widths where it appears. The script exits 1 when it finds a problem, and 2 when it can't run.
+  marks a problem that only the expanded card has with `[expanded]`. It also checks that four
+  curated rows expand to all eight in order, then collapse back to the same four and card height.
+  Each line names a problem and the widths where it appears. The script exits 1 when it finds a problem, and 2 when it can't run.
   Run it after each change to `docs/` and before you open the PR. `--from`, `--to` and `--step`
   change the widths, and `--touch` emulates a touch screen. The checks use the page's class
   names, so when you rename a class that `.github/scripts/docs-sweep.mjs` names, change the
