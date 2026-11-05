@@ -10,7 +10,7 @@ it in the first round.
 Calibrate before the first judging round of a run when one of these is true:
 
 - The last row of the results table below is more than 90 days old, or the table is empty.
-- The rubric version at the top of `judge-brief.md` isn't the version in the last row.
+- The rubric version at the top of `rubric.md` isn't the version in the last row.
 - A judge model isn't in the table.
 
 ## Reference sites
@@ -41,15 +41,18 @@ these values:
 - `SCRATCH`: a new folder for each judge model and each site, such as
   `<run>/calibration/<model>-<site>/`, so that runs at the same time don't write over each other.
 - `REPO` and `TARGET_SCORE`: as for a judging round.
+- `RUBRIC`: `@.claude/skills/design-hill-climb/rubric.md`.
 
 Run the judges as "4. Judge" in SKILL.md says. Run the calibration judges in parallel with each
 other, but not with the judges of the page.
 
 ## How to read the results
 
-- The high-polish site should get an Overall score at or above the target. If a judge gives it
-  less, that judge can't reach the target on our page either. Change the rubric, give it a new
-  version, and calibrate again.
+- If the high-polish site scores below the target, inspect the reasons. A genuine reference
+  defect does not prove that the judge cannot reach the target. Repair an ambiguous rubric or
+  choose a more suitable reference before the run; document why and calibrate again. Never
+  weaken a gate or change the rubric just to obtain a desired score. Freeze the rubric and
+  reference screenshots before judging the candidate.
 - When you use the low anchor, it should get an Overall score at least 3 points below the
   high-polish site. If it doesn't, the judge is too generous, and its score on our page means
   little.
