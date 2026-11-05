@@ -277,6 +277,55 @@ describe('mutant git coordinates', () => {
     }
   );
 
+  // Babel's readEscapedChar keeps its line for escaped Unicode separators in literals.
+  // All these prefixes have no LF: the following nullish expression is git line 2, column 11.
+  for (const separator of ['\u2028', '\u2029']) {
+    it.each([
+      ['single quote', "const a = 'a\\<sep>b';", 2],
+      ['double quote', 'const a = "a\\<sep>b";', 2],
+      ['template', 'const a = `a\\<sep>b`;', 2],
+      ['template head', 'const a = `a\\<sep>${1}b`;', 2],
+      ['template middle', 'const a = `a${1}\\<sep>b${2}c`;', 2],
+      ['template tail', 'const a = `a${1}\\<sep>b`;', 2],
+      ['nested template', 'const a = `a${`b\\<sep>c`}d`;', 2],
+      ['even backslashes', "const a = 'a\\\\<sep>b';", 3],
+      ['odd backslashes', "const a = 'a\\\\\\<sep>b';", 2],
+      ['mixed escapes', "const a = 'a\\<sep>b<sep>c';", 3],
+      ['line comment', "// 'a\\<sep>const a = 1;", 3],
+      ['block comment', "/* 'a\\<sep> */const a = 1;", 3],
+      ['regex before string', "const r = /'/; const a = 'a\\<sep>b';", 2],
+    ] as const)(
+      `maps a %s containing U+${separator.charCodeAt(0).toString(16)}`,
+      (_, prefix, babelLine) => {
+        expect.hasAssertions();
+        const report = {
+          files: {
+            'src/a.ts': {
+              source: prefix.replace(/<sep>/g, separator) + '\nconst b = a ?? 2;\n',
+              mutants: ['Survived', 'NoCoverage', 'Ignored'].map(status => ({
+                ...mutant(status, [babelLine, babelLine]),
+                mutatorName: 'LogicalOperator',
+                replacement: 'a && 2',
+                location: {
+                  start: { line: babelLine, column: 11 },
+                  end: { line: babelLine, column: 17 },
+                },
+              })),
+            },
+          },
+        };
+        expect(unkilledMutants(report, new Map([['src/a.ts', [[2, 2]]]]))).toMatchObject([
+          { line: 2, column: 11, status: 'Survived' },
+          { line: 2, column: 11, status: 'NoCoverage' },
+        ]);
+        expect(unkilledMutants(report, new Map([['src/a.ts', [[1, 1]]]]))).toEqual([]);
+        expect(unexplainedIgnores(report, new Map([['src/a.ts', [[2, 2]]]]))).toEqual([
+          { file: 'src/a.ts', line: 2, column: 11, mutator: 'LogicalOperator' },
+        ]);
+      }
+    );
+  }
+
   it('maps both ends of a spanning mutant across mixed terminators', () => {
     // Babel lines 2 through 5 share git line 2. Babel line 6 is git line 3.
     const report = {
@@ -544,8 +593,8 @@ describe('directiveLines', () => {
 });
 
 // AFA-117: no directive can be on a changed line that has no "Stryker", so the check reads such a
-// file without TypeScript, which is 9 MB, and the other helpers never load it. A process of its own
-// shows which modules this module loads.
+// file without TypeScript, which is 9 MB. A process of its own shows whether directive parsing
+// loads it; coordinate mapping also loads it for escaped Unicode separators in literals.
 describe('loading TypeScript', () => {
   const loads = (call: string): boolean => {
     const script = `

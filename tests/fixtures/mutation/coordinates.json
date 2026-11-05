@@ -54,11 +54,95 @@
       ],
       "source": "const a = 1;\r\nconst b = a ?? 2;\r\n"
     },
+    "src/escaped-ls.ts": {
+      "language": "typescript",
+      "mutants": [
+        {
+          "id": "2",
+          "mutatorName": "StringLiteral",
+          "replacement": "\"\"",
+          "status": "NoCoverage",
+          "static": false,
+          "coveredBy": [],
+          "location": {
+            "end": {
+              "column": 17,
+              "line": 1
+            },
+            "start": {
+              "column": 11,
+              "line": 1
+            }
+          }
+        },
+        {
+          "id": "3",
+          "mutatorName": "LogicalOperator",
+          "replacement": "a && 2",
+          "status": "NoCoverage",
+          "static": false,
+          "coveredBy": [],
+          "location": {
+            "end": {
+              "column": 17,
+              "line": 2
+            },
+            "start": {
+              "column": 11,
+              "line": 2
+            }
+          }
+        }
+      ],
+      "source": "const a = 'a\\ b';\nconst b = a ?? 2;\n"
+    },
+    "src/escaped-ps.ts": {
+      "language": "typescript",
+      "mutants": [
+        {
+          "id": "4",
+          "mutatorName": "StringLiteral",
+          "replacement": "\"\"",
+          "status": "NoCoverage",
+          "static": false,
+          "coveredBy": [],
+          "location": {
+            "end": {
+              "column": 17,
+              "line": 1
+            },
+            "start": {
+              "column": 11,
+              "line": 1
+            }
+          }
+        },
+        {
+          "id": "5",
+          "mutatorName": "LogicalOperator",
+          "replacement": "a && 2",
+          "status": "NoCoverage",
+          "static": false,
+          "coveredBy": [],
+          "location": {
+            "end": {
+              "column": 17,
+              "line": 2
+            },
+            "start": {
+              "column": 11,
+              "line": 2
+            }
+          }
+        }
+      ],
+      "source": "const a = 'a\\ b';\nconst b = a ?? 2;\n"
+    },
     "src/lf.ts": {
       "language": "typescript",
       "mutants": [
         {
-          "id": "5",
+          "id": "9",
           "mutatorName": "LogicalOperator",
           "replacement": "a && 2",
           "status": "NoCoverage",
@@ -82,7 +166,7 @@
       "language": "typescript",
       "mutants": [
         {
-          "id": "6",
+          "id": "10",
           "mutatorName": "LogicalOperator",
           "replacement": "a && 2",
           "status": "NoCoverage",
@@ -106,7 +190,7 @@
       "language": "typescript",
       "mutants": [
         {
-          "id": "7",
+          "id": "11",
           "mutatorName": "LogicalOperator",
           "replacement": "a && 2",
           "status": "NoCoverage",
@@ -130,7 +214,7 @@
       "language": "typescript",
       "mutants": [
         {
-          "id": "3",
+          "id": "7",
           "mutatorName": "ArrowFunction",
           "replacement": "() => undefined",
           "statusReason": "Ignored using a comment",
@@ -148,7 +232,7 @@
           }
         },
         {
-          "id": "4",
+          "id": "8",
           "mutatorName": "LogicalOperator",
           "replacement": "a && 2",
           "statusReason": "Ignored using a comment",
@@ -166,7 +250,7 @@
           }
         },
         {
-          "id": "2",
+          "id": "6",
           "mutatorName": "StringLiteral",
           "replacement": "\"\"",
           "status": "Survived",
@@ -203,6 +287,8 @@
     "package.json": false,
     "src/cr.ts": true,
     "src/crlf.ts": true,
+    "src/escaped-ls.ts": true,
+    "src/escaped-ps.ts": true,
     "src/ignored.ts": true,
     "src/lf.ts": true,
     "src/ls.ts": true,

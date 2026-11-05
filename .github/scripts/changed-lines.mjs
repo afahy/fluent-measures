@@ -144,8 +144,41 @@ export function hunkRanges(diff) {
  */
 
 /**
+ * Babel's string reader consumes escaped U+2028/U+2029 without advancing its line. Find those
+ * escapes only inside string/template tokens; backslashes in comments don't escape a break.
+ * TypeScript is already used for directive comments and loads here only for this rare input.
+ *
+ * @param {string} source
+ * @returns {Set<number>}
+ */
+function escapedSeparators(source) {
+  const escaped = new Set();
+  if (!/\\[\u2028\u2029]/.test(source)) return escaped;
+  /** @type {typeof import('typescript')} */
+  const ts = createRequire(import.meta.url)('typescript');
+  const file = ts.createSourceFile('source.ts', source, ts.ScriptTarget.Latest, true);
+  /** @type {import('typescript').Node[]} */
+  const stack = [file];
+  for (let node = stack.pop(); node; node = stack.pop()) {
+    if (ts.isStringLiteralLike(node) || ts.isTemplateLiteralToken(node)) {
+      for (let at = node.getStart(file); at < node.end; at++) {
+        if (source[at] !== '\\') continue;
+        at++;
+        if (source[at] === '\u2028' || source[at] === '\u2029') escaped.add(at);
+      }
+    } else {
+      ts.forEachChild(node, child => {
+        stack.push(child);
+      });
+    }
+  }
+  return escaped;
+}
+
+/**
  * Maps Stryker's one-based Babel positions to git's one-based LF-only positions. CRLF is one
- * line break in both systems; a lone CR, U+2028 or U+2029 starts only a Babel line. Each Babel
+ * line break in both systems. A lone CR or unescaped Unicode separator starts only a Babel
+ * line; escaped Unicode separators in literals start neither. Each Babel
  * line start records its git line and column offset. Columns count UTF-16 units, as Babel does.
  * One scan per file keeps mapping many mutants linear in the source size plus mutant count.
  *
@@ -153,10 +186,12 @@ export function hunkRanges(diff) {
  * @returns {(point: { line: number, column: number }) => { line: number, column: number }}
  */
 function gitPositions(source) {
+  const escaped = escapedSeparators(source);
   const starts = [{ line: 1, column: 0 }];
   let line = 1;
   let gitStart = 0;
   for (const match of source.matchAll(/\r\n|[\r\n\u2028\u2029]/g)) {
+    if (escaped.has(match.index)) continue;
     const at = match.index + match[0].length;
     if (match[0].endsWith('\n')) {
       line++;
@@ -269,7 +304,8 @@ const DIRECTIVE = /^\s?Stryker disable(?: next-line)? [a-zA-Z, ]+(?::(.+))?/;
  * after each token. It keeps its own stack, so a long expression or a long list doesn't overflow
  * the call stack. The nodes of a JSDoc comment start inside the comment, so the walk skips them.
  * A token whose only children are JSDoc nodes, such as the end of the file after a JSDoc, is a
- * leaf, so its comments are read. TypeScript loads only here, so the other helpers don't load it.
+ * leaf, so its comments are read. TypeScript loads only when comments or escaped Unicode
+ * separators need syntax context.
  *
  * @param {string} source
  * @returns {Array<{ at: number, text: string }>}

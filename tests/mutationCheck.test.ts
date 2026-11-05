@@ -705,6 +705,33 @@ describe('mutation-check.mjs', () => {
     }
   );
 
+  it.each(['src/escaped-ls.ts', 'src/escaped-ps.ts'])(
+    'rejects the real uncovered mutant after an escaped separator in %s',
+    file => {
+      const repository = createRepository();
+      const result = coordinates.files[file];
+      const base = commitFiles(repository, { [file]: result.source.replace('a ?? 2', 'a ?? 1') });
+      commitFiles(repository, { [file]: result.source });
+      writeReport(repository, coordinates);
+
+      const check = runCheck(repository, base);
+
+      // Escaped U+2028/U+2029 in this string advances neither Babel nor git's line.
+      expect(result.mutants).toContainEqual(
+        expect.objectContaining({
+          replacement: 'a && 2',
+          status: 'NoCoverage',
+          location: { start: { line: 2, column: 11 }, end: { line: 2, column: 17 } },
+        })
+      );
+      expect(check.stdout).toContain(`  ${file}:2`);
+      expect(check.status).toBe(1);
+      expect(check.stderr).toContain(`::error file=${file},line=2,col=11::`);
+      expect(check.stderr).not.toContain('line=1,');
+      expect(check.stdout).not.toContain('Tests kill every mutant');
+    }
+  );
+
   it('rejects the real ignored mutant when only git line 3 changes after U+2028', () => {
     const repository = createRepository();
     const file = 'src/ignored.ts';

@@ -101,11 +101,11 @@ these reports, including missing, duplicate, stale, stopped and incomplete artif
 
 `coordinates.json` records the installed Stryker 10.0.0 and Vitest runner 10.0.0 with the same
 single-worker config and reporter described above. Recreate each recorded source and test,
-then run the fixture's Stryker command. The five unimported nullish expressions have one
-`LogicalOperator` mutant each, all with `NoCoverage`. The imported string's empty replacement
-survives, and both mutations of the function under the reasonless directive are `Ignored`.
-There are eight mutants, no kills and a score of 0%, so the unchanged break threshold of 98
-makes the fixture exit 1 while still writing its complete report.
+then run the fixture's Stryker command. The seven unimported nullish expressions have one
+`LogicalOperator` mutant each, all with `NoCoverage`, as do the two escaped-string replacements.
+The imported string's empty replacement survives, and both mutations of the function under the
+reasonless directive are `Ignored`. There are twelve mutants, no kills and a score of 0%, so the
+unchanged break threshold of 98 makes the fixture exit 1 while still writing its complete report.
 
 These fixtures come from the ticket and maintainer's comment. Coordinate expectations are
 hand calculations, with lines and columns numbered from 1:
@@ -115,6 +115,10 @@ hand calculations, with lines and columns numbered from 1:
   hence git line 1, column 24. It ends at Babel column 17, hence git column 30.
 - In `lf.ts` and `crlf.ts`, both tools put the expression on line 2, columns 11 through 17.
   A change only to line 1 must leave that uncovered expression out of the check.
+- In `escaped-ls.ts` and `escaped-ps.ts`, a backslash precedes the Unicode separator inside a
+  string. Babel's string reader consumes that escape without advancing its line. The following
+  nullish expression is line 2, columns 11 through 17 in both Babel and git. Editing only git
+  line 2 must flag that mutant, leaving the unchanged string mutant on line 1 out.
 - In `ignored.ts`, the literal U+2028 inside the string makes the directive Babel line 3,
   git line 2. The function is Babel line 4, git line 3. The 33 characters preceding `a ?? 2`
   put its start at column 34; the exclusive end is column 40 in either coordinate system.
@@ -124,5 +128,7 @@ hand calculations, with lines and columns numbered from 1:
 `mutationCheck.test.ts` uses this report in temporary git repositories, checking both missed
 mutants and false positives. `changedLines.test.ts` also checks mixed terminators, spanning
 mutants, UTF-16 columns, unchanged LF/CRLF overlap behavior and that filtering leaves the
-report's parser coordinates intact. The filter uses the report's source rather than reparsing
-or starting Stryker; it works on the single full report and the aggregate shard report alike.
+report's parser coordinates intact. The filter uses the report's source and starts no Stryker
+run. For escaped Unicode separators it uses the existing TypeScript parser to identify string
+and template tokens, distinguishing literal escapes from backslashes in comments. Ordinary
+inputs do not load that parser. Both full reports and aggregate shard reports retain the source.
