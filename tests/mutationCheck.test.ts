@@ -696,18 +696,24 @@ describe('mutation-check.mjs', () => {
     expect(check.stderr).toContain('::error file=src/node_modules/unread.ts::Move');
   });
 
-  // A broken mutation glob can select no files while still reading them. Only explicitly
-  // excluded source tests pass; ordinary source files still require mutation selection.
-  it.each(['a[1]', '{a,b}'])('fails for an unselected source file in the folder %s', folder => {
+  // Preserve all four checkout-path cases: broken globs leave ordinary source unselected,
+  // while '*' and '\\' in the checkout path still allow Stryker to select it.
+  it.each([
+    ['a[1]', false, 1],
+    ['{a,b}', false, 1],
+    ['a*b', true, 0],
+    ['a\\b', true, 0],
+  ] as const)('checks mutation selection in repository folder %s', (folder, selected, status) => {
     const repository = createRepository(folder);
     const base = commitFiles(repository, { 'README.md': 'fixture\n' });
     commitFiles(repository, { 'src/units.ts': 'export const a = 1 > 0;\n' });
-    writeReport(repository, { files: {}, filesRead: { 'src/units.ts': false } });
+    writeReport(repository, { files: {}, filesRead: { 'src/units.ts': selected } });
 
     const check = runCheck(repository, base);
 
-    expect(check.status).toBe(1);
-    expect(check.stderr).toContain('never read it for mutation');
+    expect(check.status).toBe(status);
+    expect(check.stderr.includes('never read it for mutation')).toBe(!selected);
+    expect(check.stdout.includes('Tests kill every mutant on the changed lines.')).toBe(selected);
   });
 
   it('reads a report from the requested path', () => {
