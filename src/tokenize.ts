@@ -99,7 +99,6 @@ const NUMBER_WORD = [...NUMBER_WORDS.keys(), ...MULTIPLIERS.keys()].join('|');
 const QUOTED_NUMBER = String.raw`[\d.,\s/⁄${FRACTIONS}]*[\d${FRACTIONS}]`;
 // Number words have the same boundary and "and a half" rules as the later token split.
 const WORD_END = String.raw`(?:\b(?:${NUMBER_WORD})|(?:\d|\b(?:${NUMBER_WORD}))[\s-]+and[\s-]+a[\s-]+half)`;
-const NUMBER_END = String.raw`(?:[\d${FRACTIONS}]|${WORD_END})`;
 
 // Strip an ASCII opening quote and its ASCII or curly close before an explicit unit. Leaving
 // an opening apostrophe would let it take the number as feet. Paired apostrophes keep their rule.
@@ -111,7 +110,7 @@ const QUOTED_UNIT = new RegExp(
 // An explicit unit after a closing quote owns the number. Do this before mapping primes, which
 // are always unit marks. Keep paired apostrophes for their existing quotation rule below.
 const QUOTE_BEFORE_UNIT = new RegExp(
-  String.raw`(?=[’”])(?<=${NUMBER_END}\s*)(?:”|(?<!['’])’(?!['’]))(?=\s*(?=[a-z])(?:${LABELS})\b)`,
+  String.raw`(?:”|(?<!['’])’(?!['’]))(?=\s*(?=[a-z])(?:${LABELS})\b)`,
   'gi'
 );
 

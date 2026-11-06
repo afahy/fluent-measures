@@ -120,4 +120,13 @@ describe('quotation context and spaced unit marks', () => {
   it('keeps the following unit with a number word in mixed quotation marks', () => {
     expect(parseMeasurement('"seventy” kilograms')).toMatchObject({ value: 70, unit: 'kg' });
   });
+
+  // Case never changes a unit. Both quoted measurements must be recognized: 154 lb is
+  // 69.85322498 kg, within 1% of 70 kg (the documented conversion-agreement example).
+  it.each(['"70" KG', '70” KG', '"70" kg; "154" lbs', '“about 70” kg; “about 154” lbs'])(
+    'retains named units throughout %s',
+    raw => {
+      expect(parseMeasurement(raw)).toMatchObject({ value: 70, unit: 'kg', type: 'weight' });
+    }
+  );
 });
