@@ -161,7 +161,7 @@ function probe() {
   const gh = [document.querySelector('.header-github'), document.querySelector('.menu-github')];
   const shown = gh.filter(el => el && getComputedStyle(el).display !== 'none');
   if (shown.length !== 1) out.push('GITHUB count=' + shown.length);
-  const theme = document.querySelector('.theme-menu > summary');
+  const theme = document.querySelector('.theme-toggle');
   if (!vis(theme)) out.push('THEME hidden');
   document.querySelectorAll('.header-bar > *, .header-actions > *').forEach(el => {
     if (!vis(el)) return;
