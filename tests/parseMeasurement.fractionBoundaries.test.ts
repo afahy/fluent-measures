@@ -189,4 +189,51 @@ describe('fraction boundaries', () => {
   ] as const)('keeps the separate measurement around %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });
+
+  // Second review: fractional endpoints do not take the preceding independent inches.
+  it.each([
+    "5'10/180-190½ lbs",
+    "5'10/180-190 1/2 lbs",
+    "5'10/180-3/4 lbs",
+    "5'10/180-190½",
+    '5 ft 10/180-190½ lbs',
+    '5′10/180-190 1⁄2 lbs',
+  ])('preserves height before fractional weight endpoints in %s', raw => {
+    expect(parseMeasurement(raw, { type: 'height' })).toMatchObject({ value: 70, unit: 'in' });
+  });
+
+  it.each(['6 ft 1/2-3/4 lbs', '6 ft 1/2-3/4 in', '6 ft 1/2-3/4'])(
+    'retains the existing slash-height interpretation in %s',
+    raw => {
+      // Existing slash-height syntax: 6 × 12 + 1 inch; omit the range after the slash.
+      expect(parseMeasurement(raw, { type: 'height' })).toMatchObject({ value: 73, unit: 'in' });
+    }
+  );
+
+  // A separate explicit inch component identifies the fraction range to omit (6 × 12 + 11).
+  it.each([
+    '6 ft 1/2-1 1/2 11 in',
+    '6 ft 1/2-3/4 eleven in',
+    '6 ft 1/2-3/4 ELEVEN INCHES',
+    '6 ft 1/2-3/4 11"',
+    "6 ft 1/2-3/4 11''",
+  ])('retains the separate inch component after %s', raw => {
+    expect(parseMeasurement(raw, { type: 'height' })).toMatchObject({ value: 83, unit: 'in' });
+  });
+
+  // A sentence period after an endpoint is punctuation, not a continuing decimal.
+  it.each(['5.5 ½-180. lbs', '5½2-180. lbs', '5/2-180. lbs', '5½2–180. lbs'])(
+    'omits malformed fractional ranges with trailing punctuation in %s',
+    raw => {
+      expect(parseMeasurement(raw)).toBeNull();
+    }
+  );
+
+  // Reject the malformed fragment locally; the following 1 / 2 pound remains 0.5 pound.
+  it.each(['5.5½ 1/2 lb', '5.5 ½ 1⁄2 lb', '3 5.5½ 1/2 lb'])(
+    'preserves a proper fraction after a generated rejection in %s',
+    raw => {
+      expect(parseMeasurement(raw)).toMatchObject({ value: 0.5, unit: 'lb' });
+    }
+  );
 });

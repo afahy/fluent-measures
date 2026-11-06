@@ -89,7 +89,7 @@ const UNICODE_FRACTION = new RegExp(
 const RANGE_DIGITS = `(?:${FRACTION_NUMBER.slice(1, -1)})`;
 const RANGE_NUMBER = String.raw`(?:${RANGE_DIGITS}(?:\s+${RANGE_DIGITS}[/⁄]${RANGE_DIGITS}|[/⁄]${RANGE_DIGITS}|\s*[${FRACTIONS}]\d*)?|[${FRACTIONS}]\d*)`;
 const FRACTION_RANGE = new RegExp(
-  String.raw`(${FRACTION_OWNER})?(?<![\d/⁄.])(${RANGE_NUMBER})((?:\s*\p{Dash}\s*${RANGE_NUMBER})+)(?![\d/⁄.])`,
+  String.raw`(${FRACTION_OWNER})?(?<![\d/⁄.])(${RANGE_NUMBER})((?:\s*\p{Dash}\s*${RANGE_NUMBER})+)(?![\d/⁄]|\.\d)`,
   'giu'
 );
 const FRACTION_MARK = new RegExp(`[/⁄${FRACTIONS}]`);
@@ -101,7 +101,11 @@ function normalizeFractionParts(input: string): string {
       UNICODE_FRACTION,
       (text: string, whole: string | undefined, fraction: string, trailing: string | undefined) => {
         const [numerator, denominator] = fraction.normalize('NFKD').split('⁄');
-        return trailing ? 'x' : writeFraction(text, whole, numerator, denominator);
+        // Keep an invalid fragment as one non-number, including any following decimal tail.
+        // Its period prevents it from owning a later slash fraction, then trims off in M2.
+        return trailing || whole?.includes('.')
+          ? 'x.'
+          : writeFraction(text, whole, numerator, denominator);
       }
     )
     .replace(SLASH_FRACTION, writeFraction);
@@ -118,12 +122,14 @@ export function normalizeFractions(input: string): string {
   return normalizeFractionParts(
     input.replace(
       FRACTION_RANGE,
-      (_text, owner: string | undefined, first: string, rest: string) => {
-        // Keep the inches before a slash-separated numeric weight range: 5'10/180-190 lbs.
-        // A fractional right endpoint instead identifies a complete fraction range.
+      (text, owner: string | undefined, first: string, rest: string, offset: number) => {
+        // Keep slash-separated inches even when the weight range has fractional endpoints.
+        // A following inch component instead owns the height: 6 ft 1/2-3/4 11 in.
         const range = first + rest;
+        const separateInches =
+          FRACTION_MARK.test(rest) && RANGE_INCHES.test(input.slice(offset + text.length));
         const normalized =
-          owner && !FRACTION_MARK.test(rest)
+          owner && !separateInches
             ? normalizeFractionParts(owner + range).slice(owner.length)
             : normalizeFractionParts(range);
         return (owner || '') + (normalized.includes('x') ? '0-0-0' : normalized);
@@ -134,6 +140,10 @@ export function normalizeFractions(input: string): string {
 
 // The number words, as alternatives in a pattern.
 const NUMBER_WORD = [...NUMBER_WORDS.keys(), ...MULTIPLIERS.keys()].join('|');
+const RANGE_INCHES = new RegExp(
+  String.raw`^\s+(?:${RANGE_NUMBER}|(?:${NUMBER_WORD})\b(?:[\s-]+(?:${NUMBER_WORD}|and|a|half)\b)*)\s*(?:(?:"|'')(?![a-z])|in(?:ch(?:es)?)?\b)`,
+  'i'
+);
 
 // A number as it can stand in quotes: digits, separators, spaces, slashes and fractions.
 const QUOTED_NUMBER = String.raw`[\d.,\s/⁄${FRACTIONS}]*[\d${FRACTIONS}]`;
