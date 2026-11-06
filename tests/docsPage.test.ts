@@ -544,10 +544,9 @@ it('reveals the Quick start result beside either module format', () => {
 // AFA-221: source markup must be useful before any script or CDN dependency runs.
 describe('static docs examples before initialization', () => {
   it('does not advertise uninitialized tab widgets or selected states', () => {
-    const markup = page.replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, '');
-    // Match attributes only; script strings that install the semantics do not match tags.
-    expect(markup).not.toMatch(/<[^>]+\srole="(?:tab|tablist|tabpanel)"/);
-    expect(markup).not.toMatch(/<[^>]+\saria-selected=/);
+    // Opening-tag attributes distinguish static markup from the script's setAttribute calls.
+    expect(page).not.toMatch(/<[^>]+\srole="(?:tab|tablist|tabpanel)"/);
+    expect(page).not.toMatch(/<[^>]+\saria-selected=/);
   });
 
   it('starts each copy action hidden and disabled', () => {
