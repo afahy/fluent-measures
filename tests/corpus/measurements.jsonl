@@ -475,3 +475,4 @@
 {"id": "word-comma-son-weight", "input": "my son is two, thirty pounds", "expected": {"value": 30, "unit": "lb", "type": "weight"}, "category": "commas", "source": "AFA-75"}
 {"id": "word-comma-hundred-weight", "input": "twenty, one hundred pounds", "expected": {"value": 100, "unit": "lb", "type": "weight"}, "category": "commas", "source": "AFA-75"}
 {"id": "word-comma-age-weight", "input": "age one, twenty pounds", "expected": {"value": 20, "unit": "lb", "type": "weight"}, "category": "commas", "source": "AFA-75"}
+{"id": "word-comma-quoted-digits", "input": "phase twenty, “5” cm", "expected": {"value": 5, "unit": "cm", "type": "height"}, "category": "commas", "source": "AFA-75"}

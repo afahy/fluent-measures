@@ -4,3 +4,4 @@
 
 End a number phrase at a comma before another number word, so "my son is two, thirty pounds"
 reads as 30 lb instead of 230 lb. Preserve numeric commas and unsupported weight parts.
+Opening curly quotes also preserve the boundary, including "phase twenty, “5” cm" (5 cm).

@@ -21,6 +21,18 @@ describe('commas between number words', () => {
     expect(values).toEqual([30, 30, 30]);
   });
 
+  // The ticket's independent quote-review finding: opening quotes don't erase a comma.
+  it.each([
+    ['phase twenty, “5” cm', 5, 'cm'],
+    ['phase twenty, ‘5’ cm', 5, 'cm'],
+    ['phase twenty, “ .5” cm', 0.5, 'cm'],
+    ['my son is two, “thirty” pounds', 30, 'lb'],
+    ['my son is two,‘thirty’ pounds', 30, 'lb'],
+    ['twenty, “one hundred” pounds', 100, 'lb'],
+  ] as const)('keeps a quoted number separate in %s', (raw, value, unit) => {
+    expect(parseMeasurement(raw)).toMatchObject({ value, unit, matches: [{ value, unit }] });
+  });
+
   // The ticket's boundary rule also applies without spaces, around multipliers, and in heights.
   it.each([
     ['two,thirty pounds', 30, 'lb', 'weight'],

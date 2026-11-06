@@ -110,8 +110,9 @@ const NUMBER_WORD = [...NUMBER_WORDS.keys(), ...MULTIPLIERS.keys()].join('|');
 
 // A comma ends a number phrase before another number word, as in "two, thirty pounds", or
 // before spaced digits, as in "phase twenty, 5 cm". Numeric commas keep their existing rules.
+// Look past an opening curly quote too: punctuation removal mustn't join "twenty, “5” cm".
 const WORD_COMMA = new RegExp(
-  String.raw`(\b(?:${NUMBER_WORD}))\s*,(?=\s+\.?\d|\s*(?:${NUMBER_WORD})\b)`,
+  String.raw`(\b(?:${NUMBER_WORD}))\s*,(?=\s+(?:[“‘]\s*)?\.?\d|\s*(?:[“‘]\s*)?(?:${NUMBER_WORD})\b)`,
   'g'
 );
 
