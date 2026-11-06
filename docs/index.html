@@ -2463,6 +2463,24 @@ const strict = parseMeasurement(
             });
         }
 
+        // A tab stop can be inside the viewport but covered by the sticky header. Scroll
+        // spacing alone doesn't make browsers reveal it. Wait for native focus scrolling,
+        // then leave room for the outline without changing anchor offsets or animating focus.
+        document.addEventListener('focusin', event => {
+          const target = event.target;
+          requestAnimationFrame(() => {
+            if (
+              document.activeElement !== target ||
+              !target.matches(':focus-visible') ||
+              target.closest('.site-header')
+            )
+              return;
+            const top = target.getBoundingClientRect().top;
+            const edge = document.querySelector('.site-header').getBoundingClientRect().bottom + 8;
+            if (top < edge) window.scrollBy({ top: top - edge, behavior: 'instant' });
+          });
+        });
+
         // Start compact, then let the reader choose which groups stay open. Only an explicit
         // anchor jump (including the initial hash) reveals its group; scrolling never folds it.
         const tocGroups = [...document.querySelectorAll('.toc-group')];
