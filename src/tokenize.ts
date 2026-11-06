@@ -92,7 +92,7 @@ const FRACTION_RANGE = new RegExp(
   String.raw`(${FRACTION_OWNER})?(?<![\d/⁄.])(${RANGE_NUMBER})((?:\s*\p{Dash}\s*${RANGE_NUMBER})+)(?![\d/⁄.])`,
   'giu'
 );
-const FRACTION_MARK = new RegExp(`[/⁄${FRACTIONS}]`, 'u');
+const FRACTION_MARK = new RegExp(`[/⁄${FRACTIONS}]`);
 
 /** Normalize individual fractions after their surrounding range has been preserved. */
 function normalizeFractionParts(input: string): string {
@@ -121,8 +121,11 @@ export function normalizeFractions(input: string): string {
       (_text, owner: string | undefined, first: string, rest: string) => {
         // Keep the inches before a slash-separated numeric weight range: 5'10/180-190 lbs.
         // A fractional right endpoint instead identifies a complete fraction range.
-        const context = owner && !FRACTION_MARK.test(rest) ? owner : '';
-        const normalized = normalizeFractionParts(context + first + rest).slice(context.length);
+        const range = first + rest;
+        const normalized =
+          owner && !FRACTION_MARK.test(rest)
+            ? normalizeFractionParts(owner + range).slice(owner.length)
+            : normalizeFractionParts(range);
         return (owner || '') + (normalized.includes('x') ? '0-0-0' : normalized);
       }
     )

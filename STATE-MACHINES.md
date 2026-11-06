@@ -429,7 +429,7 @@ F10 remains separately tracked; the general tokenizer refactor is outside this c
 ### F2 resolution — quotation context and spaced marks
 
 Status: merged in [PR #231](https://github.com/afahy/fluent-measures/pull/231) as `ef39a7b`,
-from reviewed head `0b7f4d2`; all 19 PR checks passed. Main CI was pending at this update.
+from reviewed head `0b7f4d2`; all 19 PR checks and all 12 exact-merge main CI jobs passed.
 Before: `b79eae0`; audit publication integrated from `527f7b5` and F1 from `fa73fd5`.
 F2 implementation after: `95a5a54`; final combined validation at `133aac5` includes F9 from `b74d185`.
 The baseline row above remains historical: its two failures now return 180 lb and 71 in.
@@ -514,8 +514,12 @@ punctuation stay unchanged. No magnitude/denominator heuristic or
 public-example change is introduced. Fifteen assertions covering this policy failed against
 the prior local implementation and now pass. The extra punctuation guard and special inch
 exception were removed; quoted prose and explicit inch fractions retain the original boundary.
-The PR remains draft only for final validation and the review-fix push, pending its reserved
-heavy-check window after AFA-78 and AFA-107.
+Main `ef39a7b` was merged while preserving the F2 quote corrections and the F1 quoted-digit
+boundary. The approved-policy suite still fails 19 source and 38 package assertions on that
+main revision. Combined validation and the review-fix push use the granted shared window.
+The combined builds measure 5.11 kB ESM and 5.17 kB CommonJS, versus 4.93 kB and 5.00 kB
+on `ef39a7b`. The smallest targeted fix exceeds the previous 5 kB budget, so AGENTS.md’s
+standing approval raises each limit by 0.5 kB to 5.5 kB; all published budget notes match.
 
 ### F2 follow-up — quote pairs, low quotations and compound marks
 
@@ -538,7 +542,7 @@ head `0b7f4d2c2553c9cdf967663d4e4497e4837b7d72`, compared with main `b74d185`:
 
 PR #231 subsequently merged as `ef39a7b5fde9a33fd10789a2f25365fed30d0d43` from that reviewed
 head, carrying these six regressions into main. The comparison above retains the original
-`b74d185` baseline. All 19 PR checks passed; exact-merge main CI was pending at this update. The expected values follow paired-apostrophe rejection,
+`b74d185` baseline. All 19 PR checks and all 12 exact-merge main CI jobs passed. The expected values follow paired-apostrophe rejection,
 quotations having no measurement unit, and 5 × 12 + 11 = 71 in with a separate 80 kg weight.
 ASCII and prime controls retained the expected results on both revisions.
 
@@ -691,17 +695,19 @@ Each fix session must:
 | <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:9df9034c3ce42adbebf696dd9b9d990bec04b84a9494a53e3c9bf77d6c1fc1d4>                                                       | AFA-75, then fresh successor sessions for AFA-74, AFA-202, AFA-62   | [PR #229](https://github.com/afahy/fluent-measures/pull/229) merged at `fa73fd5`; all 12 main CI jobs passed; AFA-74 successor launched                                                |
 | <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1a5f5b908ee23500b3eab3c85521ed6236b310c0f375af966f353457aef7d25e>                                                       | Original AFA-78 implementation and recorded successor queue         | Stopped for the maintainer-requested takeover; clean history preserved through `02d463a`                                                                                               |
 | <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/thread:delegated-task:command%3Amcp%3A07e37d08-94dc-4f21-9274-996c2a7a8c00%3Adelegate-task%3A632fca4a-3251-4d46-b64c-68aa393e85be> | AFA-78 implementation takeover, final validation and PR preparation | Validated at `133aac5`; [PR #231](https://github.com/afahy/fluent-measures/pull/231) prepared for parent stewardship; no successor work                                                |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/b61ed010-1655-4d08-b5ee-8c6e4d3e7ad4>                                                                                              | AFA-78 PR steward                                                   | Owns review corrections, validation, merge and post-merge CI after the implementation handoff                                                                                          |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/b61ed010-1655-4d08-b5ee-8c6e4d3e7ad4>                                                                                              | AFA-78 PR steward                                                   | [PR #231](https://github.com/afahy/fluent-measures/pull/231) merged at `ef39a7b`; all 12 main CI jobs passed; separate AFA-203 session launched                                        |
 | <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:437846f95d8fc1b59e8b6aed92f360110a4df975347393dec096581adc8de82f>                                                       | AFA-236 finite conversion overflow                                  | F9 validated; [PR #230](https://github.com/afahy/fluent-measures/pull/230) merged at `b74d185`                                                                                         |
 | <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:e814642ff8608ad682438ef18ee4080fc919744b9ea078fd9ad8e24e7597c9b4>                                                       | AFA-74; fresh AFA-202 then AFA-62 sessions after each merge/main CI | [PR #232](https://github.com/afahy/fluent-measures/pull/232): F4 validated at `1e1a23b`; initial full checks passed; preserve-fractions policy approved; final validation/push pending |
 | <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:461b3a6bdd48f18b59aa264dedf46356fae143e0f5f4b90936f49716e134a37a>                                                       | AFA-107 inferred conversion underflow, pulled forward               | [PR #233](https://github.com/afahy/fluent-measures/pull/233) under independent stewardship; preserve F8 updates on merge                                                               |
+
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1e5640d2dbe8ef251e2bb479d46cc5f4fc59c1597ecd270e7941a88df6893b76> | AFA-203 signed unsupported-part ownership; separate F5 session | Launched from `ef39a7b` after main CI passed; focused work only, no heavy-slot reservation yet |
 
 Sessions use isolated prepared worktrees. Full checks and mutation runs have one shared execution
 slot. AFA-74 currently holds the explicit grant for combined validation and push hooks;
 AFA-107 has the next reservation, subject to the coordinator’s grant after release. The former AFA-78 session is stopped; parent
 <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/b61ed010-1655-4d08-b5ee-8c6e4d3e7ad4>
-owns its replacement stewardship. AFA-203 and AFA-116 remain the coordinator’s separate
-queue. AFA-107 has been pulled forward into its own fresh session; preserve its F8 update when
+owns its replacement stewardship. AFA-203 is active in a separate fresh session after F2
+merged and main CI passed; AFA-116 remains its successor. Preserve future F5/ledger updates. AFA-107 has been pulled forward into its own fresh session; preserve its F8 update when
 merging main. AFA-237 is not part of either active fix queue. Focused tests
 can run while another session holds the slot. Successor sessions inherit the regression, corpus,
 mutation, PR-lifecycle and document-update requirements. Launch status is not fix completion.
