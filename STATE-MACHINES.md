@@ -606,7 +606,8 @@ build, API/size checks and 3,760 package tests. That run exposed six changed-lin
 survivors, so four additional preservation controls now catch each directly applied mutant.
 No implementation changed after that full check. Fresh mutation validation with those controls
 passes at 99.78%, leaving only the three unchanged baseline survivors described above; all
-3,768 ESM/CommonJS tests pass. Changed-line verification is pending. Brotli sizes remain
+3,768 ESM/CommonJS tests pass. The fresh report passes the changed-line mutation check at
+`9c76e9`: no changed-line mutant survives or lacks coverage. Brotli sizes remain
 4.93 kB ESM and 5.00 kB CommonJS, passing the unchanged 5 kB limits; exported types are unchanged.
 
 F9 focused validation at `ecf7a2e`: 14 conversion-overflow tests, 104 tests across the conversion,
