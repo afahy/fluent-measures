@@ -92,21 +92,46 @@ export function normalizeFractions(input: string): string {
     .replace(SLASH_FRACTION, writeFraction);
 }
 
-// A number as it can stand in quotes: digits, separators, spaces, slashes and fractions.
-const QUOTED_NUMBER = String.raw`[\d.,\s/⁄${FRACTIONS}]*[\d${FRACTIONS}]`;
-// A single or double curly mark right after a number. It closes a quoted number only when its
-// opening quote comes right before that number and no digit follows, as in "“5 1/2” ft".
-const CURLY_SINGLE = new RegExp(
-  String.raw`(?<=[\d${FRACTIONS}]['’]?)(?:(?<!‘${QUOTED_NUMBER})’|’(?=\d))`,
-  'g'
-);
-const CURLY_DOUBLE = new RegExp(
-  String.raw`(?<=[\d${FRACTIONS}])(?:(?<!“${QUOTED_NUMBER})”|”(?=\d))`,
-  'g'
-);
-
 // The number words, as alternatives in a pattern.
 const NUMBER_WORD = [...NUMBER_WORDS.keys(), ...MULTIPLIERS.keys()].join('|');
+
+// A number as it can stand in quotes: digits, separators, spaces, slashes and fractions.
+const QUOTED_NUMBER = String.raw`[\d.,\s/⁄${FRACTIONS}]*[\d${FRACTIONS}]`;
+// Number words have the same boundary and "and a half" rules as the later token split.
+const WORD_END = String.raw`(?:\b(?:${NUMBER_WORD})|(?:\d|\b(?:${NUMBER_WORD}))[\s-]+and[\s-]+a[\s-]+half)`;
+// An apostrophe inside a word does not close the surrounding single quotation.
+const SINGLE_QUOTATION = String.raw`(?:[^’]|(?<=[a-z])’(?=[a-z]))*`;
+
+// Strip an ASCII opening quote and its ASCII or curly close before an explicit unit. Leaving
+// an opening apostrophe would let it take the number as feet. Paired apostrophes keep their rule.
+const QUOTED_UNIT = new RegExp(
+  String.raw`(?<![\w'"])(?:'((?:[^'’]|(?<=[a-z])’(?=[a-z]))*)['’]|"([^"”]*)["”])(?=\s*(?=[a-z])(?:${LABELS})\b)`,
+  'gi'
+);
+
+// An explicit unit after a closing quote owns the number. Do this before mapping primes, which
+// are always unit marks. Keep paired apostrophes for their existing quotation rule below.
+// "In" needs an opening quote: without one, it can be prose after feet, as in "6’ in shoes".
+// Check the following unit first, so contractions cannot repeatedly scan the preceding text.
+const QUOTE_BEFORE_UNIT = new RegExp(
+  String.raw`(?=[”’]\s*(?=[a-z])(?:${LABELS})\b)(?:”|(?<!['’])’(?!['’])(?:(?!\s*in\b)|(?<=[‘‚]${SINGLE_QUOTATION}’)))`,
+  'gi'
+);
+
+// Only a following inch component extends a spaced quotation into a compound height. Keep
+// the existing adjacent-digit rule. Match the mark before any backward scan across spaces.
+function curlyMark(open: string, close: string): RegExp {
+  const numberPart = String.raw`(?:[\d.,/⁄${FRACTIONS}]+|(?:${NUMBER_WORD}|and|a|half)\b)`;
+  const inches = String.raw`${numberPart}(?:[\s-]+${numberPart})*\s*(?:["”]|['’]{2}|in(?:ch(?:es)?)?\b)`;
+  const nextNumber = String.raw`(?=${close}(?:\d${close === '’' ? String.raw`|\s*${inches}` : ''}))`;
+  const quotation = close === '’' ? SINGLE_QUOTATION : '[^”]*';
+  return new RegExp(
+    String.raw`(?=${close})(?:(?<=[\d${FRACTIONS}]['’]?\s*)(?:(?<!${open}${QUOTED_NUMBER}\s*)|${nextNumber})|(?<=${WORD_END}\s*)(?!${close}[a-z])(?:(?<!${open}${quotation})|${nextNumber}))${close}`,
+    'gi'
+  );
+}
+const CURLY_SINGLE = curlyMark('‘', '’');
+const CURLY_DOUBLE = curlyMark('“', '”');
 
 // A comma ends a number phrase before another number word, as in "two, thirty pounds", or
 // before spaced digits, as in "phase twenty, 5 cm". Numeric commas keep their existing rules.
@@ -154,8 +179,10 @@ const PUNCTUATION = new RegExp(
 
 /**
  * Write feet and inch marks as ASCII, so "5’11”", "5′11″" and "5´11´´" read like 5'11". Primes
- * and acute accents are always marks. A curly quote is a mark only right after a number or a
- * fraction, and not when it closes a quoted number, as in "“180” cm" and "the ‘5’ kg bag".
+ * and acute accents are always marks. A curly quote can follow digits, fractions or number
+ * words, with optional spaces. A following unit word keeps the number in that unit; otherwise
+ * a matching numeric quotation stays a quotation unless an inch component follows a feet mark
+ * or a digit immediately follows the mark, as in the existing compact-height syntax.
  * Full-width characters and the units "㎝" and "㎏" become their ASCII forms. Other characters
  * stay, so normalizeFractions still sees "½". The minus signs "−" and "﹣" become a hyphen-minus
  * "-" right before a number when no number comes earlier, so "−5 ft" is negative.
@@ -164,8 +191,10 @@ export function normalizeForms(input: string): string {
   return input
     .replace(/[！-～㎝㎏]/g, character => character.normalize('NFKC'))
     .replace(MINUS_SIGN, '-')
-    .replace(/[′´]/g, "'")
-    .replace(/″/g, '"')
+    .replace(QUOTED_UNIT, ' $1$2 ')
+    .replace(QUOTE_BEFORE_UNIT, ' ')
+    .replace(/[′´ʹ]/g, "'")
+    .replace(/[″ʺ]/g, '"')
     .replace(CURLY_SINGLE, "'")
     .replace(CURLY_DOUBLE, '"');
 }
@@ -223,7 +252,7 @@ export function tokenizeNormalized(
       // that two apostrophes open, as in "the ''5'' kg bag", and a third mark keeps them as
       // they are, as in "72'''". The lookahead runs first, so the lookbehind doesn't scan back
       // from every digit of a long number.
-      .replace(/(?<=\d)(?='')(?<!(?:^|[^\w'"’])['’]{2}[^'’\s]*)''(?!['’])/g, '"')
+      .replace(/(?<=\d)(?='')(?<!(?:^|[^\w'"’])['’]{2}[^'’]*)''(?!['’])/g, '"')
       // A capital G right after a number, as in "5G phone", is a network generation, not
       // grams, which are written "g". Rename it before case is lost.
       .replace(/(?<=\d)G(?![A-Za-z])/g, 'gen')

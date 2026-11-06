@@ -2,10 +2,10 @@
 
 exports[`measurement corpus > matches the committed score 1`] = `
 "Category                 total   agree   wrong  missed  throws
-all                        491     470       9      12       0
+all                        549     528       9      12       0
 
-symbols                     27      27       0       0       0
-words                       30      30       0       0       0
+symbols                     83      83       0       0       0
+words                       31      31       0       0       0
 mixed-numbers               24      24       0       0       0
 decimals                    22      21       1       0       0
 commas                      32      31       1       0       0
@@ -13,7 +13,7 @@ hyphens                     34      34       0       0       0
 compact                     24      12       0      12       0
 unicode                     29      29       0       0       0
 typos                       32      32       0       0       0
-surrounding-text            51      51       0       0       0
+surrounding-text            52      52       0       0       0
 multiple-measurements       43      43       0       0       0
 unqualified                 25      25       0       0       0
 conversion                  40      40       0       0       0
@@ -152,7 +152,7 @@ compact-ft-in-dots (compact)
 
 Entries with the outcome "throws" (0):
 
-Entries that agree with one of several outputs (16):
+Entries that agree with one of several outputs (19):
 
 unicode-en-dash-shorthand: null
 unicode-hyphen-shorthand: null
@@ -169,5 +169,8 @@ probe-semicolon-multiple: 70 kg (weight)
 probe-semicolon-normalized: 15.24 cm (height)
 probe-semicolon-fuzzy: 70 kg (weight)
 probe-semicolon-other-weight: 70 kg (weight)
-probe-semicolon-unicode-range: 70 kg (weight)"
+probe-semicolon-unicode-range: 70 kg (weight)
+quote-context-opening-height-word-after: 71 in (height)
+quote-context-opening-height-word-first: 71 in (height)
+quote-context-opening-height-all-words: 71 in (height)"
 `;
