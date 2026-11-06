@@ -108,4 +108,14 @@ describe('quotation context and spaced unit marks', () => {
       type: 'weight',
     });
   });
+
+  // Independent probes: the ticket permits a full compound or null, never only the inches.
+  // Use the same 5 × 12 + 11 result when either component is written in words.
+  it.each(['‘5’ eleven”', '‘five’ 11”', '‘five’ eleven”'])('keeps both parts of %s', raw => {
+    expect(parseMeasurement(raw)).toMatchObject({ value: 71, unit: 'in' });
+  });
+
+  it('keeps the following unit with a number word in mixed quotation marks', () => {
+    expect(parseMeasurement('"seventy” kilograms')).toMatchObject({ value: 70, unit: 'kg' });
+  });
 });

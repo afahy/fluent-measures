@@ -98,13 +98,13 @@ const NUMBER_WORD = [...NUMBER_WORDS.keys(), ...MULTIPLIERS.keys()].join('|');
 // A number as it can stand in quotes: digits, separators, spaces, slashes and fractions.
 const QUOTED_NUMBER = String.raw`[\d.,\s/⁄${FRACTIONS}]*[\d${FRACTIONS}]`;
 // Number words have the same boundary and "and a half" rules as the later token split.
-const WORD_END = String.raw`(?:(?<![\w'"‘“])(?:${NUMBER_WORD})|(?:\d|\b(?:${NUMBER_WORD}))[\s-]+and[\s-]+a[\s-]+half)`;
+const WORD_END = String.raw`(?:\b(?:${NUMBER_WORD})|(?:\d|\b(?:${NUMBER_WORD}))[\s-]+and[\s-]+a[\s-]+half)`;
 const NUMBER_END = String.raw`(?:[\d${FRACTIONS}]|${WORD_END})`;
 
-// Strip both ASCII quotation marks before an explicit unit; leaving an opening apostrophe
-// would let it take the number as feet. Paired apostrophes retain their separate null rule.
+// Strip an ASCII opening quote and its ASCII or curly close before an explicit unit. Leaving
+// an opening apostrophe would let it take the number as feet. Paired apostrophes keep their rule.
 const QUOTED_UNIT = new RegExp(
-  String.raw`(?<![\w'"])(?:'([^']*)'|"([^"]*)")(?=\s*(?=[a-z])(?:${LABELS})\b)`,
+  String.raw`(?<![\w'"])(?:'([^'’]*)['’]|"([^"”]*)["”])(?=\s*(?=[a-z])(?:${LABELS})\b)`,
   'gi'
 );
 
@@ -118,8 +118,9 @@ const QUOTE_BEFORE_UNIT = new RegExp(
 // A matching opening quote preserves a numeric quotation unless another number follows the
 // closing mark. Match the mark first, so the backward scan doesn't run at every space.
 function curlyMark(open: string, close: string): RegExp {
+  const nextNumber = String.raw`(?=${close}\s*(?:\d|(?:${NUMBER_WORD})\b))`;
   return new RegExp(
-    String.raw`(?=${close})(?:(?<=[\d${FRACTIONS}]['’]?\s*)(?:(?<!${open}${QUOTED_NUMBER}\s*)|(?=${close}\s*\d))|(?<=${WORD_END}\s*)(?<!${open}[^${close}]*))${close}`,
+    String.raw`(?=${close})(?:(?<=[\d${FRACTIONS}]['’]?\s*)(?:(?<!${open}${QUOTED_NUMBER}\s*)|${nextNumber})|(?<=${WORD_END}\s*)(?:(?<!${open}[^${close}]*)|${nextNumber}))${close}`,
     'gi'
   );
 }
