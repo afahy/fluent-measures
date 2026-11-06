@@ -21,6 +21,7 @@ import {
   sweepOptions,
   sweepWidths,
 } from './docs-chrome.mjs';
+import { checkFocus } from './docs-focus.mjs';
 import { noScriptNavigation } from './docs-no-script-navigation.mjs';
 
 /** Runs in the page. Returns a list of the problems at the current width, without repeats. */
@@ -297,6 +298,17 @@ try {
       }
       // A card that is stuck open would make the next width's collapsed checks wrong.
       if (broken) await browser.load(url, { width, height: 900, scale: 1, scheme, touch });
+      // Keyboard gates at the sweep's boundaries and the ticket's desktop/phone widths.
+      // Keep the layout sweep's height, but reproduce keyboard use at the phone's 844px height.
+      if ([from, to, 390, 1440].includes(width)) {
+        await browser.send('Emulation.setDeviceMetricsOverride', {
+          width,
+          height: width < 600 ? 844 : 900,
+          deviceScaleFactor: 1,
+          mobile: width < 600,
+        });
+        for (const problem of await checkFocus(browser, scheme)) found.add(problem);
+      }
       for (const problem of found) {
         problems.set(problem, [...(problems.get(problem) ?? []), { scheme, width }]);
       }
