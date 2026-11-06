@@ -285,8 +285,7 @@ function combineParts(
   matches: QualifiedMatch[],
   type: MeasurementType,
   input: string,
-  normalizedUnit: Unit | undefined,
-  inferred: boolean
+  normalizedUnit: Unit | undefined
 ): ParsedValue | null | undefined {
   // Parts form one measurement only while each unit is the next smaller one, the larger part
   // is a whole number and the smaller part is less than one of the larger unit, as in
@@ -317,9 +316,9 @@ function combineParts(
   const targetUnit = normalizedUnit || first[first.length - 1].unit;
   const totalValue = total(first, targetUnit);
 
-  // A zero-height fragment must not hide a valid measurement of another type. An inferred
-  // value is the only measurement, so it stays even when its conversion underflows to zero.
-  if (!totalValue && !inferred) return undefined;
+  // A zero-height fragment must not hide a valid measurement of another type. Inference
+  // requires an explicit type, so an inferred total that underflows to zero ends in null.
+  if (!totalValue) return undefined;
   // A number too large to represent, such as 400 digits, has no usable value.
   if (!Number.isFinite(totalValue)) return null;
 
@@ -604,7 +603,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     }
 
     if (matches.length) {
-      const result = combineParts(matches, type, input, options.normalizedUnit, Boolean(inferred));
+      const result = combineParts(matches, type, input, options.normalizedUnit);
       if (result !== undefined) return result;
     }
   }
