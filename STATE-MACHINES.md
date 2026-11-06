@@ -378,8 +378,8 @@ errors: a finite positive 230 lb can still be the wrong reading of 30 lb.
 
 ### F9 correction — finite conversion after intermediate overflow
 
-Status: implemented at `ecf7a2e` on `apfahy/afa-236-finite-conversion-overflow`; PR and full
-checks pending. Failing revision: `b79eae0`; passing source/ESM/CJS revision: `ecf7a2e`.
+Status: implemented at `ecf7a2e` on `apfahy/afa-236-finite-conversion-overflow`; full checks
+passed, PR pending. Failing revision: `b79eae0`; passing source/ESM/CJS revision: `ecf7a2e`.
 The published audit was merged into the fix branch from `527f7b5` before this update.
 
 `tests/parseMeasurement.conversionOverflow.test.ts` contains 14 tests. All three historical F9
@@ -444,7 +444,7 @@ concerns but have different failure causes and existing preservation requirement
 | Separate tokenizer refactor | [AFA-88][refactor]                   | In Progress; preserve existing remote branch `apfahy/afa-88-read-every-number-form-in-one-tokenizer-pass`, last observed `ded9ee0`; requires maintainer merge |
 | Boundary and number fixes   | AFA-75 → AFA-74 → AFA-202 → AFA-62   | Pause lifted by maintainer on 2026-11-06; fresh sessions fix one ticket per PR                                                                                |
 | Quote and ownership fixes   | AFA-78 → AFA-203 → AFA-116 → AFA-107 | Pause lifted by maintainer on 2026-11-06; fresh sessions fix one ticket per PR                                                                                |
-| Numeric conversion          | [AFA-236][overflow]                  | `units.ts` correction at `ecf7a2e`; source/package regressions and independent probes pass; full checks and PR pending                                        |
+| Numeric conversion          | [AFA-236][overflow]                  | `units.ts` correction at `ecf7a2e`; full checks and independent probes pass; PR pending                                                                       |
 
 The maintainer explicitly lifted the AFA-88 pause for these eight confirmed targeted fixes on
 2026-11-06. Their AFA-88 blocker relations were removed. Other dependencies remain; the tokenizer
@@ -471,7 +471,7 @@ Each fix session must:
 | <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:ab3e225544f4690efa2764d0a191792e86a687eff06d7b4e3bb8c5380b1b736d> | AFA-235 publication and review of this document                     | [PR #228](https://github.com/afahy/fluent-measures/pull/228) open; full validation passed; review pending |
 | <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:9df9034c3ce42adbebf696dd9b9d990bec04b84a9494a53e3c9bf77d6c1fc1d4> | AFA-75, then fresh successor sessions for AFA-74, AFA-202, AFA-62   | Implementation and independent review ready; full checks pending; successors not yet started              |
 | <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1a5f5b908ee23500b3eab3c85521ed6236b310c0f375af966f353457aef7d25e> | AFA-78, then fresh successor sessions for AFA-203, AFA-116, AFA-107 | AFA-78 claimed In Progress; successors not yet started                                                    |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:437846f95d8fc1b59e8b6aed92f360110a4df975347393dec096581adc8de82f> | AFA-236 finite conversion overflow                                  | Fix `ecf7a2e`; 121 independent probes pass; full checks pending; audit merged from `527f7b5`              |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:437846f95d8fc1b59e8b6aed92f360110a4df975347393dec096581adc8de82f> | AFA-236 finite conversion overflow                                  | Fix `ecf7a2e`; 121 independent probes and full checks pass; PR pending                                    |
 
 Sessions use isolated prepared worktrees. Full checks and mutation runs have one shared execution
 slot, initially publication → AFA-75 → AFA-78 → AFA-236; sessions pass it by message. Focused tests
@@ -496,7 +496,12 @@ F9 focused validation at `ecf7a2e`: 14 conversion-overflow tests, 104 tests acro
 inference, units and corpus suites, 488 tests for the other affected feature routes/public
 examples, and 1,092 ESM/CommonJS checks passed. Lint, TypeScript, build, size and exported-API
 checks passed. Baseline `b79eae0` failed the six intended regression cases in source and each
-package format. Full `pnpm check` and mutation testing await the shared execution slot.
+package format. Full `pnpm check` passed at `6b58f92` on 2026-11-06: 3,399 unit tests,
+100% statement/branch/function/line coverage, TypeScript, 99.78% mutation score, build, size,
+exported-API checks, and 3,484 ESM/CommonJS tests. All 96 `units.ts` mutants were killed;
+`node .github/scripts/mutation-check.mjs --base origin/main` also passed. The three surviving
+mutants are in unchanged source lines. ESM size is 4.64 kB (baseline 4.62 kB); CommonJS remains
+4.70 kB when rounded, both under the unchanged 5 kB limit.
 
 ## Reproducing the audit
 
