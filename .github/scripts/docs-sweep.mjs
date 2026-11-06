@@ -6,7 +6,8 @@
 // screen, input chips that run into their results or the hero demo's arrows, values that wrap,
 // and navigation that is missing or collides. It runs the checks again with the hero demo
 // expanded, checks that all eight rows append in order, then collapses back to the same four
-// curated rows and card height. The page defaults to docs/index.html. --touch emulates a touch screen.
+// curated rows and card height. It also checks keyboard focus leaving the phone menu at 390×844
+// in both themes. The page defaults to docs/index.html. --touch emulates a touch screen.
 // It also checks no-script anchor visibility with keyboard and pointer at phone/desktop sizes.
 //
 // It exits 0 when it finds no problem, 1 when it finds one, and 2 when it can't run. The checks
@@ -24,6 +25,7 @@ import {
   sweepWidths,
 } from './docs-chrome.mjs';
 import { checkFocus } from './docs-focus.mjs';
+import { checkMenuFocus } from './docs-menu-focus.mjs';
 import { noScriptNavigation } from './docs-no-script-navigation.mjs';
 
 /** Runs in the page. Returns a list of the problems at the current width, without repeats. */
@@ -246,6 +248,7 @@ const { from, to, step, touch } = options;
 const chrome = requireChrome();
 // Each problem, with the places where it appears.
 const problems = new Map();
+const keyboardProblems = [];
 let browser;
 try {
   browser = await launchChrome(chrome);
@@ -253,6 +256,10 @@ try {
     problems.set(problem, [...(problems.get(problem) ?? []), { scheme, width }]);
   }
   for (const scheme of ['light', 'dark']) {
+    await browser.load(url, { width: 390, height: 844, scale: 1, scheme, touch });
+    for (const problem of await checkMenuFocus(browser)) {
+      keyboardProblems.push(`${problem} :: ${scheme} 390×844`);
+    }
     await browser.load(url, { width: from, height: 900, scale: 1, scheme, touch });
     for (const width of sweepWidths(from, to, step)) {
       await browser.send('Emulation.setDeviceMetricsOverride', {
@@ -330,6 +337,7 @@ try {
 }
 
 if (process.exitCode !== EXIT_ERROR) {
+  for (const problem of keyboardProblems) console.log(problem);
   for (const [problem, places] of problems) {
     console.log(`${problem} :: ${formatPlaces(places, step)}`);
   }
@@ -345,4 +353,6 @@ if (process.exitCode !== EXIT_ERROR) {
       `No problems between ${from} and ${to}px, in light and dark, or with no-script navigation at 390 and 1440px.`
     );
   }
+  if (keyboardProblems.length) process.exitCode = 1;
+  else console.log('Phone menu keyboard focus passes at 390×844, in light and dark.');
 }
