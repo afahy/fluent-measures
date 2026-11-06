@@ -82,6 +82,8 @@ describe('quotation context and spaced unit marks', () => {
     ['“one hundred and 50” pounds', 150, 'lb'],
     ['tone’ 5 ft', 5, 'ft'],
     ['one’s 180 lbs', 180, 'lb'],
+    // Without an opening quote, an ASCII apostrophe attached to a word keeps that boundary.
+    ["12kilo 6 'foot", 12, 'kg'],
   ] as const)('reads contextual form %s as %s %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });

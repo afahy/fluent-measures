@@ -111,7 +111,7 @@ const QUOTED_UNIT = new RegExp(
 // An explicit unit after a closing quote owns the number. Do this before mapping primes, which
 // are always unit marks. Keep paired apostrophes for their existing quotation rule below.
 const QUOTE_BEFORE_UNIT = new RegExp(
-  String.raw`(?=[’”'"])(?<=${NUMBER_END}\s*)(?:[”"]|(?<!['’])['’](?!['’]))(?=\s*(?=[a-z])(?:${LABELS})\b)`,
+  String.raw`(?=[’”])(?<=${NUMBER_END}\s*)(?:”|(?<!['’])’(?!['’]))(?=\s*(?=[a-z])(?:${LABELS})\b)`,
   'gi'
 );
 
