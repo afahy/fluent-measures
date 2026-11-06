@@ -49,7 +49,7 @@ const LABEL_PATTERN = new RegExp(
 // forms can't overlap, so a long number that isn't a fraction fails in linear time.
 const FRACTION_NUMBER = String.raw`(\d+(?:\.\d+)?|\.\d+)`;
 // Retain the preceding feet/mark context when normalizing a range substring.
-const FRACTION_OWNER = String.raw`(?:(?<!\p{L})(?:feet|foot|ft)|(?<=[\d¼-¾⅐-⅞↉])['"])[\s,()[\]]*`;
+const FRACTION_OWNER = String.raw`(?:(?<!\p{L})(?:feet|foot|ft)|['"])\s*`;
 // A whole number is optional. Without one, the numerator can't follow a letter or quote mark,
 // even after spaces: there the slash separates two measurements, as in "5'10/180" and
 // "5 ft 10/180 lbs". Punctuation breaks that context: fractions after a comma or bracket

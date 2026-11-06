@@ -111,15 +111,18 @@ describe('fraction boundaries', () => {
     }
   );
 
-  it.each(["5'10/180-190 lbs", '5 ft 10/180-190 lbs', '5 feet 10/180–190 lbs'])(
-    'keeps the independent height before a weight range in %s',
-    raw => {
-      expect(parseMeasurement(raw, { type: 'height' })).toMatchObject({
-        value: 70, // 5 × 12 + 10; PARSING.md Ranges omits only the weight range.
-        unit: 'in',
-      });
-    }
-  );
+  it.each([
+    "5'10/180-190 lbs",
+    '5 ft 10/180-190 lbs',
+    '5 feet 10/180–190 lbs',
+    "five'10/180-190 lbs",
+    '5 FOOT 10/180-190 lbs',
+  ])('keeps the independent height before a weight range in %s', raw => {
+    expect(parseMeasurement(raw, { type: 'height' })).toMatchObject({
+      value: 70, // 5 × 12 + 10; PARSING.md Ranges omits only the weight range.
+      unit: 'in',
+    });
+  });
 
   // AFA-74 and PARSING.md: an omitted range does not take an independent measurement's unit.
   it.each(['5/2-180 lbs; 70 kg', '180-5/2 lbs; 70 kg'])(

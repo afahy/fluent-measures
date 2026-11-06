@@ -439,7 +439,7 @@ main results; the other four remain corrections:
 | `1⁄2/180 lbs`                    | 0.011111111111111112 lb | 180 lb                  |
 
 Permanent regressions: `tests/parseMeasurement.fractionBoundaries.test.ts`; the package runner
-reuses the same assertions through ESM and CommonJS. Thirty-seven ticket-sourced corpus entries and
+reuses the same assertions through ESM and CommonJS. Thirty-nine ticket-sourced corpus entries and
 the affected feature maps record the paths. The original fractions, numeric commas, valid
 shorthand, range ownership and F1 quoted-digit boundary remain covered. No exported type or
 public example changes, and no tokenizer refactor is included.
@@ -668,11 +668,12 @@ CommonJS, within the unchanged 5 kB limits. Predecessor main CI passed all 12 CI
 [workflow run 42290644313](https://github.com/afahy/fluent-measures/actions/runs/42290644313),
 completed 2026-11-06 20:48:38 UTC; its paginated late-comment audit found no unhandled findings.
 
-After the approved preservation policy, the F4 regression suite has 70 tests. Against main
-`b74d185`, 19 source and 38 ESM/CommonJS assertions fail; the other 51 per format are
-preservation controls. All 70 pass with the updated implementation. Thirteen independent-probe
+After the approved preservation policy, the F4 regression suite has 72 tests. Against main
+`b74d185`, 19 source and 38 ESM/CommonJS assertions fail; the other 53 per format are
+preservation controls. All 72 pass with the updated implementation. Self-review also preserves the same range context
+when the feet use a number word (`five'10/180-190 lbs`) or uppercase unit alias. Thirteen independent-probe
 expectations were revised only for the approved punctuation policy; re-running all 102 probes
-passes 101 per format, with only the separately filed AFA-238 still failing. All 37 new corpus
+passes 101 per format, with only the separately filed AFA-238 still failing. All 39 new corpus
 entries agree. Final full checks and fresh changed-lines mutation validation remain pending
 the reserved shared slot; the earlier full-check evidence above applies to `1e1a23b`.
 
