@@ -15,20 +15,20 @@ state. No runtime module schedules work, performs I/O, retries a call, or awaits
 
 ## Inventory and invariants
 
-| Machine                                  | State carried by the implementation                                                           | Source at the audit baseline                                                                     |
-| ---------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| M0: call lifecycle                       | Input, options, selected type, current type pass, terminal result                             | `src/parseMeasurement.ts`, `parseMeasurement`                                                    |
-| M1: text normalization                   | Current text; numeric-comma `valid` flag; quote/minus context                                 | `src/tokenize.ts`, `normalizeForms`, `normalizeNumericCommas`, `normalizeFractions`, `normalize` |
-| M2: token emission                       | Marker text, pending `label`, pending `startsField`, token list                               | `src/tokenize.ts`, `tokenize`, `tokenizeNormalized`, `trimTrailing`                              |
-| M3: ranges and shorthand                 | Range boundaries, surrounding unit ownership, rewritten token array                           | `src/parseMeasurement.ts`, before the type loop                                                  |
-| M4: number grammar                       | `hasHundred`, `hasThousand`, `current`, `total`, previous word                                | `src/wordsToNumber.ts`, `wordsToNumber`                                                          |
-| M5: phrase scanning                      | Start/end index, direction, accumulated phrase, last valid value, sign, half/multiplier state | `src/parseMeasurement.ts`, `readNumberPhrase`, `readSignedPhrase`, `skipSemicolons`              |
-| M6: unit recognition                     | Exact/fuzzy candidate, closest distance budget; edit-distance working row                     | `src/matchUnit.ts`, `src/levenshtein.ts`                                                         |
-| M7: token ownership                      | `used`, unit scan index, proposed match interval, label ownership, matches                    | `src/parseMeasurement.ts`, `remainingWords`, `readValueAfter`, `labelHasValue`, type loop        |
-| M8: invalid fields and unsupported parts | `fieldOf`, `signedFields`, `matchFields`; original and remaining token views                  | `src/parseMeasurement.ts`, `isUnsupportedUnit`, `hasUnsupportedPart`, type loop                  |
-| M9: measurement assembly                 | Part groups, counted nonzero groups, target unit, totals, agreement threshold                 | `src/parseMeasurement.ts`, `combineParts`, `total`; `src/units.ts`                               |
-| M10: unqualified fallback                | No surviving explicit match; whole-input number; inferred unit                                | `src/parseMeasurement.ts`, end of the type loop                                                  |
-| M11: call isolation                      | Fresh local state per call; shared lookup tables and regular expressions                      | All `src/`; exports in `src/index.ts`, contract in `src/types.ts`                                |
+| Machine                                  | State carried by the implementation                                                           | Source at the audit baseline                                                                                      |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| M0: call lifecycle                       | Input, options, selected type, current type pass, terminal result                             | `src/parseMeasurement.ts`, `parseMeasurement`                                                                     |
+| M1: text normalization                   | Current text; numeric-comma `valid` flag; quote/minus context                                 | `src/tokenize.ts`, `normalizeForms`, `normalizeNumericCommas`, `normalizeFractions`, `writeFraction`, `normalize` |
+| M2: token emission                       | Marker text, pending `label`, pending `startsField`, token list                               | `src/tokenize.ts`, `tokenize`, `tokenizeNormalized`, `trimTrailing`                                               |
+| M3: ranges and shorthand                 | Range boundaries, surrounding unit ownership, rewritten token array                           | `src/parseMeasurement.ts`, before the type loop                                                                   |
+| M4: number grammar                       | `hasHundred`, `hasThousand`, `current`, `total`, previous word                                | `src/wordsToNumber.ts`, `wordsToNumber`                                                                           |
+| M5: phrase scanning                      | Start/end index, direction, accumulated phrase, last valid value, sign, half/multiplier state | `src/parseMeasurement.ts`, `readNumberPhrase`, `readSignedPhrase`, `skipSemicolons`                               |
+| M6: unit recognition                     | Exact/fuzzy candidate, closest distance budget; edit-distance working row                     | `src/matchUnit.ts`, `src/levenshtein.ts`                                                                          |
+| M7: token ownership                      | `used`, unit scan index, proposed match interval, label ownership, matches                    | `src/parseMeasurement.ts`, `remainingWords`, `readValueAfter`, `labelHasValue`, type loop                         |
+| M8: invalid fields and unsupported parts | `fieldOf`, `signedFields`, `matchFields`; original and remaining token views                  | `src/parseMeasurement.ts`, `isUnsupportedUnit`, `hasUnsupportedPart`, type loop                                   |
+| M9: measurement assembly                 | Part groups, counted nonzero groups, target unit, totals, agreement threshold                 | `src/parseMeasurement.ts`, `combineParts`, `total`; `src/units.ts`                                                |
+| M10: unqualified fallback                | No surviving explicit match; whole-input number; inferred unit                                | `src/parseMeasurement.ts`, end of the type loop                                                                   |
+| M11: call isolation                      | Fresh local state per call; shared lookup tables and regular expressions                      | All `src/`; exports in `src/index.ts`, contract in `src/types.ts`                                                 |
 
 The intended invariants, and their limits, are:
 
@@ -88,7 +88,7 @@ Likewise, unknown runtime units/types are not silently treated as valid contract
 
 ### M1 — ordered normalization and lexical context
 
-Source: `tokenize.ts:65–217`. This is a pipeline with implicit context states, rather than one
+Source: `tokenize.ts:60–217`. This is a pipeline with implicit context states, rather than one
 scanner. Later passes cannot recover characters discarded by earlier ones.
 
 | From                | Input / guard                                                    | Action                                                                                         | To                                    |
@@ -116,18 +116,18 @@ Source: `tokenize.ts:220–295`. The order is: two-apostrophe handling; capital 
 lowercase; numeric-range markers; label markers; pound signs; word-comma boundaries; punctuation;
 unit-prefix sign handling; splitting; trailing-period trimming; marker decoding.
 
-| From                    | Token/event                                   | Action                                                                           | To                            |
-| ----------------------- | --------------------------------------------- | -------------------------------------------------------------------------------- | ----------------------------- |
-| Ordinary lowercase text | Numeric range and `rangeBoundaries` requested | Write internal `RANGE` marker                                                    | Boundary pending              |
-| Ordinary text           | Supported label punctuation/context           | Write `FIELD` if separated; then `NAME` or `UNIT`; expand short `in`/`m` aliases | Label markers pending         |
-| Ordinary text           | Number word + comma + spaced digits           | Preserve `COMMA` non-number token                                                | Phrase boundary               |
-| Ordinary text           | Comma between number words                    | Remove comma as punctuation                                                      | Joined words; F1              |
-| No pending metadata     | `FIELD`                                       | Set pending `startsField = true`                                                 | Field pending                 |
-| Any pending state       | `NAME` / `UNIT`                               | Set pending label kind                                                           | Label pending                 |
-| Pending state           | `RANGE`                                       | Emit `{ text: '-', range: true }`; clear pending metadata                        | No pending metadata           |
-| Pending label           | Ordinary token                                | Emit label kind and `startsField`; clear metadata                                | No pending metadata           |
-| No pending label        | Ordinary token                                | Emit `{ text }`; clear metadata                                                  | No pending metadata           |
-| Token emitted           | Trailing periods                              | Remove them with a backward linear scan                                          | Trimmed token, possibly empty |
+| From                    | Token/event                                   | Action                                                                           | To                           |
+| ----------------------- | --------------------------------------------- | -------------------------------------------------------------------------------- | ---------------------------- |
+| Ordinary lowercase text | Numeric range and `rangeBoundaries` requested | Write internal `RANGE` marker                                                    | Boundary pending             |
+| Ordinary text           | Supported label punctuation/context           | Write `FIELD` if separated; then `NAME` or `UNIT`; expand short `in`/`m` aliases | Label markers pending        |
+| Ordinary text           | Number word + comma + spaced digits           | Preserve `COMMA` non-number token                                                | Phrase boundary              |
+| Ordinary text           | Comma between number words                    | Remove comma as punctuation                                                      | Joined words; F1             |
+| Split word              | Trailing periods, before marker decoding      | Remove them with `trimTrailing`, a backward linear scan                          | Trimmed word, possibly empty |
+| No pending metadata     | `FIELD`                                       | Set pending `startsField = true`                                                 | Field pending                |
+| Any pending state       | `NAME` / `UNIT`                               | Set pending label kind                                                           | Label pending                |
+| Pending state           | `RANGE`                                       | Emit `{ text: '-', range: true }`; clear pending metadata                        | No pending metadata          |
+| Pending label           | Ordinary token                                | Emit label kind and `startsField`; clear metadata                                | No pending metadata          |
+| No pending label        | Ordinary token                                | Emit `{ text }`; clear metadata                                                  | No pending metadata          |
 
 Input is lowercased before uppercase markers are inserted; users cannot inject marker words by
 typing their names. The decoder resets pending flags after every ordinary/range token. At this
@@ -379,7 +379,7 @@ concerns but have different failure causes and existing preservation requirement
 
 | Work stream                 | Tickets / order                      | State and required handoff                                                                                                                                    |
 | --------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Publish this audit          | [AFA-235][audit]                     | Document prepared locally; fresh publication session to run checks and submit it                                                                              |
+| Publish this audit          | [AFA-235][audit]                     | Publication self-review and full checks passed; PR submission and review pending                                                                              |
 | Separate tokenizer refactor | [AFA-88][refactor]                   | In Progress; preserve existing remote branch `apfahy/afa-88-read-every-number-form-in-one-tokenizer-pass`, last observed `ded9ee0`; requires maintainer merge |
 | Boundary and number fixes   | AFA-75 → AFA-74 → AFA-202 → AFA-62   | Pause lifted by maintainer on 2026-11-06; fresh sessions fix one ticket per PR                                                                                |
 | Quote and ownership fixes   | AFA-78 → AFA-203 → AFA-116 → AFA-107 | Pause lifted by maintainer on 2026-11-06; fresh sessions fix one ticket per PR                                                                                |
@@ -405,12 +405,12 @@ Each fix session must:
 
 ### Session ledger
 
-| Session                                                                                                                           | Assigned work                                                       | Launch state                                           |
-| --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------ |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:ab3e225544f4690efa2764d0a191792e86a687eff06d7b4e3bb8c5380b1b736d> | AFA-235 publication and review of this document                     | Started; full validation and PR pending                |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:9df9034c3ce42adbebf696dd9b9d990bec04b84a9494a53e3c9bf77d6c1fc1d4> | AFA-75, then fresh successor sessions for AFA-74, AFA-202, AFA-62   | AFA-75 claimed In Progress; successors not yet started |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1a5f5b908ee23500b3eab3c85521ed6236b310c0f375af966f353457aef7d25e> | AFA-78, then fresh successor sessions for AFA-203, AFA-116, AFA-107 | AFA-78 claimed In Progress; successors not yet started |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:437846f95d8fc1b59e8b6aed92f360110a4df975347393dec096581adc8de82f> | AFA-236 finite conversion overflow                                  | Started; implementation pending                        |
+| Session                                                                                                                           | Assigned work                                                       | Launch state                                                                                 |
+| --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:ab3e225544f4690efa2764d0a191792e86a687eff06d7b4e3bb8c5380b1b736d> | AFA-235 publication and review of this document                     | Self-review and full validation passed; PR pending                                           |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:9df9034c3ce42adbebf696dd9b9d990bec04b84a9494a53e3c9bf77d6c1fc1d4> | AFA-75, then fresh successor sessions for AFA-74, AFA-202, AFA-62   | Implementation and independent review ready; full checks pending; successors not yet started |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1a5f5b908ee23500b3eab3c85521ed6236b310c0f375af966f353457aef7d25e> | AFA-78, then fresh successor sessions for AFA-203, AFA-116, AFA-107 | AFA-78 claimed In Progress; successors not yet started                                       |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:437846f95d8fc1b59e8b6aed92f360110a4df975347393dec096581adc8de82f> | AFA-236 finite conversion overflow                                  | Implementation and focused tests ready; independent review and full checks pending           |
 
 Sessions use isolated prepared worktrees. Full checks and mutation runs have one shared execution
 slot, initially publication → AFA-75 → AFA-78 → AFA-236; sessions pass it by message. Focused tests
@@ -419,11 +419,16 @@ mutation, PR-lifecycle and document-update requirements. Launch status is not fi
 
 ## Validation record
 
-`pnpm install` and `pnpm build` passed. The independent audit harness produced the failures
-listed above. The unchanged invariant, semantic property, corpus, README and parsing-example
-suites passed: 361 tests across five files. The document passes Prettier and CSpell. Full
-`pnpm check` remains the publication and fix sessions' responsibility. No production code or
-permanent test file was changed by this audit.
+The parent audit passed `pnpm install`, `pnpm build`, and the unchanged invariant, semantic
+property, corpus, README and parsing-example suites: 361 tests across five files.
+
+The fresh publication session rechecked all runtime source files and passed `pnpm install` and
+`pnpm check` on 2026-11-06: 3,385 unit tests with coverage, TypeScript, mutation testing (99.78%),
+build, bundle-size and API checks, and 3,456 package tests. It reran the embedded harness against
+the unchanged baseline implementation: exactly 18 expected failing probes and 4 passing controls,
+including retries and four workers. The temporary probe file was removed. Final documentation
+edits passed Prettier and CSpell. No production code or permanent test file was changed by this
+audit. Each fix session remains responsible for its own regression tests and full checks.
 
 ## Reproducing the audit
 
@@ -482,14 +487,14 @@ describe('state machine audit', () => {
     expect(parseMeasurement(raw)).toBeNull();
   });
 
-  it('AFA-107 positive result invariant', () => {
+  it('AFA-107 inferred underflow is rejected', () => {
     expect(
       parseMeasurement(`0.${'0'.repeat(322)}1`, {
         type: 'height',
         allowUnqualified: true,
         normalizedUnit: 'ft',
-      })?.value
-    ).toBeGreaterThan(0);
+      })
+    ).toBeNull();
   });
 
   it.each([
