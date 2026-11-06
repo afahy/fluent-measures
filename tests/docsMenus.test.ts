@@ -36,7 +36,7 @@ function headerMenus(): {
       },
     };
   }
-  const menus = [menu(), menu()];
+  const menus = [menu()];
   const scrim = { hidden: false };
   const events: Record<string, (event: Event) => void> = {};
   runInNewContext(script, {
@@ -55,7 +55,7 @@ describe('header menu focus', () => {
   // AFA-219: Tab reaches the theme control and then Copy; Shift+Tab reaches the brand.
   it('dismisses the phone overlay without returning focus when focus leaves it', () => {
     const { menus, scrim } = headerMenus();
-    menus[0].events.focusout?.({ relatedTarget: menus[1].child });
+    menus[0].events.focusout?.({ relatedTarget: { closest: () => null } });
     menus[0].events.toggle({});
     expect(menus[0].open).toBe(false);
     expect(scrim.hidden).toBe(true);
@@ -71,7 +71,7 @@ describe('header menu focus', () => {
     }
   });
 
-  it('dismisses either menu when focus leaves the document', () => {
+  it('dismisses the menu when focus leaves the document', () => {
     expect.hasAssertions();
     const { menus } = headerMenus();
     for (const menu of menus) {
@@ -116,7 +116,6 @@ describe('header menu focus', () => {
 
   it('still returns focus to the summary on Escape', () => {
     const { menus, events } = headerMenus();
-    menus[1].open = false;
     events.keydown({ key: 'Escape' });
     expect(menus[0].open).toBe(false);
     expect(menus[0].summary.focus).toHaveBeenCalledOnce();

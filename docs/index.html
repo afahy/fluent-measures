@@ -111,10 +111,6 @@
         box-shadow: 0 8px 20px -12px rgba(0, 0, 0, 0.7);
       }
 
-      .theme-panel {
-        box-shadow: 0 16px 32px -12px rgba(0, 0, 0, 0.7);
-      }
-
       .page-scrim {
         background: rgba(0, 0, 0, 0.5);
       }
@@ -416,26 +412,20 @@
               </div>
             </div>
           </details>
-          <details class="theme-menu" data-theme-menu>
-            <summary class="icon-link" aria-label="Color theme">
-              <svg class="icon theme-light" aria-hidden="true"><use href="#i-sun" /></svg>
-              <svg class="icon theme-dark" aria-hidden="true"><use href="#i-moon" /></svg>
-            </summary>
-            <div class="theme-panel" role="group" aria-label="Color theme">
-              <button type="button" aria-pressed="false" data-theme-choice="light">
-                <svg class="icon icon-sm" aria-hidden="true"><use href="#i-sun" /></svg>
-                Light
-              </button>
-              <button type="button" aria-pressed="false" data-theme-choice="dark">
-                <svg class="icon icon-sm" aria-hidden="true"><use href="#i-moon" /></svg>
-                Dark
-              </button>
-              <button type="button" aria-pressed="false" data-theme-choice="system">
-                <svg class="icon icon-sm" aria-hidden="true"><use href="#i-monitor" /></svg>
-                System
-              </button>
-            </div>
-          </details>
+          <div class="theme-toggle" role="group" aria-label="Color theme">
+            <label title="Light theme">
+              <input type="radio" name="theme" value="light" aria-label="Light" />
+              <svg class="icon icon-sm" aria-hidden="true"><use href="#i-sun" /></svg>
+            </label>
+            <label title="System theme">
+              <input type="radio" name="theme" value="system" aria-label="System" checked />
+              <svg class="icon icon-sm" aria-hidden="true"><use href="#i-monitor" /></svg>
+            </label>
+            <label title="Dark theme">
+              <input type="radio" name="theme" value="dark" aria-label="Dark" />
+              <svg class="icon icon-sm" aria-hidden="true"><use href="#i-moon" /></svg>
+            </label>
+          </div>
           <a
             class="icon-link header-github"
             href="https://github.com/afahy/fluent-measures"
@@ -2391,9 +2381,9 @@ const strict = parseMeasurement(
           });
         });
 
-        // Header menus ("On this page" and the theme picker): one open at a time. They close
-        // after a choice, on Escape, or when focus or a click moves outside.
-        const menus = [...document.querySelectorAll('[data-page-menu], [data-theme-menu]')];
+        // The "On this page" menu closes after a choice, on Escape, or when focus or a click
+        // moves outside.
+        const menus = [...document.querySelectorAll('[data-page-menu]')];
         const pageMenu = document.querySelector('[data-page-menu]');
         const scrim = document.querySelector('[data-page-scrim]');
         let pressedMenu = null;
@@ -2412,7 +2402,7 @@ const strict = parseMeasurement(
             if (menu === pageMenu && scrim) scrim.hidden = !menu.open;
           });
           menu.addEventListener('click', event => {
-            if (event.target.closest('a, button[data-theme-choice]')) menu.open = false;
+            if (event.target.closest('a')) menu.open = false;
           });
           menu.addEventListener('focusout', event => {
             if (event.relatedTarget === null && pressedMenu === menu) return;
@@ -2439,26 +2429,18 @@ const strict = parseMeasurement(
 
         // Theme: light, dark, or the system setting (the default). The head script applies it.
         const root = document.documentElement;
-        const themeButtons = [...document.querySelectorAll('button[data-theme-choice]')];
+        const themeInputs = [...document.querySelectorAll('.theme-toggle input')];
 
-        function showThemeChoice() {
-          themeButtons.forEach(button => {
-            const pressed = button.dataset.themeChoice === root.dataset.themePref;
-            button.setAttribute('aria-pressed', String(pressed));
-          });
-        }
-
-        themeButtons.forEach(button => {
-          button.addEventListener('click', () => {
-            const choice = button.dataset.themeChoice;
+        themeInputs.forEach(input => {
+          input.checked = input.value === root.dataset.themePref;
+          input.addEventListener('change', () => {
+            const choice = input.value;
             root.dataset.themePref = choice;
             if (choice === 'system') storage.remove('fluent-measures:theme');
             else storage.set('fluent-measures:theme', choice);
             window.fluentMeasuresTheme?.();
-            showThemeChoice();
           });
         });
-        showThemeChoice();
 
         // Latest npm release, read from the registry so it never goes stale.
         const versionPills = [...document.querySelectorAll('[data-npm-version]')];

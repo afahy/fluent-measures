@@ -17,7 +17,7 @@ function focusState() {
     open: menu.open,
     inside: menu.contains(el),
     summary: el === menu.querySelector('summary'),
-    theme: el.matches('[data-theme-menu] > summary'),
+    theme: el.matches('.theme-toggle input'),
     copy: el.matches('.hero button[aria-label="Copy install command"]'),
     visible:
       r.width > 0 &&
@@ -104,25 +104,25 @@ export async function checkMenuFocus(browser) {
 
   // Emulate a browser that clears keyboard focus on a press without focusing the choice.
   // Real pointer events must still deliver the subsequent click to the link or theme button.
-  for (const [selector, choice, result] of [
-    ['[data-page-menu]', 'a[href="#api"]', 'location.hash === "#api"'],
+  for (const [choice, staysOpen, result] of [
+    ['[data-page-menu] a[href="#api"]', true, 'location.hash === "#api"'],
     [
-      '[data-theme-menu]',
-      'button[data-theme-choice="dark"]',
+      '.theme-toggle input[value="dark"]',
+      false,
       'document.documentElement.dataset.themePref === "dark"',
     ],
   ]) {
     await browser.evaluate(`(() => {
       scrollTo({ top: 0, behavior: 'instant' });
-      const menu = document.querySelector(${JSON.stringify(selector)});
+      const menu = document.querySelector('[data-page-menu]');
       menu.open = false;
       menu.querySelector('summary').focus();
     })()`);
     await press('Enter', 'Enter', 13);
     await sleep(60);
     const point = await browser.evaluate(`(() => {
-      const menu = document.querySelector(${JSON.stringify(selector)});
-      const choice = menu.querySelector(${JSON.stringify(choice)});
+      const menu = document.querySelector('[data-page-menu]');
+      const choice = document.querySelector(${JSON.stringify(choice)});
       window.pointerFocusCheck = {};
       menu.addEventListener('focusout', event => {
         window.pointerFocusCheck.nullTarget = event.relatedTarget === null;
@@ -149,8 +149,8 @@ export async function checkMenuFocus(browser) {
     });
     await sleep(500);
     const worked = await browser.evaluate(`Boolean(window.pointerFocusCheck.nullTarget &&
-      window.pointerFocusCheck.openDuringPress && (${result}) &&
-      !document.querySelector(${JSON.stringify(selector)}).open)`);
+      window.pointerFocusCheck.openDuringPress === ${staysOpen} && (${result}) &&
+      !document.querySelector('[data-page-menu]').open)`);
     if (!worked) problems.push(`MENU-FOCUS pointer choice lost when focus clears: ${choice}`);
   }
   // Leave subsequent layout checks governed by their requested system color scheme.
