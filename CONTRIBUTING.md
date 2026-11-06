@@ -123,6 +123,38 @@ argument and defaults to `docs/index.html`. A URL, such as `http://localhost:808
 For example, `pnpm docs:shot --width 1440 --scheme dark --full` takes the whole page at desktop
 width in dark, and writes `docs-shots/1440-dark-full.png`.
 
+`pnpm docs:audit` serves the committed docs files locally and runs Lighthouse three times on
+mobile and three times on desktop. Every run must score 100 in Performance, Accessibility,
+Best Practices and SEO. It uses Lighthouse's standard presets, including their normal network
+and CPU throttling. The local server compresses responses like GitHub Pages; it does not build
+or substitute page content. To audit the deployment, run:
+
+```bash
+pnpm docs:audit --url https://afahy.github.io/fluent-measures/
+```
+
+The command also runs axe against WCAG 2.2 A/AA rules and accessibility best practices at 320,
+390, 768 and 1440 CSS pixels, in both themes. It visits the initial page, expanded disclosures,
+every example tab, the narrow navigation and the no-script fallback. Text-spacing overrides
+check for overflow and obscured anchor targets, with and without scripts. The 320 CSS-pixel
+viewport also checks the reflow width required for a 1280px window at 400% zoom. The existing
+`docs:sweep` checks layout, keyboard interaction and focus visibility in more detail.
+
+Use `--only accessibility` or `--only lighthouse` for a targeted rerun, and `--runs 1` for a
+single Lighthouse sample per device during development. CI uses all three samples, runs the
+layout sweep, and makes both part of `ci-ok`. Do not lower the score threshold, disable audits
+or select only the best run to make a failure pass. Check the saved report for the cause.
+
+JSON and HTML reports go in `reports/docs-audit/`; CI uploads them as the `docs-audit` artifact
+even when a check fails. Axe's `incomplete` results are retained for review, not counted as
+passed rules. Reports from a later run replace files with the same name.
+
+WCAG is a conformance standard, not a numerical score. The target is
+[WCAG 2.2 AA](https://www.w3.org/TR/WCAG22/), and a perfect automated score alone does not prove
+conformance. Before claiming conformance, also review the items in
+[the docs accessibility review](docs/accessibility.md), including actual assistive-technology
+use. Repeat those checks when content, styles or interactions change.
+
 The sweep also checks the static examples with scripts disabled at 390×844 and 1440×900 in both
 themes, then checks initialized tabs, saved choices and copy feedback, including a blocked
 clipboard library. These controls checks always run, even with a limited layout width range.

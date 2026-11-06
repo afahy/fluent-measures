@@ -79,6 +79,7 @@
   --radius: 10px;
   --radius-sm: 6px;
   --header-h: 64px;
+  --header-offset: var(--header-h);
   --anchor-offset: 96px;
 }
 
@@ -130,8 +131,8 @@ pre {
 }
 
 /*
- * The page loads Prism's "Tomorrow" theme before this file, and that theme is for a dark page.
- * These rules undo it, so the code styles below apply in both color themes.
+ * Code layout and syntax colors belong to this page, in both color themes.
+ * No external Prism stylesheet is needed before the browser can paint the docs.
  */
 
 code[class*='language-'],
@@ -374,9 +375,17 @@ a:hover {
 
 .header-bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 24px;
-  height: var(--header-h);
+  row-gap: 0;
+  min-height: var(--header-h);
+}
+
+/* A native anchor jump must remain visible when a reader enlarges or spaces out text. */
+
+html:not([data-js]) .site-header {
+  position: relative;
 }
 
 .brand {
@@ -623,12 +632,6 @@ a:hover {
 
   .header-bar .site-nav {
     display: none;
-  }
-
-  /* Native anchor jumps cannot close the menu without scripts; let it scroll away. */
-
-  html:not([data-js]) .site-header {
-    position: relative;
   }
 }
 
@@ -1215,7 +1218,7 @@ a:hover {
   font-weight: 500;
   cursor: pointer;
   /* An immediate collapse adjustment leaves the control below the sticky header. */
-  scroll-margin-top: calc(var(--header-h) + 12px);
+  scroll-margin-top: calc(var(--header-offset) + 12px);
   scroll-margin-bottom: 12px;
 }
 
@@ -1346,8 +1349,8 @@ a:hover {
 
   .toc-col .toc {
     position: sticky;
-    top: calc(var(--header-h) + 32px);
-    max-height: calc(100vh - var(--header-h) - 56px);
+    top: calc(var(--header-offset) + 32px);
+    max-height: calc(100vh - var(--header-offset) - 56px);
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-width: thin;
@@ -1510,7 +1513,7 @@ a:hover {
 #ex-basic,
 #ex-feet-inches,
 #ex-null {
-  scroll-margin-top: var(--anchor-offset);
+  scroll-margin-top: max(var(--anchor-offset), calc(var(--header-offset) + 24px));
 }
 
 /*

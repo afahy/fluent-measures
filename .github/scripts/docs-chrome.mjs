@@ -280,6 +280,7 @@ export async function launchChrome(chrome) {
       await sleep(500);
     };
     return {
+      port: Number(port),
       send,
       evaluate,
       load,

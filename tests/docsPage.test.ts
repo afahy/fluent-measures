@@ -116,8 +116,6 @@ const tags = externalTags(page);
 // "curl -fsSL <url> | openssl dgst -sha512 -binary | openssl base64 -A". A new URL with an old
 // hash then fails here, not only in the browser.
 const HASHES: Record<string, string> = {
-  'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css':
-    'sha512-vswe+cgvic/XBoF1OcM/TeJ2FW0OofqAVdCZiEYkd6dwGXthvkSFWOoGGJgS2CW70VK5dQM5Oh+7ne47s74VTg==',
   'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js':
     'sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==',
   'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js':
@@ -264,7 +262,7 @@ function runCopyScript(clipboardJS?: unknown): {
 }
 
 describe('the docs page', () => {
-  // Prism's stylesheet and three scripts, and clipboard.js, all from cdnjs.
+  // Prism's three scripts and clipboard.js, all from cdnjs. The page owns its styles.
   it('loads only the external files whose hashes the test knows', () => {
     expect(tags.map(({ url }) => url).sort()).toEqual(Object.keys(HASHES).sort());
   });

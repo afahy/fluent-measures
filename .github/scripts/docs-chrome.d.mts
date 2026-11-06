@@ -48,6 +48,7 @@ export interface LoadOptions {
 }
 
 export interface Chrome {
+  port: number;
   send(method: string, params?: Record<string, unknown>): Promise<Record<string, unknown>>;
   evaluate(expression: string): Promise<unknown>;
   load(url: string, options: LoadOptions): Promise<void>;
