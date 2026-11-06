@@ -24,7 +24,7 @@ it, a unit name must be exact.
 ## How to verify it
 
 - Source: `src/matchUnit.ts`, `src/levenshtein.ts`
-- Tests: `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.fuzzyUnits.test.ts`, `tests/matchUnit.closest.test.ts`,
+- Tests: `tests/parseMeasurement.signedWeightOwnership.test.ts`, `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.fuzzyUnits.test.ts`, `tests/matchUnit.closest.test.ts`,
   `tests/parseMeasurement.numberWordCommas.test.ts`, `tests/parseMeasurement.commaBetweenWords.test.ts`,
   `tests/levenshtein.test.ts`
 - Properties: "generated single measurements" in `tests/properties.test.ts`
