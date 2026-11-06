@@ -1162,15 +1162,15 @@ html:not([data-js]) .site-header {
   gap: 12px;
 }
 
-.demo-foot a {
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
 .demo-links a {
   display: inline-flex;
   align-items: center;
+  gap: 4px;
   min-height: 44px;
+}
+
+.demo-links a .icon {
+  transform: rotate(90deg);
 }
 
 [data-js] .demo-more {
