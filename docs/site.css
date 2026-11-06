@@ -1065,6 +1065,13 @@ html:not([data-js]) .site-header {
   color: var(--text);
 }
 
+.demo-note {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
 @media (min-width: 640px) and (max-width: 1023px) {
   .demo {
     max-width: 36rem;
