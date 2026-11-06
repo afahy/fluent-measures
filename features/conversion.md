@@ -21,7 +21,7 @@ measurement type.
 ## How to verify it
 
 - Source: `src/units.ts`, `src/parseMeasurement.ts`
-- Tests: `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.unitConversions.test.ts`,
+- Tests: `tests/parseMeasurement.fractionBoundaries.test.ts`, `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.unitConversions.test.ts`,
   `tests/parseMeasurement.numberWordCommas.test.ts`
 - Properties: "generated single measurements" in `tests/properties.test.ts`
 - Properties: "generated number phrases" in `tests/properties.test.ts`
