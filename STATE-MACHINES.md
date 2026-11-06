@@ -262,7 +262,7 @@ aliases expanded to label words retain their label metadata. A zero is a recogni
 not simply a missing value, although several branches use falsy checks with special zero rules.
 The `used` flag moves false → true monotonically within a pass; it is reset at the next type
 pass. Rejected signed matches do not become accepted positive matches. The F5 correction at
-`938c2ff` keeps those original signed tokens visible to M8: rejecting a signed supported field
+`938c2ff` uses those original signed tokens in M8: rejecting a signed supported field
 does not disconnect its separately numbered unsupported weight part.
 
 ### M8 — field rejection and unsupported-part relationships
@@ -457,7 +457,7 @@ public example or exported type changes. Paired-apostrophe quotations retain the
 ### F5 correction — signed supported weight ownership
 
 Status: implemented at `938c2ff`, with the review correction at `488bced`. Focused checks
-and independent review are complete; full validation and PR creation pending. Before: `ef39a7b5fde9a33fd10789a2f25365fed30d0d43` (main).
+and independent review are complete; full validation passed at `9030111`. PR creation pending. Before: `ef39a7b5fde9a33fd10789a2f25365fed30d0d43` (main).
 The original `b79eae0` audit row and 22-test evidence remain historical.
 
 All four ticket inputs now return `null`, with default options and with `type: 'weight'`:
@@ -584,15 +584,15 @@ Each fix session must:
 
 <!-- cspell:ignore Amcp Adelegate -->
 
-| Session                                                                                                                                                                                 | Assigned work                                                       | Launch state                                                                                                                                           |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:ab3e225544f4690efa2764d0a191792e86a687eff06d7b4e3bb8c5380b1b736d>                                                       | AFA-235 publication and review of this document                     | [PR #228](https://github.com/afahy/fluent-measures/pull/228) merged at `527f7b5`; main CI passed                                                       |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:9df9034c3ce42adbebf696dd9b9d990bec04b84a9494a53e3c9bf77d6c1fc1d4>                                                       | AFA-75, then fresh successor sessions for AFA-74, AFA-202, AFA-62   | F1 validated; [PR #229](https://github.com/afahy/fluent-measures/pull/229) tracks review/merge; successors start after merge and main CI               |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1a5f5b908ee23500b3eab3c85521ed6236b310c0f375af966f353457aef7d25e>                                                       | Original AFA-78 implementation and recorded successor queue         | Stopped for the maintainer-requested takeover; clean history preserved through `02d463a`                                                               |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/thread:delegated-task:command%3Amcp%3A07e37d08-94dc-4f21-9274-996c2a7a8c00%3Adelegate-task%3A632fca4a-3251-4d46-b64c-68aa393e85be> | AFA-78 implementation takeover, final validation and PR preparation | Validated at `133aac5`; [PR #231](https://github.com/afahy/fluent-measures/pull/231) prepared for parent stewardship; no successor work                |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/b61ed010-1655-4d08-b5ee-8c6e4d3e7ad4>                                                                                              | AFA-78 PR steward                                                   | Completed PR #231 merge at `ef39a7b`; all 12 exact-merge main CI jobs passed. Retains possible future AFA-88 assessment; no refactor started           |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:437846f95d8fc1b59e8b6aed92f360110a4df975347393dec096581adc8de82f>                                                       | AFA-236 finite conversion overflow                                  | F9 validated; [PR #230](https://github.com/afahy/fluent-measures/pull/230) tracks review/merge; no successor assigned                                  |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1e5640d2dbe8ef251e2bb479d46cc5f4fc59c1597ecd270e7941a88df6893b76>                                                       | Fresh AFA-203 implementation, review and PR stewardship             | Active at `488bced`; independent review handled, focused checks pass. Full validation reserved after AFA-74 and AFA-107; no successor launch ownership |
+| Session                                                                                                                                                                                 | Assigned work                                                       | Launch state                                                                                                                                 |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:ab3e225544f4690efa2764d0a191792e86a687eff06d7b4e3bb8c5380b1b736d>                                                       | AFA-235 publication and review of this document                     | [PR #228](https://github.com/afahy/fluent-measures/pull/228) merged at `527f7b5`; main CI passed                                             |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:9df9034c3ce42adbebf696dd9b9d990bec04b84a9494a53e3c9bf77d6c1fc1d4>                                                       | AFA-75, then fresh successor sessions for AFA-74, AFA-202, AFA-62   | F1 validated; [PR #229](https://github.com/afahy/fluent-measures/pull/229) tracks review/merge; successors start after merge and main CI     |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1a5f5b908ee23500b3eab3c85521ed6236b310c0f375af966f353457aef7d25e>                                                       | Original AFA-78 implementation and recorded successor queue         | Stopped for the maintainer-requested takeover; clean history preserved through `02d463a`                                                     |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/thread:delegated-task:command%3Amcp%3A07e37d08-94dc-4f21-9274-996c2a7a8c00%3Adelegate-task%3A632fca4a-3251-4d46-b64c-68aa393e85be> | AFA-78 implementation takeover, final validation and PR preparation | Validated at `133aac5`; [PR #231](https://github.com/afahy/fluent-measures/pull/231) prepared for parent stewardship; no successor work      |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/b61ed010-1655-4d08-b5ee-8c6e4d3e7ad4>                                                                                              | AFA-78 PR steward                                                   | Completed PR #231 merge at `ef39a7b`; all 12 exact-merge main CI jobs passed. Retains possible future AFA-88 assessment; no refactor started |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:437846f95d8fc1b59e8b6aed92f360110a4df975347393dec096581adc8de82f>                                                       | AFA-236 finite conversion overflow                                  | F9 validated; [PR #230](https://github.com/afahy/fluent-measures/pull/230) tracks review/merge; no successor assigned                        |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1e5640d2dbe8ef251e2bb479d46cc5f4fc59c1597ecd270e7941a88df6893b76>                                                       | Fresh AFA-203 implementation, review and PR stewardship             | Source `488bced`; full checks and changed-line mutation validation passed at `9030111`. Preparing PR; coordinator retains AFA-116 launch     |
 
 Sessions use isolated prepared worktrees. Full checks and mutation runs have one shared execution
 slot, initially publication → AFA-75 → AFA-78 → AFA-236; sessions pass it by message. Focused tests
@@ -683,8 +683,8 @@ With the correction, all 121 pass in source and both package formats. The combin
 and unsupported-unit run passes 344 source tests; 465 further public-example, label, fraction,
 comma, unit and multiple-measurement checks pass. The 550-row corpus has 533 agreements and
 retains every previous agreement. Bundles shrink from 4.93/5.00 kB to 4.92/4.97 kB (ESM/CommonJS),
-within the unchanged 5 kB limits. Full checks and fresh mutation validation await the explicitly
-allocated CPU slot; these focused results do not yet establish merge readiness.
+within the unchanged 5 kB limits. At this initial validation stage, full checks awaited the
+explicitly allocated CPU slot; the final results are recorded below.
 
 F5 independent-review correction at `488bced`: six added regression assertions fail on both
 main `ef39a7b` and the initial correction in each of source, ESM and CommonJS; two further
@@ -696,7 +696,19 @@ ESM and CommonJS, with no remaining disagreement. Another 559 source checks pres
 fields, other types, Unicode signs, labels and public examples; exported types are unchanged.
 The corpus has 556 rows and 539 agreements, preserving every previous agreement. Final focused
 bundle sizes are 4.96/4.98 kB (ESM/CommonJS); the 5 kB limits remain unchanged. The coordinator
-has reserved, but not yet granted, the full-check/mutation/push slot after AFA-107.
+then granted the full-check/mutation/push slot after AFA-107 explicitly released it.
+
+F5 full validation at `9030111` (source `488bced`) on 2026-11-06: `pnpm check` passed
+3,628 unit tests with 100% statement/branch/function/line coverage, TypeScript, 99.78% fresh
+mutation score, build, size, exported-API checks and 3,942 ESM/CommonJS tests. The fresh report
+passes `node .github/scripts/mutation-check.mjs --base origin/main`: all seven mutants in the
+changed lookup were detected (six killed and one timeout); none survives or lacks coverage.
+The three survivors are unchanged baseline option-contract cases: omitting the zero-conversion
+skip, returning a nonnumeric rejection marker, and broadening the prose-exclusion regex only
+outside the documented fuzziness range. Their out-of-contract behavior belongs to AFA-178.
+No public type or example changes, and no bundle-limit increase, are needed. Lint reports only
+the two existing warnings in unchanged test files. Self-review confirms the original audit
+harness and every previous corpus input, expectation, option and source are preserved.
 
 ## Reproducing the audit
 
