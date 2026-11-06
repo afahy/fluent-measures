@@ -413,9 +413,9 @@ F10 remains separately tracked; the general tokenizer refactor is outside this c
 
 ### F2 resolution — quotation context and spaced marks
 
-Status: implemented and regression-tested in the AFA-78 fix branch; final checks and PR pending.
+Status: implemented and locally validated in the AFA-78 fix branch; PR pending.
 Before: `b79eae0`; audit publication integrated from `527f7b5` and F1 from `fa73fd5`.
-F2 implementation after: `95a5a54`.
+F2 implementation after: `95a5a54`; final combined validation at `133aac5` includes F9 from `b74d185`.
 The baseline row above remains historical: its two failures now return 180 lb and 71 in.
 
 `tests/parseMeasurement.quoteContext.test.ts` covers the ticket's description and comments,
@@ -571,8 +571,22 @@ on the fix. The full
 `pnpm check` at `d850230` passed 3,449 source tests with 100% coverage and 3,584 package tests,
 with unchanged exported types and bundles below 5 kB. Its 99.56% mutation result exposed three
 survivors on changed lines: an unnecessary preceding-number guard was removed, and uppercase
-and repeated-quotation tests now fail when either regex loses its flags. Final full-check and
-changed-line mutation validation of `95a5a54` remain pending before publication.
+and repeated-quotation tests now fail when either regex loses its flags.
+
+The implementation takeover preserved that history and added two controls for quoted number
+words touching their named unit: `“seventy”kg` and `‘seventy’kg` both retain 70 kg. Removing the
+space inserted for a closing curly quote makes exactly these two tests fail. The resulting
+73-test suite fails 42 cases on latest baseline `b74d185`, with 31 preservation cases passing;
+all 73 pass with the fix. No further parser implementation change was needed.
+
+Final `pnpm check` passed at merged revision `133aac5` on 2026-11-06: 3,516 source tests,
+100% statement/branch/function/line coverage, TypeScript, 99.78% mutation score, build, size,
+exported-API checks and 3,718 ESM/CommonJS tests. The fresh report passes
+`node .github/scripts/mutation-check.mjs --base origin/main`: every mutant on changed source
+lines is killed. The remaining three survivors are the unchanged baseline option-contract
+cases described in the F9 validation below. Brotli sizes are 4.80 kB ESM and 4.86 kB CommonJS,
+within unchanged 5 kB limits. All 484 corpus rows from `b74d185` are preserved exactly, with
+33 additions; the resulting corpus has 517 rows, 496 agreements and no new disagreements.
 
 F9 focused validation at `ecf7a2e`: 14 conversion-overflow tests, 104 tests across the conversion,
 inference, units and corpus suites, 488 tests for the other affected feature routes/public
