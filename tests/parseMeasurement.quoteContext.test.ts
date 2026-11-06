@@ -128,10 +128,14 @@ describe('quotation context and spaced unit marks', () => {
 
   // Case never changes a unit. Both quoted measurements must be recognized: 154 lb is
   // 69.85322498 kg, within 1% of 70 kg (the documented conversion-agreement example).
-  it.each(['"70" KG', '70” KG', '"70" kg; "154" lbs', '“about 70” kg; “about 154” lbs'])(
-    'retains named units throughout %s',
-    raw => {
-      expect(parseMeasurement(raw)).toMatchObject({ value: 70, unit: 'kg', type: 'weight' });
-    }
-  );
+  it.each([
+    '"70" KG',
+    '70” KG',
+    '“seventy”kg',
+    '‘seventy’kg',
+    '"70" kg; "154" lbs',
+    '“about 70” kg; “about 154” lbs',
+  ])('retains named units throughout %s', raw => {
+    expect(parseMeasurement(raw)).toMatchObject({ value: 70, unit: 'kg', type: 'weight' });
+  });
 });
