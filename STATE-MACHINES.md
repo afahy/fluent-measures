@@ -89,27 +89,36 @@ Likewise, unknown runtime units/types are not silently treated as valid contract
 
 ### M1 — ordered normalization and lexical context
 
-Source: `tokenize.ts:60–217`. This is a pipeline with implicit context states, rather than one
-scanner. Later passes cannot recover characters discarded by earlier ones.
+Source at baseline: `tokenize.ts:60–217`; F4 fraction boundaries updated in `fa607f3`.
+This is a pipeline with implicit context states, rather than one scanner. Later passes cannot recover characters discarded by earlier ones.
 
-| From                | Input / guard                                                    | Action                                                                                         | To                                    |
-| ------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------- |
-| Raw                 | Full-width character or supported compatibility unit             | Convert that character with NFKC                                                               | Forms normalized                      |
-| Raw/forms           | Unicode minus before a number and no earlier number anywhere     | Preserve it as ASCII minus                                                                     | Signed number text                    |
-| Raw/forms           | Unicode minus after any earlier number                           | Leave it for later punctuation removal/range handling                                          | Unsigned/joining context; F3          |
-| Raw/forms           | Prime or acute accent                                            | Convert to ASCII feet/inch mark                                                                | Mark text                             |
-| Raw/forms           | Curly close mark immediately after number/fraction               | Preserve quotation only if recognized numeric opening quote context; otherwise write unit mark | Quote or mark; F2                     |
-| Forms normalized    | Supported numeric comma group                                    | Convert last 1–2 digits to decimal part and remove thousands commas                            | Numeric text                          |
-| Forms normalized    | Numeric group matches comma-size detection but fails grammar     | Set `valid = false`; entire normalized input becomes empty                                     | Rejected text                         |
-| Forms normalized    | Comma is not such a numeric group, or belongs to attached label  | Leave it for tokenization                                                                      | Punctuation text                      |
-| Numeric text        | Proper integer fraction, representable without exponent notation | Replace whole-plus-fraction with decimal text                                                  | Fraction normalized                   |
-| Numeric text        | Improper/decimal/exponent-producing fraction                     | Write `x` boundary                                                                             | Invalid numeric fragment              |
-| Numeric text        | Unicode fraction                                                 | Decode numerator/denominator and apply same numeric writer                                     | Fraction normalized; F4 at boundaries |
-| Fraction normalized | Pipeline complete                                                | Pass text to tokenization/range detection                                                      | M2/M3                                 |
+| From                | Input / guard                                                    | Action                                                                                         | To                           |
+| ------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ---------------------------- |
+| Raw                 | Full-width character or supported compatibility unit             | Convert that character with NFKC                                                               | Forms normalized             |
+| Raw/forms           | Unicode minus before a number and no earlier number anywhere     | Preserve it as ASCII minus                                                                     | Signed number text           |
+| Raw/forms           | Unicode minus after any earlier number                           | Leave it for later punctuation removal/range handling                                          | Unsigned/joining context; F3 |
+| Raw/forms           | Prime or acute accent                                            | Convert to ASCII feet/inch mark                                                                | Mark text                    |
+| Raw/forms           | Curly close mark immediately after number/fraction               | Preserve quotation only if recognized numeric opening quote context; otherwise write unit mark | Quote or mark; F2            |
+| Forms normalized    | Supported numeric comma group                                    | Convert last 1–2 digits to decimal part and remove thousands commas                            | Numeric text                 |
+| Forms normalized    | Numeric group matches comma-size detection but fails grammar     | Set `valid = false`; entire normalized input becomes empty                                     | Rejected text                |
+| Forms normalized    | Comma is not such a numeric group, or belongs to attached label  | Leave it for tokenization                                                                      | Punctuation text             |
+| Numeric text        | Proper integer fraction, representable without exponent notation | Replace whole-plus-fraction with decimal text                                                  | Fraction normalized          |
+| Numeric text        | Improper/decimal/exponent-producing fraction                     | Write `x` boundary                                                                             | Invalid numeric fragment     |
+| Numeric text        | Unicode fraction with integer whole and no trailing digit        | Decode numerator/denominator and apply the numeric writer                                      | Fraction normalized          |
+| Numeric text        | Unicode fraction with decimal whole or trailing digits           | Consume the malformed fragment and write `x`                                                   | Invalid numeric fragment     |
+| Numeric text        | Range with any invalid fraction endpoint                         | Normalize complete ranges first; keep invalid ones as non-shorthand numeric ranges             | Range evidence for M3        |
+| Numeric text        | Slash after feet/marks across brackets or commas; two slashes    | Keep measurement separators; neither slash character permits a partial fraction match          | Separate numeric text        |
+| Fraction normalized | Pipeline complete                                                | Pass text to tokenization/range detection                                                      | M2/M3                        |
 
 Comma rejection is absorbing. Fraction rejection is local: `x` is a non-number, so later valid
-measurements can still be read. That local replacement wrongly destroys range evidence in
-`5/2-180 lbs` (F4). A decimal rewrite next to a digit can instead manufacture `5.52` from `5½2`.
+measurements can still be read. At baseline that replacement destroyed range evidence in
+`5/2-180 lbs`, and a rewrite next to a digit manufactured `5.52` from `5½2`. The F4 correction
+normalizes complete fraction ranges before replacing individual fractions. An invalid endpoint
+becomes a three-endpoint numeric range, which M3 omits without admitting shorthand. Outside
+ranges, it consumes the entire malformed Unicode fragment.
+A proper fractional shorthand such as `5-1/2` retains its existing 60.5-inch result with height
+type. Brackets/commas extend slash ownership only after feet or marks; prose such as
+`weight (1/2 lbs)` still contains a proper half pound.
 
 ### M2 — token construction and pending label state
 
@@ -159,6 +168,8 @@ Source: `parseMeasurement.ts:361–453`.
 Preprocessing changes token text before the height/weight passes. The per-type reset restores
 consumption flags, not erased range-unit text. This is deliberate, not leaked state from a prior
 call. The public example `6 1-2 ft 3 in` permits dropping the range to retain 75 inches.
+With F4, invalid slash fractions on either endpoint reach this same range machine; M3 itself
+is unchanged. The range unit cannot claim the later 70 kg in `180-5/2 lbs; 70 kg`.
 
 ### M4 — number grammar accumulator
 
@@ -365,7 +376,7 @@ ordinary input frequency above extreme-number rejection.
 | ------------------ | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
 | F1 / High          | `my son is two, thirty pounds`; `twenty, one hundred pounds`                                                    | 230 lb; 2100 lb                                 | 30 lb; 100 lb, specified by [AFA-75][commas]                                                           | Baseline M2 boundary loss; correction in [PR #229](https://github.com/afahy/fluent-measures/pull/229) |
 | F2 / High          | `he said “about 180” lbs`; `5 ’11”`                                                                             | 180 in (height); 11 in                          | 180 lb; 71 in, [AFA-78][quotes]                                                                        | M1 quotation → unit, or omitted feet → partial success                                                |
-| F4 / High          | `5/2-180 lbs`; `5½2 lb`; `5.5 ½ ft`; `5 ft (10/180 lbs)` with weight type                                       | 180 lb; 5.52 lb; 0.5 ft; 0.05555555555555555 lb | `null`; `null`; `null`; 180 lb, [AFA-74][fractions]                                                    | M1 rewrites away range/fraction boundaries or measurement ownership before M3/M7                      |
+| F4 / High          | `5/2-180 lbs`; `5½2 lb`; `5.5 ½ ft`; `5 ft (10/180 lbs)` with weight type                                       | 180 lb; 5.52 lb; 0.5 ft; 0.05555555555555555 lb | `null`; `null`; `null`; 180 lb, [AFA-74][fractions]                                                    | Baseline M1 boundary/ownership loss; correction documented below in F4                                |
 | F3 / Medium        | `phase 20, −5 cm`; `phase twenty, −5 cm`                                                                        | 5 cm; 25 cm                                     | `null`, negative-field rule and [AFA-202][signs]                                                       | M1 sees earlier unrelated number → drops negative sign → accepted positive number                     |
 | F6 / Medium        | `5ft11`                                                                                                         | `null`                                          | 71 in, [AFA-62][compact] and 5 × 12 + 11                                                               | M2 leaves `ft11` indivisible → M7 never reaches recognized unit                                       |
 | F5 / Low           | `kg -20 5 grams; actual 70 kg`                                                                                  | 70 kg                                           | `null`, Unsupported Units specification and [AFA-203][unsupported]                                     | M8 unsigned backward lookup misses the supported prefix; incomplete weight bypasses rejection         |
@@ -399,6 +410,41 @@ failing on baseline and passing with the fix. Four ticket-sourced entries in
 Existing corpus outcomes and the generated result snapshot are unchanged. Numeric commas,
 semicolons, supported/unsupported part ownership, public types and examples keep their rules.
 F10 remains separately tracked; the general tokenizer refactor is outside this correction.
+
+### F4 correction — fraction and slash boundaries
+
+Implemented in `fa607f3` on current-main baseline `fa73fd5`; the fix PR is pending validation.
+The original audit baseline remains `b79eae0`. All six exact ticket/comment inputs failed before
+production edits through source, ESM and CommonJS:
+
+| Input / options                  | Before (`fa73fd5`)      | After (`fa607f3`) |
+| -------------------------------- | ----------------------- | ----------------- |
+| `5/2-180 lbs`                    | 180 lb                  | `null`            |
+| `5 ft (10/180 lbs)`, weight type | 0.05555555555555555 lb  | 180 lb            |
+| `5 ft, 10/180 lbs`, weight type  | 0.05555555555555555 lb  | 180 lb            |
+| `5.5 ½ ft`                       | 0.5 ft                  | `null`            |
+| `5½2 lb`                         | 5.52 lb                 | `null`            |
+| `1⁄2/180 lbs`                    | 0.011111111111111112 lb | 180 lb            |
+
+Permanent regressions: `tests/parseMeasurement.fractionBoundaries.test.ts`; the package runner
+reuses the same assertions through ESM and CommonJS. Twenty-two ticket-sourced corpus entries and
+the affected feature maps record the paths. The original fractions, numeric commas, valid
+shorthand, range ownership and F1 quoted-digit boundary remain covered. No exported type or
+public example changes, and no tokenizer refactor is included.
+
+The same cause at a right endpoint changed `180-5/2 lbs; 70 kg` from 70 lb to the independent
+70 kg; this input also failed first against both baseline package builds. Generated evidence
+changes `5/2 ½6 centimeter` from 0.56 cm to `null` with default, height, normalized cm,
+fuzziness 2 and height/unqualified options, as required by the trailing-digit correction.
+Independent probes also exposed three same-cause failures on main `b74d185`: `kg 5/2-180`
+changes from 5 kg to `null`, `5/2-1/2 lb` from 0.5 lb to `null`, and
+`6 ft 1/2-3/4 11 in` from `null` to 83 in. Eleven regressions found on the initial fix were
+corrected before review; all fourteen range cases failed first on that implementation.
+The separate unit-prefix fraction failure is filed as [AFA-238][prefix-fraction].
+One induced change beyond the exact ticket inputs is recorded under decision rule 3:
+`six kg 1.75´,5½-centimeter` changes from `null` to 6 kg with default options or fuzziness 2.
+Rejecting the decimal-whole Unicode fragment permits the existing weight fallback; height-only
+still returns `null` and weight-only still returns 6 kg. No existing corpus agreement is lost.
 
 ### Follow-up finding F10 — earlier number hides an unsupported prefix
 
@@ -435,6 +481,18 @@ it('keeps the documented unsupported-part control', () => {
 });
 ```
 
+### Follow-up finding F11 — a unit prefix hides its own fraction
+
+[AFA-238][prefix-fraction] (Medium) was found by the independent F4 probes and reproduced on
+current main `b74d185` and the fix branch: `kg 1/2` returns 1 kg instead of 0.5 kg. M1's slash
+ownership guard sees the unit's last letter and leaves the slash for punctuation removal;
+M7 then accepts the numerator as the whole value. The expected amount follows the documented
+unit-prefix rule and 1 / 2 = 0.5. A temporary public-API assertion failed with that exact result.
+The existing fraction and semantic property suites missed the combination of unit prefix and
+slash fraction. The follow-up ticket requires strengthening that coverage. It is outside F4's
+range/Unicode correction and outside either active fix queue; no fix session has been launched.
+The original audit baseline and 22-test harness remain unchanged.
+
 ## Fix groups, dependencies and document ownership
 
 Keep one ticket per PR. F1, F2 and F4 remain their existing grouped issues; do not duplicate them
@@ -469,15 +527,20 @@ Each fix session must:
 
 ### Session ledger
 
-| Session                                                                                                                           | Assigned work                                                       | Launch state                                                                                                                             |
-| --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:ab3e225544f4690efa2764d0a191792e86a687eff06d7b4e3bb8c5380b1b736d> | AFA-235 publication and review of this document                     | [PR #228](https://github.com/afahy/fluent-measures/pull/228) merged at `527f7b5`; main CI passed                                         |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:9df9034c3ce42adbebf696dd9b9d990bec04b84a9494a53e3c9bf77d6c1fc1d4> | AFA-75, then fresh successor sessions for AFA-74, AFA-202, AFA-62   | F1 validated; [PR #229](https://github.com/afahy/fluent-measures/pull/229) tracks review/merge; successors start after merge and main CI |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1a5f5b908ee23500b3eab3c85521ed6236b310c0f375af966f353457aef7d25e> | AFA-78, then fresh successor sessions for AFA-203, AFA-116, AFA-107 | AFA-78 claimed In Progress; successors not yet started                                                                                   |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:437846f95d8fc1b59e8b6aed92f360110a4df975347393dec096581adc8de82f> | AFA-236 finite conversion overflow                                  | Implementation and focused tests ready; independent review and full checks pending                                                       |
+| Session                                                                                                                           | Assigned work                                                       | Launch state                                                                                                                            |
+| --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:ab3e225544f4690efa2764d0a191792e86a687eff06d7b4e3bb8c5380b1b736d> | AFA-235 publication and review of this document                     | [PR #228](https://github.com/afahy/fluent-measures/pull/228) merged at `527f7b5`; main CI passed                                        |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:9df9034c3ce42adbebf696dd9b9d990bec04b84a9494a53e3c9bf77d6c1fc1d4> | AFA-75, then fresh successor sessions for AFA-74, AFA-202, AFA-62   | [PR #229](https://github.com/afahy/fluent-measures/pull/229) merged at `fa73fd5`; all 12 main CI jobs passed; AFA-74 successor launched |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1a5f5b908ee23500b3eab3c85521ed6236b310c0f375af966f353457aef7d25e> | AFA-78, then fresh successor sessions for AFA-203, AFA-116, AFA-107 | AFA-78 claimed In Progress; successors not yet started                                                                                  |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:437846f95d8fc1b59e8b6aed92f360110a4df975347393dec096581adc8de82f> | AFA-236 finite conversion overflow                                  | Implementation and focused tests ready; independent review and full checks pending                                                      |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:e814642ff8608ad682438ef18ee4080fc919744b9ea078fd9ad8e24e7597c9b4> | AFA-74; fresh AFA-202 then AFA-62 sessions after each merge/main CI | F4 implemented at `fa607f3`; independent findings handled; full validation pending                                                      |
 
 Sessions use isolated prepared worktrees. Full checks and mutation runs have one shared execution
-slot, initially publication → AFA-75 → AFA-78 → AFA-236; sessions pass it by message. Focused tests
+slot. Current handoff is AFA-236 → replacement AFA-78 delegate → AFA-74; each next owner
+waits for an explicit grant. The former AFA-78 session is stopped; parent
+<t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/b61ed010-1655-4d08-b5ee-8c6e4d3e7ad4>
+owns its replacement stewardship. AFA-203, AFA-116 and AFA-107 remain the coordinator’s
+separate queue. AFA-237 is not part of either active fix queue. Focused tests
 can run while another session holds the slot. Successor sessions inherit the regression, corpus,
 mutation, PR-lifecycle and document-update requirements. Launch status is not fix completion.
 
@@ -503,6 +566,15 @@ all agreeing through source/ESM/CommonJS; the related quoted-number finding rece
 failing-first regressions. Brotli sizes are 4.65 kB ESM and 4.69 kB CommonJS, within the unchanged
 5 kB limits. The published audit was merged from `main` at `527f7b5` before this targeted update.
 
+The F4 session installed dependencies and reproduced the six exact failures on `fa73fd5`:
+6 failing source tests and 12 failing ESM/CommonJS tests before production edits. The initial expanded
+41-test boundary suite had 29 failing cases per baseline package format. Fourteen independent
+range findings were then reproduced as failures on the initial fix and corrected in `fa607f3`;
+the boundary suite now has 55 tests, passing through source, ESM and CommonJS. Full mutation, changed-lines mutation validation and `pnpm check` remain pending
+the shared heavy-check slot. Predecessor main CI passed all 12 CI jobs at `fa73fd5`, confirmed by
+[workflow run 42290644313](https://github.com/afahy/fluent-measures/actions/runs/42290644313),
+completed 2026-11-06 20:48:38 UTC; its paginated late-comment audit found no unhandled findings.
+
 ## Reproducing the audit
 
 Use a disposable checkout of `b79eae0`. Run `pnpm install` and `pnpm build`. Save the following
@@ -524,6 +596,7 @@ single audit file contains its evidence; it is not a second, automatically run t
 [fractions]: https://linear.app/afahy/issue/AFA-74
 [unsupported]: https://linear.app/afahy/issue/AFA-203
 [prefix-ownership]: https://linear.app/afahy/issue/AFA-237
+[prefix-fraction]: https://linear.app/afahy/issue/AFA-238
 [compact]: https://linear.app/afahy/issue/AFA-62
 [ownership]: https://linear.app/afahy/issue/AFA-116
 [underflow]: https://linear.app/afahy/issue/AFA-107
