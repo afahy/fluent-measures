@@ -287,28 +287,34 @@ tickets.
 
 ### M9 — grouping, conversion, agreement and terminal result
 
-Source: `parseMeasurement.ts:150–168`, `289–338`; conversions in `units.ts:47–76`.
+Source: `parseMeasurement.ts:150–168`, `289–338`; conversions in `units.ts:47–85`
+after the F9 correction at `ecf7a2e`.
 
-| From                 | Event / guard                                                                          | Action                                                                   | To                                  |
-| -------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | ----------------------------------- |
-| No group             | First match                                                                            | Start group                                                              | Group open                          |
-| Group open           | Previous value integral, unit step in `NEXT_PART`, smaller value below one larger unit | Append part                                                              | Compound group                      |
-| Group open           | Any other match                                                                        | Start independent measurement                                            | New group                           |
-| Groups complete      | Group contains only zero parts                                                         | Exclude from counted groups                                              | Counted groups ready                |
-| Counted groups ready | Choose first nonzero group, or first group if all zero                                 | Choose requested unit or last part's unit                                | Convert                             |
-| Convert              | Zero part                                                                              | Skip it                                                                  | Next part                           |
-| Convert              | Same unit                                                                              | Add original value                                                       | Next part                           |
-| Convert              | Same-type conversion exists                                                            | Add converted value                                                      | Next part                           |
-| Convert              | No conversion exists (out-of-contract unit/type)                                       | Throw                                                                    | Error                               |
-| First total          | Zero and explicit                                                                      | Return internal `undefined`                                              | Try next type                       |
-| First total          | Non-finite                                                                             | Return `null`                                                            | Rejected; F9 can wrongly reach this |
-| First total          | Finite (including inferred zero)                                                       | Calculate 1% threshold with rounding margin `1 + 1e-9`                   | Compare                             |
-| Compare              | Any counted total differs more than threshold                                          | Return `null`                                                            | Rejected                            |
-| Compare              | All agree                                                                              | Return first group's matches, total, unit, type and exact original input | Success                             |
+| From                 | Event / guard                                                                          | Action                                                                   | To                   |
+| -------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | -------------------- |
+| No group             | First match                                                                            | Start group                                                              | Group open           |
+| Group open           | Previous value integral, unit step in `NEXT_PART`, smaller value below one larger unit | Append part                                                              | Compound group       |
+| Group open           | Any other match                                                                        | Start independent measurement                                            | New group            |
+| Groups complete      | Group contains only zero parts                                                         | Exclude from counted groups                                              | Counted groups ready |
+| Counted groups ready | Choose first nonzero group, or first group if all zero                                 | Choose requested unit or last part's unit                                | Convert              |
+| Convert              | Zero part                                                                              | Skip it                                                                  | Next part            |
+| Convert              | Same unit                                                                              | Add original value                                                       | Next part            |
+| Convert              | Same-type conversion exists                                                            | Evaluate the established conversion arithmetic                           | Converted part       |
+| Converted part       | Finite result                                                                          | Keep its value and rounding; add to total                                | Next part            |
+| Converted part       | Non-finite result through centimeters (ft/in → m or m → ft/in)                         | Use the direct factor for the same target unit; add to total             | Next part            |
+| Converted part       | Any other non-finite result                                                            | Add unchanged value                                                      | Next part            |
+| Convert              | No conversion exists (out-of-contract unit/type)                                       | Throw                                                                    | Error                |
+| First total          | Zero and explicit                                                                      | Return internal `undefined`                                              | Try next type        |
+| First total          | Non-finite                                                                             | Return `null`                                                            | Rejected             |
+| First total          | Finite (including inferred zero)                                                       | Calculate 1% threshold with rounding margin `1 + 1e-9`                   | Compare              |
+| Compare              | Any counted total differs more than threshold                                          | Return `null`                                                            | Rejected             |
+| Compare              | All agree                                                                              | Return first group's matches, total, unit, type and exact original input | Success              |
 
-This machine does not retry with a different target unit after overflow. Returning `null` is
-correct for a target that cannot be represented; the F9 conversions instead overflow on an
-intermediate centimeter value. An inferred zero bypasses the explicit-zero fallback (F8).
+This machine keeps the requested target unit. At baseline, F9 rejected finite targets because
+the intermediate centimeter value overflowed. The correction preserves every finite result of
+the established arithmetic and uses 0.3048 m/ft or 0.0254 m/in only after a non-finite conversion.
+A truly infinite target still returns `null`. An inferred zero still bypasses the explicit-zero
+fallback (F8); that separate issue is unchanged.
 
 ### M10 — complete-input unqualified inference
 
@@ -376,7 +382,7 @@ ordinary input frequency above extreme-number rejection.
 | F5 / Low           | `kg -20 5 grams; actual 70 kg`                                                                                  | 70 kg                                           | `null`, Unsupported Units specification and [AFA-203][unsupported]                                     | M8 unsigned backward lookup misses the supported prefix; incomplete weight bypasses rejection         |
 | F7 / Low           | `kg -6 ft, 70 kg`                                                                                               | `null`                                          | 70 kg, [AFA-116][ownership]                                                                            | M7/M8 rejects kg field for a signed value owned by ft                                                 |
 | F8 / Low           | `0.` + 322 zeros + `1`, height + allowUnqualified + normalized ft                                               | Successful result with value 0                  | `null`, [AFA-107][underflow], maintainer's 2026-10-08 “option 1” comment                               | M9 inferred-zero exception violates intended positive-result invariant                                |
-| F9 / Low           | `1` + 307 zeros + ` ft`, normalized m; same digits + ` m`, normalized ft; `1` + 308 zeros + ` in`, normalized m | `null` in all three cases                       | Approximately 3.048e306 m; 3.280839895013123e307 ft; 2.54e306 m, independently calculated unit factors | M9 finite source → intermediate infinity → false rejection; new [AFA-236][overflow]                   |
+| F9 / Low           | `1` + 307 zeros + ` ft`, normalized m; same digits + ` m`, normalized ft; `1` + 308 zeros + ` in`, normalized m | `null` in all three cases                       | Approximately 3.048e306 m; 3.280839895013123e307 ft; 2.54e306 m, independently calculated unit factors | M9 intermediate overflow falsely rejects finite target; [AFA-236][overflow], fix below                |
 
 F8 is intentionally retained by one existing test, not an accidental untested branch. The
 maintainer approved changing it to `null`; the audit follow-up is authorized to proceed. Its
@@ -432,6 +438,27 @@ PR description; the result snapshot records those transitions. No previous corpu
 public example or exported type changes. Paired-apostrophe quotations retain their required
 `null` result. The tokenizer refactor remains separate.
 
+### F9 correction — finite conversion after intermediate overflow
+
+Status: corrected in [PR #230](https://github.com/afahy/fluent-measures/pull/230), with
+implementation at `ecf7a2e` and full checks passed. Failing revision: `b79eae0`; passing source/ESM/CJS revision: `ecf7a2e`.
+The published audit was merged into the fix branch from `527f7b5` before this update.
+
+`tests/parseMeasurement.conversionOverflow.test.ts` contains 14 tests. All three historical F9
+inputs now return the finite target values listed above. The same cause also affected
+`2` + 306 zeros + ` m` normalized to inches (approximately 7.874015748031496e307), and default
+or imperial inferred inches to meters. These six cases fail on the baseline and pass with the
+fix through source, ESM and CommonJS. Expectations come from the exact unit definitions,
+with relative-error tolerance for the large results. The remaining tests check rejection of
+truly infinite targets and exact preservation of ordinary conversion rounding.
+
+Six corpus entries with source `AFA-236` cover the four explicit conversions, default inference
+and infinite-target rejection. The conversion, units and unqualified feature maps include the
+regression suite. An independent failing-input review found 121/121 probes agree on the fix
+through source/ESM/CommonJS; 71 disagree on baseline main. No additional finding was reported.
+Public examples/types, tokenization and the separately tracked F8 inferred-zero behavior remain
+unchanged. This is a bounded arithmetic correction for extreme values, not a tokenizer change.
+
 ### Follow-up finding F10 — earlier number hides an unsupported prefix
 
 [AFA-237][prefix-ownership] (Low) was discovered during the F1 fix's self-review and independently
@@ -479,7 +506,7 @@ concerns but have different failure causes and existing preservation requirement
 | Separate tokenizer refactor | [AFA-88][refactor]                   | In Progress; preserve existing remote branch `apfahy/afa-88-read-every-number-form-in-one-tokenizer-pass`, last observed `ded9ee0`; requires maintainer merge |
 | Boundary and number fixes   | AFA-75 → AFA-74 → AFA-202 → AFA-62   | Pause lifted by maintainer on 2026-11-06; fresh sessions fix one ticket per PR                                                                                |
 | Quote and ownership fixes   | AFA-78 → AFA-203 → AFA-116 → AFA-107 | F2 implemented in this branch; AFA-203 starts fresh only after its merge and main CI                                                                          |
-| Numeric conversion          | [AFA-236][overflow]                  | Independent `units.ts` correction; fresh fix session                                                                                                          |
+| Numeric conversion          | [AFA-236][overflow]                  | `units.ts` correction at `ecf7a2e`; full validation passes; [PR #230](https://github.com/afahy/fluent-measures/pull/230) tracks review/merge                  |
 
 The maintainer explicitly lifted the AFA-88 pause for these eight confirmed targeted fixes on
 2026-11-06. Their AFA-88 blocker relations were removed. Other dependencies remain; the tokenizer
@@ -510,7 +537,7 @@ Each fix session must:
 | <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1a5f5b908ee23500b3eab3c85521ed6236b310c0f375af966f353457aef7d25e>                                                       | Original AFA-78 implementation and recorded successor queue         | Stopped for the maintainer-requested takeover; clean history preserved through `02d463a`                                                 |
 | <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/thread:delegated-task:command%3Amcp%3A07e37d08-94dc-4f21-9274-996c2a7a8c00%3Adelegate-task%3A632fca4a-3251-4d46-b64c-68aa393e85be> | AFA-78 implementation takeover, final validation and PR preparation | Continues the preserved ticket history in the prepared isolated worktree; no successor work                                              |
 | <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/b61ed010-1655-4d08-b5ee-8c6e4d3e7ad4>                                                                                              | AFA-78 PR steward                                                   | Owns review/check waiting, merge and post-merge CI after the implementation handoff                                                      |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:437846f95d8fc1b59e8b6aed92f360110a4df975347393dec096581adc8de82f>                                                       | AFA-236 finite conversion overflow                                  | Implementation and focused tests ready; independent review and full checks pending                                                       |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:437846f95d8fc1b59e8b6aed92f360110a4df975347393dec096581adc8de82f>                                                       | AFA-236 finite conversion overflow                                  | F9 validated; [PR #230](https://github.com/afahy/fluent-measures/pull/230) tracks review/merge; no successor assigned                    |
 
 Sessions use isolated prepared worktrees. Full checks and mutation runs have one shared execution
 slot, initially publication → AFA-75 → AFA-78 → AFA-236; sessions pass it by message. Focused tests
@@ -546,6 +573,24 @@ with unchanged exported types and bundles below 5 kB. Its 99.56% mutation result
 survivors on changed lines: an unnecessary preceding-number guard was removed, and uppercase
 and repeated-quotation tests now fail when either regex loses its flags. Final full-check and
 changed-line mutation validation of `95a5a54` remain pending before publication.
+
+F9 focused validation at `ecf7a2e`: 14 conversion-overflow tests, 104 tests across the conversion,
+inference, units and corpus suites, 488 tests for the other affected feature routes/public
+examples, and 1,092 ESM/CommonJS checks passed. Lint, TypeScript, build, size and exported-API
+checks passed. Baseline `b79eae0` failed the six intended regression cases in source and each
+package format. Full `pnpm check` passed at `6b58f92` on 2026-11-06: 3,399 unit tests,
+100% statement/branch/function/line coverage, TypeScript, 99.78% mutation score, build, size,
+exported-API checks, and 3,484 ESM/CommonJS tests. All 96 `units.ts` mutants were killed;
+`node .github/scripts/mutation-check.mjs --base origin/main` also passed. The three surviving
+mutants are in unchanged source lines. ESM size is 4.64 kB (baseline 4.62 kB); CommonJS remains
+4.70 kB when rounded, both under the unchanged 5 kB limit.
+
+After merging `main` at `fa73fd5`, the six regression cases still fail without the conversion
+fix and all 14 tests pass with it. The combined corpus/conversion/comma suite passes 90 tests,
+and the rebuilt ESM/CommonJS suites pass 3,572 tests. Build, exported-API and size checks pass;
+combined sizes are 4.67 kB ESM and 4.71 kB CommonJS. The F1 corpus and audit updates are retained.
+A fresh `pnpm test:mutation --mutate src/units.ts` run after this merge killed all 96 mutants
+(100%), and the changed-lines mutation check passed again.
 
 ## Reproducing the audit
 
