@@ -362,7 +362,7 @@ ordinary input frequency above extreme-number rejection.
 | F9 / Low           | `1` + 307 zeros + ` ft`, normalized m; same digits + ` m`, normalized ft; `1` + 308 zeros + ` in`, normalized m | `null` in all three cases                       | Approximately 3.048e306 m; 3.280839895013123e307 ft; 2.54e306 m, independently calculated unit factors | M9 finite source → intermediate infinity → false rejection; new [AFA-236][overflow]           |
 
 F8 is intentionally retained by one existing test, not an accidental untested branch. The
-maintainer approved changing it to `null`; its implementation remains blocked on AFA-88. Its
+maintainer approved changing it to `null`; the audit follow-up is authorized to proceed. Its
 fix must update that test according to the ticket, not weaken the positivity invariant.
 
 The corpus's existing “wrong” classification is not enough by itself to establish a bug:
@@ -377,16 +377,18 @@ Keep one ticket per PR. F1, F2 and F4 remain their existing grouped issues; do n
 or fold all tokenizer behavior changes into a single refactor. F3, F5 and F7 share broad ownership
 concerns but have different failure causes and existing preservation requirements.
 
-| Work stream                    | Tickets / order                      | State and required handoff                                                                                                                                    |
-| ------------------------------ | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Publish this audit             | [AFA-235][audit]                     | Document prepared locally; fresh publication session to run checks and submit it                                                                              |
-| Restore tokenizer prerequisite | [AFA-88][refactor]                   | In Progress; preserve existing remote branch `apfahy/afa-88-read-every-number-form-in-one-tokenizer-pass`, last observed `ded9ee0`; requires maintainer merge |
-| Boundary and number fixes      | AFA-75 → AFA-74 → AFA-202 → AFA-62   | Blocked by AFA-88; fresh session owns the ordered queue after that dependency lands                                                                           |
-| Quote and ownership fixes      | AFA-78 → AFA-203 → AFA-116 → AFA-107 | Blocked by AFA-88; fresh session owns the ordered queue after that dependency lands                                                                           |
-| Numeric conversion             | [AFA-236][overflow]                  | Independent `units.ts` correction; fresh fix session                                                                                                          |
+| Work stream                 | Tickets / order                      | State and required handoff                                                                                                                                    |
+| --------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Publish this audit          | [AFA-235][audit]                     | Document prepared locally; fresh publication session to run checks and submit it                                                                              |
+| Separate tokenizer refactor | [AFA-88][refactor]                   | In Progress; preserve existing remote branch `apfahy/afa-88-read-every-number-form-in-one-tokenizer-pass`, last observed `ded9ee0`; requires maintainer merge |
+| Boundary and number fixes   | AFA-75 → AFA-74 → AFA-202 → AFA-62   | Pause lifted by maintainer on 2026-11-06; fresh sessions fix one ticket per PR                                                                                |
+| Quote and ownership fixes   | AFA-78 → AFA-203 → AFA-116 → AFA-107 | Pause lifted by maintainer on 2026-11-06; fresh sessions fix one ticket per PR                                                                                |
+| Numeric conversion          | [AFA-236][overflow]                  | Independent `units.ts` correction; fresh fix session                                                                                                          |
 
-Fresh-session links and actual launch status are recorded below when sessions start. A session
-must not claim a blocked fix as implemented. Existing dependency restrictions remain in place.
+The maintainer explicitly lifted the AFA-88 pause for these eight confirmed targeted fixes on
+2026-11-06. Their AFA-88 blocker relations were removed. Other dependencies remain; the tokenizer
+refactor is separate and is not part of these fix sessions. Each successor ticket starts in a
+fresh session after its predecessor merges, limiting overlapping edits and expensive check runs.
 
 Each fix session must:
 
@@ -399,11 +401,19 @@ Each fix session must:
   regression-test path, PR link, and any remaining limitation. Keep the historical baseline
   output. Do not mark a finding fixed merely because a ticket was filed or a session started.
 - Merge latest `main` when needed and retain other sessions' document updates. No force pushes.
-  The refactor session must update the machine map when the actual implementation changes.
+  Any later refactor must update the machine map when the implementation changes.
 
 ### Session ledger
 
 Pending launch after the audit document is saved.
+
+## Validation record
+
+`pnpm install` and `pnpm build` passed. The independent audit harness produced the failures
+listed above. The unchanged invariant, semantic property, corpus, README and parsing-example
+suites passed: 361 tests across five files. The document passes Prettier and CSpell. Full
+`pnpm check` remains the publication and fix sessions' responsibility. No production code or
+permanent test file was changed by this audit.
 
 ## Reproducing the audit
 
