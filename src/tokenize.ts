@@ -112,10 +112,7 @@ function normalizeFractionParts(input: string): string {
 export function normalizeFractions(input: string): string {
   return normalizeFractionParts(
     input.replace(FRACTION_RANGE, range => {
-      const normalized = range
-        .split(/(\s*\p{Dash}\s*)/u)
-        .map(normalizeFractionParts)
-        .join('');
+      const normalized = normalizeFractionParts(range);
       return normalized.includes('x') ? '0-0-0' : normalized;
     })
   );
