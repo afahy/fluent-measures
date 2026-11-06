@@ -52,10 +52,9 @@ const FRACTION_NUMBER = String.raw`(\d+(?:\.\d+)?|\.\d+)`;
 // even after spaces: there the slash separates two measurements, as in "5'10/180" and
 // "5 ft 10/180 lbs". Feet or marks keep that ownership across brackets and commas too.
 // The lookahead keeps those lookbehinds from running at every space. Both slash characters
-// block a second fraction match in a date/code. Keep adjacent range endpoints with the
-// fraction, so invalid fractions cannot hide ranges.
+// block a second fraction match in a date/code.
 const SLASH_FRACTION = new RegExp(
-  String.raw`(?<![\d/⁄.])([\d.]+\s*\p{Dash}\s*)?(?:${FRACTION_NUMBER}\s+|(?=[\d.])(?<![\p{L}'"]\s*)(?<!(?:(?<!\p{L})(?:feet|foot|ft)|['"])[\s,()[\]]*))${FRACTION_NUMBER}[/⁄]${FRACTION_NUMBER}(?![\d/⁄])(\s*\p{Dash}\s*[\d.]+)?`,
+  String.raw`(?<![\d/⁄.])(?:${FRACTION_NUMBER}\s+|(?=[\d.])(?<![\p{L}'"]\s*)(?<!(?:(?<!\p{L})(?:feet|foot|ft)|['"])[\s,()[\]]*))${FRACTION_NUMBER}[/⁄]${FRACTION_NUMBER}(?![\d/⁄])`,
   'giu'
 );
 
@@ -82,14 +81,16 @@ const UNICODE_FRACTION = new RegExp(
   'gu'
 );
 
-/**
- * Write each proper fraction as a decimal, so "150 1/2" and "150½" are 150.5. A whole number
- * before the fraction is part of it. Other numbers with a slash between them become "x", with
- * their whole number, so "5/2" and "150 5/2" can't be read as a value. So does a fraction with a
- * decimal in it, or one whose result needs an exponent. A date such as "12/25/2020" has two
- * slashes and stays as it is. Run this after normalizeNumericCommas, so "1,000 1/2" is 1000.5.
- */
-export function normalizeFractions(input: string): string {
+// Range endpoints can contain either fraction form, including malformed Unicode whole/tail
+// digits. Match the complete range before a local fraction can erase one of its boundaries.
+const RANGE_NUMBER = String.raw`(?:${FRACTION_NUMBER}(?:\s+${FRACTION_NUMBER}[/⁄]${FRACTION_NUMBER}|[/⁄]${FRACTION_NUMBER}|\s*[${FRACTIONS}]\d*)?|[${FRACTIONS}]\d*)`;
+const FRACTION_RANGE = new RegExp(
+  String.raw`(?<![\d/⁄.])${RANGE_NUMBER}(?:\s*\p{Dash}\s*${RANGE_NUMBER})+(?![\d/⁄.])`,
+  'gu'
+);
+
+/** Normalize individual fractions after their surrounding range has been preserved. */
+function normalizeFractionParts(input: string): string {
   return input
     .replace(
       UNICODE_FRACTION,
@@ -98,26 +99,26 @@ export function normalizeFractions(input: string): string {
         return trailing ? 'x' : writeFraction(text, whole, numerator, denominator);
       }
     )
-    .replace(
-      SLASH_FRACTION,
-      (
-        _text: string,
-        before = '',
-        whole = '',
-        numerator: string,
-        denominator: string,
-        after = ''
-      ) => {
-        const value = writeFraction(whole + numerator + denominator, whole, numerator, denominator);
-        // Keep invalid endpoints visible to range removal. Three endpoints cannot become
-        // feet/inch shorthand; proper fractions still normalize normally, as in "5-1/2".
-        return (
-          before +
-          ((before || after) && value === 'x' ? `${numerator}-${denominator}` : value) +
-          after
-        );
-      }
-    );
+    .replace(SLASH_FRACTION, writeFraction);
+}
+
+/**
+ * Write proper fractions as decimals after normalizing commas, so "1,000 1/2" is 1000.5.
+ * Invalid fractions become "x". Inside a range, preserve a numeric range instead, so its unit
+ * cannot claim an unrelated value. Three endpoints prevent an invalid range becoming shorthand.
+ * Proper shorthand such as "5-1/2" keeps its value; Unicode dashes keep their existing meaning.
+ * Dates and codes with two slash characters stay as they are.
+ */
+export function normalizeFractions(input: string): string {
+  return normalizeFractionParts(
+    input.replace(FRACTION_RANGE, range => {
+      const normalized = range
+        .split(/(\s*\p{Dash}\s*)/u)
+        .map(normalizeFractionParts)
+        .join('');
+      return normalized.includes('x') ? '0-0-0' : normalized;
+    })
+  );
 }
 
 // A number as it can stand in quotes: digits, separators, spaces, slashes and fractions.

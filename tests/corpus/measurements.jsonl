@@ -484,3 +484,17 @@
 {"id": "fraction-mixed-slash-separators", "input": "1⁄2/180 lbs", "expected": {"value": 180, "unit": "lb", "type": "weight"}, "category": "mixed-numbers", "source": "AFA-74"}
 {"id": "fraction-right-range-independent-unit", "input": "180-5/2 lbs; 70 kg", "expected": {"value": 70, "unit": "kg", "type": "weight"}, "category": "multiple-measurements", "source": "AFA-74"}
 {"id": "fraction-invalid-unicode-after-slash", "input": "5/2 ½6 centimeter", "expected": null, "category": "mixed-numbers", "source": "AFA-74"}
+{"id": "probe-afa74-range-2", "input": "1/2-3/4 lb", "expected": null, "category": "hyphens", "source": "AFA-74", "note": "PARSING.md Ranges: a range does not identify one measurement."}
+{"id": "probe-afa74-range-3", "input": "1⁄2-3⁄4 lb", "expected": null, "category": "hyphens", "source": "AFA-74", "note": "PARSING.md Ranges: a range does not identify one measurement."}
+{"id": "probe-afa74-range-5", "input": "1/2 - 3/4 lb", "expected": null, "category": "hyphens", "source": "AFA-74", "note": "PARSING.md Ranges: a range does not identify one measurement."}
+{"id": "probe-afa74-range-6", "input": "1/2–3/4 lb", "expected": null, "category": "hyphens", "source": "AFA-74", "note": "PARSING.md Ranges: a range does not identify one measurement."}
+{"id": "probe-afa74-range-7", "input": "1/2-1 1/2 lb", "expected": null, "category": "hyphens", "source": "AFA-74", "note": "PARSING.md Ranges: a range does not identify one measurement."}
+{"id": "probe-afa74-range-8", "input": "1 1/2-2 1/2 lb", "expected": null, "category": "hyphens", "source": "AFA-74", "note": "PARSING.md Ranges: a range does not identify one measurement."}
+{"id": "probe-afa74-range-9", "input": "kg 5/2-180", "expected": null, "category": "hyphens", "source": "AFA-74", "note": "PARSING.md Ranges: a range does not identify one measurement."}
+{"id": "probe-afa74-range-21", "input": "5.5 ½-6 ft", "expected": null, "category": "hyphens", "source": "AFA-74", "note": "PARSING.md Ranges: a range does not identify one measurement."}
+{"id": "probe-afa74-range-22", "input": "5½2-6 ft", "expected": null, "category": "hyphens", "source": "AFA-74", "note": "PARSING.md Ranges: a range does not identify one measurement."}
+{"id": "probe-afa74-range-23", "input": "5/2-1/2 lb", "expected": null, "category": "hyphens", "source": "AFA-74", "note": "PARSING.md Ranges: a range does not identify one measurement."}
+{"id": "probe-afa74-range-24", "input": "1/2-5/2 lb", "expected": null, "category": "hyphens", "source": "AFA-74", "note": "PARSING.md Ranges: a range does not identify one measurement."}
+{"id": "probe-afa74-independent-proper", "input": "1/2-3/4 lb; actual 70 kg", "expected": {"value": 70, "unit": "kg", "type": "weight"}, "category": "multiple-measurements", "source": "AFA-74"}
+{"id": "probe-afa74-same-unit", "input": "1/2-3/4 lb; actual 2 lb", "expected": {"value": 2, "unit": "lb", "type": "weight"}, "category": "multiple-measurements", "source": "AFA-74"}
+{"id": "probe-afa74-parts", "input": "6 ft 1/2-3/4 11 in", "expected": {"value": 83, "unit": "in", "type": "height"}, "category": "multiple-measurements", "source": "AFA-74"}

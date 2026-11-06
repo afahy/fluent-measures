@@ -122,4 +122,29 @@ describe('fraction boundaries', () => {
     });
     expect(parseMeasurement('5-5/2', { type: 'height' })).toBeNull();
   });
+
+  // Independent probes: PARSING.md Ranges omits the complete range, including its fractions.
+  it.each([
+    '1/2-3/4 lb',
+    '1⁄2-3⁄4 lb',
+    '1/2 - 3/4 lb',
+    '1/2–3/4 lb',
+    '1/2-1 1/2 lb',
+    '1 1/2-2 1/2 lb',
+    '5.5 ½-6 ft',
+    '5½2-6 ft',
+    '1/2-5/2 lb',
+    'kg 5/2-180',
+    '5/2-1/2 lb',
+  ])('omits every endpoint of the fraction range in %s', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
+
+  it.each([
+    ['1/2-3/4 lb; actual 70 kg', 70, 'kg'],
+    ['1/2-3/4 lb; actual 2 lb', 2, 'lb'],
+    ['6 ft 1/2-3/4 11 in', 83, 'in'], // 6 × 12 + 11
+  ] as const)('keeps the separate measurement around %s', (raw, value, unit) => {
+    expect(parseMeasurement(raw)).toMatchObject({ value, unit });
+  });
 });
