@@ -89,7 +89,7 @@ Likewise, unknown runtime units/types are not silently treated as valid contract
 
 ### M1 — ordered normalization and lexical context
 
-Source at baseline: `tokenize.ts:60–217`; F4 fraction boundaries updated in `fa607f3`.
+Source at baseline: `tokenize.ts:60–217`; F4 fraction boundaries updated in `1e1a23b`.
 This is a pipeline with implicit context states, rather than one scanner. Later passes cannot recover characters discarded by earlier ones.
 
 | From                | Input / guard                                                    | Action                                                                                         | To                           |
@@ -419,11 +419,12 @@ F10 remains separately tracked; the general tokenizer refactor is outside this c
 
 ### F4 correction — fraction and slash boundaries
 
-Implemented in `fa607f3` on current-main baseline `fa73fd5`; the fix PR is pending validation.
+Implemented in `1e1a23b`, validated against current main `b74d185`; the fix PR link follows
+when opened. The initial failing-first baseline was `fa73fd5`.
 The original audit baseline remains `b79eae0`. All six exact ticket/comment inputs failed before
 production edits through source, ESM and CommonJS:
 
-| Input / options                  | Before (`fa73fd5`)      | After (`fa607f3`) |
+| Input / options                  | Before (`fa73fd5`)      | After (`1e1a23b`) |
 | -------------------------------- | ----------------------- | ----------------- |
 | `5/2-180 lbs`                    | 180 lb                  | `null`            |
 | `5 ft (10/180 lbs)`, weight type | 0.05555555555555555 lb  | 180 lb            |
@@ -591,7 +592,7 @@ Each fix session must:
 | <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:9df9034c3ce42adbebf696dd9b9d990bec04b84a9494a53e3c9bf77d6c1fc1d4> | AFA-75, then fresh successor sessions for AFA-74, AFA-202, AFA-62   | [PR #229](https://github.com/afahy/fluent-measures/pull/229) merged at `fa73fd5`; all 12 main CI jobs passed; AFA-74 successor launched |
 | <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1a5f5b908ee23500b3eab3c85521ed6236b310c0f375af966f353457aef7d25e> | AFA-78, then fresh successor sessions for AFA-203, AFA-116, AFA-107 | AFA-78 claimed In Progress; successors not yet started                                                                                  |
 | <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:437846f95d8fc1b59e8b6aed92f360110a4df975347393dec096581adc8de82f> | AFA-236 finite conversion overflow                                  | F9 validated; [PR #230](https://github.com/afahy/fluent-measures/pull/230) merged at `b74d185`                                          |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:e814642ff8608ad682438ef18ee4080fc919744b9ea078fd9ad8e24e7597c9b4> | AFA-74; fresh AFA-202 then AFA-62 sessions after each merge/main CI | F4 implemented at `fa607f3`; independent findings handled; full validation pending                                                      |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:e814642ff8608ad682438ef18ee4080fc919744b9ea078fd9ad8e24e7597c9b4> | AFA-74; fresh AFA-202 then AFA-62 sessions after each merge/main CI | F4 implemented at `1e1a23b`; independent findings handled; full checks and changed-lines mutation validation passed                     |
 
 Sessions use isolated prepared worktrees. Full checks and mutation runs have one shared execution
 slot. Current handoff is AFA-236 → replacement AFA-78 delegate → AFA-74; each next owner
@@ -632,9 +633,13 @@ the boundary suite now has 55 tests, passing through source, ESM and CommonJS. A
 `b74d185`, a fresh comparison against its tokenizer failed 32 source assertions and 64 package
 assertions; restoring the fix passed all 55 in each format. Re-running the 102 independent
 probes passed 101 through each API; only the separately filed AFA-238 remains. The combined
-F4/F1/F9 package suites passed 226 tests. Full mutation, changed-lines mutation validation and
-`pnpm check` remain pending
-the shared heavy-check slot. Predecessor main CI passed all 12 CI jobs at `fa73fd5`, confirmed by
+F4/F1/F9 package suites passed 226 tests. At `1e1a23b`, `pnpm check` passed on 2026-11-06:
+3,498 unit tests with 100% source coverage, TypeScript, mutation testing (99.78%; 1,352 killed,
+13 timed out, 3 pre-existing survivors), build, size/API checks, and 3,682 package tests.
+The fresh changed-lines mutation check confirms every mutant on changed lines was killed.
+Redundant range splitting was removed after mutation testing exposed equivalent mutations in
+its whitespace pattern; no mutant was suppressed. Brotli sizes are 4.78 kB ESM and 4.83 kB
+CommonJS, within the unchanged 5 kB limits. Predecessor main CI passed all 12 CI jobs at `fa73fd5`, confirmed by
 [workflow run 42290644313](https://github.com/afahy/fluent-measures/actions/runs/42290644313),
 completed 2026-11-06 20:48:38 UTC; its paginated late-comment audit found no unhandled findings.
 
