@@ -172,12 +172,12 @@ one centimeters	w	null
 one centimeters	cm	1 cm height
 one centimeters	f2	1 cm height
 one centimeters	hu	1 cm height
-hundred ”	-	null
-hundred ”	h	null
+hundred ”	-	100 in height
+hundred ”	h	100 in height
 hundred ”	w	null
-hundred ”	cm	null
-hundred ”	f2	null
-hundred ”	hu	100 cm height
+hundred ”	cm	254 cm height = 100 in
+hundred ”	f2	100 in height
+hundred ”	hu	100 in height
 &-−	-	null
 &-−	h	null
 &-−	w	null
@@ -706,12 +706,12 @@ one-eighty foot,72kg ¼	hu	180 ft height
 1000 in-180 meters	cm	null
 1000 in-180 meters	f2	null
 1000 in-180 meters	hu	null
-5-poundz,1,234.5 150 ”	-	null
-5-poundz,1,234.5 150 ”	h	null
+5-poundz,1,234.5 150 ”	-	150 in height
+5-poundz,1,234.5 150 ”	h	150 in height
 5-poundz,1,234.5 150 ”	w	null
-5-poundz,1,234.5 150 ”	cm	null
-5-poundz,1,234.5 150 ”	f2	5 lb weight
-5-poundz,1,234.5 150 ”	hu	null
+5-poundz,1,234.5 150 ”	cm	381 cm height = 150 in
+5-poundz,1,234.5 150 ”	f2	150 in height
+5-poundz,1,234.5 150 ”	hu	150 in height
 and	-	null
 and	h	null
 and	w	null
@@ -1108,12 +1108,12 @@ a,0.75 kg	hu	null
 72,5-grams	cm	null
 72,5-grams	f2	null
 72,5-grams	hu	null
-5 ”,0 180,'	-	180 ft height
-5 ”,0 180,'	h	180 ft height
+5 ”,0 180,'	-	null
+5 ”,0 180,'	h	null
 5 ”,0 180,'	w	null
-5 ”,0 180,'	cm	5486.4 cm height = 180 ft
-5 ”,0 180,'	f2	180 ft height
-5 ”,0 180,'	hu	180 ft height
+5 ”,0 180,'	cm	null
+5 ”,0 180,'	f2	null
+5 ”,0 180,'	hu	null
 5.11 in,half 5.11,lb	-	5.11 in height
 5.11 in,half 5.11,lb	h	5.11 in height
 5.11 in,half 5.11,lb	w	5.11 lb weight
@@ -2440,12 +2440,12 @@ lb,feet	hu	null
 0.75in stone	cm	1.905 cm height = 0.75 in
 0.75in stone	f2	0.75 in height
 0.75in stone	hu	0.75 in height
-12,345 ”	-	null
-12,345 ”	h	null
+12,345 ”	-	12345 in height
+12,345 ”	h	12345 in height
 12,345 ”	w	null
-12,345 ”	cm	null
-12,345 ”	f2	null
-12,345 ”	hu	12345 cm height
+12,345 ”	cm	31356.3 cm height = 12345 in
+12,345 ”	f2	12345 in height
+12,345 ”	hu	12345 in height
 72,5	-	null
 72,5	h	null
 72,5	w	null
@@ -2722,12 +2722,12 @@ one-eighty kilograms	w	180 kg weight
 one-eighty kilograms	cm	null
 one-eighty kilograms	f2	180 kg weight
 one-eighty kilograms	hu	null
-2 70 ’	-	null
-2 70 ’	h	null
+2 70 ’	-	70 ft height
+2 70 ’	h	70 ft height
 2 70 ’	w	null
-2 70 ’	cm	null
-2 70 ’	f2	null
-2 70 ’	hu	null
+2 70 ’	cm	2133.6 cm height = 70 ft
+2 70 ’	f2	70 ft height
+2 70 ’	hu	70 ft height
 eleven kilograms	-	11 kg weight
 eleven kilograms	h	null
 eleven kilograms	w	11 kg weight
@@ -2800,12 +2800,12 @@ in.,5/2	w	null
 in.,5/2	cm	null
 in.,5/2	f2	null
 in.,5/2	hu	null
-(kg) 80 ’	-	80 kg weight
-(kg) 80 ’	h	null
-(kg) 80 ’	w	80 kg weight
-(kg) 80 ’	cm	null
-(kg) 80 ’	f2	80 kg weight
-(kg) 80 ’	hu	null
+(kg) 80 ’	-	80 ft height
+(kg) 80 ’	h	80 ft height
+(kg) 80 ’	w	null
+(kg) 80 ’	cm	2438.4 cm height = 80 ft
+(kg) 80 ’	f2	80 ft height
+(kg) 80 ’	hu	80 ft height
 5 ¼-m 2	-	5.25 m height
 5 ¼-m 2	h	5.25 m height
 5 ¼-m 2	w	null
@@ -3034,12 +3034,12 @@ inches,150-lbs 12	hu	null
 5.11stone,fivekg	cm	null
 5.11stone,fivekg	f2	null
 5.11stone,fivekg	hu	null
-eleven ”	-	null
-eleven ”	h	null
+eleven ”	-	11 in height
+eleven ”	h	11 in height
 eleven ”	w	null
-eleven ”	cm	null
-eleven ”	f2	null
-eleven ”	hu	11 cm height
+eleven ”	cm	27.94 cm height = 11 in
+eleven ”	f2	11 in height
+eleven ”	hu	11 in height
 eighty meters 72 stone,lbs:	-	80 m height
 eighty meters 72 stone,lbs:	h	80 m height
 eighty meters 72 stone,lbs:	w	null
@@ -3460,12 +3460,12 @@ in,eighty meter1,8 #	hu	null
 12,345 70 Oct	cm	null
 12,345 70 Oct	f2	null
 12,345 70 Oct	hu	null
-2 ’	-	null
-2 ’	h	null
+2 ’	-	2 ft height
+2 ’	h	2 ft height
 2 ’	w	null
-2 ’	cm	null
-2 ’	f2	null
-2 ’	hu	2 m height
+2 ’	cm	60.96 cm height = 2 ft
+2 ’	f2	2 ft height
+2 ’	hu	2 ft height
 5 kg,5-pound-sixinches	-	null
 5 kg,5-pound-sixinches	h	null
 5 kg,5-pound-sixinches	w	null
@@ -4120,12 +4120,12 @@ centimeters 1/2 kilograms 180.0 lbs	hu	1 cm height
 150 centimetersinch	cm	null
 150 centimetersinch	f2	null
 150 centimetersinch	hu	null
-one-centimeter-5 ”,;	-	1 cm height
-one-centimeter-5 ”,;	h	1 cm height
+one-centimeter-5 ”,;	-	null
+one-centimeter-5 ”,;	h	null
 one-centimeter-5 ”,;	w	null
-one-centimeter-5 ”,;	cm	1 cm height
-one-centimeter-5 ”,;	f2	1 cm height
-one-centimeter-5 ”,;	hu	1 cm height
+one-centimeter-5 ”,;	cm	null
+one-centimeter-5 ”,;	f2	null
+one-centimeter-5 ”,;	hu	null
 0.75lbs-72 pounds	-	null
 0.75lbs-72 pounds	h	null
 0.75lbs-72 pounds	w	null
@@ -4456,12 +4456,12 @@ Octelevenmeters in	w	null
 Octelevenmeters in	cm	null
 Octelevenmeters in	f2	null
 Octelevenmeters in	hu	null
-eighty-pounds1,234.5 five ’	-	null
-eighty-pounds1,234.5 five ’	h	null
+eighty-pounds1,234.5 five ’	-	5 ft height
+eighty-pounds1,234.5 five ’	h	5 ft height
 eighty-pounds1,234.5 five ’	w	null
-eighty-pounds1,234.5 five ’	cm	null
-eighty-pounds1,234.5 five ’	f2	80 lb weight
-eighty-pounds1,234.5 five ’	hu	null
+eighty-pounds1,234.5 five ’	cm	152.4 cm height = 5 ft
+eighty-pounds1,234.5 five ’	f2	5 ft height
+eighty-pounds1,234.5 five ’	hu	5 ft height
 2-¾,lb	-	null
 2-¾,lb	h	null
 2-¾,lb	w	null
@@ -4660,12 +4660,12 @@ hundred inches	hu	100 in height
 72 pound	cm	null
 72 pound	f2	72 lb weight
 72 pound	hu	null
-1.8 ” 1,000metres	-	1000 m height
-1.8 ” 1,000metres	h	1000 m height
+1.8 ” 1,000metres	-	null
+1.8 ” 1,000metres	h	null
 1.8 ” 1,000metres	w	null
-1.8 ” 1,000metres	cm	100000 cm height = 1000 m
-1.8 ” 1,000metres	f2	1000 m height
-1.8 ” 1,000metres	hu	1000 m height
+1.8 ” 1,000metres	cm	null
+1.8 ” 1,000metres	f2	null
+1.8 ” 1,000metres	hu	null
 1000,meter80 in-80,in	-	null
 1000,meter80 in-80,in	h	null
 1000,meter80 in-80,in	w	null
@@ -4912,12 +4912,12 @@ feet1/2 #	w	null
 feet1/2 #	cm	null
 feet1/2 #	f2	2 ft height
 feet1/2 #	hu	null
-1000 inch 10/180 ” 1000 fet	-	1000 in height
-1000 inch 10/180 ” 1000 fet	h	1000 in height
+1000 inch 10/180 ” 1000 fet	-	null
+1000 inch 10/180 ” 1000 fet	h	null
 1000 inch 10/180 ” 1000 fet	w	null
-1000 inch 10/180 ” 1000 fet	cm	2540 cm height = 1000 in
+1000 inch 10/180 ” 1000 fet	cm	null
 1000 inch 10/180 ” 1000 fet	f2	null
-1000 inch 10/180 ” 1000 fet	hu	1000 in height
+1000 inch 10/180 ” 1000 fet	hu	null
 in= m	-	null
 in= m	h	null
 in= m	w	null
@@ -4942,12 +4942,12 @@ eighty-kilos	w	80 kg weight
 eighty-kilos	cm	null
 eighty-kilos	f2	80 kg weight
 eighty-kilos	hu	null
-five ”	-	null
-five ”	h	null
+five ”	-	5 in height
+five ”	h	5 in height
 five ”	w	null
-five ”	cm	null
-five ”	f2	null
-five ”	hu	5 cm height
+five ”	cm	12.7 cm height = 5 in
+five ”	f2	5 in height
+five ”	hu	5 in height
 in ,,age	-	null
 in ,,age	h	null
 in ,,age	w	null
@@ -5092,12 +5092,12 @@ halfone centimeters	hu	null
 12,345' and lb	cm	376275.6 cm height = 12345 ft
 12,345' and lb	f2	12345 ft height
 12,345' and lb	hu	12345 ft height
-80 centimeters-seventy”	-	80 cm height
-80 centimeters-seventy”	h	80 cm height
+80 centimeters-seventy”	-	null
+80 centimeters-seventy”	h	null
 80 centimeters-seventy”	w	null
-80 centimeters-seventy”	cm	80 cm height
-80 centimeters-seventy”	f2	80 cm height
-80 centimeters-seventy”	hu	80 cm height
+80 centimeters-seventy”	cm	null
+80 centimeters-seventy”	f2	null
+80 centimeters-seventy”	hu	null
 tall,one-eighty	-	null
 tall,one-eighty	h	null
 tall,one-eighty	w	null
@@ -5110,12 +5110,12 @@ tall,one-eighty	hu	null
 =180,st	cm	null
 =180,st	f2	null
 =180,st	hu	null
-3/4 ”-in-1.75lb	-	1.75 lb weight
-3/4 ”-in-1.75lb	h	null
-3/4 ”-in-1.75lb	w	1.75 lb weight
-3/4 ”-in-1.75lb	cm	null
-3/4 ”-in-1.75lb	f2	1.75 lb weight
-3/4 ”-in-1.75lb	hu	null
+3/4 ”-in-1.75lb	-	0.75 in height
+3/4 ”-in-1.75lb	h	0.75 in height
+3/4 ”-in-1.75lb	w	null
+3/4 ”-in-1.75lb	cm	1.905 cm height = 0.75 in
+3/4 ”-in-1.75lb	f2	0.75 in height
+3/4 ”-in-1.75lb	hu	0.75 in height
 3/4feet	-	0.75 ft height
 3/4feet	h	0.75 ft height
 3/4feet	w	null
@@ -5272,12 +5272,12 @@ lbs 0 centimeter	hu	null
 = 72,5-kilo,the	cm	null
 = 72,5-kilo,the	f2	72.5 kg weight
 = 72,5-kilo,the	hu	null
-¾ ’	-	null
-¾ ’	h	null
+¾ ’	-	0.75 ft height
+¾ ’	h	0.75 ft height
 ¾ ’	w	null
-¾ ’	cm	null
-¾ ’	f2	null
-¾ ’	hu	0.75 m height
+¾ ’	cm	22.86 cm height = 0.75 ft
+¾ ’	f2	0.75 ft height
+¾ ’	hu	0.75 ft height
 mweight= kg	-	null
 mweight= kg	h	null
 mweight= kg	w	null
@@ -5554,12 +5554,12 @@ kg 80-kg	hu	null
 72-kg 150	cm	null
 72-kg 150	f2	72 kg weight
 72-kg 150	hu	null
-150 ’	-	null
-150 ’	h	null
+150 ’	-	150 ft height
+150 ’	h	150 ft height
 150 ’	w	null
-150 ’	cm	null
-150 ’	f2	null
-150 ’	hu	150 cm height
+150 ’	cm	4572 cm height = 150 ft
+150 ’	f2	150 ft height
+150 ’	hu	150 ft height
 12,345lb	-	12345 lb weight
 12,345lb	h	null
 12,345lb	w	12345 lb weight
@@ -5782,12 +5782,12 @@ seventy g	hu	null
 6,’,0	cm	null
 6,’,0	f2	null
 6,’,0	hu	null
-3/4kilogram& 72,5 ’	-	0.75 kg weight
-3/4kilogram& 72,5 ’	h	null
+3/4kilogram& 72,5 ’	-	72.5 ft height
+3/4kilogram& 72,5 ’	h	72.5 ft height
 3/4kilogram& 72,5 ’	w	0.75 kg weight
-3/4kilogram& 72,5 ’	cm	null
-3/4kilogram& 72,5 ’	f2	0.75 kg weight
-3/4kilogram& 72,5 ’	hu	null
+3/4kilogram& 72,5 ’	cm	2209.8 cm height = 72.5 ft
+3/4kilogram& 72,5 ’	f2	72.5 ft height
+3/4kilogram& 72,5 ’	hu	72.5 ft height
 = and-5 foot	-	5 ft height
 = and-5 foot	h	5 ft height
 = and-5 foot	w	null
@@ -5956,12 +5956,12 @@ and70,pounds6	w	null
 and70,pounds6	cm	null
 and70,pounds6	f2	null
 and70,pounds6	hu	null
-– 6 ”	-	null
-– 6 ”	h	null
+– 6 ”	-	6 in height
+– 6 ”	h	6 in height
 – 6 ”	w	null
-– 6 ”	cm	null
-– 6 ”	f2	null
-– 6 ”	hu	6 cm height
+– 6 ”	cm	15.24 cm height = 6 in
+– 6 ”	f2	6 in height
+– 6 ”	hu	6 in height
 80 0,ounces	-	null
 80 0,ounces	h	null
 80 0,ounces	w	null
@@ -6322,12 +6322,12 @@ eleven-kilograms-one	hu	null
 10/180 seventy,''	cm	null
 10/180 seventy,''	f2	null
 10/180 seventy,''	hu	null
-5 ’	-	null
-5 ’	h	null
+5 ’	-	5 ft height
+5 ’	h	5 ft height
 5 ’	w	null
-5 ’	cm	null
-5 ’	f2	null
-5 ’	hu	5 cm height
+5 ’	cm	152.4 cm height = 5 ft
+5 ’	f2	5 ft height
+5 ’	hu	5 ft height
 seventycentimetre	-	null
 seventycentimetre	h	null
 seventycentimetre	w	null
@@ -6904,12 +6904,12 @@ six,feet5.5,feetlbs	hu	null
 11-“,1,234.5lbs	cm	null
 11-“,1,234.5lbs	f2	null
 11-“,1,234.5lbs	hu	null
-5,kilogram,1.8 ’ five,lbs	-	null
-5,kilogram,1.8 ’ five,lbs	h	null
+5,kilogram,1.8 ’ five,lbs	-	1.8 ft height
+5,kilogram,1.8 ’ five,lbs	h	1.8 ft height
 5,kilogram,1.8 ’ five,lbs	w	null
-5,kilogram,1.8 ’ five,lbs	cm	null
-5,kilogram,1.8 ’ five,lbs	f2	null
-5,kilogram,1.8 ’ five,lbs	hu	null
+5,kilogram,1.8 ’ five,lbs	cm	54.864000000000004 cm height = 1.8 ft
+5,kilogram,1.8 ’ five,lbs	f2	1.8 ft height
+5,kilogram,1.8 ’ five,lbs	hu	1.8 ft height
 3/4,lb,hundred-pound	-	null
 3/4,lb,hundred-pound	h	null
 3/4,lb,hundred-pound	w	null
@@ -7168,12 +7168,12 @@ onemeters	hu	null
 72,5 11-kilo-5.11 inch	cm	12.979400000000002 cm height = 5.11 in
 72,5 11-kilo-5.11 inch	f2	5.11 in height
 72,5 11-kilo-5.11 inch	hu	5.11 in height
-5 ”	-	null
-5 ”	h	null
+5 ”	-	5 in height
+5 ”	h	5 in height
 5 ”	w	null
-5 ”	cm	null
-5 ”	f2	null
-5 ”	hu	5 cm height
+5 ”	cm	12.7 cm height = 5 in
+5 ”	f2	5 in height
+5 ”	hu	5 in height
 (in)-in	-	null
 (in)-in	h	null
 (in)-in	w	null
@@ -8524,12 +8524,12 @@ hundred,lbs-1,000-pounds	hu	null
 .5 cm,0,lbs 5	cm	0.5 cm height
 .5 cm,0,lbs 5	f2	0.5 cm height
 .5 cm,0,lbs 5	hu	0.5 cm height
-5 lb twelve ”,¾,st	-	null
-5 lb twelve ”,¾,st	h	null
-5 lb twelve ”,¾,st	w	null
-5 lb twelve ”,¾,st	cm	null
-5 lb twelve ”,¾,st	f2	null
-5 lb twelve ”,¾,st	hu	null
+5 lb twelve ”,¾,st	-	12 in height
+5 lb twelve ”,¾,st	h	12 in height
+5 lb twelve ”,¾,st	w	5 lb weight
+5 lb twelve ”,¾,st	cm	30.48 cm height = 12 in
+5 lb twelve ”,¾,st	f2	12 in height
+5 lb twelve ”,¾,st	hu	12 in height
 80-in-180,pound 5.5 kilogram	-	80 in height
 80-in-180,pound 5.5 kilogram	h	80 in height
 80-in-180,pound 5.5 kilogram	w	null
@@ -8836,12 +8836,12 @@ one,' and,eleven	hu	23 in height = 1 ft + 11 in
 12,345,cm	cm	12345 cm height
 12,345,cm	f2	12345 cm height
 12,345,cm	hu	12345 cm height
-2 ” .5-inch	-	0.5 in height
-2 ” .5-inch	h	0.5 in height
+2 ” .5-inch	-	null
+2 ” .5-inch	h	null
 2 ” .5-inch	w	null
-2 ” .5-inch	cm	1.27 cm height = 0.5 in
-2 ” .5-inch	f2	0.5 in height
-2 ” .5-inch	hu	0.5 in height
+2 ” .5-inch	cm	null
+2 ” .5-inch	f2	null
+2 ” .5-inch	hu	null
 5-pound	-	5 lb weight
 5-pound	h	null
 5-pound	w	5 lb weight
@@ -8860,24 +8860,24 @@ elevenpoundeleven,feet	w	null
 elevenpoundeleven,feet	cm	null
 elevenpoundeleven,feet	f2	null
 elevenpoundeleven,feet	hu	null
-1,234.5-kilos-5.11 ” 12,345-kilo	-	null
-1,234.5-kilos-5.11 ” 12,345-kilo	h	null
+1,234.5-kilos-5.11 ” 12,345-kilo	-	5.11 in height
+1,234.5-kilos-5.11 ” 12,345-kilo	h	5.11 in height
 1,234.5-kilos-5.11 ” 12,345-kilo	w	null
-1,234.5-kilos-5.11 ” 12,345-kilo	cm	null
-1,234.5-kilos-5.11 ” 12,345-kilo	f2	null
-1,234.5-kilos-5.11 ” 12,345-kilo	hu	null
+1,234.5-kilos-5.11 ” 12,345-kilo	cm	12.979400000000002 cm height = 5.11 in
+1,234.5-kilos-5.11 ” 12,345-kilo	f2	5.11 in height
+1,234.5-kilos-5.11 ” 12,345-kilo	hu	5.11 in height
 0.7580-''	-	null
 0.7580-''	h	null
 0.7580-''	w	null
 0.7580-''	cm	null
 0.7580-''	f2	null
 0.7580-''	hu	null
-six g eighty ”	-	null
-six g eighty ”	h	null
+six g eighty ”	-	80 in height
+six g eighty ”	h	80 in height
 six g eighty ”	w	null
-six g eighty ”	cm	null
-six g eighty ”	f2	null
-six g eighty ”	hu	null
+six g eighty ”	cm	203.2 cm height = 80 in
+six g eighty ”	f2	80 in height
+six g eighty ”	hu	80 in height
 five-lbs-Top	-	5 lb weight
 five-lbs-Top	h	null
 five-lbs-Top	w	5 lb weight
@@ -9352,12 +9352,12 @@ hundred kilos	hu	null
 5 meters80,′-tall	cm	null
 5 meters80,′-tall	f2	null
 5 meters80,′-tall	hu	null
-one ’	-	null
-one ’	h	null
+one ’	-	1 ft height
+one ’	h	1 ft height
 one ’	w	null
-one ’	cm	null
-one ’	f2	null
-one ’	hu	1 m height
+one ’	cm	30.48 cm height = 1 ft
+one ’	f2	1 ft height
+one ’	hu	1 ft height
 0kilo about	-	null
 0kilo about	h	null
 0kilo about	w	null
@@ -9796,12 +9796,12 @@ eleven,feet	hu	11 ft height
 5½ 72,5 g 6metres	cm	600 cm height = 6 m
 5½ 72,5 g 6metres	f2	6 m height
 5½ 72,5 g 6metres	hu	6 m height
-11 150,foot 1/2 ”	-	1801 in height = 150 ft + 1 in
-11 150,foot 1/2 ”	h	1801 in height = 150 ft + 1 in
+11 150,foot 1/2 ”	-	null
+11 150,foot 1/2 ”	h	null
 11 150,foot 1/2 ”	w	null
-11 150,foot 1/2 ”	cm	4574.54 cm height = 150 ft + 1 in
-11 150,foot 1/2 ”	f2	1801 in height = 150 ft + 1 in
-11 150,foot 1/2 ”	hu	1801 in height = 150 ft + 1 in
+11 150,foot 1/2 ”	cm	null
+11 150,foot 1/2 ”	f2	null
+11 150,foot 1/2 ”	hu	null
 onecm ½-´ metres	-	null
 onecm ½-´ metres	h	null
 onecm ½-´ metres	w	null
@@ -9964,12 +9964,12 @@ eighty meters-0.75foot 1 centimetre	hu	null
 ´ 1.8,lbszero centimeter	cm	54.864000000000004 cm height = 1.8 ft
 ´ 1.8,lbszero centimeter	f2	1.8 ft height
 ´ 1.8,lbszero centimeter	hu	1.8 ft height
-150 ” ¼inch and	-	0.25 in height
-150 ” ¼inch and	h	0.25 in height
+150 ” ¼inch and	-	null
+150 ” ¼inch and	h	null
 150 ” ¼inch and	w	null
-150 ” ¼inch and	cm	0.635 cm height = 0.25 in
-150 ” ¼inch and	f2	0.25 in height
-150 ” ¼inch and	hu	0.25 in height
+150 ” ¼inch and	cm	null
+150 ” ¼inch and	f2	null
+150 ” ¼inch and	hu	null
 70,kilogams	-	null
 70,kilogams	h	null
 70,kilogams	w	null
@@ -10192,12 +10192,12 @@ seventylb,¾,"1centimetres	w	null
 seventylb,¾,"1centimetres	cm	null
 seventylb,¾,"1centimetres	f2	null
 seventylb,¾,"1centimetres	hu	null
-´ one-eighty ” ¾	-	180.75 ft height
-´ one-eighty ” ¾	h	180.75 ft height
+´ one-eighty ” ¾	-	2160.75 in height = 180 ft + 0.75 in
+´ one-eighty ” ¾	h	2160.75 in height = 180 ft + 0.75 in
 ´ one-eighty ” ¾	w	null
-´ one-eighty ” ¾	cm	5509.26 cm height = 180.75 ft
-´ one-eighty ” ¾	f2	180.75 ft height
-´ one-eighty ” ¾	hu	180.75 ft height
+´ one-eighty ” ¾	cm	5488.304999999999 cm height = 180 ft + 0.75 in
+´ one-eighty ” ¾	f2	2160.75 in height = 180 ft + 0.75 in
+´ one-eighty ” ¾	hu	2160.75 in height = 180 ft + 0.75 in
 &-.5,inch-m	-	null
 &-.5,inch-m	h	null
 &-.5,inch-m	w	null
@@ -10708,12 +10708,12 @@ twelveinch 5½-seventy,’	w	null
 twelveinch 5½-seventy,’	cm	null
 twelveinch 5½-seventy,’	f2	null
 twelveinch 5½-seventy,’	hu	null
-a-3/4 ”	-	null
-a-3/4 ”	h	null
+a-3/4 ”	-	0.75 in height
+a-3/4 ”	h	0.75 in height
 a-3/4 ”	w	null
-a-3/4 ”	cm	null
-a-3/4 ”	f2	null
-a-3/4 ”	hu	null
+a-3/4 ”	cm	1.905 cm height = 0.75 in
+a-3/4 ”	f2	0.75 in height
+a-3/4 ”	hu	0.75 in height
 inches,.5 in six lb	-	0.5 in height
 inches,.5 in six lb	h	0.5 in height
 inches,.5 in six lb	w	6 lb weight
