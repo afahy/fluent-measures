@@ -65,12 +65,21 @@ export const lbToKg = (value: number): number => value * 0.45359237;
 
 export const kgToLb = (value: number): number => value / 0.45359237;
 
+// Keep existing rounding unless the centimeter intermediate overflows. The direct factor
+// can still produce a finite target; truly infinite targets are rejected by the caller.
+const finiteOr = (value: number, fallback: number): number =>
+  Number.isFinite(value) ? value : fallback;
+
 // Conversions between units of the same type. There are none between a height and a weight.
 export const unitConversions: Record<Unit, Partial<Record<Unit, (value: number) => number>>> = {
-  ft: { in: ftToIn, cm: ftToCm, m: value => cmToM(ftToCm(value)) },
-  in: { ft: inToFt, cm: inToCm, m: value => cmToM(inToCm(value)) },
+  ft: { in: ftToIn, cm: ftToCm, m: value => finiteOr(cmToM(ftToCm(value)), value * 0.3048) },
+  in: { ft: inToFt, cm: inToCm, m: value => finiteOr(cmToM(inToCm(value)), value * 0.0254) },
   cm: { in: cmToIn, ft: cmToFt, m: cmToM },
-  m: { cm: mToCm, in: value => cmToIn(mToCm(value)), ft: value => cmToFt(mToCm(value)) },
+  m: {
+    cm: mToCm,
+    in: value => finiteOr(cmToIn(mToCm(value)), value / 0.0254),
+    ft: value => finiteOr(cmToFt(mToCm(value)), value / 0.3048),
+  },
   lb: { kg: lbToKg },
   kg: { lb: kgToLb },
 };
