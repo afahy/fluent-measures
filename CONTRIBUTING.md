@@ -104,6 +104,11 @@ argument and defaults to `docs/index.html`. A URL, such as `http://localhost:808
   sticky header. After scrolling settles, it checks focus, the outline's position and hit
   testing in both motion settings. These keyboard checks use a height of 844px below 600px wide,
   and 900px otherwise.
+  At 390 and 1440px, it checks the skip links with and without scripts. On desktop, the second
+  skip link reaches the contents navigation; on phones it stays out of the focus order. With
+  scripts, ordinary code examples that fit are skipped, active tab-panel code stays reachable,
+  and a constrained example becomes focusable until it fits again. These checks also cover
+  changing code tabs and opening the full-result disclosure.
   It also disables JavaScript before loading at 390×844 and 1440×900 in both themes, activates
   API, Troubleshooting and a nested topic with the keyboard and pointer, and checks that each
   destination is visible and uncovered after scrolling stops. These navigation checks always

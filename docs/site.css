@@ -607,6 +607,10 @@ html:not([data-js]) .site-header {
 
 /* One header row below the desktop layout; "On this page" holds the section links. */
 @media (max-width: 1023px) {
+  .skip-navigation {
+    display: none;
+  }
+
   :root {
     --header-h: 55px;
     --anchor-offset: 80px;

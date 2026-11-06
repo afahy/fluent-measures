@@ -42,6 +42,9 @@ Reviewed on 6 November 2026, using the page's markup, styles and Chrome layout/k
   The sweep checks focus leaving the phone menu and backward focus beneath the sticky header,
   including reduced motion and no-script navigation. Check the complete reading and focus
   order when adding or moving sections.
+  A second desktop skip link reaches the contents navigation before the article. Ordinary code
+  examples join the Tab order only when scrollable; selected tab-panel code retains a content
+  entry. The sweep checks these paths in both themes, including the no-script fallback.
 - **Names, states and feedback (2.4.2, 2.4.4, 2.4.6, 2.5.3, 4.1.2, 4.1.3):** the page has a
   descriptive title, labeled controls and links, selected/expanded states, and live messages
   for copy outcomes and example expansion. Tabs and copy actions become interactive only

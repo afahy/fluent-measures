@@ -150,6 +150,7 @@
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
+    <a class="skip-link skip-navigation" href="#page-navigation">Skip to page navigation</a>
 
     <svg class="sprite" aria-hidden="true">
       <symbol id="i-ruler" viewBox="0 0 24 24">
@@ -2002,7 +2003,7 @@ const strict = parseMeasurement(
         </div>
 
         <aside class="toc-col">
-          <nav class="toc" aria-label="On this page">
+          <nav class="toc" id="page-navigation" tabindex="-1" aria-label="On this page">
             <p class="toc-title">On this page</p>
             <ul>
               <li class="toc-group">
@@ -2284,14 +2285,22 @@ const strict = parseMeasurement(
           const more = el.scrollWidth - el.clientWidth - el.scrollLeft > 2;
           el.classList.toggle('has-more', more);
           el.classList.toggle('has-less', el.scrollLeft > 2);
+          // Tab-panel text needs a content entry; ordinary examples need focus only to scroll.
+          // Keep tabindex="0" in the markup so the no-script page stays keyboard scrollable.
+          const scrollable = el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight;
+          el.tabIndex = scrollable || el.closest('[role="tabpanel"]') ? 0 : -1;
         }
 
         function updateOverflow(root = document) {
           root.querySelectorAll('.code pre').forEach(markOverflow);
         }
 
+        const codeObserver = new ResizeObserver(entries => {
+          entries.forEach(entry => markOverflow(entry.target));
+        });
         document.querySelectorAll('.code pre').forEach(el => {
           el.addEventListener('scroll', () => markOverflow(el), { passive: true });
+          codeObserver.observe(el);
         });
 
         document.querySelectorAll('details.full-object').forEach(details => {
