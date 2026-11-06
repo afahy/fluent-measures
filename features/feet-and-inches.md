@@ -27,7 +27,7 @@ The user gets the total height in inches from feet and inches, with each part in
 
 - Source: `src/parseMeasurement.ts`, `src/tokenize.ts`
 - Tests: `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.bareInches.test.ts`, `tests/parseMeasurement.hyphens.test.ts`,
-  `tests/parseMeasurement.numberWordCommas.test.ts`,
+  `tests/parseMeasurement.numberWordCommas.test.ts`, `tests/parseMeasurement.commaBetweenWords.test.ts`,
   `tests/parseMeasurement.hyphenReview.test.ts`, `tests/parseMeasurement.markHyphens.test.ts`,
   `tests/parseMeasurement.marksAfterWords.test.ts`, `tests/parseMeasurement.twoApostrophes.test.ts`,
   `tests/parseMeasurement.unicodeMarks.test.ts`
