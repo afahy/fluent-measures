@@ -99,6 +99,10 @@ argument and defaults to `docs/index.html`. A URL, such as `http://localhost:808
   is missing, too tall or collides. It checks each width again with the hero demo expanded, and
   marks a problem that only the expanded card has with `[expanded]`. It also checks that four
   curated rows expand to all eight in order, then collapse back to the same four and card height.
+  It also disables JavaScript before loading at 390×844 and 1440×900 in both themes, activates
+  API, Troubleshooting and a nested topic with the keyboard and pointer, and checks that each
+  destination is visible and uncovered after scrolling stops. These navigation checks always
+  run, including when `--from` and `--to` select fewer layout widths.
   Each line names a problem and the widths where it appears. The script exits 1 when it finds a problem, and 2 when it can't run.
   Run it after each change to `docs/` and before you open the PR. `--from`, `--to` and `--step`
   change the widths, and `--touch` emulates a touch screen. The checks use the page's class

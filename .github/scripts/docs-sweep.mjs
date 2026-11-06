@@ -7,6 +7,7 @@
 // and navigation that is missing or collides. It runs the checks again with the hero demo
 // expanded, checks that all eight rows append in order, then collapses back to the same four
 // curated rows and card height. The page defaults to docs/index.html. --touch emulates a touch screen.
+// It also checks no-script anchor visibility with keyboard and pointer at phone/desktop sizes.
 //
 // It exits 0 when it finds no problem, 1 when it finds one, and 2 when it can't run. The checks
 // use the class names of docs/index.html, so a change to those names needs a change here.
@@ -22,6 +23,7 @@ import {
   sweepOptions,
   sweepWidths,
 } from './docs-chrome.mjs';
+import { noScriptNavigation } from './docs-no-script-navigation.mjs';
 
 /** Runs in the page. Returns a list of the problems at the current width, without repeats. */
 function probe() {
@@ -161,7 +163,7 @@ function probe() {
   const gh = [document.querySelector('.header-github'), document.querySelector('.menu-github')];
   const shown = gh.filter(el => el && getComputedStyle(el).display !== 'none');
   if (shown.length !== 1) out.push('GITHUB count=' + shown.length);
-  const theme = document.querySelector('.theme-menu > summary');
+  const theme = document.querySelector('.theme-toggle');
   if (!vis(theme)) out.push('THEME hidden');
   document.querySelectorAll('.header-bar > *, .header-actions > *').forEach(el => {
     if (!vis(el)) return;
@@ -305,6 +307,9 @@ try {
       }
     }
   }
+  for (const { problem, scheme, width } of await noScriptNavigation(browser, url)) {
+    problems.set(problem, [...(problems.get(problem) ?? []), { scheme, width }]);
+  }
 } catch (error) {
   console.error(error.message);
   process.exitCode = EXIT_ERROR;
@@ -319,9 +324,13 @@ if (process.exitCode !== EXIT_ERROR) {
   if (problems.size) {
     const places = new Set([...problems.values()].flat().map(p => `${p.scheme} ${p.width}`));
     const visited = 2 * sweepWidths(from, to, step).length;
-    console.log(`\nProblems at ${places.size} of ${visited} widths, counting each color scheme.`);
+    console.log(
+      `\nProblems at ${places.size} theme/width combinations (${visited} layout checks plus no-script navigation).`
+    );
     process.exitCode = 1;
   } else {
-    console.log(`No problems between ${from} and ${to}px, in light and dark.`);
+    console.log(
+      `No problems between ${from} and ${to}px, in light and dark, or with no-script navigation at 390 and 1440px.`
+    );
   }
 }
