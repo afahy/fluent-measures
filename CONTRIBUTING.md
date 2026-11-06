@@ -99,6 +99,8 @@ argument and defaults to `docs/index.html`. A URL, such as `http://localhost:808
   is missing, too tall or collides. It checks each width again with the hero demo expanded, and
   marks a problem that only the expanded card has with `[expanded]`. It also checks that four
   curated rows expand to all eight in order, then collapse back to the same four and card height.
+  The original rows must keep their column positions, widths and text wrapping through both
+  toggles.
   At the first and last widths, and at 390 and 1440px when included, it also presses Tab and
   Shift+Tab from beside option links, code tabs, copy buttons and disclosures placed under the
   sticky header. After scrolling settles, it checks focus, the outline's position and hit

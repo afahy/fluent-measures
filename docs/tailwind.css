@@ -975,13 +975,18 @@ html:not([data-js]) .site-header {
   color: var(--heading);
 }
 
-/* Rows share one grid so arrows line up just before right-aligned results. */
+/*
+ * Reserve the longest result (68.0388555 kg, 13 characters) plus the row's right padding,
+ * even while it is hidden. Expanding the examples must not resize the shared columns.
+ */
 
 .demo-list {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 20px auto;
+  grid-template-columns: minmax(0, 1fr) 20px calc(13ch + 20px);
   -moz-column-gap: 12px;
   column-gap: 12px;
+  font-family: var(--font-mono);
+  font-size: var(--mono-lg);
 }
 
 .demo-list > div {
@@ -1110,6 +1115,8 @@ html:not([data-js]) .site-header {
 
 @media (max-width: 639px) {
   .demo-list {
+    /* The long result has its own line here; reserve the next longest, 180.34 cm. */
+    grid-template-columns: minmax(0, 1fr) 20px calc(9ch + 16px);
     -moz-column-gap: 10px;
     column-gap: 10px;
   }
@@ -1163,10 +1170,8 @@ html:not([data-js]) .site-header {
 }
 
 /*
- * A long result (150 lbs in kg) widens the shared result column. So its input and options take
- * the whole row, which keeps them on as few lines as in the other rows, and the result sits on
- * the chip's line. On a phone the result takes its own line instead, so it doesn't widen the
- * column for every row and push the arrows into the inputs.
+ * The long result's input and options take the whole row, with the result on the chip's line.
+ * On a phone the result takes its own line instead, leaving room for the other rows' inputs.
  */
 
 .demo-list > .demo-long dt {

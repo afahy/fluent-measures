@@ -6,7 +6,8 @@
 // screen, input chips that run into their results or the hero demo's arrows, values that wrap,
 // and navigation that is missing or collides. It runs the checks again with the hero demo
 // expanded, checks that all eight rows append in order, then collapses back to the same four
-// curated rows and card height. It also checks keyboard focus leaving the phone menu at 390×844
+// curated rows and card height. The original rows keep their geometry through both toggles.
+// It also checks keyboard focus leaving the phone menu at 390×844
 // in both themes. The page defaults to docs/index.html. --touch emulates a touch screen.
 // It also checks no-script anchor visibility with keyboard and pointer at phone/desktop sizes.
 //
@@ -219,6 +220,19 @@ async function toggleDemo() {
     rows: [...demo.querySelectorAll('.demo-list > div')]
       .filter(row => row.getClientRects().length && getComputedStyle(row).visibility !== 'hidden')
       .map(row => row.querySelector('.demo-input')?.textContent),
+    // AFA-233: revealing the longer kg result must not resize the shared columns or rewrap
+    // existing options. Measure relative to the card so collapse scrolling is allowed.
+    geometry: [...demo.querySelectorAll('.demo-list > div:not(.demo-extra)')].map(row =>
+      [...row.querySelectorAll('dt, .demo-input, .demo-opts, .demo-arrow, dd > span')].map(el => {
+        const rect = el.getBoundingClientRect();
+        return [
+          rect.left,
+          rect.top - demo.getBoundingClientRect().top,
+          rect.width,
+          rect.height,
+        ].map(Math.round);
+      })
+    ),
   });
   const before = snapshot();
   more.click();
@@ -296,6 +310,9 @@ try {
         if (open.after.height <= open.before.height) {
           found.add('DEMO-HEIGHT appended rows do not increase the card height');
         }
+        if (!sameRows(open.after.geometry, open.before.geometry)) {
+          found.add('DEMO-SHIFT expansion moves or resizes the original examples');
+        }
         const shut = await browser.evaluate(`(${toggleDemo})()`);
         if (typeof shut === 'string' || shut.expanded) {
           found.add('DEMO-TOGGLE a second press does not collapse the card');
@@ -306,6 +323,9 @@ try {
           }
           if (Math.round(shut.after.height) !== Math.round(open.before.height)) {
             found.add('DEMO-HEIGHT collapse does not restore the initial card height');
+          }
+          if (!sameRows(shut.after.geometry, shut.before.geometry)) {
+            found.add('DEMO-SHIFT collapse moves or resizes the original examples');
           }
           for (const problem of await browser.evaluate(`(${probe})()`)) {
             if (!found.has(problem)) found.add(problem + ' [collapsed again]');
