@@ -405,7 +405,17 @@ Each fix session must:
 
 ### Session ledger
 
-Pending launch after the audit document is saved.
+| Session                                                                                                                           | Assigned work                                                       | Launch state                                           |
+| --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------ |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:ab3e225544f4690efa2764d0a191792e86a687eff06d7b4e3bb8c5380b1b736d> | AFA-235 publication and review of this document                     | Started; full validation and PR pending                |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:9df9034c3ce42adbebf696dd9b9d990bec04b84a9494a53e3c9bf77d6c1fc1d4> | AFA-75, then fresh successor sessions for AFA-74, AFA-202, AFA-62   | AFA-75 claimed In Progress; successors not yet started |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1a5f5b908ee23500b3eab3c85521ed6236b310c0f375af966f353457aef7d25e> | AFA-78, then fresh successor sessions for AFA-203, AFA-116, AFA-107 | AFA-78 claimed In Progress; successors not yet started |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:437846f95d8fc1b59e8b6aed92f360110a4df975347393dec096581adc8de82f> | AFA-236 finite conversion overflow                                  | Started; implementation pending                        |
+
+Sessions use isolated prepared worktrees. Full checks and mutation runs have one shared execution
+slot, initially publication → AFA-75 → AFA-78 → AFA-236; sessions pass it by message. Focused tests
+can run while another session holds the slot. Successor sessions inherit the regression, corpus,
+mutation, PR-lifecycle and document-update requirements. Launch status is not fix completion.
 
 ## Validation record
 
