@@ -219,7 +219,11 @@ type Toasts = Record<'success-toast' | 'error-toast', Toast>;
  * has one copy button here. The stand-ins act only on the event names and the selector that the
  * page should use. Return the button's click listeners and the two toasts.
  */
-function runCopyScript(clipboardJS?: unknown): { clicks: Listener[]; toasts: Toasts } {
+function runCopyScript(clipboardJS?: unknown): {
+  clicks: Listener[];
+  toasts: Toasts;
+  button: { hidden: boolean; disabled: boolean };
+} {
   const script = page
     .split('<script>')
     .map(part => part.split('</script>')[0])
@@ -239,6 +243,8 @@ function runCopyScript(clipboardJS?: unknown): { clicks: Listener[]; toasts: Toa
   const clicks: Listener[] = [];
   let onReady: Listener = () => undefined;
   const button = {
+    hidden: true,
+    disabled: true,
     addEventListener: (event: string, listener: Listener): void => {
       if (event === 'click') clicks.push(listener);
     },
@@ -254,7 +260,7 @@ function runCopyScript(clipboardJS?: unknown): { clicks: Listener[]; toasts: Toa
   const globals = { document, setTimeout: (): number => 0, clearTimeout: (): void => undefined };
   runInNewContext(script ?? '', clipboardJS ? { ...globals, ClipboardJS: clipboardJS } : globals);
   onReady();
-  return { clicks, toasts };
+  return { clicks, toasts, button };
 }
 
 describe('the docs page', () => {
@@ -407,7 +413,8 @@ describe('the docs page', () => {
   // If the browser blocks clipboard.js, or cdnjs is down, "new ClipboardJS" would throw, and the
   // copy buttons would fail with no message.
   it('shows the error toast for a copy button when clipboard.js is missing', () => {
-    const { clicks, toasts } = runCopyScript();
+    const { clicks, toasts, button } = runCopyScript();
+    expect(button).toMatchObject({ hidden: true, disabled: true });
     expect(clicks).toHaveLength(1);
     clicks[0]();
     expect(toasts['error-toast'].dataset.visible).toBe('true');
@@ -416,7 +423,13 @@ describe('the docs page', () => {
     expect(toasts['success-toast'].dataset.visible).toBe('false');
   });
 
+  it('keeps copy actions unavailable when the browser cannot copy', () => {
+    const { button } = runCopyScript({ isSupported: () => false });
+    expect(button).toMatchObject({ hidden: true, disabled: true });
+  });
+
   it('uses clipboard.js for the copy buttons when it loaded', () => {
+    expect.hasAssertions();
     const selectors: string[] = [];
     const handlers: Record<string, Listener> = {};
     function ClipboardJS(selector: string): { on: (event: string, handler: Listener) => void } {
@@ -427,7 +440,12 @@ describe('the docs page', () => {
         },
       };
     }
-    const { clicks, toasts } = runCopyScript(ClipboardJS);
+    ClipboardJS.isSupported = (action: string): boolean => {
+      expect(action).toBe('copy');
+      return true;
+    };
+    const { clicks, toasts, button } = runCopyScript(ClipboardJS);
+    expect(button).toMatchObject({ hidden: false, disabled: false });
     expect(selectors).toEqual(['.copy-button']);
     expect(clicks).toEqual([]);
     expect(Object.keys(handlers).sort()).toEqual(['error', 'success']);
@@ -521,4 +539,40 @@ it('reveals the Quick start result beside either module format', () => {
   });
   expect(code.textContent).toContain('if (result)');
   expect(code.textContent).not.toContain('✓ Returns');
+});
+
+// AFA-221: source markup must be useful before any script or CDN dependency runs.
+describe('static docs examples before initialization', () => {
+  it('does not advertise uninitialized tab widgets or selected states', () => {
+    const markup = page.replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, '');
+    // Match attributes only; script strings that install the semantics do not match tags.
+    expect(markup).not.toMatch(/<[^>]+\srole="(?:tab|tablist|tabpanel)"/);
+    expect(markup).not.toMatch(/<[^>]+\saria-selected=/);
+  });
+
+  it('starts each copy action hidden and disabled', () => {
+    expect.hasAssertions();
+    const buttons = [...page.matchAll(/<button\b[^>]*class="copy-button"[^>]*>/g)];
+    expect(buttons).toHaveLength(7);
+    for (const [button] of buttons) {
+      expect(button).toMatch(/\shidden(?:\s|>)/);
+      expect(button).toMatch(/\sdisabled(?:\s|>)/);
+    }
+  });
+
+  it.each([
+    ['npm', 'npm'],
+    ['yarn', 'yarn'],
+    ['pnpm', 'pnpm'],
+    ['esm', 'ES modules'],
+    ['cjs', 'CommonJS'],
+    ['convert-height', 'Height conversion'],
+    ['convert-weight', 'Weight conversion'],
+  ])('labels the visible static %s group', (id, label) => {
+    const panel = new RegExp(`<div[^>]*id="panel-${id}"[^>]*>`).exec(page)?.[0] ?? '';
+    expect(panel).toContain('role="group"');
+    expect(panel).not.toMatch(/\shidden(?:\s|>)/);
+    const labelId = /aria-labelledby="([^"]+)"/.exec(panel)?.[1];
+    expect(page).toMatch(new RegExp(`<p[^>]*id="${labelId}"[^>]*>\\s*${label}\\s*</p>`));
+  });
 });

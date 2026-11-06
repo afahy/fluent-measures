@@ -114,6 +114,11 @@ argument and defaults to `docs/index.html`. A URL, such as `http://localhost:808
 For example, `pnpm docs:shot --width 1440 --scheme dark --full` takes the whole page at desktop
 width in dark, and writes `docs-shots/1440-dark-full.png`.
 
+The sweep also checks the static examples with scripts disabled at 390×844 and 1440×900 in both
+themes, then checks initialized tabs, saved choices and copy feedback, including a blocked
+clipboard library. These controls checks always run, even with a limited layout width range.
+Run them separately with `pnpm exec node .github/scripts/docs-controls.mjs [page]`.
+
 ## Development Setup
 
 Use Node.js 22.22.1 or later in 22.x, 24.11 or later in 24.x, or 26 or later. Use Git 2.32.0 or later. CI runs on Node.js 22 and 24. These development dependencies need these versions:

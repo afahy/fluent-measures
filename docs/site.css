@@ -2343,11 +2343,12 @@ a:hover {
   color: var(--text-muted);
 }
 
-/* All lesson examples remain readable when scripts are unavailable. */
-html:not([data-js]) .code [role='tabpanel'][hidden] {
-  display: block !important;
+/* Static groups carry their own labels until the tab handlers are ready. */
+.code-head:has(> [data-tab-group][hidden]) {
+  display: none;
 }
 
+/* All lesson examples remain readable when scripts are unavailable. */
 html:not([data-js]) .code .code-wide {
   display: block;
 }
