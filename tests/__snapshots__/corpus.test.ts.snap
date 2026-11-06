@@ -2,7 +2,7 @@
 
 exports[`measurement corpus > matches the committed score 1`] = `
 "Category                 total   agree   wrong  missed  throws
-all                        549     528       9      12       0
+all                        563     546       5      12       0
 
 symbols                     83      83       0       0       0
 words                       31      31       0       0       0
@@ -17,10 +17,10 @@ surrounding-text            52      52       0       0       0
 multiple-measurements       43      43       0       0       0
 unqualified                 25      25       0       0       0
 conversion                  40      40       0       0       0
-unsupported                 46      42       4       0       0
+unsupported                 60      60       0       0       0
 prose                       32      29       3       0       0
 
-Entries with the outcome "wrong" (9):
+Entries with the outcome "wrong" (5):
 
 decimals-5-11-ft (decimals)
   input:    "5.11 ft"
@@ -51,30 +51,6 @@ unicode-minus-after-number-word-label (commas)
   options:  {}
   expected: null
   actual:   25 cm (height)
-
-signed-phrase-separate-grams (unsupported)
-  input:    "kg -twenty five 5 grams; actual 70 kg"
-  options:  {}
-  expected: null
-  actual:   70 kg (weight)
-
-signed-digits-separate-grams (unsupported)
-  input:    "kg -20 5 grams; actual 70 kg"
-  options:  {}
-  expected: null
-  actual:   70 kg (weight)
-
-signed-phrase-compact-comma-grams (unsupported)
-  input:    "kg -twenty five,5 grams; actual 70 kg"
-  options:  {}
-  expected: null
-  actual:   70 kg (weight)
-
-signed-phrase-semicolon-grams (unsupported)
-  input:    "kg -twenty five; 5 grams; actual 70 kg"
-  options:  {}
-  expected: null
-  actual:   70 kg (weight)
 
 Entries with the outcome "missed" (12):
 

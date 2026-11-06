@@ -47,20 +47,14 @@ describe.each(weightOptions)('weight number ownership across comma boundaries wi
     expect(parseMeasurement(raw, options)).toBeNull();
   });
 
-  // This ticket changes comma-and-space boundaries only. Preserve main for other separators;
-  // the separate signed-ownership ticket owns their incomplete-weight correction.
+  // AFA-203 extends signed supported-prefix ownership beyond comma-and-space boundaries.
+  // These were preservation cases for AFA-179's narrower scope; the ticket now requires null.
   it.each([
     'kg -twenty five 5 grams; actual 70 kg',
     'kg -20 5 grams; actual 70 kg',
     'kg -twenty five,5 grams; actual 70 kg',
     'kg -twenty five; 5 grams; actual 70 kg',
-  ])('preserves the existing result without the new comma boundary in %s', raw => {
-    expect(parseMeasurement(raw, options)).toEqual({
-      value: 70,
-      unit: 'kg',
-      type: 'weight',
-      raw,
-      matches: [{ value: 70, unit: 'kg' }],
-    });
+  ])('rejects the incomplete weight without a comma boundary in %s', raw => {
+    expect(parseMeasurement(raw, options)).toBeNull();
   });
 });
