@@ -76,6 +76,11 @@ sufficient. Recommend human sessions before anyone calls the page easy to use in
    the same disk: rule 3 of the brief, and each reviewer's report on it, are what keep reviewers
    out. Copy the key to `$R/private/`. Copy `decisions.md.tmpl` to
    `$R/decisions.md`, and add the entries of the last usability run from its PR body.
+   Start `$R/findings.md` using [the findings ledger](../council/ledger.md). Keep it with the
+   coordinator; never include it in a first-use reviewer's brief or folder. Carry its stable
+   finding IDs through synthesis, blocker lists and fix reports, using trace and grade evidence
+   to verify outcomes. Prepare the design acceptance constraints and fixed reference screenshots
+   before the baseline, as design skill sections 1 and 3 say.
 3. Check the key against the merged README, `PARSING.md` and page. Each `path` id must be a
    heading id on the page, and each grounding note must still hold. If an id or a rule changed,
    update the key, bump its version, and say so in the PR.
@@ -158,9 +163,13 @@ A round passes when all of these hold, over the core tasks of the 4 reviewers:
 `grade.mjs round` checks 1 to 4. The organizer checks 5. The final round also needs:
 
 6. The holdout correct share within 15 points of the core share.
-7. One design-judge round of the design skill (`judge-brief.md`, both families) gives at least 9
-   Overall from each judge. Give the judges the last design run's history and decisions, and a
-   changelog of the usability changes.
+7. One blind design acceptance round (design skill section 8a, both families) gives at least 9
+   Overall from each judge, with no open gate failure. Prepare the neutral constraints and fixed
+   reference screenshots before the baseline, as design skill sections 1 and 3 say. Keep the
+   last design run's history and decisions with the coordinator; acceptance judges receive
+   neither those files nor usability results or changelogs. Reserve one blind design assessment
+   for the final round. Any additional attempt, including after a merge from main, needs a
+   maintainer-approved extension; it does not reset the usability fix budget.
 8. The gates and `pnpm check` pass.
 
 ## 7. Stop rules
@@ -202,7 +211,10 @@ what waits on the maintainer. Put each report in the same message as your next t
 
 ## 10. Final round and ship
 
-1. After a pass, run section 6 with 4 new reviewers and `HOLDOUT=1`, and the design-judge round.
+1. After a pass, run section 6 with 4 new reviewers and `HOLDOUT=1`, and the blind design
+   acceptance round. Check all eight acceptance criteria before shipping. A failed final check
+   is not a pass; report the findings and use the stop rules, requesting an extension when its
+   budget is spent. The staged design mode never reduces these four first-use reviewers.
 2. Ship as design skill section 9 says. In the PR body, under "Description", add each round's
    `metrics.md`, the findings table, the decisions, the holdout check and the design-judge
    scores, with "simulated AI reviewers" beside every AI number. Say whether human sessions ran.
