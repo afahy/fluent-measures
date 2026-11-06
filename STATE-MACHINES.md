@@ -414,7 +414,7 @@ concerns but have different failure causes and existing preservation requirement
 
 | Work stream                 | Tickets / order                      | State and required handoff                                                                                                                                    |
 | --------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Publish this audit          | [AFA-235][audit]                     | Publication self-review and full checks passed; PR submission and review pending                                                                              |
+| Publish this audit          | [AFA-235][audit]                     | [PR #228](https://github.com/afahy/fluent-measures/pull/228) open; self-review and full checks passed; review pending                                         |
 | Separate tokenizer refactor | [AFA-88][refactor]                   | In Progress; preserve existing remote branch `apfahy/afa-88-read-every-number-form-in-one-tokenizer-pass`, last observed `ded9ee0`; requires maintainer merge |
 | Boundary and number fixes   | AFA-75 → AFA-74 → AFA-202 → AFA-62   | Pause lifted by maintainer on 2026-11-06; fresh sessions fix one ticket per PR                                                                                |
 | Quote and ownership fixes   | AFA-78 → AFA-203 → AFA-116 → AFA-107 | Pause lifted by maintainer on 2026-11-06; fresh sessions fix one ticket per PR                                                                                |
@@ -440,12 +440,12 @@ Each fix session must:
 
 ### Session ledger
 
-| Session                                                                                                                           | Assigned work                                                       | Launch state                                                                                 |
-| --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:ab3e225544f4690efa2764d0a191792e86a687eff06d7b4e3bb8c5380b1b736d> | AFA-235 publication and review of this document                     | Self-review and full validation passed; PR pending                                           |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:9df9034c3ce42adbebf696dd9b9d990bec04b84a9494a53e3c9bf77d6c1fc1d4> | AFA-75, then fresh successor sessions for AFA-74, AFA-202, AFA-62   | Implementation and independent review ready; full checks pending; successors not yet started |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1a5f5b908ee23500b3eab3c85521ed6236b310c0f375af966f353457aef7d25e> | AFA-78, then fresh successor sessions for AFA-203, AFA-116, AFA-107 | AFA-78 claimed In Progress; successors not yet started                                       |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:437846f95d8fc1b59e8b6aed92f360110a4df975347393dec096581adc8de82f> | AFA-236 finite conversion overflow                                  | Implementation and focused tests ready; independent review and full checks pending           |
+| Session                                                                                                                           | Assigned work                                                       | Launch state                                                                                              |
+| --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:ab3e225544f4690efa2764d0a191792e86a687eff06d7b4e3bb8c5380b1b736d> | AFA-235 publication and review of this document                     | [PR #228](https://github.com/afahy/fluent-measures/pull/228) open; full validation passed; review pending |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:9df9034c3ce42adbebf696dd9b9d990bec04b84a9494a53e3c9bf77d6c1fc1d4> | AFA-75, then fresh successor sessions for AFA-74, AFA-202, AFA-62   | Implementation and independent review ready; full checks pending; successors not yet started              |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1a5f5b908ee23500b3eab3c85521ed6236b310c0f375af966f353457aef7d25e> | AFA-78, then fresh successor sessions for AFA-203, AFA-116, AFA-107 | AFA-78 claimed In Progress; successors not yet started                                                    |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:437846f95d8fc1b59e8b6aed92f360110a4df975347393dec096581adc8de82f> | AFA-236 finite conversion overflow                                  | Implementation and focused tests ready; independent review and full checks pending                        |
 
 Sessions use isolated prepared worktrees. Full checks and mutation runs have one shared execution
 slot, initially publication → AFA-75 → AFA-78 → AFA-236; sessions pass it by message. Focused tests
@@ -461,7 +461,8 @@ The fresh publication session rechecked all runtime source files and passed `pnp
 `pnpm check` on 2026-11-06: 3,385 unit tests with coverage, TypeScript, mutation testing (99.78%),
 build, bundle-size and API checks, and 3,456 package tests. It reran the embedded harness against
 the unchanged baseline implementation: exactly 18 expected failing probes and 4 passing controls,
-including retries and four workers. The temporary probe file was removed. Final documentation
+including retries and four workers. The separate F10 harness also reproduced its two expected
+failures and one passing control. Both temporary probe files were removed. Final documentation
 edits passed Prettier and CSpell. No production code or permanent test file was changed by this
 audit. Each fix session remains responsible for its own regression tests and full checks.
 
