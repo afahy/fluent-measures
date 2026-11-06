@@ -586,7 +586,9 @@ additional survivors relax the earlier inference gate to admit zero; they cannot
 result now that M9 rejects zero totals. The other three survivors are the previously recorded
 zero-part skip, numeric-comma rejection string and fuzzy-unit regex. No mutation suppression
 was added. Sizes are 4.67 kB ESM and 4.70 kB CommonJS, under unchanged 5 kB limits.
-Independent input review and PR/merge validation remain pending.
+The independent input review at `4191746` found all 92 predefined probes agree through
+source, ESM and CommonJS. Ten reproduce the inferred-zero defect on `b74d185`; positive
+boundary controls remain positive. No new finding was reported. PR/merge validation is pending.
 
 ## Reproducing the audit
 
