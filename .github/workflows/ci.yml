@@ -335,9 +335,28 @@ jobs:
           path: reports/stryker-incremental.json
           key: stryker-main-${{ needs.mutation-inventory.outputs.tools }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ steps.aggregate.outputs.stopped == 'true' && 'stopped' || 'ended' }}
 
+  docs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          node-version: 24
+      - name: Lighthouse and WCAG automated audits
+        run: pnpm docs:audit
+      - name: Docs layout and keyboard checks
+        run: pnpm docs:sweep
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: docs-audit
+          path: reports/docs-audit/
+          if-no-files-found: error
+
   ci-ok:
     if: always()
-    needs: [test, package, mutation, mutation-report]
+    needs: [test, package, mutation, mutation-report, docs]
     runs-on: ubuntu-latest
     steps:
       - name: Check all CI jobs passed

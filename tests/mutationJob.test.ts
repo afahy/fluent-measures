@@ -303,7 +303,7 @@ describe('the mutation job in CI', () => {
   it('uses one mutation run and keeps it required through ci-ok', () => {
     expect([...ci.matchAll(/pnpm test:mutation/g)]).toHaveLength(1);
     expect(ci).not.toMatch(/^ {2}mutation-changed-lines:/m);
-    expect(ci).toContain('needs: [test, package, mutation, mutation-report]');
+    expect(ci).toContain('needs: [test, package, mutation, mutation-report, docs]');
     expect(mutation).not.toContain('continue-on-error');
     expect(job).not.toContain('continue-on-error');
   });
@@ -717,9 +717,9 @@ describe('parallel mutation workflow', () => {
   it('requires aggregation even after a failed shard and rejects missing uploads', () => {
     expect(ci).toContain("if: ${{ !cancelled() && needs.mutation-inventory.result == 'success' }}");
     expect(ci).toContain('needs: [mutation-inventory, mutation]');
-    expect(ci.match(/if-no-files-found: error/g)).toHaveLength(3);
+    expect(ci.match(/if-no-files-found: error/g)).toHaveLength(4);
     expect(ci).toContain('node .github/scripts/mutation-shards.mjs merge');
-    expect(ci).toContain('needs: [test, package, mutation, mutation-report]');
+    expect(ci).toContain('needs: [test, package, mutation, mutation-report, docs]');
   });
 
   it('disables only the shard break check and retains the configured aggregate threshold', () => {
