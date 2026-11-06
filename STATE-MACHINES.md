@@ -477,6 +477,38 @@ exception were removed; quoted prose and explicit inch fractions retain the orig
 The PR remains draft only for final validation and the review-fix push, pending its reserved
 heavy-check window after AFA-78 and AFA-107.
 
+### F2 follow-up — quote pairs, low quotations and compound marks
+
+[AFA-239][quote-follow-up] (Medium) is **unfixed, unassigned and in Backlog**. It groups three
+findings deferred under AGENTS.md’s three-review-round rule. This is an audit-only follow-up;
+it is not an AFA-74 production change and is outside both active successor queues.
+
+The AFA-78 owner reproduced all six input/option rows with `parseMeasurement` and
+`pnpm test:unit` on reviewed [PR #231](https://github.com/afahy/fluent-measures/pull/231)
+head `0b7f4d2c2553c9cdf967663d4e4497e4837b7d72`, compared with main `b74d185`:
+
+| Input                               | Options     | Main `b74d185` / expected | Reviewed #231 head |
+| ----------------------------------- | ----------- | ------------------------- | ------------------ |
+| `72 ’’`                             | default     | `null`                    | 72 ft              |
+| `five’’`                            | default     | `null`                    | 5 ft               |
+| `he said „five” and weighs 180 lbs` | default     | 180 lb                    | 5 in               |
+| `he said ‚five’ and weighs 180 lbs` | default     | 180 lb                    | 5 ft               |
+| `5’11” kg 80`                       | default     | 71 in                     | 5 ft               |
+| `5’11” kg 80`                       | weight type | 80 kg                     | 11 kg              |
+
+At the time this evidence was recorded, #231 was still open; these reviewed-head outputs are
+not presented as main results. The expected values follow paired-apostrophe rejection,
+quotations having no measurement unit, and 5 × 12 + 11 = 71 in with a separate 80 kg weight.
+ASCII and prime controls retained the expected results on both revisions.
+
+The M1 causes are partial conversion of paired curly marks; failure to recognize low opening
+quotation marks `„` and `‚`; and removal of a compound height’s inch mark before a separate
+prefix-unit weight. The quote-context regressions and generated result snapshot missed these
+combinations. AFA-239 requires extending that coverage with failing-first source/ESM/CommonJS
+regressions and ticket-sourced corpus entries. No fix or assignment is claimed here. The
+original `b79eae0` baseline, 22-test embedded harness/counts and historical F2 evidence remain
+unchanged; this note is a follow-up within F2, not a replacement baseline.
+
 ### F9 correction — finite conversion after intermediate overflow
 
 Status: corrected in [PR #230](https://github.com/afahy/fluent-measures/pull/230), with
@@ -717,6 +749,7 @@ single audit file contains its evidence; it is not a second, automatically run t
 [unsupported]: https://linear.app/afahy/issue/AFA-203
 [prefix-ownership]: https://linear.app/afahy/issue/AFA-237
 [prefix-fraction]: https://linear.app/afahy/issue/AFA-238
+[quote-follow-up]: https://linear.app/afahy/issue/AFA-239
 [compact]: https://linear.app/afahy/issue/AFA-62
 [ownership]: https://linear.app/afahy/issue/AFA-116
 [underflow]: https://linear.app/afahy/issue/AFA-107
