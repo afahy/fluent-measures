@@ -87,6 +87,8 @@ describe('fraction boundaries', () => {
     ['6 foot (1/2 inches)', 72.5],
     ['6 ft, 1/2"', 72.5],
     ['6 ft, 1⁄2″', 72.5],
+    ['6 ft (1/2) in', 72.5],
+    ["6 ft, 1/2''", 72.5],
   ] as const)('keeps the explicit fraction of an inch in %s', (raw, value) => {
     expect(parseMeasurement(raw, { type: 'height' })).toMatchObject({ value, unit: 'in' });
   });

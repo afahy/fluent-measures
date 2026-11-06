@@ -56,7 +56,7 @@ const FRACTION_OWNER = String.raw`(?:(?<!\p{L})(?:feet|foot|ft)|(?<=[\d¼-¾⅐-
 // The lookahead keeps those lookbehinds from running at every space. Both slash characters
 // block a second fraction match in a date/code.
 const SLASH_FRACTION = new RegExp(
-  String.raw`(${FRACTION_OWNER})?(?<![\d/⁄.])(?:${FRACTION_NUMBER}\s+|(?=[\d.])(?<![\p{L}'"]\s*))${FRACTION_NUMBER}[/⁄]${FRACTION_NUMBER}(?![\d/⁄])(?=(\s*(?:in(?:ch(?:es)?)?\b|"))?)`,
+  String.raw`(${FRACTION_OWNER})?(?<![\d/⁄.])(?:${FRACTION_NUMBER}\s+|(?=[\d.])(?<![\p{L}'"]\s*))${FRACTION_NUMBER}[/⁄]${FRACTION_NUMBER}(?![\d/⁄])(?=([\s,()[\]]*(?:in(?:ch(?:es)?)?\b|"|''(?!')))?)`,
   'giu'
 );
 

@@ -434,7 +434,7 @@ production edits through source, ESM and CommonJS:
 | `1⁄2/180 lbs`                    | 0.011111111111111112 lb | 180 lb            |
 
 Permanent regressions: `tests/parseMeasurement.fractionBoundaries.test.ts`; the package runner
-reuses the same assertions through ESM and CommonJS. Thirty-three ticket-sourced corpus entries and
+reuses the same assertions through ESM and CommonJS. Thirty-five ticket-sourced corpus entries and
 the affected feature maps record the paths. The original fractions, numeric commas, valid
 shorthand, range ownership and F1 quoted-digit boundary remain covered. No exported type or
 public example changes, and no tokenizer refactor is included.
@@ -453,11 +453,11 @@ One induced change beyond the exact ticket inputs is recorded under decision rul
 Rejecting the decimal-whole Unicode fragment permits the existing weight fallback; height-only
 still returns `null` and weight-only still returns 6 kg. No existing corpus agreement is lost.
 
-Review follow-up on `d182e37`: the first bot round reproduced eleven preservation regressions.
+Review follow-up on `d182e37`: the first bot round reproduced thirteen preservation regressions.
 Closing prose quotes such as `"weight" (1/2 lbs)` must retain 0.5 lb; extracting
 `10/180-190` from `5'10/180-190 lbs` must retain the preceding height context and 70 in;
 explicit inch fractions such as `5' (1/2 in)` and `6 ft, 1/2 in` must retain 60.5 in and
-72.5 in. These eleven assertions pass on main `b74d185`, failed on the reviewed branch in
+72.5 in. These thirteen assertions pass on main `b74d185`, failed on the reviewed branch in
 source and both package formats, and pass with local corrections in the same regression file.
 
 The PR remains **draft / needs-decision** for the ambiguous weight forms. Both `1/2` and
