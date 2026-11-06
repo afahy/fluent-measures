@@ -2,9 +2,9 @@
 
 exports[`measurement corpus > matches the committed score 1`] = `
 "Category                 total   agree   wrong  missed  throws
-all                        504     482      10      12       0
+all                        507     485      10      12       0
 
-symbols                     55      55       0       0       0
+symbols                     58      58       0       0       0
 words                       31      31       0       0       0
 mixed-numbers               24      24       0       0       0
 decimals                    22      21       1       0       0

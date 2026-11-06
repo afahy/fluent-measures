@@ -117,6 +117,11 @@ describe('quotation context and spaced unit marks', () => {
     expect(parseMeasurement(raw)).toMatchObject({ value: 71, unit: 'in' });
   });
 
+  // Half an inch can start with a decimal separator or a Unicode fraction: 5 × 12 + 0.5.
+  it.each(['‘5’ .5”', '‘5’ ,5”', '‘5’ ½”'])('keeps fractional inches in %s', raw => {
+    expect(parseMeasurement(raw)).toMatchObject({ value: 60.5, unit: 'in' });
+  });
+
   it('keeps the following unit with a number word in mixed quotation marks', () => {
     expect(parseMeasurement('"seventy” kilograms')).toMatchObject({ value: 70, unit: 'kg' });
   });

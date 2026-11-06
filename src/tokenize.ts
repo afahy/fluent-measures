@@ -117,7 +117,7 @@ const QUOTE_BEFORE_UNIT = new RegExp(
 // A matching opening quote preserves a numeric quotation unless another number follows the
 // closing mark. Match the mark first, so the backward scan doesn't run at every space.
 function curlyMark(open: string, close: string): RegExp {
-  const nextNumber = String.raw`(?=${close}\s*(?:\d|(?:${NUMBER_WORD})\b))`;
+  const nextNumber = String.raw`(?=${close}\s*(?:[.,]?\d|[${FRACTIONS}]|(?:${NUMBER_WORD})\b))`;
   return new RegExp(
     String.raw`(?=${close})(?:(?<=[\d${FRACTIONS}]['’]?\s*)(?:(?<!${open}${QUOTED_NUMBER}\s*)|${nextNumber})|(?<=${WORD_END}\s*)(?:(?<!${open}[^${close}]*)|${nextNumber}))${close}`,
     'gi'
