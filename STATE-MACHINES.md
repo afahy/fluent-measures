@@ -489,7 +489,7 @@ No production change or new fix session has been started for this follow-up tick
 
 Evidence: a separate `pnpm test:unit tests/stateMachineOwnershipAudit.test.ts` run produced two
 failing assertions and one passing control. The original 22-test audit and its reported counts
-above remain the historical baseline. This brings the tracked findings to ten groups. Reproduce
+above remain the historical baseline. At that stage, ten finding groups were tracked. Reproduce
 in a disposable checkout with this temporary test file:
 
 ```typescript
@@ -510,15 +510,46 @@ it('keeps the documented unsupported-part control', () => {
 
 ### Follow-up finding F11 — a unit prefix hides its own fraction
 
-[AFA-238][prefix-fraction] (Medium) was found by the independent F4 probes and reproduced on
-current main `b74d185` and the fix branch: `kg 1/2` returns 1 kg instead of 0.5 kg. M1's slash
-ownership guard sees the unit's last letter and leaves the slash for punctuation removal;
-M7 then accepts the numerator as the whole value. The expected amount follows the documented
-unit-prefix rule and 1 / 2 = 0.5. A temporary public-API assertion failed with that exact result.
+[AFA-238][prefix-fraction] (Medium) is filed in Backlog, outside both active fix queues.
+The independent F4 probes found it on current main `b74d185` and the fix branch; the audit
+coordinator independently reproduced it on unchanged root main `b74d185` on 2026-11-06:
+
+| Input    | Expected | Actual on main | Source of expectation                          |
+| -------- | -------- | -------------- | ---------------------------------------------- |
+| `kg 1/2` | 0.5 kg   | 1 kg           | PARSING.md, Units Before a Number; 1 / 2 = 0.5 |
+| `1/2 kg` | 0.5 kg   | 0.5 kg         | Fraction control; 1 / 2 = 0.5                  |
+| `kg 70`  | 70 kg    | 70 kg          | Public Units Before a Number example           |
+
+M1's slash guard declines fraction normalization after the unit-prefix letter and leaves the
+slash for punctuation removal. M5/M7 then accepts the numerator alone as the whole value.
 The existing fraction and semantic property suites missed the combination of unit prefix and
-slash fraction. The follow-up ticket requires strengthening that coverage. It is outside F4's
-range/Unicode correction and outside either active fix queue; no fix session has been launched.
-The original audit baseline and 22-test harness remain unchanged.
+slash fraction. The follow-up ticket requires strengthening that coverage. AFA-74 does not
+change this production behavior, and no fix session has been launched for AFA-238.
+
+Evidence: `pnpm test:unit tests/stateMachinePrefixFractionAudit.test.ts` produced **one failing
+probe and two passing controls**. The temporary test was removed; its source and log were retained
+locally as `/tmp/fluent-state-machine-prefix-fraction.test.ts` and
+`/tmp/fluent-state-machine-prefix-fraction.log`. This is separate from F10's two failures and one
+control. There are now **eleven tracked finding groups**; the original `b79eae0` baseline,
+22-test harness, 18 failing probes and 4 passing controls remain unchanged. Reproduce this
+follow-up separately on `b74d185` with the temporary test below:
+
+```typescript
+import { expect, it } from 'vitest';
+import { parseMeasurement } from '../src';
+
+it('AFA-238 reads the complete fraction after its unit', () => {
+  expect(parseMeasurement('kg 1/2')).toMatchObject({ value: 0.5, unit: 'kg' });
+});
+
+it('preserves the suffix-fraction control', () => {
+  expect(parseMeasurement('1/2 kg')).toMatchObject({ value: 0.5, unit: 'kg' });
+});
+
+it('preserves the public unit-prefix control', () => {
+  expect(parseMeasurement('kg 70')).toMatchObject({ value: 70, unit: 'kg' });
+});
+```
 
 ## Fix groups, dependencies and document ownership
 
