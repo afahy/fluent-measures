@@ -33,6 +33,7 @@
   /* Outlines that mark a control (install box, secondary button): 3:1 on white */
   --border-control: #8794a5;
   --heading: #0f172a;
+  --result-value: var(--heading);
   --text: #334155;
   --text-muted: #5a6577;
   --accent: #0f766e;
@@ -1079,8 +1080,13 @@ html:not([data-js]) .site-header {
   justify-self: end;
 }
 
-.demo-list dd b {
-  color: var(--accent);
+/* Summarized values share a neutral color; code literals keep their syntax colors. */
+
+.demo-list dd b,
+.summary b,
+.result b,
+.input-results dd b {
+  color: var(--result-value);
   font-weight: 650;
 }
 
@@ -1737,6 +1743,7 @@ html:not([data-js]) .site-header {
 /* Code blocks */
 
 .code {
+  --result-value: var(--code-text);
   position: relative;
   border: 1px solid var(--code-border);
   border-radius: var(--radius);
@@ -1945,11 +1952,6 @@ html:not([data-js]) .site-header {
   grid-column: 1 / -1;
   grid-template-columns: subgrid;
   padding: 0;
-}
-
-.summary b {
-  color: var(--code-accent);
-  font-weight: 650;
 }
 
 .summary .is-null {
@@ -2362,12 +2364,8 @@ html:not([data-js]) .site-header {
   color: var(--heading);
 }
 
-.input-results b {
-  font-weight: 650;
-}
-
 .input-results .is-null {
-  color: var(--text-muted);
+  color: var(--null);
 }
 
 /* Native focus scrolling must finish before a following Enter jumps to its anchor. Removing
@@ -2686,11 +2684,6 @@ tbody th {
   font-size: var(--mono-lg);
   color: var(--text-muted);
   white-space: nowrap;
-}
-
-.result b {
-  color: var(--accent);
-  font-weight: 650;
 }
 
 .result-null {
