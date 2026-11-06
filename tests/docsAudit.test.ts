@@ -3,6 +3,10 @@ import { Script } from 'node:vm';
 import { describe, expect, it } from 'vitest';
 import { lighthouseFailures } from '../.github/scripts/docs-audit-check.mjs';
 
+function scriptBodies(html: string): string[] {
+  return [...html.matchAll(/<script>([\s\S]*?)<\/script>/gi)].map(([, body]) => body);
+}
+
 describe('the docs Lighthouse gate', () => {
   it('provides the audit command and engines used by CI', () => {
     const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
@@ -58,11 +62,20 @@ describe('the docs Lighthouse gate', () => {
 describe('docs render-blocking resources', () => {
   const page = readFileSync(new URL('../docs/index.html', import.meta.url), 'utf8');
 
+  it.each(['script', 'SCRIPT', 'ScRiPt'])(
+    'finds an invalid script body inside <%s> for the syntax check',
+    tag => {
+      const bodies = scriptBodies(`<${tag}>const = ;</${tag}>`);
+      expect(bodies).toEqual(['const = ;']);
+      expect(() => new Script(bodies[0])).toThrow(SyntaxError);
+    }
+  );
+
   it('parses every inline script before any enhancement runs', () => {
     expect.hasAssertions();
-    const scripts = [...page.matchAll(/<script>([\s\S]*?)<\/script>/g)];
+    const scripts = scriptBodies(page);
     expect(scripts.length).toBeGreaterThan(0);
-    for (const [, script] of scripts) expect(() => new Script(script)).not.toThrow();
+    for (const script of scripts) expect(() => new Script(script)).not.toThrow();
   });
 
   it('loads its code styles without an external stylesheet', () => {
