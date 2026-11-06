@@ -678,7 +678,9 @@ ownership/session history. The corpus combines all 58 F2 entries with the seven 
 `7426e3e`. Restoring main's parser reproduces 12 source and 24 ESM/CommonJS failures, with
 17 controls passing per format; restoring the fix passes 225 focused source tests and 436
 ESM/CommonJS tests across F1, F2, F8, F9, invariants, corpus and result snapshots. Build and
-TypeScript also pass.
+TypeScript also pass. A fresh `pnpm test:mutation --mutate src/parseMeasurement.ts` run
+at `2c0f762` scores 99.63% (802 killed, 7 timed out, 3 equivalent survivors described above).
+The changed-lines mutation check passes again after this merge.
 
 ## Reproducing the audit
 
