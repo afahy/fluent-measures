@@ -202,13 +202,16 @@ describe('fraction boundaries', () => {
     expect(parseMeasurement(raw, { type: 'height' })).toMatchObject({ value: 70, unit: 'in' });
   });
 
-  it.each(['6 ft 1/2-3/4 lbs', '6 ft 1/2-3/4 in', '6 ft 1/2-3/4'])(
-    'retains the existing slash-height interpretation in %s',
-    raw => {
-      // Existing slash-height syntax: 6 × 12 + 1 inch; omit the range after the slash.
-      expect(parseMeasurement(raw, { type: 'height' })).toMatchObject({ value: 73, unit: 'in' });
-    }
-  );
+  it.each([
+    '6 ft 1/2-3/4 lbs',
+    '6 ft 1/2-3/4 in',
+    '6 ft 1/2-3/4',
+    '6 ft 1/2-3/4 elevenin',
+    '6 ft 1/2-3/4 eleven"foo',
+  ])('retains the existing slash-height interpretation in %s', raw => {
+    // Existing slash-height syntax: 6 × 12 + 1 inch; omit the range after the slash.
+    expect(parseMeasurement(raw, { type: 'height' })).toMatchObject({ value: 73, unit: 'in' });
+  });
 
   // A separate explicit inch component identifies the fraction range to omit (6 × 12 + 11).
   it.each([

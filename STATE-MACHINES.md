@@ -111,7 +111,7 @@ Later passes cannot recover characters discarded by earlier ones.
 | Numeric text        | Proper integer fraction, representable without exponent notation    | Replace whole-plus-fraction with decimal text                                              | Fraction normalized          |
 | Numeric text        | Improper/decimal/exponent-producing fraction                        | Write `x` boundary                                                                         | Invalid numeric fragment     |
 | Numeric text        | Unicode fraction with integer whole and no trailing digit           | Decode numerator/denominator and apply the numeric writer                                  | Fraction normalized          |
-| Numeric text        | Unicode fraction with decimal whole or trailing digits              | Consume the malformed fragment and write `x`                                               | Invalid numeric fragment     |
+| Numeric text        | Unicode fraction with decimal whole or trailing digits              | Consume the malformed fragment and write `x.`                                              | Invalid numeric fragment     |
 | Numeric text        | Range with any invalid fraction endpoint                            | Normalize complete ranges first; keep invalid ones as non-shorthand numeric ranges         | Range evidence for M3        |
 | Numeric text        | Slash after feet/marks without punctuation; two slashes             | Retain existing separators and range context; either slash blocks a partial fraction match | Separate numeric text        |
 | Fraction normalized | Pipeline complete                                                   | Pass text to tokenization/range detection                                                  | M2/M3                        |
@@ -121,12 +121,17 @@ measurements can still be read. At baseline that replacement destroyed range evi
 `5/2-180 lbs`, and a rewrite next to a digit manufactured `5.52` from `5½2`. The F4 correction
 normalizes complete fraction ranges before replacing individual fractions. An invalid endpoint
 becomes a three-endpoint numeric range, which M3 omits without admitting shorthand. Outside
-ranges, it consumes the entire malformed Unicode fragment.
+ranges, it consumes the entire malformed Unicode fragment as `x.`. The period blocks letter
+ownership of a following proper fraction, while keeping an adjacent decimal tail within the
+invalid token; M2 trims the terminal period. A terminal period after a range endpoint is
+punctuation, while a period followed by a digit still continues a decimal.
 A proper fractional shorthand such as `5-1/2` retains its existing 60.5-inch result with height
 type. Brackets and commas break slash ownership: `5 ft (1/2 lbs)` and `weight (1/2 lbs)`
 retain a proper half pound. This follows the maintainer’s explicit 2026-11-06 policy decision.
 Range normalization retains preceding feet/mark context, so `5'10/180-190 lbs` keeps its
-70-inch height when M3 omits the weight range.
+70-inch height when M3 omits the weight range, including a fractional upper endpoint. If a
+separate explicit inch component follows a fractional range, that component owns the height;
+`6 ft 1/2-3/4 11 in` retains 83 in.
 
 ### M2 — token construction and pending label state
 
@@ -484,7 +489,7 @@ main results; the other four remain corrections:
 | `1⁄2/180 lbs`                    | 0.011111111111111112 lb | 180 lb                  |
 
 Permanent regressions: `tests/parseMeasurement.fractionBoundaries.test.ts`; the package runner
-reuses the same assertions through ESM and CommonJS. Thirty-nine ticket-sourced corpus entries and
+reuses the same assertions through ESM and CommonJS. Sixty-two ticket-sourced corpus entries and
 the affected feature maps record the paths. The original fractions, numeric commas, valid
 shorthand, range ownership and F1 quoted-digit boundary remain covered. No exported type or
 public example changes, and no tokenizer refactor is included.
@@ -527,6 +532,31 @@ The combined builds measure 5.11 kB ESM and 5.17 kB CommonJS, versus 4.93 kB and
 on `ef39a7b`. The smallest targeted fix exceeds the previous 5 kB budget, so AGENTS.md’s
 standing approval raises each limit by 0.5 kB to 5.5 kB; all published budget notes match.
 
+Round-two Codex review of `2041d2a` found three more boundary failures. All five exact
+examples pass on main `ef39a7b` and fail in source/ESM/CommonJS on the reviewed head:
+
+| Input / options                     | Reviewed head | Required / main result |
+| ----------------------------------- | ------------- | ---------------------- |
+| `5'10/180-190½ lbs`, height type    | 5 ft          | 70 in                  |
+| `5'10/180-190 1/2 lbs`, height type | 5 ft          | 70 in                  |
+| `5.5 ½-180. lbs`                    | 180 lb        | `null`                 |
+| `5½2-180. lbs`                      | 180 lb        | `null`                 |
+| `5.5½ 1/2 lb`                       | 2 lb          | 0.5 lb                 |
+
+The correction at `83b505f` retains slash ownership for fractional weight endpoints, uses a
+following separate inch component to identify an intervening height range, distinguishes final
+periods from continuing decimals, and keeps generated rejection markers from acting as source
+letters. The approved punctuation policy is unchanged. Main `b76070d` was merged at `1150bf8`,
+preserving F8 and its corpus/invariant/ledger updates. The current regression file has 95 tests
+and 62 corpus entries; final full validation and the review-fix push await a new explicit slot.
+
+Seven additional current-main corrections follow the same causes: five variants of the
+83-inch intervening-range case (`6 ft 1/2-1 1/2 11 in`, `6 ft 1/2-3/4 eleven in`,
+`6 ft 1/2-3/4 ELEVEN INCHES`, `6 ft 1/2-3/4 11"`, and `6 ft 1/2-3/4 11''`) change
+`null` to 83 in; `5/2-180. lbs` changes 180 lb to `null`; and `5.5 ½ 1⁄2 lb` changes
+`null` to 0.5 lb. These are disclosed with regression/corpus coverage. Generated snapshot
+changes remain limited to the two inputs already listed above.
+
 ### F2 follow-up — quote pairs, low quotations and compound marks
 
 [AFA-239][quote-follow-up] (Medium) is **unfixed, unassigned and in Backlog**. It groups three
@@ -563,7 +593,8 @@ unchanged; this note is a follow-up within F2, not a replacement baseline.
 ### F8 correction — inferred conversion underflow
 
 Implemented at `7426e3e` against current main `b74d185`;
-[PR #233](https://github.com/afahy/fluent-measures/pull/233) tracks review and merge status.
+[PR #233](https://github.com/afahy/fluent-measures/pull/233) merged at `b76070d`; exact-merge
+[main ci-ok passed](https://github.com/afahy/fluent-measures/actions/runs/42311844267/job/128216783563).
 The approved result is `null` when the total after conversion is zero. `combineParts` now
 uses the existing zero-total path for both explicit and inferred matches, with no inferred
 flag. The finite-overflow fallback in `units.ts` is unchanged.
@@ -688,14 +719,14 @@ Keep one ticket per PR. F1, F2 and F4 remain their existing grouped issues; do n
 or fold all tokenizer behavior changes into a single refactor. F3, F5 and F7 share broad ownership
 concerns but have different failure causes and existing preservation requirements.
 
-| Work stream                   | Tickets / order                    | State and required handoff                                                                                                                                           |
-| ----------------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Publish this audit            | [AFA-235][audit]                   | [PR #228](https://github.com/afahy/fluent-measures/pull/228) merged at `527f7b5`; main CI passed                                                                     |
-| Separate tokenizer refactor   | [AFA-88][refactor]                 | In Progress; preserve existing remote branch `apfahy/afa-88-read-every-number-form-in-one-tokenizer-pass`, last observed `ded9ee0`; requires maintainer merge        |
-| Boundary and number fixes     | AFA-75 → AFA-74 → AFA-202 → AFA-62 | Pause lifted by maintainer on 2026-11-06; fresh sessions fix one ticket per PR                                                                                       |
-| Quote and ownership fixes     | AFA-78 → AFA-203 → AFA-116         | F2 locally validated; [PR #231](https://github.com/afahy/fluent-measures/pull/231) tracks review/merge; successors remain separate                                   |
-| Inferred conversion underflow | [AFA-107][underflow]               | Pulled forward during AFA-74’s separate decision wait; implementation `7426e3e`; [PR #233](https://github.com/afahy/fluent-measures/pull/233); no successor assigned |
-| Numeric conversion            | [AFA-236][overflow]                | `units.ts` correction at `ecf7a2e`; full validation passes; [PR #230](https://github.com/afahy/fluent-measures/pull/230) tracks review/merge                         |
+| Work stream                   | Tickets / order                    | State and required handoff                                                                                                                                    |
+| ----------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Publish this audit            | [AFA-235][audit]                   | [PR #228](https://github.com/afahy/fluent-measures/pull/228) merged at `527f7b5`; main CI passed                                                              |
+| Separate tokenizer refactor   | [AFA-88][refactor]                 | In Progress; preserve existing remote branch `apfahy/afa-88-read-every-number-form-in-one-tokenizer-pass`, last observed `ded9ee0`; requires maintainer merge |
+| Boundary and number fixes     | AFA-75 → AFA-74 → AFA-202 → AFA-62 | Pause lifted by maintainer on 2026-11-06; fresh sessions fix one ticket per PR                                                                                |
+| Quote and ownership fixes     | AFA-78 → AFA-203 → AFA-116         | F2 merged at `ef39a7b` with main CI passed; separate AFA-203 is active, followed by AFA-116                                                                   |
+| Inferred conversion underflow | [AFA-107][underflow]               | Pulled forward independently; [PR #233](https://github.com/afahy/fluent-measures/pull/233) merged at `b76070d`; main ci-ok passed; no successor assigned      |
+| Numeric conversion            | [AFA-236][overflow]                | `units.ts` correction at `ecf7a2e`; full validation passes; [PR #230](https://github.com/afahy/fluent-measures/pull/230) tracks review/merge                  |
 
 The maintainer explicitly lifted the AFA-88 pause for these eight confirmed targeted fixes on
 2026-11-06. Their AFA-88 blocker relations were removed. Other dependencies remain; the tokenizer
@@ -719,22 +750,22 @@ Each fix session must:
 
 <!-- cspell:ignore Amcp Adelegate -->
 
-| Session                                                                                                                                                                                 | Assigned work                                                       | Launch state                                                                                                                                                                                                   |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:ab3e225544f4690efa2764d0a191792e86a687eff06d7b4e3bb8c5380b1b736d>                                                       | AFA-235 publication and review of this document                     | [PR #228](https://github.com/afahy/fluent-measures/pull/228) merged at `527f7b5`; main CI passed                                                                                                               |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:9df9034c3ce42adbebf696dd9b9d990bec04b84a9494a53e3c9bf77d6c1fc1d4>                                                       | AFA-75, then fresh successor sessions for AFA-74, AFA-202, AFA-62   | [PR #229](https://github.com/afahy/fluent-measures/pull/229) merged at `fa73fd5`; all 12 main CI jobs passed; AFA-74 successor launched                                                                        |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1a5f5b908ee23500b3eab3c85521ed6236b310c0f375af966f353457aef7d25e>                                                       | Original AFA-78 implementation and recorded successor queue         | Stopped for the maintainer-requested takeover; clean history preserved through `02d463a`                                                                                                                       |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/thread:delegated-task:command%3Amcp%3A07e37d08-94dc-4f21-9274-996c2a7a8c00%3Adelegate-task%3A632fca4a-3251-4d46-b64c-68aa393e85be> | AFA-78 implementation takeover, final validation and PR preparation | Validated at `133aac5`; [PR #231](https://github.com/afahy/fluent-measures/pull/231) prepared for parent stewardship; no successor work                                                                        |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/b61ed010-1655-4d08-b5ee-8c6e4d3e7ad4>                                                                                              | AFA-78 PR steward                                                   | [PR #231](https://github.com/afahy/fluent-measures/pull/231) merged at `ef39a7b`; all 12 main CI jobs passed; separate AFA-203 session launched                                                                |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:437846f95d8fc1b59e8b6aed92f360110a4df975347393dec096581adc8de82f>                                                       | AFA-236 finite conversion overflow                                  | F9 validated; [PR #230](https://github.com/afahy/fluent-measures/pull/230) merged at `b74d185`                                                                                                                 |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:e814642ff8608ad682438ef18ee4080fc919744b9ea078fd9ad8e24e7597c9b4>                                                       | AFA-74; fresh AFA-202 then AFA-62 sessions after each merge/main CI | [PR #232](https://github.com/afahy/fluent-measures/pull/232): approved-policy F4 validated at `cb1bf60` after merging `ef39a7b`; full checks and changed-line mutation validation passed; review/merge pending |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:461b3a6bdd48f18b59aa264dedf46356fae143e0f5f4b90936f49716e134a37a>                                                       | AFA-107 inferred conversion underflow; no successor                 | [PR #233](https://github.com/afahy/fluent-measures/pull/233) at `7426e3e` implementation; full checks and independent probes pass; merged at `b76070d`; exact-merge main CI pending                            |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1e5640d2dbe8ef251e2bb479d46cc5f4fc59c1597ecd270e7941a88df6893b76>                                                       | AFA-203 signed unsupported-part ownership; separate F5 session      | Launched from `ef39a7b` after main CI passed; focused-ready, heavy-slot reservation follows AFA-107                                                                                                            |
+| Session                                                                                                                                                                                 | Assigned work                                                       | Launch state                                                                                                                                                                                                               |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:ab3e225544f4690efa2764d0a191792e86a687eff06d7b4e3bb8c5380b1b736d>                                                       | AFA-235 publication and review of this document                     | [PR #228](https://github.com/afahy/fluent-measures/pull/228) merged at `527f7b5`; main CI passed                                                                                                                           |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:9df9034c3ce42adbebf696dd9b9d990bec04b84a9494a53e3c9bf77d6c1fc1d4>                                                       | AFA-75, then fresh successor sessions for AFA-74, AFA-202, AFA-62   | [PR #229](https://github.com/afahy/fluent-measures/pull/229) merged at `fa73fd5`; all 12 main CI jobs passed; AFA-74 successor launched                                                                                    |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1a5f5b908ee23500b3eab3c85521ed6236b310c0f375af966f353457aef7d25e>                                                       | Original AFA-78 implementation and recorded successor queue         | Stopped for the maintainer-requested takeover; clean history preserved through `02d463a`                                                                                                                                   |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/thread:delegated-task:command%3Amcp%3A07e37d08-94dc-4f21-9274-996c2a7a8c00%3Adelegate-task%3A632fca4a-3251-4d46-b64c-68aa393e85be> | AFA-78 implementation takeover, final validation and PR preparation | Validated at `133aac5`; [PR #231](https://github.com/afahy/fluent-measures/pull/231) prepared for parent stewardship; no successor work                                                                                    |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/b61ed010-1655-4d08-b5ee-8c6e4d3e7ad4>                                                                                              | AFA-78 PR steward                                                   | [PR #231](https://github.com/afahy/fluent-measures/pull/231) merged at `ef39a7b`; all 12 main CI jobs passed; separate AFA-203 session launched                                                                            |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:437846f95d8fc1b59e8b6aed92f360110a4df975347393dec096581adc8de82f>                                                       | AFA-236 finite conversion overflow                                  | F9 validated; [PR #230](https://github.com/afahy/fluent-measures/pull/230) merged at `b74d185`                                                                                                                             |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:e814642ff8608ad682438ef18ee4080fc919744b9ea078fd9ad8e24e7597c9b4>                                                       | AFA-74; fresh AFA-202 then AFA-62 sessions after each merge/main CI | [PR #232](https://github.com/afahy/fluent-measures/pull/232): prior full checks passed at `cb1bf60`; round-two fixes at `83b505f` merged with `b76070d`; focused-ready, final heavy validation/push reserved after AFA-203 |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:461b3a6bdd48f18b59aa264dedf46356fae143e0f5f4b90936f49716e134a37a>                                                       | AFA-107 inferred conversion underflow; no successor                 | [PR #233](https://github.com/afahy/fluent-measures/pull/233) at `7426e3e` implementation; full checks and independent probes pass; merged at `b76070d`; exact-merge main ci-ok passed                                      |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1e5640d2dbe8ef251e2bb479d46cc5f4fc59c1597ecd270e7941a88df6893b76>                                                       | AFA-203 signed unsupported-part ownership; separate F5 session      | Launched from `ef39a7b` after main CI passed; currently owns the heavy window; preserve its future F5 update                                                                                                               |
 
 Sessions use isolated prepared worktrees. Full checks and mutation runs have one shared execution
-slot. The recorded validation window was granted to AFA-74 for combined checks and push hooks;
-AFA-107 then AFA-203 have the next reservations, each subject to the coordinator’s grant
-after release. AFA-74 releases immediately after its local run and push, before remote waits. The former AFA-78 session is stopped; parent
+slot. AFA-74 released its prior window after pushing `2041d2a`. AFA-203 now owns the window;
+AFA-74 has the next reservation for round-two corrections, subject to an explicit coordinator
+grant after release. The former AFA-78 session is stopped; parent
 <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/b61ed010-1655-4d08-b5ee-8c6e4d3e7ad4>
 owns its replacement stewardship. AFA-203 is active in a separate fresh session after F2
 merged and main CI passed; AFA-116 remains its successor. Preserve future F5/ledger updates. AFA-107 has been pulled forward into its own fresh session; preserve its F8 update when
@@ -837,6 +868,16 @@ and temporary empty-string prefix were removed after the previous run exposed eq
 mutations; no new mutation suppression was added. Final sizes are 5.11 kB ESM and 5.17 kB
 CommonJS, within the authorized 5.5 kB limits. Whole-diff self-review found no remaining
 in-scope issue; F11/AFA-238 and the F2/AFA-239 follow-up remain separate and unfixed.
+
+Round-two focused validation after merging `b76070d`: 378 source tests and 430 ESM/CommonJS
+checks pass, including all 95 boundary assertions. The reviewed `2041d2a` tokenizer fails 18
+source / 36 package assertions in that expanded suite; current main fails 26 / 52, with 69
+preservation controls passing per format. All 62 added corpus cases agree, retaining every one
+of main’s 549 entries. There are 611 total rows and 590 agreements. The 102 independent probes
+still have 101 agreements per format; only F11/AFA-238 remains. TypeScript, focused ESLint and
+build/size checks pass; sizes are 5.15 kB ESM and 5.21 kB CommonJS. The next full run and fresh
+changed-line mutation validation are pending the reserved shared window; the preceding full
+run applies to `cb1bf60`, not these later source corrections.
 
 F9 focused validation at `ecf7a2e`: 14 conversion-overflow tests, 104 tests across the conversion,
 inference, units and corpus suites, 488 tests for the other affected feature routes/public
