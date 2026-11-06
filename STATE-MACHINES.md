@@ -597,7 +597,12 @@ The F4 session installed dependencies and reproduced the six exact failures on `
 6 failing source tests and 12 failing ESM/CommonJS tests before production edits. The initial expanded
 41-test boundary suite had 29 failing cases per baseline package format. Fourteen independent
 range findings were then reproduced as failures on the initial fix and corrected in `fa607f3`;
-the boundary suite now has 55 tests, passing through source, ESM and CommonJS. Full mutation, changed-lines mutation validation and `pnpm check` remain pending
+the boundary suite now has 55 tests, passing through source, ESM and CommonJS. After merging
+`b74d185`, a fresh comparison against its tokenizer failed 32 source assertions and 64 package
+assertions; restoring the fix passed all 55 in each format. Re-running the 102 independent
+probes passed 101 through each API; only the separately filed AFA-238 remains. The combined
+F4/F1/F9 package suites passed 226 tests. Full mutation, changed-lines mutation validation and
+`pnpm check` remain pending
 the shared heavy-check slot. Predecessor main CI passed all 12 CI jobs at `fa73fd5`, confirmed by
 [workflow run 42290644313](https://github.com/afahy/fluent-measures/actions/runs/42290644313),
 completed 2026-11-06 20:48:38 UTC; its paginated late-comment audit found no unhandled findings.
