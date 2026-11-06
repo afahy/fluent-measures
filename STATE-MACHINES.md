@@ -371,6 +371,41 @@ documented edit-distance rules. Those rows are not additional confirmed defects 
 The structural invariant generator also misses subnormal positive values and ordinary semantic
 errors: a finite positive 230 lb can still be the wrong reading of 30 lb.
 
+### Follow-up finding F10 — earlier number hides an unsupported prefix
+
+[AFA-237][prefix-ownership] (Low) was discovered during the F1 fix's self-review and independently
+reproduced by the audit coordinator on unchanged `b79eae0` source on 2026-11-06. Both
+`twenty, stone 12, 4 lb` and `age twenty, stone 12, 4 lb` return 4 lb instead of `null`.
+The documented control `stone 12, 4 lb` still returns `null`.
+
+This is a distinct M8 transition defect: `hasUnsupportedPart` finds the unrelated preceding
+`twenty`, chooses its number-before-unit branch, and never follows the valid unit-first stone
+amount through to the pounds part. An incomplete weight then reaches M9 success. The expected
+rejection follows PARSING.md's Unsupported Units example and the ticket's preservation list.
+It is separate from F1's comma-between-number-words boundary and F5's signed backward lookup.
+No production change or new fix session has been started for this follow-up ticket.
+
+Evidence: a separate `pnpm test:unit tests/stateMachineOwnershipAudit.test.ts` run produced two
+failing assertions and one passing control. The original 22-test audit and its reported counts
+above remain the historical baseline. This brings the tracked findings to ten groups. Reproduce
+in a disposable checkout with this temporary test file:
+
+```typescript
+import { expect, it } from 'vitest';
+import { parseMeasurement } from '../src';
+
+it.each(['twenty, stone 12, 4 lb', 'age twenty, stone 12, 4 lb'])(
+  'rejects the incomplete weight in %s',
+  raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  }
+);
+
+it('keeps the documented unsupported-part control', () => {
+  expect(parseMeasurement('stone 12, 4 lb')).toBeNull();
+});
+```
+
 ## Fix groups, dependencies and document ownership
 
 Keep one ticket per PR. F1, F2 and F4 remain their existing grouped issues; do not duplicate them
@@ -445,6 +480,7 @@ single audit file contains its evidence; it is not a second, automatically run t
 [signs]: https://linear.app/afahy/issue/AFA-202
 [fractions]: https://linear.app/afahy/issue/AFA-74
 [unsupported]: https://linear.app/afahy/issue/AFA-203
+[prefix-ownership]: https://linear.app/afahy/issue/AFA-237
 [compact]: https://linear.app/afahy/issue/AFA-62
 [ownership]: https://linear.app/afahy/issue/AFA-116
 [underflow]: https://linear.app/afahy/issue/AFA-107
