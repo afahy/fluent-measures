@@ -6,8 +6,8 @@ Audit baseline: `b79eae0` (`main`), 2026-11-06. Tracking: [AFA-235][audit].
 Scope: every runtime module in `src/`, reached through `parseMeasurement`. The docs website,
 release scripts, PR stewardship and their asynchronous state machines are outside this library
 audit. This file describes the implementation at that revision, including its defects; it is
-not a replacement for the public specification in README.md and PARSING.md. Fix-specific
-sections identify later transition updates while retaining the historical baseline results.
+not a replacement for the public specification in README.md and PARSING.md. Follow-up sections
+name later implementation revisions; the original failure outputs remain historical evidence.
 
 There is no persistent parser object or declared state enum. Explicit state consists of token
 flags, label kinds, number-grammar flags, the selected measurement type, and local collections.
@@ -116,8 +116,9 @@ measurements can still be read. That local replacement wrongly destroys range ev
 
 ### M2 — token construction and pending label state
 
-Source: `tokenize.ts`, `tokenizeNormalized` and token splitting. The F2 paired-apostrophe
-transition is updated at `95a5a54`. The order is: two-apostrophe handling; capital `G` protection;
+Source: `tokenize.ts`, `tokenizeNormalized` and token splitting. The F1 boundary is updated
+in `cbf94c1`, and the F2 paired-apostrophe rule in `95a5a54`. The order is:
+two-apostrophe handling; capital `G` protection;
 lowercase; numeric-range markers; label markers; pound signs; word-comma boundaries; punctuation;
 unit-prefix sign handling; splitting; trailing-period trimming; marker decoding.
 
@@ -127,13 +128,18 @@ unit-prefix sign handling; splitting; trailing-period trimming; marker decoding.
 | Ordinary lowercase text | Numeric range and `rangeBoundaries` requested         | Write internal `RANGE` marker                                                            | Boundary pending                |
 | Ordinary text           | Supported label punctuation/context                   | Write `FIELD` if separated; then `NAME` or `UNIT`; expand short `in`/`m` aliases         | Label markers pending           |
 | Ordinary text           | Number word + comma + spaced digits                   | Preserve `COMMA` non-number token                                                        | Phrase boundary                 |
-| Ordinary text           | Comma between number words                            | Remove comma as punctuation                                                              | Joined words; F1                |
+| Ordinary text           | Comma between number words                            | Preserve `COMMA` non-number token (F1 fix)                                               | Phrase boundary                 |
 | Split word              | Trailing periods, before marker decoding              | Remove them with `trimTrailing`, a backward linear scan                                  | Trimmed word, possibly empty    |
 | No pending metadata     | `FIELD`                                               | Set pending `startsField = true`                                                         | Field pending                   |
 | Any pending state       | `NAME` / `UNIT`                                       | Set pending label kind                                                                   | Label pending                   |
 | Pending state           | `RANGE`                                               | Emit `{ text: '-', range: true }`; clear pending metadata                                | No pending metadata             |
 | Pending label           | Ordinary token                                        | Emit label kind and `startsField`; clear metadata                                        | No pending metadata             |
 | No pending label        | Ordinary token                                        | Emit `{ text }`; clear metadata                                                          | No pending metadata             |
+
+The F1 fix also looks past an opening curly quote (`“` or `‘`) before the next number word or
+spaced digits, so `phase twenty, “5” cm` retains the boundary. No space is needed between a
+comma and a number word; digits keep the existing space requirement. Numeric comma groups
+are still normalized in M1. This is a targeted boundary change, not the tokenizer refactor.
 
 Input is lowercased before uppercase markers are inserted; users cannot inject marker words by
 typing their names. The decoder resets pending flags after every ordinary/range token. At this
@@ -205,6 +211,9 @@ The sign retry neither changes token text nor creates a second public invocation
 longer candidate returns the shorter valid phrase by design. Forward reads stop at semicolons;
 backward reads can cross them. `skipSemicolons` advances only across literal semicolon tokens.
 Half handling limits nested reads so repeated `and a half` does not create unbounded recursion.
+The `COMMA` token is not a number: both reading directions stop at it. With the F1 fix, this
+also separates number words and quoted numbers. M8 can still cross the token between weight
+parts to reject unsupported units, while M10 rejects two separated unqualified phrases.
 
 ### M6 — exact and fuzzy unit matching
 
@@ -342,10 +351,12 @@ All passed. Four workers concurrently ran 200 rejection/error/success cycles eac
 built ESM API; all passed. This is genuine worker concurrency, but not concurrent access to one
 parser heap. Promise batching alone is not evidence of parallel execution.
 
-Three retries of F1 returned `[230, 230, 230]` instead of `[30, 30, 30]`: retrying preserves the
-deterministic bug rather than repairing it. The tests establish isolation for these sequences,
+At baseline, three retries of F1 returned `[230, 230, 230]` instead of `[30, 30, 30]`:
+retrying preserves the deterministic bug rather than repairing it. The tests establish isolation for these sequences,
 not a proof over hostile option getters, monkey-patched built-ins, private-module mutation,
 resource exhaustion, or every JavaScript engine. No retry/concurrency-specific bug was confirmed.
+The F1 regression now returns `[30, 30, 30]` on `cbf94c1`; the correction is to the boundary,
+not to call isolation.
 
 ## Confirmed failures, ranked by impact
 
@@ -355,17 +366,17 @@ assertion is evidence here, not a failing test committed into the normal suite. 
 one group share a ticket; existing issues were reused. Priorities weigh silent corruption and
 ordinary input frequency above extreme-number rejection.
 
-| Finding / priority | Reachable input and options                                                                                     | Actual at baseline                              | Required result and source                                                                             | Invalid transition / issue                                                                    |
-| ------------------ | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
-| F1 / High          | `my son is two, thirty pounds`; `twenty, one hundred pounds`                                                    | 230 lb; 2100 lb                                 | 30 lb; 100 lb, specified by [AFA-75][commas]                                                           | M2 discards boundary → M4 joins unrelated fields                                              |
-| F2 / High          | `he said “about 180” lbs`; `5 ’11”`                                                                             | 180 in (height); 11 in                          | 180 lb; 71 in, [AFA-78][quotes]                                                                        | M1 quotation → unit, or omitted feet → partial success                                        |
-| F4 / High          | `5/2-180 lbs`; `5½2 lb`; `5.5 ½ ft`; `5 ft (10/180 lbs)` with weight type                                       | 180 lb; 5.52 lb; 0.5 ft; 0.05555555555555555 lb | `null`; `null`; `null`; 180 lb, [AFA-74][fractions]                                                    | M1 rewrites away range/fraction boundaries or measurement ownership before M3/M7              |
-| F3 / Medium        | `phase 20, −5 cm`; `phase twenty, −5 cm`                                                                        | 5 cm; 25 cm                                     | `null`, negative-field rule and [AFA-202][signs]                                                       | M1 sees earlier unrelated number → drops negative sign → accepted positive number             |
-| F6 / Medium        | `5ft11`                                                                                                         | `null`                                          | 71 in, [AFA-62][compact] and 5 × 12 + 11                                                               | M2 leaves `ft11` indivisible → M7 never reaches recognized unit                               |
-| F5 / Low           | `kg -20 5 grams; actual 70 kg`                                                                                  | 70 kg                                           | `null`, Unsupported Units specification and [AFA-203][unsupported]                                     | M8 unsigned backward lookup misses the supported prefix; incomplete weight bypasses rejection |
-| F7 / Low           | `kg -6 ft, 70 kg`                                                                                               | `null`                                          | 70 kg, [AFA-116][ownership]                                                                            | M7/M8 rejects kg field for a signed value owned by ft                                         |
-| F8 / Low           | `0.` + 322 zeros + `1`, height + allowUnqualified + normalized ft                                               | Successful result with value 0                  | `null`, [AFA-107][underflow], maintainer's 2026-10-08 “option 1” comment                               | M9 inferred-zero exception violates intended positive-result invariant                        |
-| F9 / Low           | `1` + 307 zeros + ` ft`, normalized m; same digits + ` m`, normalized ft; `1` + 308 zeros + ` in`, normalized m | `null` in all three cases                       | Approximately 3.048e306 m; 3.280839895013123e307 ft; 2.54e306 m, independently calculated unit factors | M9 finite source → intermediate infinity → false rejection; new [AFA-236][overflow]           |
+| Finding / priority | Reachable input and options                                                                                     | Actual at baseline                              | Required result and source                                                                             | Invalid transition / issue                                                                            |
+| ------------------ | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| F1 / High          | `my son is two, thirty pounds`; `twenty, one hundred pounds`                                                    | 230 lb; 2100 lb                                 | 30 lb; 100 lb, specified by [AFA-75][commas]                                                           | Baseline M2 boundary loss; correction in [PR #229](https://github.com/afahy/fluent-measures/pull/229) |
+| F2 / High          | `he said “about 180” lbs`; `5 ’11”`                                                                             | 180 in (height); 11 in                          | 180 lb; 71 in, [AFA-78][quotes]                                                                        | M1 quotation → unit, or omitted feet → partial success                                                |
+| F4 / High          | `5/2-180 lbs`; `5½2 lb`; `5.5 ½ ft`; `5 ft (10/180 lbs)` with weight type                                       | 180 lb; 5.52 lb; 0.5 ft; 0.05555555555555555 lb | `null`; `null`; `null`; 180 lb, [AFA-74][fractions]                                                    | M1 rewrites away range/fraction boundaries or measurement ownership before M3/M7                      |
+| F3 / Medium        | `phase 20, −5 cm`; `phase twenty, −5 cm`                                                                        | 5 cm; 25 cm                                     | `null`, negative-field rule and [AFA-202][signs]                                                       | M1 sees earlier unrelated number → drops negative sign → accepted positive number                     |
+| F6 / Medium        | `5ft11`                                                                                                         | `null`                                          | 71 in, [AFA-62][compact] and 5 × 12 + 11                                                               | M2 leaves `ft11` indivisible → M7 never reaches recognized unit                                       |
+| F5 / Low           | `kg -20 5 grams; actual 70 kg`                                                                                  | 70 kg                                           | `null`, Unsupported Units specification and [AFA-203][unsupported]                                     | M8 unsigned backward lookup misses the supported prefix; incomplete weight bypasses rejection         |
+| F7 / Low           | `kg -6 ft, 70 kg`                                                                                               | `null`                                          | 70 kg, [AFA-116][ownership]                                                                            | M7/M8 rejects kg field for a signed value owned by ft                                                 |
+| F8 / Low           | `0.` + 322 zeros + `1`, height + allowUnqualified + normalized ft                                               | Successful result with value 0                  | `null`, [AFA-107][underflow], maintainer's 2026-10-08 “option 1” comment                               | M9 inferred-zero exception violates intended positive-result invariant                                |
+| F9 / Low           | `1` + 307 zeros + ` ft`, normalized m; same digits + ` m`, normalized ft; `1` + 308 zeros + ` in`, normalized m | `null` in all three cases                       | Approximately 3.048e306 m; 3.280839895013123e307 ft; 2.54e306 m, independently calculated unit factors | M9 finite source → intermediate infinity → false rejection; new [AFA-236][overflow]                   |
 
 F8 is intentionally retained by one existing test, not an accidental untested branch. The
 maintainer approved changing it to `null`; the audit follow-up is authorized to proceed. Its
@@ -377,10 +388,28 @@ documented edit-distance rules. Those rows are not additional confirmed defects 
 The structural invariant generator also misses subnormal positive values and ordinary semantic
 errors: a finite positive 230 lb can still be the wrong reading of 30 lb.
 
+### F1 correction — comma boundaries
+
+Implemented in `cbf94c1`; [PR #229](https://github.com/afahy/fluent-measures/pull/229) tracks
+review and merge status. Against baseline
+`b79eae0`, the exact ticket inputs change from 230 to 30 lb (`my son is two, thirty pounds`),
+2100 to 100 lb (`twenty, one hundred pounds`), and 120 to 20 lb (`age one, twenty pounds`).
+The related independent quote-review input `phase twenty, “5” cm` changes from 25 to 5 cm
+at the same boundary check. Three consecutive retries now give `[30, 30, 30]`.
+
+Permanent regressions: `tests/parseMeasurement.commaBetweenWords.test.ts`, run through source,
+ESM and CommonJS. The three original cases, retry case and six quoted variants were verified
+failing on baseline and passing with the fix. Four ticket-sourced entries in
+`tests/corpus/measurements.jsonl` and the affected feature maps retain the evidence.
+Existing corpus outcomes and the generated result snapshot are unchanged. Numeric commas,
+semicolons, supported/unsupported part ownership, public types and examples keep their rules.
+F10 remains separately tracked; the general tokenizer refactor is outside this correction.
+
 ### F2 resolution — quotation context and spaced marks
 
 Status: implemented and regression-tested in the AFA-78 fix branch; final checks and PR pending.
-Before: `b79eae0`; audit publication integrated from `527f7b5`. Implementation after: `95a5a54`.
+Before: `b79eae0`; audit publication integrated from `527f7b5` and F1 from `fa73fd5`.
+F2 implementation after: `95a5a54`.
 The baseline row above remains historical: its two failures now return 180 lb and 71 in.
 
 `tests/parseMeasurement.quoteContext.test.ts` covers the ticket's description and comments,
@@ -390,8 +419,9 @@ preserves the required quotation and unit-mark controls. The same tests run thro
 ESM and CommonJS. Ticket-sourced corpus rows have the `quote-context-` prefix.
 
 The independent session specified 122 probes before running them. Four quote findings were
-fixed; replay agrees on 121. The remaining `phase twenty, “5” cm` comma-boundary failure also
-exists on baseline and is recorded on [AFA-75][commas] and in the corpus. It is separate from F2.
+fixed here. The baseline `phase twenty, “5” cm` comma-boundary failure was recorded on
+[AFA-75][commas] and fixed separately in `fa73fd5`. After merging that revision, all 122 probes
+agree, including that exact corpus case. It remains separate from F2.
 The choice for quoted feet followed by inches is the complete compound (71 in), including
 `‘5’ eleven”`, `‘five’ 11”` and `‘five’ eleven”`, rather than dropping the feet.
 
@@ -445,7 +475,7 @@ concerns but have different failure causes and existing preservation requirement
 
 | Work stream                 | Tickets / order                      | State and required handoff                                                                                                                                    |
 | --------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Publish this audit          | [AFA-235][audit]                     | [PR #228](https://github.com/afahy/fluent-measures/pull/228) open; self-review and full checks passed; review pending                                         |
+| Publish this audit          | [AFA-235][audit]                     | [PR #228](https://github.com/afahy/fluent-measures/pull/228) merged at `527f7b5`; main CI passed                                                              |
 | Separate tokenizer refactor | [AFA-88][refactor]                   | In Progress; preserve existing remote branch `apfahy/afa-88-read-every-number-form-in-one-tokenizer-pass`, last observed `ded9ee0`; requires maintainer merge |
 | Boundary and number fixes   | AFA-75 → AFA-74 → AFA-202 → AFA-62   | Pause lifted by maintainer on 2026-11-06; fresh sessions fix one ticket per PR                                                                                |
 | Quote and ownership fixes   | AFA-78 → AFA-203 → AFA-116 → AFA-107 | F2 implemented in this branch; AFA-203 starts fresh only after its merge and main CI                                                                          |
@@ -471,12 +501,12 @@ Each fix session must:
 
 ### Session ledger
 
-| Session                                                                                                                           | Assigned work                                                       | Launch state                                                                                              |
-| --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:ab3e225544f4690efa2764d0a191792e86a687eff06d7b4e3bb8c5380b1b736d> | AFA-235 publication and review of this document                     | [PR #228](https://github.com/afahy/fluent-measures/pull/228) open; full validation passed; review pending |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:9df9034c3ce42adbebf696dd9b9d990bec04b84a9494a53e3c9bf77d6c1fc1d4> | AFA-75, then fresh successor sessions for AFA-74, AFA-202, AFA-62   | Implementation and independent review ready; full checks pending; successors not yet started              |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1a5f5b908ee23500b3eab3c85521ed6236b310c0f375af966f353457aef7d25e> | AFA-78, then fresh successor sessions for AFA-203, AFA-116, AFA-107 | F2 implemented at `95a5a54`; final mutation check and PR pending; successors wait for merge/main CI       |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:437846f95d8fc1b59e8b6aed92f360110a4df975347393dec096581adc8de82f> | AFA-236 finite conversion overflow                                  | Implementation and focused tests ready; independent review and full checks pending                        |
+| Session                                                                                                                           | Assigned work                                                       | Launch state                                                                                                                             |
+| --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:ab3e225544f4690efa2764d0a191792e86a687eff06d7b4e3bb8c5380b1b736d> | AFA-235 publication and review of this document                     | [PR #228](https://github.com/afahy/fluent-measures/pull/228) merged at `527f7b5`; main CI passed                                         |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:9df9034c3ce42adbebf696dd9b9d990bec04b84a9494a53e3c9bf77d6c1fc1d4> | AFA-75, then fresh successor sessions for AFA-74, AFA-202, AFA-62   | F1 validated; [PR #229](https://github.com/afahy/fluent-measures/pull/229) tracks review/merge; successors start after merge and main CI |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1a5f5b908ee23500b3eab3c85521ed6236b310c0f375af966f353457aef7d25e> | AFA-78, then fresh successor sessions for AFA-203, AFA-116, AFA-107 | F2 implemented at `95a5a54`; final mutation check and PR pending; successors wait for merge/main CI                                      |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:437846f95d8fc1b59e8b6aed92f360110a4df975347393dec096581adc8de82f> | AFA-236 finite conversion overflow                                  | Implementation and focused tests ready; independent review and full checks pending                                                       |
 
 Sessions use isolated prepared worktrees. Full checks and mutation runs have one shared execution
 slot, initially publication → AFA-75 → AFA-78 → AFA-236; sessions pass it by message. Focused tests
@@ -496,6 +526,14 @@ including retries and four workers. The separate F10 harness also reproduced its
 failures and one passing control. Both temporary probe files were removed. Final documentation
 edits passed Prettier and CSpell. No production code or permanent test file was changed by this
 audit. Each fix session remains responsible for its own regression tests and full checks.
+
+The F1 fix at `cbf94c1` passed `pnpm check` on 2026-11-06: 3,429 unit tests, 100% source
+coverage, TypeScript, 99.78% mutation score, build/size/API checks and 3,544 package tests.
+The changed-lines mutation check confirms every mutant on the changed source lines was killed.
+An independent failing-input session tested 92 predefined probes on the initial boundary fix,
+all agreeing through source/ESM/CommonJS; the related quoted-number finding received six more
+failing-first regressions. Brotli sizes are 4.65 kB ESM and 4.69 kB CommonJS, within the unchanged
+5 kB limits. The published audit was merged from `main` at `527f7b5` before this targeted update.
 
 AFA-78 validation: 42 of the 71 new regression/control tests fail on baseline; all 71 pass
 on the fix. The full

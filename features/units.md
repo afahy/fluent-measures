@@ -30,7 +30,7 @@ in `I drink 8 oz of water, weight 180 lbs`, which gives 180 lb.
 
 - Source: `src/units.ts`, `src/matchUnit.ts`, `src/tokenize.ts`, `src/parseMeasurement.ts`
 - Tests: `tests/parseMeasurement.quoteContext.test.ts`, `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.test.ts`, `tests/parseMeasurement.britishUnits.test.ts`,
-  `tests/parseMeasurement.numberWordCommas.test.ts`,
+  `tests/parseMeasurement.numberWordCommas.test.ts`, `tests/parseMeasurement.commaBetweenWords.test.ts`,
   `tests/parseMeasurement.commaWeightOwnership.test.ts`,
   `tests/parseMeasurement.inAfterNumber.test.ts`, `tests/parseMeasurement.unsupportedUnits.test.ts`,
   `tests/units.test.ts`, `tests/matchUnit.test.ts`

@@ -126,9 +126,13 @@ function curlyMark(open: string, close: string): RegExp {
 const CURLY_SINGLE = curlyMark('‘', '’');
 const CURLY_DOUBLE = curlyMark('“', '”');
 
-// A comma and space after a number word separate it from digits, as in "phase twenty, 5 cm".
-// Numeric commas and commas between number words keep their existing rules (AFA-179, AFA-75).
-const WORD_COMMA = new RegExp(String.raw`(\b(?:${NUMBER_WORD}))\s*,(?=\s+\.?\d)`, 'g');
+// A comma ends a number phrase before another number word, as in "two, thirty pounds", or
+// before spaced digits, as in "phase twenty, 5 cm". Numeric commas keep their existing rules.
+// Look past an opening curly quote too: punctuation removal mustn't join "twenty, “5” cm".
+const WORD_COMMA = new RegExp(
+  String.raw`(\b(?:${NUMBER_WORD}))\s*,(?=\s+(?:[“‘]\s*)?\.?\d|\s*(?:[“‘]\s*)?(?:${NUMBER_WORD})\b)`,
+  'g'
+);
 
 // A minus sign before a number, when no number comes earlier: no digit, Unicode fraction or number
 // word. The number can be a word too, as in "−five'", also after "a" or "an", as in "−a hundred"

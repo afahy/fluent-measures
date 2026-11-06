@@ -26,7 +26,7 @@ be either one, or `null`.
 
 - Source: `src/parseMeasurement.ts`, `src/tokenize.ts`
 - Tests: `tests/parseMeasurement.quoteContext.test.ts`, `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.separateMeasurements.test.ts`,
-  `tests/parseMeasurement.numberWordCommas.test.ts`,
+  `tests/parseMeasurement.numberWordCommas.test.ts`, `tests/parseMeasurement.commaBetweenWords.test.ts`,
   `tests/parseMeasurement.commaWeightOwnership.test.ts`
 - Properties: "generated pairs of measurements" in `tests/properties.test.ts`
 - Corpus categories: `multiple-measurements`
