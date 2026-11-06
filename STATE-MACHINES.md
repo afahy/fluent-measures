@@ -191,7 +191,8 @@ this audit does not assert a new grammar rule for unusual phrases such as `zero 
 
 ### M5 — directional phrase reading and signed retry
 
-Source: `parseMeasurement.ts:32–148`.
+Source: `parseMeasurement.ts:32–148`. The F5 caller correction at `938c2ff` reuses this
+signed reader for every backward supported-weight lookup in M8; the reader itself is unchanged.
 
 | From             | Event / guard                                                                    | Action                                                                              | To                              |
 | ---------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | ------------------------------- |
@@ -260,30 +261,36 @@ Source: `remainingWords`, `readValueAfter`, `labelHasValue`, `parseMeasurement.t
 aliases expanded to label words retain their label metadata. A zero is a recognized candidate,
 not simply a missing value, although several branches use falsy checks with special zero rules.
 The `used` flag moves false → true monotonically within a pass; it is reset at the next type
-pass. Rejected signed matches do not become accepted positive matches.
+pass. Rejected signed matches do not become accepted positive matches. The F5 correction at
+`938c2ff` keeps those original signed tokens visible to M8: rejecting a signed supported field
+does not disconnect its separately numbered unsupported weight part.
 
 ### M8 — field rejection and unsupported-part relationships
 
 Source: `parseMeasurement.ts:97–102`, `234–280`, `452–585`.
 
-| From                 | Event / guard                                                                 | Action                                                                      | To                   |
-| -------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------- | -------------------- |
-| Token indexing       | Semicolon                                                                     | Increment field number                                                      | New field            |
-| Type pass begins     | Any input                                                                     | Allocate empty signed-field set and match-field map                         | Clean pass           |
-| Backward signed part | Signed first word and unit may span semicolon                                 | Mark first-word and unit fields invalid                                     | Rejected fields      |
-| Forward signed part  | Prefix owns signed value                                                      | Mark unit and following-value fields invalid                                | Rejected fields      |
-| Unsigned match       | Accepted interval                                                             | Record its endpoint fields (bare inches record their starting field)        | Pending match        |
-| Weight scan          | Stone/ounce/gram has separately numbered adjacent supported part              | Return `null`, using original text to find already consumed supported units | Whole parse rejected |
-| Weight scan          | Unsupported unit is unrelated, ordinal `st`, or excluded bare prefix `st`/`g` | Continue                                                                    | Scan                 |
-| End of pass          | Match has any recorded field in signed-field set                              | Remove match                                                                | Rejected match       |
-| End of pass          | Recorded fields all valid                                                     | Keep match                                                                  | Assembly candidate   |
+| From                 | Event / guard                                                                 | Action                                                                      | To                              |
+| -------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------- |
+| Token indexing       | Semicolon                                                                     | Increment field number                                                      | New field                       |
+| Type pass begins     | Any input                                                                     | Allocate empty signed-field set and match-field map                         | Clean pass                      |
+| Backward signed part | Signed first word and unit may span semicolon                                 | Mark first-word and unit fields invalid                                     | Rejected fields                 |
+| Forward signed part  | Prefix owns signed value                                                      | Mark unit and following-value fields invalid                                | Rejected fields                 |
+| Unsigned match       | Accepted interval                                                             | Record its endpoint fields (bare inches record their starting field)        | Pending match                   |
+| Backward adjacency   | Checking a supported unit-first weight before an unsupported part             | Read the complete signed phrase across the existing part separators         | Supported owner found or absent |
+| Weight scan          | Stone/ounce/gram has separately numbered adjacent supported part              | Return `null`, using original text to find already consumed supported units | Whole parse rejected            |
+| Weight scan          | Unsupported unit is unrelated, ordinal `st`, or excluded bare prefix `st`/`g` | Continue                                                                    | Scan                            |
+| End of pass          | Match has any recorded field in signed-field set                              | Remove match                                                                | Rejected match                  |
+| End of pass          | Recorded fields all valid                                                     | Keep match                                                                  | Assembly candidate              |
 
 Unsupported-part adjacency can cross semicolons or retained comma boundaries, as documented.
-The backward ownership helper uses the signed reader only at a retained `COMMA` boundary;
-elsewhere it uses an unsigned reader. F5 demonstrates the resulting missed connection. A bare
-supported prefix rejects its field before applying the other-type ownership exception used for
-labels; F7 demonstrates that asymmetry. These are different fix locations and retain separate
-tickets.
+At baseline the backward ownership helper used the signed reader only at a retained `COMMA`
+boundary, missing the supported prefix elsewhere (F5). At `938c2ff`, `partEndsAt` always uses
+`readSignedPhrase` after skipping the existing semicolon/comma separators. Thus `kg -20 5 grams`
+retains two connected parts even though the signed kg field was rejected. The unsigned and
+unsupported-prefix ownership guards stay unchanged: `stone -5 lb; actual 70 kg` still has only
+the independent 70 kg match. A bare supported prefix still rejects its field before applying
+the other-type ownership exception used for labels (F7); that distinct correction remains
+separate, as does F10 prefix ownership.
 
 ### M9 — grouping, conversion, agreement and terminal result
 
@@ -445,6 +452,31 @@ PR description; the result snapshot records those transitions. No previous corpu
 public example or exported type changes. Paired-apostrophe quotations retain their required
 `null` result. The tokenizer refactor remains separate.
 
+### F5 correction — signed supported weight ownership
+
+Status: implemented at `938c2ff` and focused checks passed; full validation, independent review
+and PR creation pending. Before: `ef39a7b5fde9a33fd10789a2f25365fed30d0d43` (main).
+The original `b79eae0` audit row and 22-test evidence remain historical.
+
+All four ticket inputs now return `null`, with default options and with `type: 'weight'`:
+`kg -twenty five 5 grams; actual 70 kg`, `kg -20 5 grams; actual 70 kg`,
+`kg -twenty five,5 grams; actual 70 kg`, and `kg -twenty five; 5 grams; actual 70 kg`.
+Previously each returned 70 kg. The single backward ownership lookup now reads signed phrases
+at every existing separator; no tokenizer or other-type ownership code changes.
+
+Permanent regressions: `tests/parseMeasurement.signedWeightOwnership.test.ts` and the explicitly
+authorized preservation-assertion corrections in `tests/parseMeasurement.commaWeightOwnership.test.ts`.
+Expectations come from the ticket, public unsupported-unit rules and hand calculations.
+The new suite covers supported aliases, labels, decimals, fractions, words, separators, fuzzy
+units, normalization, independent fields and height selection. `stone -5 lb; actual 70 kg`
+retains exactly one 70 kg match. Public examples and generated result snapshots are unchanged.
+
+The four existing ticket-sourced corpus rows now agree; eight new rows cover explicit weight
+selection and related supported-prefix forms. No previous corpus agreement is lost.
+Other-type signed ownership, Unicode sign normalization, unsupported-prefix ownership and
+quotation regressions remain separate. The independently reproduced `kg 1/2` numerator bug
+is already AFA-238; its evidence was added there, and the AFA-74 session owns the audit follow-up.
+
 ### F9 correction — finite conversion after intermediate overflow
 
 Status: corrected in [PR #230](https://github.com/afahy/fluent-measures/pull/230), with
@@ -507,17 +539,20 @@ Keep one ticket per PR. F1, F2 and F4 remain their existing grouped issues; do n
 or fold all tokenizer behavior changes into a single refactor. F3, F5 and F7 share broad ownership
 concerns but have different failure causes and existing preservation requirements.
 
-| Work stream                 | Tickets / order                      | State and required handoff                                                                                                                                    |
-| --------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Publish this audit          | [AFA-235][audit]                     | [PR #228](https://github.com/afahy/fluent-measures/pull/228) merged at `527f7b5`; main CI passed                                                              |
-| Separate tokenizer refactor | [AFA-88][refactor]                   | In Progress; preserve existing remote branch `apfahy/afa-88-read-every-number-form-in-one-tokenizer-pass`, last observed `ded9ee0`; requires maintainer merge |
-| Boundary and number fixes   | AFA-75 → AFA-74 → AFA-202 → AFA-62   | Pause lifted by maintainer on 2026-11-06; fresh sessions fix one ticket per PR                                                                                |
-| Quote and ownership fixes   | AFA-78 → AFA-203 → AFA-116 → AFA-107 | F2 locally validated; [PR #231](https://github.com/afahy/fluent-measures/pull/231) tracks review/merge; successors remain separate                            |
-| Numeric conversion          | [AFA-236][overflow]                  | `units.ts` correction at `ecf7a2e`; full validation passes; [PR #230](https://github.com/afahy/fluent-measures/pull/230) tracks review/merge                  |
+| Work stream                 | Tickets / order                    | State and required handoff                                                                                                                                    |
+| --------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Publish this audit          | [AFA-235][audit]                   | [PR #228](https://github.com/afahy/fluent-measures/pull/228) merged at `527f7b5`; main CI passed                                                              |
+| Separate tokenizer refactor | [AFA-88][refactor]                 | In Progress; preserve existing remote branch `apfahy/afa-88-read-every-number-form-in-one-tokenizer-pass`, last observed `ded9ee0`; requires maintainer merge |
+| Boundary and number fixes   | AFA-75 → AFA-74 → AFA-202 → AFA-62 | Pause lifted by maintainer on 2026-11-06; fresh sessions fix one ticket per PR                                                                                |
+| Quote and ownership fixes   | AFA-78 → AFA-203 → AFA-116         | AFA-78 merged at `ef39a7b`; exact-merge main CI passed. AFA-203 active; coordinator launches AFA-116 only after its merge and exact-merge main CI             |
+| Numeric conversion          | [AFA-236][overflow]                | `units.ts` correction at `ecf7a2e`; full validation passes; [PR #230](https://github.com/afahy/fluent-measures/pull/230) tracks review/merge                  |
 
 The maintainer explicitly lifted the AFA-88 pause for these eight confirmed targeted fixes on
 2026-11-06. Their AFA-88 blocker relations were removed. Other dependencies remain; the tokenizer
-refactor is separate and is not part of these fix sessions. Each successor ticket starts in a
+refactor is separate and is not part of these fix sessions. AFA-107 was pulled forward into
+[PR #233](https://github.com/afahy/fluent-measures/pull/233); it is no longer in the queue after
+AFA-203. AFA-74 is active in [PR #232](https://github.com/afahy/fluent-measures/pull/232).
+Each successor ticket starts in a
 fresh session after its predecessor merges, limiting overlapping edits and expensive check runs.
 
 Each fix session must:
@@ -537,14 +572,15 @@ Each fix session must:
 
 <!-- cspell:ignore Amcp Adelegate -->
 
-| Session                                                                                                                                                                                 | Assigned work                                                       | Launch state                                                                                                                             |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:ab3e225544f4690efa2764d0a191792e86a687eff06d7b4e3bb8c5380b1b736d>                                                       | AFA-235 publication and review of this document                     | [PR #228](https://github.com/afahy/fluent-measures/pull/228) merged at `527f7b5`; main CI passed                                         |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:9df9034c3ce42adbebf696dd9b9d990bec04b84a9494a53e3c9bf77d6c1fc1d4>                                                       | AFA-75, then fresh successor sessions for AFA-74, AFA-202, AFA-62   | F1 validated; [PR #229](https://github.com/afahy/fluent-measures/pull/229) tracks review/merge; successors start after merge and main CI |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1a5f5b908ee23500b3eab3c85521ed6236b310c0f375af966f353457aef7d25e>                                                       | Original AFA-78 implementation and recorded successor queue         | Stopped for the maintainer-requested takeover; clean history preserved through `02d463a`                                                 |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/thread:delegated-task:command%3Amcp%3A07e37d08-94dc-4f21-9274-996c2a7a8c00%3Adelegate-task%3A632fca4a-3251-4d46-b64c-68aa393e85be> | AFA-78 implementation takeover, final validation and PR preparation | Validated at `133aac5`; [PR #231](https://github.com/afahy/fluent-measures/pull/231) prepared for parent stewardship; no successor work  |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/b61ed010-1655-4d08-b5ee-8c6e4d3e7ad4>                                                                                              | AFA-78 PR steward                                                   | Owns review corrections, validation, merge and post-merge CI after the implementation handoff                                            |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:437846f95d8fc1b59e8b6aed92f360110a4df975347393dec096581adc8de82f>                                                       | AFA-236 finite conversion overflow                                  | F9 validated; [PR #230](https://github.com/afahy/fluent-measures/pull/230) tracks review/merge; no successor assigned                    |
+| Session                                                                                                                                                                                 | Assigned work                                                       | Launch state                                                                                                                                 |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:ab3e225544f4690efa2764d0a191792e86a687eff06d7b4e3bb8c5380b1b736d>                                                       | AFA-235 publication and review of this document                     | [PR #228](https://github.com/afahy/fluent-measures/pull/228) merged at `527f7b5`; main CI passed                                             |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:9df9034c3ce42adbebf696dd9b9d990bec04b84a9494a53e3c9bf77d6c1fc1d4>                                                       | AFA-75, then fresh successor sessions for AFA-74, AFA-202, AFA-62   | F1 validated; [PR #229](https://github.com/afahy/fluent-measures/pull/229) tracks review/merge; successors start after merge and main CI     |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1a5f5b908ee23500b3eab3c85521ed6236b310c0f375af966f353457aef7d25e>                                                       | Original AFA-78 implementation and recorded successor queue         | Stopped for the maintainer-requested takeover; clean history preserved through `02d463a`                                                     |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/thread:delegated-task:command%3Amcp%3A07e37d08-94dc-4f21-9274-996c2a7a8c00%3Adelegate-task%3A632fca4a-3251-4d46-b64c-68aa393e85be> | AFA-78 implementation takeover, final validation and PR preparation | Validated at `133aac5`; [PR #231](https://github.com/afahy/fluent-measures/pull/231) prepared for parent stewardship; no successor work      |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/b61ed010-1655-4d08-b5ee-8c6e4d3e7ad4>                                                                                              | AFA-78 PR steward                                                   | Completed PR #231 merge at `ef39a7b`; all 12 exact-merge main CI jobs passed. Retains possible future AFA-88 assessment; no refactor started |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:437846f95d8fc1b59e8b6aed92f360110a4df975347393dec096581adc8de82f>                                                       | AFA-236 finite conversion overflow                                  | F9 validated; [PR #230](https://github.com/afahy/fluent-measures/pull/230) tracks review/merge; no successor assigned                        |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1e5640d2dbe8ef251e2bb479d46cc5f4fc59c1597ecd270e7941a88df6893b76>                                                       | Fresh AFA-203 implementation, review and PR stewardship             | Active at `938c2ff`; focused checks pass. Queued for full validation after AFA-74 and AFA-107; no successor launch ownership                 |
 
 Sessions use isolated prepared worktrees. Full checks and mutation runs have one shared execution
 slot, initially publication → AFA-75 → AFA-78 → AFA-236; sessions pass it by message. Focused tests
@@ -627,6 +663,16 @@ and the rebuilt ESM/CommonJS suites pass 3,572 tests. Build, exported-API and si
 combined sizes are 4.67 kB ESM and 4.71 kB CommonJS. The F1 corpus and audit updates are retained.
 A fresh `pnpm test:mutation --mutate src/units.ts` run after this merge killed all 96 mutants
 (100%), and the changed-lines mutation check passed again.
+
+F5 focused validation at `938c2ff`: `pnpm install` passed. Against main `ef39a7b`, 36 of the
+121 checks in the signed-weight/comma-ownership suites fail, including every exact ticket input;
+85 controls pass. The same 36 fail in each of ESM and CommonJS (72 failures, 170 passes).
+With the correction, all 121 pass in source and both package formats. The combined signed-part
+and unsupported-unit run passes 344 source tests; 465 further public-example, label, fraction,
+comma, unit and multiple-measurement checks pass. The 550-row corpus has 533 agreements and
+retains every previous agreement. Bundles shrink from 4.93/5.00 kB to 4.92/4.97 kB (ESM/CommonJS),
+within the unchanged 5 kB limits. Full checks and fresh mutation validation await the explicitly
+allocated CPU slot; these focused results do not yet establish merge readiness.
 
 ## Reproducing the audit
 
