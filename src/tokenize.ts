@@ -99,27 +99,34 @@ const NUMBER_WORD = [...NUMBER_WORDS.keys(), ...MULTIPLIERS.keys()].join('|');
 const QUOTED_NUMBER = String.raw`[\d.,\s/⁄${FRACTIONS}]*[\d${FRACTIONS}]`;
 // Number words have the same boundary and "and a half" rules as the later token split.
 const WORD_END = String.raw`(?:\b(?:${NUMBER_WORD})|(?:\d|\b(?:${NUMBER_WORD}))[\s-]+and[\s-]+a[\s-]+half)`;
+// An apostrophe inside a word does not close the surrounding single quotation.
+const SINGLE_QUOTATION = String.raw`(?:[^’]|(?<=[a-z])’(?=[a-z]))*`;
 
 // Strip an ASCII opening quote and its ASCII or curly close before an explicit unit. Leaving
 // an opening apostrophe would let it take the number as feet. Paired apostrophes keep their rule.
 const QUOTED_UNIT = new RegExp(
-  String.raw`(?<![\w'"])(?:'([^'’]*)['’]|"([^"”]*)["”])(?=\s*(?=[a-z])(?:${LABELS})\b)`,
+  String.raw`(?<![\w'"])(?:'((?:[^'’]|(?<=[a-z])’(?=[a-z]))*)['’]|"([^"”]*)["”])(?=\s*(?=[a-z])(?:${LABELS})\b)`,
   'gi'
 );
 
 // An explicit unit after a closing quote owns the number. Do this before mapping primes, which
 // are always unit marks. Keep paired apostrophes for their existing quotation rule below.
+// "In" needs an opening quote: without one, it can be prose after feet, as in "6’ in shoes".
+// Check the following unit first, so contractions cannot repeatedly scan the preceding text.
 const QUOTE_BEFORE_UNIT = new RegExp(
-  String.raw`(?:”|(?<!['’])’(?!['’]))(?=\s*(?=[a-z])(?:${LABELS})\b)`,
+  String.raw`(?=[”’]\s*(?=[a-z])(?:${LABELS})\b)(?:”|(?<!['’])’(?!['’])(?:(?!\s*in\b)|(?<=[‘‚]${SINGLE_QUOTATION}’)))`,
   'gi'
 );
 
-// A matching opening quote preserves a numeric quotation unless another number follows the
-// closing mark. Match the mark first, so the backward scan doesn't run at every space.
+// Only a following inch component extends a spaced quotation into a compound height. Keep
+// the existing adjacent-digit rule. Match the mark before any backward scan across spaces.
 function curlyMark(open: string, close: string): RegExp {
-  const nextNumber = String.raw`(?=${close}\s*(?:[.,]?\d|[${FRACTIONS}]|(?:${NUMBER_WORD})\b))`;
+  const numberPart = String.raw`(?:[\d.,/⁄${FRACTIONS}]+|(?:${NUMBER_WORD}|and|a|half)\b)`;
+  const inches = String.raw`${numberPart}(?:[\s-]+${numberPart})*\s*(?:["”]|['’]{2}|in(?:ch(?:es)?)?\b)`;
+  const nextNumber = String.raw`(?=${close}(?:\d${close === '’' ? String.raw`|\s*${inches}` : ''}))`;
+  const quotation = close === '’' ? SINGLE_QUOTATION : '[^”]*';
   return new RegExp(
-    String.raw`(?=${close})(?:(?<=[\d${FRACTIONS}]['’]?\s*)(?:(?<!${open}${QUOTED_NUMBER}\s*)|${nextNumber})|(?<=${WORD_END}\s*)(?:(?<!${open}[^${close}]*)|${nextNumber}))${close}`,
+    String.raw`(?=${close})(?:(?<=[\d${FRACTIONS}]['’]?\s*)(?:(?<!${open}${QUOTED_NUMBER}\s*)|${nextNumber})|(?<=${WORD_END}\s*)(?!${close}[a-z])(?:(?<!${open}${quotation})|${nextNumber}))${close}`,
     'gi'
   );
 }
@@ -174,7 +181,8 @@ const PUNCTUATION = new RegExp(
  * Write feet and inch marks as ASCII, so "5’11”", "5′11″" and "5´11´´" read like 5'11". Primes
  * and acute accents are always marks. A curly quote can follow digits, fractions or number
  * words, with optional spaces. A following unit word keeps the number in that unit; otherwise
- * a matching numeric quotation stays a quotation unless another number follows the mark.
+ * a matching numeric quotation stays a quotation unless an inch component follows a feet mark
+ * or a digit immediately follows the mark, as in the existing compact-height syntax.
  * Full-width characters and the units "㎝" and "㎏" become their ASCII forms. Other characters
  * stay, so normalizeFractions still sees "½". The minus signs "−" and "﹣" become a hyphen-minus
  * "-" right before a number when no number comes earlier, so "−5 ft" is negative.

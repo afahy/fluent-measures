@@ -122,6 +122,13 @@ describe('quotation context and spaced unit marks', () => {
     expect(parseMeasurement(raw)).toMatchObject({ value: 60.5, unit: 'in' });
   });
 
+  it.each(['‘5’ 11 inches', '‘five’ eleven inches', "‘5’ 11''", '‘5’ 11’’'])(
+    'keeps the inch component after quoted feet in %s',
+    raw => {
+      expect(parseMeasurement(raw)).toMatchObject({ value: 71, unit: 'in' });
+    }
+  );
+
   it('keeps the following unit with a number word in mixed quotation marks', () => {
     expect(parseMeasurement('"seventy” kilograms')).toMatchObject({ value: 70, unit: 'kg' });
   });
@@ -137,5 +144,63 @@ describe('quotation context and spaced unit marks', () => {
     '“about 70” kg; “about 154” lbs',
   ])('retains named units throughout %s', raw => {
     expect(parseMeasurement(raw)).toMatchObject({ value: 70, unit: 'kg', type: 'weight' });
+  });
+
+  // A separate number is not an inches component of a quoted quantity (Codex round 2).
+  it.each(['“72” 180 cm', '‘5’ 180 cm', '“seventy two” 180 cm'])(
+    'keeps the separate measurement after %s',
+    raw => {
+      expect(parseMeasurement(raw)).toMatchObject({ value: 180, unit: 'cm', type: 'height' });
+    }
+  );
+
+  it.each(['“72” 180', 'he said ‘it’s five’', 'he said ‘that’s six and a half’'])(
+    'preserves the unitless quotation in %s',
+    raw => {
+      expect(parseMeasurement(raw)).toBeNull();
+    }
+  );
+
+  it('retains a following weight after a quotation containing an apostrophe', () => {
+    expect(parseMeasurement('he said ‘it’s five’ and weighs 180 lbs')).toMatchObject({
+      value: 180,
+      unit: 'lb',
+      type: 'weight',
+    });
+  });
+
+  // "In" is prose after an existing feet mark, as for ASCII apostrophes and primes.
+  it.each(['he is 6’ in height', '6’ in shoes', 'six’ in height', '6’ IN shoes'])(
+    'reads the unquoted feet mark in %s',
+    raw => {
+      expect(parseMeasurement(raw)).toMatchObject({ value: 6, unit: 'ft', type: 'height' });
+    }
+  );
+
+  // A genuine quoted quantity still takes the following named inch unit.
+  it.each(['‘6’ in', '‚6’ in', '‘it’s six’ in', "'it’s six’ in", '“6” in', '"6" in'])(
+    'retains the explicit inch unit after %s',
+    raw => {
+      expect(parseMeasurement(raw)).toMatchObject({ value: 6, unit: 'in', type: 'height' });
+    }
+  );
+
+  // A completed quotation cannot hide a later unit mark. The ticket's number-word marks
+  // represent the same six feet or inches as numeric marks.
+  it.each([
+    ['‘hello’ six’', 'ft'],
+    ['“hello” six”', 'in'],
+  ])('keeps the mark after the completed quotation in %s', (raw, unit) => {
+    expect(parseMeasurement(raw)).toMatchObject({ value: 6, unit, type: 'height' });
+  });
+
+  it('does not make a double quotation part of a following inch measurement', () => {
+    expect(parseMeasurement('“72” 60 inches')).toMatchObject({ value: 60, unit: 'in' });
+  });
+
+  // Preserve the existing adjacent-digit rule. 72 inches is 182.88 cm, not 180 cm, so the
+  // two explicit heights conflict under PARSING.md's multiple-measurement rule.
+  it('preserves the compact adjacent-digit interpretation of a double mark', () => {
+    expect(parseMeasurement('“72”180 cm')).toBeNull();
   });
 });

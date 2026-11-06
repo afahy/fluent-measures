@@ -90,25 +90,25 @@ Likewise, unknown runtime units/types are not silently treated as valid contract
 ### M1 — ordered normalization and lexical context
 
 Source: `tokenize.ts`, normalization functions and quote patterns. F2 transitions below are
-updated at `95a5a54`. This is a pipeline with implicit context states, rather than one scanner.
+include `95a5a54` and the review corrections recorded below. This is a pipeline with implicit context states, rather than one scanner.
 Later passes cannot recover characters discarded by earlier ones.
 
-| From                | Input / guard                                                       | Action                                                                                       | To                                    |
-| ------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------- |
-| Raw                 | Full-width character or supported compatibility unit                | Convert that character with NFKC                                                             | Forms normalized                      |
-| Raw/forms           | Unicode minus before a number and no earlier number anywhere        | Preserve it as ASCII minus                                                                   | Signed number text                    |
-| Raw/forms           | Unicode minus after any earlier number                              | Leave it for later punctuation removal/range handling                                        | Unsigned/joining context; F3          |
-| Raw/forms           | ASCII opener and ASCII/curly closer before a named unit             | Remove both quotation marks; retain the quantity and named unit                              | Named-unit text                       |
-| Raw/forms           | Curly closer before a named unit                                    | Remove the quotation mark; keep paired apostrophes for M2                                    | Named-unit text                       |
-| Raw/forms           | Prime, modifier-letter prime or acute accent                        | Convert to ASCII feet/inch mark                                                              | Mark text                             |
-| Raw/forms           | Curly closer after digits, fraction or number words; spaces allowed | Preserve matching quotation context unless another number follows; otherwise write unit mark | Quote or mark; F2 corrected           |
-| Forms normalized    | Supported numeric comma group                                       | Convert last 1–2 digits to decimal part and remove thousands commas                          | Numeric text                          |
-| Forms normalized    | Numeric group matches comma-size detection but fails grammar        | Set `valid = false`; entire normalized input becomes empty                                   | Rejected text                         |
-| Forms normalized    | Comma is not such a numeric group, or belongs to attached label     | Leave it for tokenization                                                                    | Punctuation text                      |
-| Numeric text        | Proper integer fraction, representable without exponent notation    | Replace whole-plus-fraction with decimal text                                                | Fraction normalized                   |
-| Numeric text        | Improper/decimal/exponent-producing fraction                        | Write `x` boundary                                                                           | Invalid numeric fragment              |
-| Numeric text        | Unicode fraction                                                    | Decode numerator/denominator and apply same numeric writer                                   | Fraction normalized; F4 at boundaries |
-| Fraction normalized | Pipeline complete                                                   | Pass text to tokenization/range detection                                                    | M2/M3                                 |
+| From                | Input / guard                                                       | Action                                                                                    | To                                    |
+| ------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------- |
+| Raw                 | Full-width character or supported compatibility unit                | Convert that character with NFKC                                                          | Forms normalized                      |
+| Raw/forms           | Unicode minus before a number and no earlier number anywhere        | Preserve it as ASCII minus                                                                | Signed number text                    |
+| Raw/forms           | Unicode minus after any earlier number                              | Leave it for later punctuation removal/range handling                                     | Unsigned/joining context; F3          |
+| Raw/forms           | ASCII opener and ASCII/curly closer before a named unit             | Remove both quotation marks; retain the quantity and named unit                           | Named-unit text                       |
+| Raw/forms           | Curly closer before a named unit                                    | Remove closing quote; retain unquoted feet before `in` and paired apostrophes for M2      | Named-unit text                       |
+| Raw/forms           | Prime, modifier-letter prime or acute accent                        | Convert to ASCII feet/inch mark                                                           | Mark text                             |
+| Raw/forms           | Curly closer after digits, fraction or number words; spaces allowed | Preserve quotation context except compact digits or a following inch component after feet | Quote or mark; F2 corrected           |
+| Forms normalized    | Supported numeric comma group                                       | Convert last 1–2 digits to decimal part and remove thousands commas                       | Numeric text                          |
+| Forms normalized    | Numeric group matches comma-size detection but fails grammar        | Set `valid = false`; entire normalized input becomes empty                                | Rejected text                         |
+| Forms normalized    | Comma is not such a numeric group, or belongs to attached label     | Leave it for tokenization                                                                 | Punctuation text                      |
+| Numeric text        | Proper integer fraction, representable without exponent notation    | Replace whole-plus-fraction with decimal text                                             | Fraction normalized                   |
+| Numeric text        | Improper/decimal/exponent-producing fraction                        | Write `x` boundary                                                                        | Invalid numeric fragment              |
+| Numeric text        | Unicode fraction                                                    | Decode numerator/denominator and apply same numeric writer                                | Fraction normalized; F4 at boundaries |
+| Fraction normalized | Pipeline complete                                                   | Pass text to tokenization/range detection                                                 | M2/M3                                 |
 
 Comma rejection is absorbing. Fraction rejection is local: `x` is a non-number, so later valid
 measurements can still be read. That local replacement wrongly destroys range evidence in
@@ -423,7 +423,7 @@ The baseline row above remains historical: its two failures now return 180 lb an
 including words/signs within quotations, mixed and full-width quotes, spaced feet marks,
 number-word and fractional-inch components, modifier-letter primes and spaces after paired apostrophes. It also
 preserves the required quotation and unit-mark controls. The same tests run through source,
-ESM and CommonJS. Ticket-sourced corpus rows have the `quote-context-` prefix.
+ESM and CommonJS. Ticket-sourced corpus rows have the `quote-context-` and `quote-review-` prefixes.
 
 The independent session specified 122 probes before running them. Four quote findings were
 fixed here. The baseline `phase twenty, “5” cm` comma-boundary failure was recorded on
@@ -431,6 +431,12 @@ fixed here. The baseline `phase twenty, “5” cm` comma-boundary failure was r
 agree, including that exact corpus case. It remains separate from F2.
 The choice for quoted feet followed by inches is the complete compound (71 in), including
 `‘5’ eleven”`, `‘five’ 11”` and `‘five’ eleven”`, rather than dropping the feet.
+
+Round-two Codex review found three quotation regressions. The steward's correction limits
+spaced quotation overrides to actual inch components, keeps intra-word apostrophes within a
+single quotation, and retains unquoted feet before the preposition `in`. The added controls
+preserve `“72” 180 cm` as 180 cm, `he said ‘it’s five’` as a quotation and `6’ in shoes` as 6 ft.
+Genuine quoted inch values and named or paired-mark inch components remain supported.
 
 Recognizing previously omitted marks also changes 157 generated option results across 31 inputs.
 These can expose disagreeing heights, select height before weight, override inferred units, or
@@ -537,7 +543,7 @@ Each fix session must:
 | <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:9df9034c3ce42adbebf696dd9b9d990bec04b84a9494a53e3c9bf77d6c1fc1d4>                                                       | AFA-75, then fresh successor sessions for AFA-74, AFA-202, AFA-62   | F1 validated; [PR #229](https://github.com/afahy/fluent-measures/pull/229) tracks review/merge; successors start after merge and main CI |
 | <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1a5f5b908ee23500b3eab3c85521ed6236b310c0f375af966f353457aef7d25e>                                                       | Original AFA-78 implementation and recorded successor queue         | Stopped for the maintainer-requested takeover; clean history preserved through `02d463a`                                                 |
 | <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/thread:delegated-task:command%3Amcp%3A07e37d08-94dc-4f21-9274-996c2a7a8c00%3Adelegate-task%3A632fca4a-3251-4d46-b64c-68aa393e85be> | AFA-78 implementation takeover, final validation and PR preparation | Validated at `133aac5`; [PR #231](https://github.com/afahy/fluent-measures/pull/231) prepared for parent stewardship; no successor work  |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/b61ed010-1655-4d08-b5ee-8c6e4d3e7ad4>                                                                                              | AFA-78 PR steward                                                   | Owns review/check waiting, merge and post-merge CI after the implementation handoff                                                      |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/b61ed010-1655-4d08-b5ee-8c6e4d3e7ad4>                                                                                              | AFA-78 PR steward                                                   | Owns review corrections, validation, merge and post-merge CI after the implementation handoff                                            |
 | <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:437846f95d8fc1b59e8b6aed92f360110a4df975347393dec096581adc8de82f>                                                       | AFA-236 finite conversion overflow                                  | F9 validated; [PR #230](https://github.com/afahy/fluent-measures/pull/230) tracks review/merge; no successor assigned                    |
 
 Sessions use isolated prepared worktrees. Full checks and mutation runs have one shared execution
@@ -578,7 +584,7 @@ The implementation takeover preserved that history and added two controls for qu
 words touching their named unit: `“seventy”kg` and `‘seventy’kg` both retain 70 kg. Removing the
 space inserted for a closing curly quote makes exactly these two tests fail. The resulting
 73-test suite fails 42 cases on latest baseline `b74d185`, with 31 preservation cases passing;
-all 73 pass with the fix. No further parser implementation change was needed.
+all 73 pass with the fix. No further parser implementation change was needed during takeover.
 
 Final `pnpm check` passed at merged revision `133aac5` on 2026-11-06: 3,516 source tests,
 100% statement/branch/function/line coverage, TypeScript, 99.78% mutation score, build, size,
@@ -588,6 +594,20 @@ lines is killed. The remaining three survivors are the unchanged baseline option
 cases described in the F9 validation below. Brotli sizes are 4.80 kB ESM and 4.86 kB CommonJS,
 within unchanged 5 kB limits. All 484 corpus rows from `b74d185` are preserved exactly, with
 33 additions; the resulting corpus has 517 rows, 496 agreements and no new disagreements.
+
+The round-two review correction adds 25 regression/control tests and 25 corpus rows. The
+98-test quotation suite fails 12 cases on reviewed head `7a6654f` and 50 cases on main
+`b74d185`; all 98 pass on the correction. The corpus has 542 rows and 521 agreements,
+preserving every previous agreement, and the generated result snapshot is unchanged. All
+122 saved independent probes agree when replayed through source, ESM and CommonJS.
+
+`pnpm check` passed on the final source with 3,537 source tests, 100% coverage, TypeScript,
+build, API/size checks and 3,760 package tests. That run exposed six changed-line mutation
+survivors, so four additional preservation controls now catch each directly applied mutant.
+No implementation changed after that full check. Fresh mutation validation with those controls
+passes at 99.78%, leaving only the three unchanged baseline survivors described above; all
+3,768 ESM/CommonJS tests pass. Changed-line verification is pending. Brotli sizes remain
+4.93 kB ESM and 5.00 kB CommonJS, passing the unchanged 5 kB limits; exported types are unchanged.
 
 F9 focused validation at `ecf7a2e`: 14 conversion-overflow tests, 104 tests across the conversion,
 inference, units and corpus suites, 488 tests for the other affected feature routes/public
