@@ -25,6 +25,7 @@ import {
   sweepWidths,
 } from './docs-chrome.mjs';
 import { checkFocus } from './docs-focus.mjs';
+import { checkFocusOrder } from './docs-focus-order.mjs';
 import { checkMenuFocus } from './docs-menu-focus.mjs';
 import { noScriptNavigation } from './docs-no-script-navigation.mjs';
 
@@ -253,6 +254,9 @@ let browser;
 try {
   browser = await launchChrome(chrome);
   for (const { problem, scheme, width } of await checkDocsControls(browser, url)) {
+    problems.set(problem, [...(problems.get(problem) ?? []), { scheme, width }]);
+  }
+  for (const { problem, scheme, width } of await checkFocusOrder(browser, url)) {
     problems.set(problem, [...(problems.get(problem) ?? []), { scheme, width }]);
   }
   for (const scheme of ['light', 'dark']) {
