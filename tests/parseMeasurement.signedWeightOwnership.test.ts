@@ -15,6 +15,17 @@ describe.each(weightOptions)('signed supported weight ownership with %o', option
     expect(parseMeasurement(raw, options)).toBeNull();
   });
 
+  // Independent review: a semicolon between a prefix and its signed amount is still inside
+  // that part (PARSING.md, Semicolons). The signed reader ends just before the sign.
+  it.each([
+    'kg; -20 5 grams; actual 70 kg',
+    'kg;; -twenty five 5 grams; actual 70 kg',
+    'lb; -a hundred 5 ounces; actual 70 kg',
+    'kg; -two and a half 5 grams; actual 70 kg',
+  ])('keeps the supported owner across semicolons in %s', raw => {
+    expect(parseMeasurement(raw, options)).toBeNull();
+  });
+
   // The same Unsupported Units rule covers supported aliases, labels, fractions, signs on
   // number words, either unit order, and separators between the two independently owned parts.
   it.each([

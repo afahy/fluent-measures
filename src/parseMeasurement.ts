@@ -255,8 +255,12 @@ function hasUnsupportedPart(text: Words, remaining: Words, i: number, fuzziness?
   // A supported part before it can have its unit first, as in "kg 3, 400 g". Earlier
   // matches use their tokens, so check all the tokens for a unit. A sign belongs to that
   // supported part's number, so "kg -20 5 grams" keeps both parts connected too.
-  const partEndsAt = (end: number): boolean =>
-    isWeightUnit(text(readSignedPhrase(text, skip(end, -1), -1)[1]));
+  const partEndsAt = (end: number): boolean => {
+    let unitAt = readSignedPhrase(text, skip(end, -1), -1)[1];
+    // A signed read stops just before its sign; the unit can be across a semicolon there.
+    while (text(unitAt) === ';') unitAt--;
+    return isWeightUnit(text(unitAt));
+  };
   // With no number before it, the unit can come before its number, as in "stone 12, 4 lb",
   // unless a weight unit after that number takes it, as in "stone, 50 lb bag". A unit with
   // its own number after it doesn't, as in "Stone: 12, lb: 4". Like "in" and "m", "st"
