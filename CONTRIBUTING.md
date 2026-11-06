@@ -104,6 +104,10 @@ argument and defaults to `docs/index.html`. A URL, such as `http://localhost:808
   sticky header. After scrolling settles, it checks focus, the outline's position and hit
   testing in both motion settings. These keyboard checks use a height of 844px below 600px wide,
   and 900px otherwise.
+  It also disables JavaScript before loading at 390×844 and 1440×900 in both themes, activates
+  API, Troubleshooting and a nested topic with the keyboard and pointer, and checks that each
+  destination is visible and uncovered after scrolling stops. These navigation checks always
+  run, including when `--from` and `--to` select fewer layout widths.
   Each line names a problem and the widths where it appears. The script exits 1 when it finds a problem, and 2 when it can't run.
   Run it after each change to `docs/` and before you open the PR. `--from`, `--to` and `--step`
   change the widths, and `--touch` emulates a touch screen. The checks use the page's class
