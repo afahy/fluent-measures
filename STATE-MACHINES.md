@@ -48,9 +48,10 @@ The intended invariants, and their limits, are:
    parts across discarded text.
 5. **All counted measurements agree with the first within 1%.** Zero-only groups are ignored;
    the result reports the first counted group's matches, not all agreeing alternatives.
-6. **Results have a finite value and a unit of the reported type.** The intended positive-value
-   invariant in `tests/invariants.test.ts` has a known inferred-underflow exception, F8. Exported
-   types allow `unit: null`, but no successful typed-input path currently emits it.
+6. **Results have a finite positive value and a unit of the reported type.** F8 violated the
+   positive-value invariant at baseline. The correction at `7426e3e` rejects inferred zero totals
+   and strengthens `tests/invariants.test.ts` to reach conversion underflow. Exported types allow
+   `unit: null`, but no successful typed-input path currently emits it.
 7. **Finite conversions must not fail because of an avoidable intermediate overflow.** F9
    reaches the overflow rejection state with a mathematically finite target value.
 8. **Retrying cannot inherit tokens, matches or fuzzy budgets.** Returned objects belong to the
@@ -63,24 +64,24 @@ The intended invariants, and their limits, are:
 Source: `parseMeasurement.ts:341–611`. The order matters: some early returns precede option
 validation. `null`, an internal `undefined`, and a thrown error have different meanings.
 
-| From           | Event / guard                                                    | Action                                                                                        | To               |
-| -------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ---------------- |
-| Entered        | Runtime input is not a string                                    | Return `null` without reading options                                                         | Rejected         |
-| Entered        | `maxLength` is not a number >= 1                                 | Throw the documented length error                                                             | Error            |
-| Length checked | Raw UTF-16 length exceeds limit                                  | Return `null` before trimming                                                                 | Rejected         |
-| Length checked | Within limit                                                     | Trim and normalize with M1                                                                    | Normalized       |
-| Normalized     | Empty result, including invalid numeric commas                   | Return `null`                                                                                 | Rejected         |
-| Normalized     | Nonempty text                                                    | Emit tokens; preprocess ranges (M2/M3)                                                        | Tokens ready     |
-| Tokens ready   | At least one token; `allowUnqualified` without explicit `type`   | Throw                                                                                         | Error            |
-| Tokens ready   | At least one token; `type` contradicts valid `normalizedUnit`    | Throw                                                                                         | Error            |
-| Tokens ready   | Otherwise                                                        | Select explicit type, normalized unit's type, or height then weight                           | Type selected    |
-| Type selected  | Bare shorthand recognized                                        | Require explicit height and inches < 12; synthesize feet/inch tokens, otherwise return `null` | Scan or Rejected |
-| Scan           | Beginning of each type pass                                      | Reset every `used` flag; allocate matches and field rejection sets                            | Scanning         |
-| Scanning       | Connected unsupported weight part                                | Return `null` immediately                                                                     | Rejected         |
-| Scanning       | End of token scan                                                | Remove matches touching signed fields; optionally infer (M10)                                 | Assemble         |
-| Assemble       | No matches, or M9 returns `undefined` for an explicit zero total | Try next type, if any                                                                         | Scan or Rejected |
-| Assemble       | M9 returns `null`                                                | Return `null`; do not try the next type                                                       | Rejected         |
-| Assemble       | M9 returns an object                                             | Return immediately                                                                            | Success          |
+| From           | Event / guard                                                  | Action                                                                                        | To               |
+| -------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ---------------- |
+| Entered        | Runtime input is not a string                                  | Return `null` without reading options                                                         | Rejected         |
+| Entered        | `maxLength` is not a number >= 1                               | Throw the documented length error                                                             | Error            |
+| Length checked | Raw UTF-16 length exceeds limit                                | Return `null` before trimming                                                                 | Rejected         |
+| Length checked | Within limit                                                   | Trim and normalize with M1                                                                    | Normalized       |
+| Normalized     | Empty result, including invalid numeric commas                 | Return `null`                                                                                 | Rejected         |
+| Normalized     | Nonempty text                                                  | Emit tokens; preprocess ranges (M2/M3)                                                        | Tokens ready     |
+| Tokens ready   | At least one token; `allowUnqualified` without explicit `type` | Throw                                                                                         | Error            |
+| Tokens ready   | At least one token; `type` contradicts valid `normalizedUnit`  | Throw                                                                                         | Error            |
+| Tokens ready   | Otherwise                                                      | Select explicit type, normalized unit's type, or height then weight                           | Type selected    |
+| Type selected  | Bare shorthand recognized                                      | Require explicit height and inches < 12; synthesize feet/inch tokens, otherwise return `null` | Scan or Rejected |
+| Scan           | Beginning of each type pass                                    | Reset every `used` flag; allocate matches and field rejection sets                            | Scanning         |
+| Scanning       | Connected unsupported weight part                              | Return `null` immediately                                                                     | Rejected         |
+| Scanning       | End of token scan                                              | Remove matches touching signed fields; optionally infer (M10)                                 | Assemble         |
+| Assemble       | No matches, or M9 returns `undefined` for a zero total         | Try next type, if any                                                                         | Scan or Rejected |
+| Assemble       | M9 returns `null`                                              | Return `null`; do not try the next type                                                       | Rejected         |
+| Assemble       | M9 returns an object                                           | Return immediately                                                                            | Success          |
 
 For consistent typed options there is no intended throw path. Runtime `null` options are outside
 the type: the length guard tolerates them, but a nonempty input then throws on `options.fuzziness`.
@@ -282,8 +283,8 @@ tickets.
 
 ### M9 — grouping, conversion, agreement and terminal result
 
-Source: `parseMeasurement.ts:150–168`, `289–338`; conversions in `units.ts:47–85`
-after the F9 correction at `ecf7a2e`.
+Source: `parseMeasurement.ts`, `total` and `combineParts`, after the F8 correction at
+`7426e3e`; conversions in `units.ts` retain the F9 correction at `ecf7a2e`.
 
 | From                 | Event / guard                                                                          | Action                                                                   | To                   |
 | -------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | -------------------- |
@@ -299,21 +300,23 @@ after the F9 correction at `ecf7a2e`.
 | Converted part       | Non-finite result through centimeters (ft/in → m or m → ft/in)                         | Use the direct factor for the same target unit; add to total             | Next part            |
 | Converted part       | Any other non-finite result                                                            | Add unchanged value                                                      | Next part            |
 | Convert              | No conversion exists (out-of-contract unit/type)                                       | Throw                                                                    | Error                |
-| First total          | Zero and explicit                                                                      | Return internal `undefined`                                              | Try next type        |
+| First total          | Zero, explicit or inferred                                                             | Return internal `undefined`                                              | Try next type        |
 | First total          | Non-finite                                                                             | Return `null`                                                            | Rejected             |
-| First total          | Finite (including inferred zero)                                                       | Calculate 1% threshold with rounding margin `1 + 1e-9`                   | Compare              |
+| First total          | Finite and positive                                                                    | Calculate 1% threshold with rounding margin `1 + 1e-9`                   | Compare              |
 | Compare              | Any counted total differs more than threshold                                          | Return `null`                                                            | Rejected             |
 | Compare              | All agree                                                                              | Return first group's matches, total, unit, type and exact original input | Success              |
 
 This machine keeps the requested target unit. At baseline, F9 rejected finite targets because
 the intermediate centimeter value overflowed. The correction preserves every finite result of
 the established arithmetic and uses 0.3048 m/ft or 0.0254 m/in only after a non-finite conversion.
-A truly infinite target still returns `null`. An inferred zero still bypasses the explicit-zero
-fallback (F8); that separate issue is unchanged.
+A truly infinite target still returns `null`. After F8, every zero total returns internal
+`undefined`. Explicit zero fragments can still fall through to another measurement type.
+Inference requires an explicit type, so an inferred zero exhausts its only pass and returns
+`null`. Positive subnormal totals continue to comparison and success without a minimum cutoff.
 
 ### M10 — complete-input unqualified inference
 
-Source: `parseMeasurement.ts:582–605`.
+Source: `parseMeasurement.ts`, complete-input inference at the end of the type loop (`7426e3e`).
 
 | From                   | Guard / event                          | Action                                                             | To                  |
 | ---------------------- | -------------------------------------- | ------------------------------------------------------------------ | ------------------- |
@@ -324,11 +327,12 @@ Source: `parseMeasurement.ts:582–605`.
 | Positive candidate     | Height, imperial/default               | Infer inches                                                       | One match           |
 | Positive candidate     | Height, metric, value < 3              | Infer meters                                                       | One match           |
 | Positive candidate     | Height, metric, value >= 3             | Infer centimeters                                                  | One match           |
-| One match              | Requested normalization                | Use M9 with inferred flag                                          | Result / rejection  |
+| One match              | Requested normalization                | Use the same M9 result handling as explicit units                  | Result / rejection  |
 
 Inference reads complete token text, not a surviving numeric prefix and not just unused tokens.
 It cannot retry arbitrary trailing garbage as a bare number. `normalizedUnit` chooses the target
-unit but does not replace the explicit-type requirement for this feature.
+unit but does not replace the explicit-type requirement for this feature. A positive candidate
+can become zero during conversion; after F8, M9 rejects that result as it does for explicit units.
 
 ### M11 — retries, repeated calls and concurrency
 
@@ -379,14 +383,15 @@ ordinary input frequency above extreme-number rejection.
 | F8 / Low           | `0.` + 322 zeros + `1`, height + allowUnqualified + normalized ft                                               | Successful result with value 0                  | `null`, [AFA-107][underflow], maintainer's 2026-10-08 “option 1” comment                               | M9 inferred-zero exception violates intended positive-result invariant                                |
 | F9 / Low           | `1` + 307 zeros + ` ft`, normalized m; same digits + ` m`, normalized ft; `1` + 308 zeros + ` in`, normalized m | `null` in all three cases                       | Approximately 3.048e306 m; 3.280839895013123e307 ft; 2.54e306 m, independently calculated unit factors | M9 intermediate overflow falsely rejects finite target; [AFA-236][overflow], fix below                |
 
-F8 is intentionally retained by one existing test, not an accidental untested branch. The
-maintainer approved changing it to `null`; the audit follow-up is authorized to proceed. Its
-fix must update that test according to the ticket, not weaken the positivity invariant.
+At baseline, F8 was intentionally retained by one existing test. The maintainer approved
+changing it to `null` on 2026-10-08. The correction below updates that expectation and
+strengthens the positivity invariant; the original zero output above remains historical evidence.
 
 The corpus's existing “wrong” classification is not enough by itself to establish a bug:
 `5.11 ft` is a documented decimal grammar, and fuzzy prose such as `2 ponds` is admitted by the
 documented edit-distance rules. Those rows are not additional confirmed defects in this audit.
-The structural invariant generator also misses subnormal positive values and ordinary semantic
+At baseline, the structural invariant generator missed positive subnormal values. F8 adds these
+values and deterministic conversion examples. Structural invariants still miss ordinary semantic
 errors: a finite positive 230 lb can still be the wrong reading of 30 lb.
 
 ### F1 correction — comma boundaries
@@ -405,6 +410,28 @@ failing on baseline and passing with the fix. Four ticket-sourced entries in
 Existing corpus outcomes and the generated result snapshot are unchanged. Numeric commas,
 semicolons, supported/unsupported part ownership, public types and examples keep their rules.
 F10 remains separately tracked; the general tokenizer refactor is outside this correction.
+
+### F8 correction — inferred conversion underflow
+
+Implemented at `7426e3e` against current main `b74d185`; PR review and merge are pending.
+The approved result is `null` when the total after conversion is zero. `combineParts` now
+uses the existing zero-total path for both explicit and inferred matches, with no inferred
+flag. The finite-overflow fallback in `units.ts` is unchanged.
+
+Permanent regressions: `tests/parseMeasurement.conversionUnderflow.test.ts`, the approved
+expectation in `tests/parseMeasurement.unqualifiedNormalization.test.ts`, and the strengthened
+`tests/invariants.test.ts`. The new suite checks default and imperial inference for both ticket
+heights and the same zero-total case in pounds to kilograms. Controls preserve the ticket's
+1e-323 inches and 2.5e-323 centimeters, the smallest positive converted results, metric
+inference, explicit-unit rejection, and zero-height fallback to a weight. Expected values come
+from the approved ticket and binary64 rounding of exact unit factors, not parser output.
+
+On `b74d185`, the three suites fail 12 tests in source and 24 across ESM/CommonJS; 17 controls
+pass in each format. At `7426e3e`, all 29 tests pass in each format. The invariant includes
+positive subnormal values in its vocabulary and three deterministic examples so that both normal
+and reduced mutation runs reach conversion underflow rather than an input already parsed as zero.
+Seven corpus entries with source `AFA-107` all agree; existing corpus outcomes are unchanged.
+A minor changeset records the approved change to a previously non-null result.
 
 ### F9 correction — finite conversion after intermediate overflow
 
@@ -468,13 +495,14 @@ Keep one ticket per PR. F1, F2 and F4 remain their existing grouped issues; do n
 or fold all tokenizer behavior changes into a single refactor. F3, F5 and F7 share broad ownership
 concerns but have different failure causes and existing preservation requirements.
 
-| Work stream                 | Tickets / order                      | State and required handoff                                                                                                                                    |
-| --------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Publish this audit          | [AFA-235][audit]                     | [PR #228](https://github.com/afahy/fluent-measures/pull/228) merged at `527f7b5`; main CI passed                                                              |
-| Separate tokenizer refactor | [AFA-88][refactor]                   | In Progress; preserve existing remote branch `apfahy/afa-88-read-every-number-form-in-one-tokenizer-pass`, last observed `ded9ee0`; requires maintainer merge |
-| Boundary and number fixes   | AFA-75 → AFA-74 → AFA-202 → AFA-62   | Pause lifted by maintainer on 2026-11-06; fresh sessions fix one ticket per PR                                                                                |
-| Quote and ownership fixes   | AFA-78 → AFA-203 → AFA-116 → AFA-107 | Pause lifted by maintainer on 2026-11-06; fresh sessions fix one ticket per PR                                                                                |
-| Numeric conversion          | [AFA-236][overflow]                  | `units.ts` correction at `ecf7a2e`; full validation passes; [PR #230](https://github.com/afahy/fluent-measures/pull/230) tracks review/merge                  |
+| Work stream                   | Tickets / order                    | State and required handoff                                                                                                                                    |
+| ----------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Publish this audit            | [AFA-235][audit]                   | [PR #228](https://github.com/afahy/fluent-measures/pull/228) merged at `527f7b5`; main CI passed                                                              |
+| Separate tokenizer refactor   | [AFA-88][refactor]                 | In Progress; preserve existing remote branch `apfahy/afa-88-read-every-number-form-in-one-tokenizer-pass`, last observed `ded9ee0`; requires maintainer merge |
+| Boundary and number fixes     | AFA-75 → AFA-74 → AFA-202 → AFA-62 | Pause lifted by maintainer on 2026-11-06; fresh sessions fix one ticket per PR                                                                                |
+| Quote and ownership fixes     | AFA-78 → AFA-203 → AFA-116         | Pause lifted by maintainer on 2026-11-06; fresh sessions fix one ticket per PR                                                                                |
+| Inferred conversion underflow | [AFA-107][underflow]               | Fresh session pulled forward while AFA-74 awaits its separate semantic decision; implementation `7426e3e`; no successor assigned                              |
+| Numeric conversion            | [AFA-236][overflow]                | `units.ts` correction at `ecf7a2e`; full validation passes; [PR #230](https://github.com/afahy/fluent-measures/pull/230) tracks review/merge                  |
 
 The maintainer explicitly lifted the AFA-88 pause for these eight confirmed targeted fixes on
 2026-11-06. Their AFA-88 blocker relations were removed. Other dependencies remain; the tokenizer
@@ -496,12 +524,13 @@ Each fix session must:
 
 ### Session ledger
 
-| Session                                                                                                                           | Assigned work                                                       | Launch state                                                                                                                             |
-| --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:ab3e225544f4690efa2764d0a191792e86a687eff06d7b4e3bb8c5380b1b736d> | AFA-235 publication and review of this document                     | [PR #228](https://github.com/afahy/fluent-measures/pull/228) merged at `527f7b5`; main CI passed                                         |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:9df9034c3ce42adbebf696dd9b9d990bec04b84a9494a53e3c9bf77d6c1fc1d4> | AFA-75, then fresh successor sessions for AFA-74, AFA-202, AFA-62   | F1 validated; [PR #229](https://github.com/afahy/fluent-measures/pull/229) tracks review/merge; successors start after merge and main CI |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1a5f5b908ee23500b3eab3c85521ed6236b310c0f375af966f353457aef7d25e> | AFA-78, then fresh successor sessions for AFA-203, AFA-116, AFA-107 | AFA-78 claimed In Progress; successors not yet started                                                                                   |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:437846f95d8fc1b59e8b6aed92f360110a4df975347393dec096581adc8de82f> | AFA-236 finite conversion overflow                                  | F9 validated; [PR #230](https://github.com/afahy/fluent-measures/pull/230) tracks review/merge; no successor assigned                    |
+| Session                                                                                                                           | Assigned work                                                     | Launch state                                                                                                                             |
+| --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:ab3e225544f4690efa2764d0a191792e86a687eff06d7b4e3bb8c5380b1b736d> | AFA-235 publication and review of this document                   | [PR #228](https://github.com/afahy/fluent-measures/pull/228) merged at `527f7b5`; main CI passed                                         |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:9df9034c3ce42adbebf696dd9b9d990bec04b84a9494a53e3c9bf77d6c1fc1d4> | AFA-75, then fresh successor sessions for AFA-74, AFA-202, AFA-62 | F1 validated; [PR #229](https://github.com/afahy/fluent-measures/pull/229) tracks review/merge; successors start after merge and main CI |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1a5f5b908ee23500b3eab3c85521ed6236b310c0f375af966f353457aef7d25e> | Historical AFA-78 owner; remaining successors AFA-203, AFA-116    | Historical session retained; current parent owns PR #231; coordinator owns the remaining queue; AFA-107 moved to its own session         |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:437846f95d8fc1b59e8b6aed92f360110a4df975347393dec096581adc8de82f> | AFA-236 finite conversion overflow                                | F9 validated; [PR #230](https://github.com/afahy/fluent-measures/pull/230) tracks review/merge; no successor assigned                    |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:461b3a6bdd48f18b59aa264dedf46356fae143e0f5f4b90936f49716e134a37a> | AFA-107 inferred conversion underflow; no successor               | Fresh owner at `7426e3e`; source/ESM/CommonJS failing-first evidence recorded; PR pending                                                |
 
 Sessions use isolated prepared worktrees. Full checks and mutation runs have one shared execution
 slot, initially publication → AFA-75 → AFA-78 → AFA-236; sessions pass it by message. Focused tests
@@ -547,6 +576,17 @@ and the rebuilt ESM/CommonJS suites pass 3,572 tests. Build, exported-API and si
 combined sizes are 4.67 kB ESM and 4.71 kB CommonJS. The F1 corpus and audit updates are retained.
 A fresh `pnpm test:mutation --mutate src/units.ts` run after this merge killed all 96 mutants
 (100%), and the changed-lines mutation check passed again.
+
+F8 validation at `7426e3e` on 2026-11-06 passed `pnpm install` and `pnpm check`:
+3,465 unit tests, 100% source coverage, TypeScript, 99.63% mutation score (1,342 killed,
+11 timed out, 5 survived), build, size, API and 3,616 ESM/CommonJS tests. Fresh changed-lines
+validation with `node .github/scripts/mutation-check.mjs --base origin/main --report
+reports/mutation/mutation.json` confirms every mutant on changed lines was killed. The two
+additional survivors relax the earlier inference gate to admit zero; they cannot change a
+result now that M9 rejects zero totals. The other three survivors are the previously recorded
+zero-part skip, numeric-comma rejection string and fuzzy-unit regex. No mutation suppression
+was added. Sizes are 4.67 kB ESM and 4.70 kB CommonJS, under unchanged 5 kB limits.
+Independent input review and PR/merge validation remain pending.
 
 ## Reproducing the audit
 
