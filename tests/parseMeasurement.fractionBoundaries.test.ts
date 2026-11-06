@@ -202,6 +202,11 @@ describe('fraction boundaries', () => {
     expect(parseMeasurement(raw, { type: 'height' })).toMatchObject({ value: 70, unit: 'in' });
   });
 
+  it('keeps disagreeing independent inches around an integer weight range', () => {
+    // PARSING.md More Than One Measurement: 5 × 12 + 10 conflicts with 11 inches.
+    expect(parseMeasurement("5'10/180-190 11 in", { type: 'height' })).toBeNull();
+  });
+
   it.each([
     '6 ft 1/2-3/4 lbs',
     '6 ft 1/2-3/4 in',
