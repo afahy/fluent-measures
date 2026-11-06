@@ -545,6 +545,8 @@ After merging `main` at `fa73fd5`, the six regression cases still fail without t
 fix and all 14 tests pass with it. The combined corpus/conversion/comma suite passes 90 tests,
 and the rebuilt ESM/CommonJS suites pass 3,572 tests. Build, exported-API and size checks pass;
 combined sizes are 4.67 kB ESM and 4.71 kB CommonJS. The F1 corpus and audit updates are retained.
+A fresh `pnpm test:mutation --mutate src/units.ts` run after this merge killed all 96 mutants
+(100%), and the changed-lines mutation check passed again.
 
 ## Reproducing the audit
 
