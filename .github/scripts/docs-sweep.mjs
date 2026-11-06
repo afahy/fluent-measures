@@ -11,6 +11,8 @@
 //
 // It exits 0 when it finds no problem, 1 when it finds one, and 2 when it can't run. The checks
 // use the class names of docs/index.html, so a change to those names needs a change here.
+// Independently check static examples, initialized tabs and copy at phone/desktop sizes.
+import { checkDocsControls } from './docs-controls.mjs';
 import {
   EXIT_ERROR,
   formatPlaces,
@@ -247,6 +249,9 @@ const problems = new Map();
 let browser;
 try {
   browser = await launchChrome(chrome);
+  for (const { problem, scheme, width } of await checkDocsControls(browser, url)) {
+    problems.set(problem, [...(problems.get(problem) ?? []), { scheme, width }]);
+  }
   for (const scheme of ['light', 'dark']) {
     await browser.load(url, { width: from, height: 900, scale: 1, scheme, touch });
     for (const width of sweepWidths(from, to, step)) {

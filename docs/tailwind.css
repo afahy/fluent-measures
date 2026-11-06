@@ -2410,11 +2410,20 @@ a:hover {
   color: var(--text-muted);
 }
 
-/* All lesson examples remain readable when scripts are unavailable. */
+/* Native focus scrolling must finish before a following Enter jumps to its anchor. Removing
+ * unavailable controls shortens the Tab path, so smooth scrolling can cancel that jump. */
 
-html:not([data-js]) .code [role='tabpanel'][hidden] {
-  display: block !important;
+html:not([data-js]) {
+  scroll-behavior: auto;
 }
+
+/* Static groups carry their own labels until the tab handlers are ready. */
+
+.code-head:has(> [data-tab-group][hidden]) {
+  display: none;
+}
+
+/* All lesson examples remain readable when scripts are unavailable. */
 
 html:not([data-js]) .code .code-wide {
   display: block;
