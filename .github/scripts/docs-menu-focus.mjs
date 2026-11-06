@@ -17,7 +17,7 @@ function focusState() {
     open: menu.open,
     inside: menu.contains(el),
     summary: el === menu.querySelector('summary'),
-    theme: el.matches('.theme-toggle input'),
+    theme: el.matches('button.theme-toggle'),
     copy: el.matches('.hero button[aria-label="Copy install command"]'),
     visible:
       r.width > 0 &&
@@ -106,11 +106,7 @@ export async function checkMenuFocus(browser) {
   // Real pointer events must still deliver the subsequent click to the link or theme button.
   for (const [choice, staysOpen, result] of [
     ['[data-page-menu] a[href="#api"]', true, 'location.hash === "#api"'],
-    [
-      '.theme-toggle input[value="dark"]',
-      false,
-      'document.documentElement.dataset.themePref === "dark"',
-    ],
+    ['button.theme-toggle', false, 'document.documentElement.dataset.themePref === "dark"'],
   ]) {
     await browser.evaluate(`(() => {
       scrollTo({ top: 0, behavior: 'instant' });

@@ -530,62 +530,11 @@ a:hover {
   }
 }
 
-/* Native radios give the three theme positions one tab stop and arrow-key navigation. */
+/* One button cycles through light, system, and dark; its icon shows the preference. */
 .theme-toggle {
-  display: none;
-  flex: none;
-  gap: 2px;
-  padding: 2px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface-muted);
-}
-
-[data-js] .theme-toggle {
-  display: flex;
-}
-
-.theme-toggle label {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 36px;
-  border-radius: 999px;
-  color: var(--text-muted);
-  cursor: pointer;
-}
-
-/* Keep the native input over its whole segment for pointer and keyboard interaction. */
-.theme-toggle input {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.theme-toggle label:hover {
-  color: var(--heading);
-}
-
-.theme-toggle label:has(:checked) {
-  color: var(--accent);
-  background: var(--surface);
-  box-shadow: 0 0 0 1px var(--accent);
-}
-
-.theme-toggle label:has(:focus-visible) {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-@media (pointer: coarse) {
-  .theme-toggle label {
-    height: 44px;
-  }
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
 }
 
 /* Compact "On this page" menu, shown when the side rail is hidden */
@@ -673,7 +622,7 @@ a:hover {
 /*
  * Narrow headers, in steps so nothing ever overflows: the GitHub label goes first, then
  * the GitHub link moves into the "On this page" panel (below 480px), then the chevron,
- * with the shorter "Menu" label below 768px and decorative icons hidden below 380px.
+ * then the menu label shortens to "Menu".
  */
 .menu-github,
 .page-menu .label-short {
@@ -731,16 +680,6 @@ a:hover {
   }
 }
 
-@media (max-width: 767px) {
-  .page-menu .label-long {
-    display: none;
-  }
-
-  .page-menu .label-short {
-    display: inline;
-  }
-}
-
 @media (max-width: 379px) {
   .header-bar {
     gap: 8px;
@@ -751,9 +690,12 @@ a:hover {
     font-size: 0.9375rem;
   }
 
-  .brand-mark,
-  .page-menu > summary > .icon {
+  .page-menu .label-long {
     display: none;
+  }
+
+  .page-menu .label-short {
+    display: inline;
   }
 }
 
