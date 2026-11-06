@@ -2410,6 +2410,13 @@ a:hover {
   color: var(--text-muted);
 }
 
+/* Native focus scrolling must finish before a following Enter jumps to its anchor. Removing
+ * unavailable controls shortens the Tab path, so smooth scrolling can cancel that jump. */
+
+html:not([data-js]) {
+  scroll-behavior: auto;
+}
+
 /* Static groups carry their own labels until the tab handlers are ready. */
 
 .code-head:has(> [data-tab-group][hidden]) {
