@@ -1,0 +1,564 @@
+# Library state machines
+
+<!-- cspell:ignore NFKC apfahy -->
+
+Audit baseline: `b79eae0` (`main`), 2026-11-06. Tracking: [AFA-235][audit].
+Scope: every runtime module in `src/`, reached through `parseMeasurement`. The docs website,
+release scripts, PR stewardship and their asynchronous state machines are outside this library
+audit. This file describes the implementation at that revision, including its defects; it is
+not a replacement for the public specification in README.md and PARSING.md.
+
+There is no persistent parser object or declared state enum. Explicit state consists of token
+flags, label kinds, number-grammar flags, the selected measurement type, and local collections.
+The control flow creates the implicit machines below. Every parse allocates its own mutable
+state. No runtime module schedules work, performs I/O, retries a call, or awaits another task.
+
+## Inventory and invariants
+
+| Machine                                  | State carried by the implementation                                                           | Source at the audit baseline                                                                     |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| M0: call lifecycle                       | Input, options, selected type, current type pass, terminal result                             | `src/parseMeasurement.ts`, `parseMeasurement`                                                    |
+| M1: text normalization                   | Current text; numeric-comma `valid` flag; quote/minus context                                 | `src/tokenize.ts`, `normalizeForms`, `normalizeNumericCommas`, `normalizeFractions`, `normalize` |
+| M2: token emission                       | Marker text, pending `label`, pending `startsField`, token list                               | `src/tokenize.ts`, `tokenize`, `tokenizeNormalized`, `trimTrailing`                              |
+| M3: ranges and shorthand                 | Range boundaries, surrounding unit ownership, rewritten token array                           | `src/parseMeasurement.ts`, before the type loop                                                  |
+| M4: number grammar                       | `hasHundred`, `hasThousand`, `current`, `total`, previous word                                | `src/wordsToNumber.ts`, `wordsToNumber`                                                          |
+| M5: phrase scanning                      | Start/end index, direction, accumulated phrase, last valid value, sign, half/multiplier state | `src/parseMeasurement.ts`, `readNumberPhrase`, `readSignedPhrase`, `skipSemicolons`              |
+| M6: unit recognition                     | Exact/fuzzy candidate, closest distance budget; edit-distance working row                     | `src/matchUnit.ts`, `src/levenshtein.ts`                                                         |
+| M7: token ownership                      | `used`, unit scan index, proposed match interval, label ownership, matches                    | `src/parseMeasurement.ts`, `remainingWords`, `readValueAfter`, `labelHasValue`, type loop        |
+| M8: invalid fields and unsupported parts | `fieldOf`, `signedFields`, `matchFields`; original and remaining token views                  | `src/parseMeasurement.ts`, `isUnsupportedUnit`, `hasUnsupportedPart`, type loop                  |
+| M9: measurement assembly                 | Part groups, counted nonzero groups, target unit, totals, agreement threshold                 | `src/parseMeasurement.ts`, `combineParts`, `total`; `src/units.ts`                               |
+| M10: unqualified fallback                | No surviving explicit match; whole-input number; inferred unit                                | `src/parseMeasurement.ts`, end of the type loop                                                  |
+| M11: call isolation                      | Fresh local state per call; shared lookup tables and regular expressions                      | All `src/`; exports in `src/index.ts`, contract in `src/types.ts`                                |
+
+The intended invariants, and their limits, are:
+
+1. **Meaning survives normalization.** Field boundaries, negative signs, fractions and quotations
+   must not create a different measurement. F1–F4 below show violations.
+2. **One token has one owner per type pass.** Once consumed it is invisible through
+   `remainingWords`. Original text remains available for unsupported-part detection. Ownership
+   must be decided before rejecting a field; F5 and F7 expose mistakes in those decisions.
+3. **Signed parts invalidate their measurement fields.** They are never returned as positive
+   magnitudes. Semicolons delimit fields, although the grammar deliberately permits a number and
+   its unit to span a semicolon.
+4. **A compound measurement has only valid adjacent unit steps.** Only integral feet followed by
+   inches below 12, or integral meters followed by centimeters below 100, combine. Adjacency here
+   means adjacency in the accepted match list, not necessarily in the original text. Do not
+   silently strengthen this into a punctuation rule; the public range examples allow joining
+   parts across discarded text.
+5. **All counted measurements agree with the first within 1%.** Zero-only groups are ignored;
+   the result reports the first counted group's matches, not all agreeing alternatives.
+6. **Results have a finite value and a unit of the reported type.** The intended positive-value
+   invariant in `tests/invariants.test.ts` has a known inferred-underflow exception, F8. Exported
+   types allow `unit: null`, but no successful typed-input path currently emits it.
+7. **Finite conversions must not fail because of an avoidable intermediate overflow.** F9
+   reaches the overflow rejection state with a mathematically finite target value.
+8. **Retrying cannot inherit tokens, matches or fuzzy budgets.** Returned objects belong to the
+   caller; mutating one must not affect another call. M11 gives evidence and concurrency limits.
+
+## Transition tables
+
+### M0 — public call lifecycle
+
+Source: `parseMeasurement.ts:341–611`. The order matters: some early returns precede option
+validation. `null`, an internal `undefined`, and a thrown error have different meanings.
+
+| From           | Event / guard                                                    | Action                                                                                        | To               |
+| -------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ---------------- |
+| Entered        | Runtime input is not a string                                    | Return `null` without reading options                                                         | Rejected         |
+| Entered        | `maxLength` is not a number >= 1                                 | Throw the documented length error                                                             | Error            |
+| Length checked | Raw UTF-16 length exceeds limit                                  | Return `null` before trimming                                                                 | Rejected         |
+| Length checked | Within limit                                                     | Trim and normalize with M1                                                                    | Normalized       |
+| Normalized     | Empty result, including invalid numeric commas                   | Return `null`                                                                                 | Rejected         |
+| Normalized     | Nonempty text                                                    | Emit tokens; preprocess ranges (M2/M3)                                                        | Tokens ready     |
+| Tokens ready   | At least one token; `allowUnqualified` without explicit `type`   | Throw                                                                                         | Error            |
+| Tokens ready   | At least one token; `type` contradicts valid `normalizedUnit`    | Throw                                                                                         | Error            |
+| Tokens ready   | Otherwise                                                        | Select explicit type, normalized unit's type, or height then weight                           | Type selected    |
+| Type selected  | Bare shorthand recognized                                        | Require explicit height and inches < 12; synthesize feet/inch tokens, otherwise return `null` | Scan or Rejected |
+| Scan           | Beginning of each type pass                                      | Reset every `used` flag; allocate matches and field rejection sets                            | Scanning         |
+| Scanning       | Connected unsupported weight part                                | Return `null` immediately                                                                     | Rejected         |
+| Scanning       | End of token scan                                                | Remove matches touching signed fields; optionally infer (M10)                                 | Assemble         |
+| Assemble       | No matches, or M9 returns `undefined` for an explicit zero total | Try next type, if any                                                                         | Scan or Rejected |
+| Assemble       | M9 returns `null`                                                | Return `null`; do not try the next type                                                       | Rejected         |
+| Assemble       | M9 returns an object                                             | Return immediately                                                                            | Success          |
+
+For consistent typed options there is no intended throw path. Runtime `null` options are outside
+the type: the length guard tolerates them, but a nonempty input then throws on `options.fuzziness`.
+This behavior is explicitly preserved by `features/input-limits.md`; it is not a newly found bug.
+Likewise, unknown runtime units/types are not silently treated as valid contract inputs.
+
+### M1 — ordered normalization and lexical context
+
+Source: `tokenize.ts:65–217`. This is a pipeline with implicit context states, rather than one
+scanner. Later passes cannot recover characters discarded by earlier ones.
+
+| From                | Input / guard                                                    | Action                                                                                         | To                                    |
+| ------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------- |
+| Raw                 | Full-width character or supported compatibility unit             | Convert that character with NFKC                                                               | Forms normalized                      |
+| Raw/forms           | Unicode minus before a number and no earlier number anywhere     | Preserve it as ASCII minus                                                                     | Signed number text                    |
+| Raw/forms           | Unicode minus after any earlier number                           | Leave it for later punctuation removal/range handling                                          | Unsigned/joining context; F3          |
+| Raw/forms           | Prime or acute accent                                            | Convert to ASCII feet/inch mark                                                                | Mark text                             |
+| Raw/forms           | Curly close mark immediately after number/fraction               | Preserve quotation only if recognized numeric opening quote context; otherwise write unit mark | Quote or mark; F2                     |
+| Forms normalized    | Supported numeric comma group                                    | Convert last 1–2 digits to decimal part and remove thousands commas                            | Numeric text                          |
+| Forms normalized    | Numeric group matches comma-size detection but fails grammar     | Set `valid = false`; entire normalized input becomes empty                                     | Rejected text                         |
+| Forms normalized    | Comma is not such a numeric group, or belongs to attached label  | Leave it for tokenization                                                                      | Punctuation text                      |
+| Numeric text        | Proper integer fraction, representable without exponent notation | Replace whole-plus-fraction with decimal text                                                  | Fraction normalized                   |
+| Numeric text        | Improper/decimal/exponent-producing fraction                     | Write `x` boundary                                                                             | Invalid numeric fragment              |
+| Numeric text        | Unicode fraction                                                 | Decode numerator/denominator and apply same numeric writer                                     | Fraction normalized; F4 at boundaries |
+| Fraction normalized | Pipeline complete                                                | Pass text to tokenization/range detection                                                      | M2/M3                                 |
+
+Comma rejection is absorbing. Fraction rejection is local: `x` is a non-number, so later valid
+measurements can still be read. That local replacement wrongly destroys range evidence in
+`5/2-180 lbs` (F4). A decimal rewrite next to a digit can instead manufacture `5.52` from `5½2`.
+
+### M2 — token construction and pending label state
+
+Source: `tokenize.ts:220–295`. The order is: two-apostrophe handling; capital `G` protection;
+lowercase; numeric-range markers; label markers; pound signs; word-comma boundaries; punctuation;
+unit-prefix sign handling; splitting; trailing-period trimming; marker decoding.
+
+| From                    | Token/event                                   | Action                                                                           | To                            |
+| ----------------------- | --------------------------------------------- | -------------------------------------------------------------------------------- | ----------------------------- |
+| Ordinary lowercase text | Numeric range and `rangeBoundaries` requested | Write internal `RANGE` marker                                                    | Boundary pending              |
+| Ordinary text           | Supported label punctuation/context           | Write `FIELD` if separated; then `NAME` or `UNIT`; expand short `in`/`m` aliases | Label markers pending         |
+| Ordinary text           | Number word + comma + spaced digits           | Preserve `COMMA` non-number token                                                | Phrase boundary               |
+| Ordinary text           | Comma between number words                    | Remove comma as punctuation                                                      | Joined words; F1              |
+| No pending metadata     | `FIELD`                                       | Set pending `startsField = true`                                                 | Field pending                 |
+| Any pending state       | `NAME` / `UNIT`                               | Set pending label kind                                                           | Label pending                 |
+| Pending state           | `RANGE`                                       | Emit `{ text: '-', range: true }`; clear pending metadata                        | No pending metadata           |
+| Pending label           | Ordinary token                                | Emit label kind and `startsField`; clear metadata                                | No pending metadata           |
+| No pending label        | Ordinary token                                | Emit `{ text }`; clear metadata                                                  | No pending metadata           |
+| Token emitted           | Trailing periods                              | Remove them with a backward linear scan                                          | Trimmed token, possibly empty |
+
+Input is lowercased before uppercase markers are inserted; users cannot inject marker words by
+typing their names. The decoder resets pending flags after every ordinary/range token. At this
+revision, range tokens cannot simultaneously be labels. `startsField` is emitted only with a
+label. `used` is assigned later by the parser. Compact unit-to-digit boundaries are not generally
+split, explaining F6. Empty tokens remain harmless non-number boundaries.
+
+### M3 — range ownership and shorthand
+
+Source: `parseMeasurement.ts:361–453`.
+
+| From                  | Guard at a range                                                                                                              | Action                                                               | To                                          |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------- |
+| Range boundary        | No following unit, or following unit starts a new field/owns a label value                                                    | Keep boundary and independent unit                                   | Continue                                    |
+| Range boundary        | Intervening semicolons; unrelated prefix field without surrounding measurement                                                | Keep independent prefix                                              | Continue                                    |
+| Range boundary        | Following feet unit, integral unowned preceding feet, following inches < 12 with explicit inch unit, no competing field owner | Mark only range boundary used, then remove it                        | Surrounding feet/inches remain              |
+| Range boundary        | Other attached following unit                                                                                                 | Blank that unit's text                                               | Range and its unit cannot steal later value |
+| All ranges visited    | Temporary used boundaries                                                                                                     | Filter them from tokens                                              | Ownership preprocessing done                |
+| Whole normalized text | Numeric `N-M`, or permitted two-word shorthand                                                                                | Require `type: 'height'` and `M < 12`; replace tokens with N/ft/M/in | Ordinary type scan                          |
+| Whole normalized text | Recognized shorthand with failed guard                                                                                        | Return `null`                                                        | Rejected                                    |
+
+Preprocessing changes token text before the height/weight passes. The per-type reset restores
+consumption flags, not erased range-unit text. This is deliberate, not leaked state from a prior
+call. The public example `6 1-2 ft 3 in` permits dropping the range to retain 75 inches.
+
+### M4 — number grammar accumulator
+
+Source: `wordsToNumber.ts:16–72`. State is `(current, total, hasHundred, hasThousand, previous)`.
+The numeric domain is unbounded at this stage: syntactically valid digits can evaluate to
+`Infinity`; final result validation belongs to M9.
+
+| From                 | Word / guard                                    | Action                                                                                               | To              |
+| -------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------- | --------------- |
+| Start                | Lowercase words split; `and` removed            | Initialize both totals to 0 and both flags false                                                     | Empty group     |
+| Empty group          | Number word or valid decimal digits             | Add number to `current`                                                                              | Number group    |
+| Number group         | Tens word followed by value between 0 and 10    | Add ones value                                                                                       | Number group    |
+| First ones word      | Second word is a tens word >= 20                | Multiply first value by 100; add tens; set `hasHundred`                                              | Spoken hundreds |
+| Multiplier just read | Next number smaller than that multiplier        | Add number                                                                                           | Number group    |
+| Number group         | Another number without an allowed relation      | Return `null`                                                                                        | Invalid phrase  |
+| Any group            | `hundred`, not yet used in this group           | Set flag; multiply nonzero current, or use implicit 100                                              | Hundred group   |
+| Any group            | `thousand`, not yet used                        | Set thousand flag, reset hundred flag; multiply or use implicit 1000; add to total and clear current | New group       |
+| Group                | Repeated disallowed multiplier, or unknown word | Return `null`                                                                                        | Invalid phrase  |
+| End                  | At least one non-`and` word                     | Return total + current, including zero or overflow                                                   | Number          |
+| End                  | No words                                        | Return `null`                                                                                        | No number       |
+
+The accumulator itself accepts no sign or fraction slash. A leading `a`/`an` is dealt with by
+phrase traversal, not by this function. The code uses `current === 0` for implicit multipliers;
+this audit does not assert a new grammar rule for unusual phrases such as `zero hundred`.
+
+### M5 — directional phrase reading and signed retry
+
+Source: `parseMeasurement.ts:32–148`.
+
+| From             | Event / guard                                                                    | Action                                                                              | To                              |
+| ---------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | ------------------------------- |
+| Start            | Backward read with half support                                                  | Scan semicolons/multipliers; track product, decreasing order and nearest multiplier | Half candidate or ordinary scan |
+| Half candidate   | `whole and a half`, ordered multipliers, integral whole below nearest multiplier | Return `(whole + 0.5) * product` and boundary                                       | Number                          |
+| Half candidate   | Signed whole                                                                     | Return rejection positioned so outer signed reader sees sign                        | Signed candidate                |
+| Ordinary scan    | `and`, or semicolon in backward direction                                        | Advance cursor without adding word                                                  | Scan                            |
+| Scan             | Appended/prepended word gives a complete valid M4 number                         | Save candidate; advance                                                             | Scan                            |
+| Scan             | Candidate is invalid                                                             | Stop at boundary; retain previous valid value                                       | Number or no number             |
+| Forward boundary | Integral value followed by `and a half`                                          | Add 0.5; advance beyond half                                                        | Number                          |
+| Signed check     | Relevant first word starts with minus signs                                      | Remove signs in a local word view and retry number read                             | Signed retry                    |
+| Signed retry     | Stripped word joins the phrase                                                   | Return unsigned magnitude plus `signed = true`                                      | Signed number                   |
+| Signed check     | Signed `a`/`an` followed by number word/multiplier                               | Attribute sign to following phrase                                                  | Signed number                   |
+| Signed check     | Sign does not own the phrase                                                     | Keep original number/boundary                                                       | Unsigned or no number           |
+
+The sign retry neither changes token text nor creates a second public invocation. A failed
+longer candidate returns the shorter valid phrase by design. Forward reads stop at semicolons;
+backward reads can cross them. `skipSemicolons` advances only across literal semicolon tokens.
+Half handling limits nested reads so repeated `and a half` does not create unbounded recursion.
+
+### M6 — exact and fuzzy unit matching
+
+Source: all of `matchUnit.ts` and `levenshtein.ts`; aliases in `units.ts`.
+
+| From              | Event / guard                                                                        | Action                                         | To                  |
+| ----------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------- | ------------------- |
+| No candidate      | Fuzziness is positive infinity                                                       | Disable fuzzy matching locally                 | Exact-only search   |
+| Searching aliases | Exact alias                                                                          | Return its canonical unit immediately          | Matched             |
+| Searching aliases | No fuzzy budget, excluded prose, British exact-only alias, or different first letter | Skip fuzzy comparison                          | Next alias          |
+| Searching aliases | Edit distance <= budget and distance \* 3 < alias length                             | Save unit; reduce local budget to distance - 1 | Candidate           |
+| Candidate         | Later strictly closer alias                                                          | Replace candidate                              | Candidate           |
+| End               | Candidate / no candidate                                                             | Return canonical unit / `null`                 | Matched / unmatched |
+
+Tie order is alias iteration order. Exact matches still win after a fuzzy candidate. The budget
+is local; it cannot carry into a later call. NaN and negative budgets do not admit a typo.
+
+Edit distance is a supporting dynamic-programming machine: initialize row `0..b.length`; for
+each character of `a`, save the old diagonal, set row[0] to the row index, then replace each
+cell with the unchanged diagonal for equal characters or `min(above, left, diagonal) + 1`.
+Advance the saved diagonal to the old `above`; finish with the last cell. The row is freshly
+allocated and represents only the preceding/current prefix distances. This source has no
+cross-call cache.
+
+### M7 — ownership and consumption
+
+Source: `remainingWords`, `readValueAfter`, `labelHasValue`, `parseMeasurement.ts:455–577`.
+
+| From              | Guard / event                                                                                      | Action                                                                   | To                 |
+| ----------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------ |
+| Unused token      | Not a unit of this pass                                                                            | Inspect unsupported weight relationship if applicable                    | Next token         |
+| Unit candidate    | Label owns following value, or starts a field                                                      | Suppress backward number read                                            | Forward candidate  |
+| Unit candidate    | Otherwise                                                                                          | Read preceding signed phrase                                             | Backward candidate |
+| Candidate         | Owned signed phrase                                                                                | Record rejected fields; do not consume match                             | Next token via M8  |
+| Candidate         | No preceding number, or eligible zero; raw alias is not bare `in`/`m`                              | Read following signed/unsigned value                                     | Forward candidate  |
+| Forward candidate | Label/zero value has its own unit (except next compound part or separate label with its own value) | Reject ownership of that number                                          | No match           |
+| Candidate         | No number                                                                                          | Leave tokens available                                                   | Next token         |
+| Candidate         | Number accepted                                                                                    | Append match and its field endpoints; set `used` over its token interval | Consumed           |
+| Feet accepted     | Following number has inch unit, or is bare 0 < n < 12 without another supported/unsupported unit   | Append inch match; consume number and explicit inch unit if present      | Compound candidate |
+| Feet accepted     | Isolated zero without inches                                                                       | Remove zero feet match                                                   | Next token         |
+| End of pass       | All candidates visited                                                                             | Apply signed-field filter                                                | M8 then M9/M10     |
+
+`readValueAfter` checks the next unit across semicolons but not across a new field label. Short
+aliases expanded to label words retain their label metadata. A zero is a recognized candidate,
+not simply a missing value, although several branches use falsy checks with special zero rules.
+The `used` flag moves false → true monotonically within a pass; it is reset at the next type
+pass. Rejected signed matches do not become accepted positive matches.
+
+### M8 — field rejection and unsupported-part relationships
+
+Source: `parseMeasurement.ts:97–102`, `234–280`, `452–585`.
+
+| From                 | Event / guard                                                                 | Action                                                                      | To                   |
+| -------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------- | -------------------- |
+| Token indexing       | Semicolon                                                                     | Increment field number                                                      | New field            |
+| Type pass begins     | Any input                                                                     | Allocate empty signed-field set and match-field map                         | Clean pass           |
+| Backward signed part | Signed first word and unit may span semicolon                                 | Mark first-word and unit fields invalid                                     | Rejected fields      |
+| Forward signed part  | Prefix owns signed value                                                      | Mark unit and following-value fields invalid                                | Rejected fields      |
+| Unsigned match       | Accepted interval                                                             | Record its endpoint fields (bare inches record their starting field)        | Pending match        |
+| Weight scan          | Stone/ounce/gram has separately numbered adjacent supported part              | Return `null`, using original text to find already consumed supported units | Whole parse rejected |
+| Weight scan          | Unsupported unit is unrelated, ordinal `st`, or excluded bare prefix `st`/`g` | Continue                                                                    | Scan                 |
+| End of pass          | Match has any recorded field in signed-field set                              | Remove match                                                                | Rejected match       |
+| End of pass          | Recorded fields all valid                                                     | Keep match                                                                  | Assembly candidate   |
+
+Unsupported-part adjacency can cross semicolons or retained comma boundaries, as documented.
+The backward ownership helper uses the signed reader only at a retained `COMMA` boundary;
+elsewhere it uses an unsigned reader. F5 demonstrates the resulting missed connection. A bare
+supported prefix rejects its field before applying the other-type ownership exception used for
+labels; F7 demonstrates that asymmetry. These are different fix locations and retain separate
+tickets.
+
+### M9 — grouping, conversion, agreement and terminal result
+
+Source: `parseMeasurement.ts:150–168`, `289–338`; conversions in `units.ts:47–76`.
+
+| From                 | Event / guard                                                                          | Action                                                                   | To                                  |
+| -------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | ----------------------------------- |
+| No group             | First match                                                                            | Start group                                                              | Group open                          |
+| Group open           | Previous value integral, unit step in `NEXT_PART`, smaller value below one larger unit | Append part                                                              | Compound group                      |
+| Group open           | Any other match                                                                        | Start independent measurement                                            | New group                           |
+| Groups complete      | Group contains only zero parts                                                         | Exclude from counted groups                                              | Counted groups ready                |
+| Counted groups ready | Choose first nonzero group, or first group if all zero                                 | Choose requested unit or last part's unit                                | Convert                             |
+| Convert              | Zero part                                                                              | Skip it                                                                  | Next part                           |
+| Convert              | Same unit                                                                              | Add original value                                                       | Next part                           |
+| Convert              | Same-type conversion exists                                                            | Add converted value                                                      | Next part                           |
+| Convert              | No conversion exists (out-of-contract unit/type)                                       | Throw                                                                    | Error                               |
+| First total          | Zero and explicit                                                                      | Return internal `undefined`                                              | Try next type                       |
+| First total          | Non-finite                                                                             | Return `null`                                                            | Rejected; F9 can wrongly reach this |
+| First total          | Finite (including inferred zero)                                                       | Calculate 1% threshold with rounding margin `1 + 1e-9`                   | Compare                             |
+| Compare              | Any counted total differs more than threshold                                          | Return `null`                                                            | Rejected                            |
+| Compare              | All agree                                                                              | Return first group's matches, total, unit, type and exact original input | Success                             |
+
+This machine does not retry with a different target unit after overflow. Returning `null` is
+correct for a target that cannot be represented; the F9 conversions instead overflow on an
+intermediate centimeter value. An inferred zero bypasses the explicit-zero fallback (F8).
+
+### M10 — complete-input unqualified inference
+
+Source: `parseMeasurement.ts:582–605`.
+
+| From                   | Guard / event                          | Action                                                             | To                  |
+| ---------------------- | -------------------------------------- | ------------------------------------------------------------------ | ------------------- |
+| Explicit scan finished | Surviving matches exist                | Do not infer                                                       | M9                  |
+| No matches             | `allowUnqualified` and explicit `type` | Join all token text except semicolons and parse complete M4 phrase | Inference candidate |
+| Candidate              | Not a number, or number <= 0           | Add nothing                                                        | Next type / null    |
+| Positive candidate     | Weight                                 | Infer kg for metric, otherwise lb                                  | One match           |
+| Positive candidate     | Height, imperial/default               | Infer inches                                                       | One match           |
+| Positive candidate     | Height, metric, value < 3              | Infer meters                                                       | One match           |
+| Positive candidate     | Height, metric, value >= 3             | Infer centimeters                                                  | One match           |
+| One match              | Requested normalization                | Use M9 with inferred flag                                          | Result / rejection  |
+
+Inference reads complete token text, not a surviving numeric prefix and not just unused tokens.
+It cannot retry arbitrary trailing garbage as a bare number. `normalizedUnit` chooses the target
+unit but does not replace the explicit-type requirement for this feature.
+
+### M11 — retries, repeated calls and concurrency
+
+| From                    | Event                                         | Action                                                                        | To                      |
+| ----------------------- | --------------------------------------------- | ----------------------------------------------------------------------------- | ----------------------- |
+| Idle module             | Call starts                                   | Allocate text, tokens, maps, sets, arrays and scalar cursors                  | Independent invocation  |
+| Invocation              | Success, `null`, or throw                     | Discard internal state; expose only newly allocated result/matches on success | Idle module             |
+| Idle module             | Caller retries same input/options             | Re-run from M0; no saved progress                                             | Independent invocation  |
+| Caller owns result      | Mutates result or matches                     | No shared parser object is changed                                            | Later call unaffected   |
+| Same JavaScript isolate | Several Promise callbacks call parser         | Synchronous calls complete serially; no internal suspension point             | Independent invocations |
+| Worker threads          | Concurrent calls in separate module instances | Each worker has its own ordinary heap and lookup state                        | Independent invocations |
+
+Shared module values are unit/number tables, Sets/Maps and RegExp instances. Public parsing never
+mutates the tables. Global regular expressions are used by string replacement, not a retained
+`exec` cursor loop; repeated probes found no `lastIndex` leakage. There is no public singleton
+session, lock, retry budget, transaction or cancellation state.
+
+The audit ran 100 mixed sequences in a Promise batch: rejected range → expected option error →
+fuzzy parse → mutate a successful result → parse again using frozen options → height fallback.
+All passed. Four workers concurrently ran 200 rejection/error/success cycles each against the
+built ESM API; all passed. This is genuine worker concurrency, but not concurrent access to one
+parser heap. Promise batching alone is not evidence of parallel execution.
+
+Three retries of F1 returned `[230, 230, 230]` instead of `[30, 30, 30]`: retrying preserves the
+deterministic bug rather than repairing it. The tests establish isolation for these sequences,
+not a proof over hostile option getters, monkey-patched built-ins, private-module mutation,
+resource exhaustion, or every JavaScript engine. No retry/concurrency-specific bug was confirmed.
+
+## Confirmed failures, ranked by impact
+
+All rows were reproduced through `pnpm test:unit` at the audit baseline. The embedded harness
+below has **22 tests: 18 failing probes and 4 passing controls**. A failed intended-behavior
+assertion is evidence here, not a failing test committed into the normal suite. Multiple rows in
+one group share a ticket; existing issues were reused. Priorities weigh silent corruption and
+ordinary input frequency above extreme-number rejection.
+
+| Finding / priority | Reachable input and options                                                                                     | Actual at baseline                              | Required result and source                                                                             | Invalid transition / issue                                                                    |
+| ------------------ | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| F1 / High          | `my son is two, thirty pounds`; `twenty, one hundred pounds`                                                    | 230 lb; 2100 lb                                 | 30 lb; 100 lb, specified by [AFA-75][commas]                                                           | M2 discards boundary → M4 joins unrelated fields                                              |
+| F2 / High          | `he said “about 180” lbs`; `5 ’11”`                                                                             | 180 in (height); 11 in                          | 180 lb; 71 in, [AFA-78][quotes]                                                                        | M1 quotation → unit, or omitted feet → partial success                                        |
+| F4 / High          | `5/2-180 lbs`; `5½2 lb`; `5.5 ½ ft`; `5 ft (10/180 lbs)` with weight type                                       | 180 lb; 5.52 lb; 0.5 ft; 0.05555555555555555 lb | `null`; `null`; `null`; 180 lb, [AFA-74][fractions]                                                    | M1 rewrites away range/fraction boundaries or measurement ownership before M3/M7              |
+| F3 / Medium        | `phase 20, −5 cm`; `phase twenty, −5 cm`                                                                        | 5 cm; 25 cm                                     | `null`, negative-field rule and [AFA-202][signs]                                                       | M1 sees earlier unrelated number → drops negative sign → accepted positive number             |
+| F6 / Medium        | `5ft11`                                                                                                         | `null`                                          | 71 in, [AFA-62][compact] and 5 × 12 + 11                                                               | M2 leaves `ft11` indivisible → M7 never reaches recognized unit                               |
+| F5 / Low           | `kg -20 5 grams; actual 70 kg`                                                                                  | 70 kg                                           | `null`, Unsupported Units specification and [AFA-203][unsupported]                                     | M8 unsigned backward lookup misses the supported prefix; incomplete weight bypasses rejection |
+| F7 / Low           | `kg -6 ft, 70 kg`                                                                                               | `null`                                          | 70 kg, [AFA-116][ownership]                                                                            | M7/M8 rejects kg field for a signed value owned by ft                                         |
+| F8 / Low           | `0.` + 322 zeros + `1`, height + allowUnqualified + normalized ft                                               | Successful result with value 0                  | `null`, [AFA-107][underflow], maintainer's 2026-10-08 “option 1” comment                               | M9 inferred-zero exception violates intended positive-result invariant                        |
+| F9 / Low           | `1` + 307 zeros + ` ft`, normalized m; same digits + ` m`, normalized ft; `1` + 308 zeros + ` in`, normalized m | `null` in all three cases                       | Approximately 3.048e306 m; 3.280839895013123e307 ft; 2.54e306 m, independently calculated unit factors | M9 finite source → intermediate infinity → false rejection; new [AFA-236][overflow]           |
+
+F8 is intentionally retained by one existing test, not an accidental untested branch. The
+maintainer approved changing it to `null`; its implementation remains blocked on AFA-88. Its
+fix must update that test according to the ticket, not weaken the positivity invariant.
+
+The corpus's existing “wrong” classification is not enough by itself to establish a bug:
+`5.11 ft` is a documented decimal grammar, and fuzzy prose such as `2 ponds` is admitted by the
+documented edit-distance rules. Those rows are not additional confirmed defects in this audit.
+The structural invariant generator also misses subnormal positive values and ordinary semantic
+errors: a finite positive 230 lb can still be the wrong reading of 30 lb.
+
+## Fix groups, dependencies and document ownership
+
+Keep one ticket per PR. F1, F2 and F4 remain their existing grouped issues; do not duplicate them
+or fold all tokenizer behavior changes into a single refactor. F3, F5 and F7 share broad ownership
+concerns but have different failure causes and existing preservation requirements.
+
+| Work stream                    | Tickets / order                      | State and required handoff                                                                                                                                    |
+| ------------------------------ | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Publish this audit             | [AFA-235][audit]                     | Document prepared locally; fresh publication session to run checks and submit it                                                                              |
+| Restore tokenizer prerequisite | [AFA-88][refactor]                   | In Progress; preserve existing remote branch `apfahy/afa-88-read-every-number-form-in-one-tokenizer-pass`, last observed `ded9ee0`; requires maintainer merge |
+| Boundary and number fixes      | AFA-75 → AFA-74 → AFA-202 → AFA-62   | Blocked by AFA-88; fresh session owns the ordered queue after that dependency lands                                                                           |
+| Quote and ownership fixes      | AFA-78 → AFA-203 → AFA-116 → AFA-107 | Blocked by AFA-88; fresh session owns the ordered queue after that dependency lands                                                                           |
+| Numeric conversion             | [AFA-236][overflow]                  | Independent `units.ts` correction; fresh fix session                                                                                                          |
+
+Fresh-session links and actual launch status are recorded below when sessions start. A session
+must not claim a blocked fix as implemented. Existing dependency restrictions remain in place.
+
+Each fix session must:
+
+- Re-read its ticket and applicable feature files; reproduce the exact failure inputs.
+- Add regression tests with ticket/specification/hand-calculated expectations. Verify failure on
+  `main` and success on the fix; include source, ESM and CommonJS coverage as appropriate.
+- Add ticket-sourced corpus entries and feature-map references; run mutation testing and
+  `pnpm check`; preserve unrelated results and follow changeset rules.
+- Update this file in the same PR: affected machine/table, finding status, before/after revision,
+  regression-test path, PR link, and any remaining limitation. Keep the historical baseline
+  output. Do not mark a finding fixed merely because a ticket was filed or a session started.
+- Merge latest `main` when needed and retain other sessions' document updates. No force pushes.
+  The refactor session must update the machine map when the actual implementation changes.
+
+### Session ledger
+
+Pending launch after the audit document is saved.
+
+## Reproducing the audit
+
+Use a disposable checkout of `b79eae0`. Run `pnpm install` and `pnpm build`. Save the following
+code as `tests/stateMachineAudit.test.ts` and run:
+
+```sh
+pnpm test:unit tests/stateMachineAudit.test.ts
+```
+
+The intended-behavior probes are expected to fail on the baseline. Do not add skips, expected
+failures or snapshots of incorrect behavior to make this probe suite green. Fix PRs should turn
+their relevant cases into permanent regression tests. The test code is retained here so the
+single audit file contains its evidence; it is not a second, automatically run test suite.
+
+[audit]: https://linear.app/afahy/issue/AFA-235
+[commas]: https://linear.app/afahy/issue/AFA-75
+[quotes]: https://linear.app/afahy/issue/AFA-78
+[signs]: https://linear.app/afahy/issue/AFA-202
+[fractions]: https://linear.app/afahy/issue/AFA-74
+[unsupported]: https://linear.app/afahy/issue/AFA-203
+[compact]: https://linear.app/afahy/issue/AFA-62
+[ownership]: https://linear.app/afahy/issue/AFA-116
+[underflow]: https://linear.app/afahy/issue/AFA-107
+[overflow]: https://linear.app/afahy/issue/AFA-236
+[refactor]: https://linear.app/afahy/issue/AFA-88
+
+```typescript
+import { describe, expect, it } from 'vitest';
+import { Worker } from 'node:worker_threads';
+import { parseMeasurement, type ParseOptions } from '../src';
+
+// Temporary audit probes. Expectations come from named tickets, public examples,
+// or the international unit definitions, never from observed parser output.
+describe('state machine audit', () => {
+  it.each([
+    ['AFA-75 comma boundary', 'my son is two, thirty pounds', {}, 30, 'lb'],
+    ['AFA-75 multiplier', 'twenty, one hundred pounds', {}, 100, 'lb'],
+    ['AFA-116 signed ownership', 'kg -6 ft, 70 kg', {}, 70, 'kg'],
+    ['AFA-78 quoted words', 'he said “about 180” lbs', {}, 180, 'lb'],
+    ['AFA-78 spaced marks', '5 ’11”', {}, 71, 'in'],
+    ['AFA-62 compact', '5ft11', {}, 71, 'in'],
+    ['AFA-74 slash ownership', '5 ft (10/180 lbs)', { type: 'weight' }, 180, 'lb'],
+  ] as const)('%s', (_, raw, options, value, unit) => {
+    expect(parseMeasurement(raw, options)).toMatchObject({ value, unit });
+  });
+
+  it.each([
+    ['AFA-202 digit label', 'phase 20, −5 cm'],
+    ['AFA-202 word label', 'phase twenty, −5 cm'],
+    ['AFA-203 unsupported part', 'kg -20 5 grams; actual 70 kg'],
+    ['AFA-74 fraction range', '5/2-180 lbs'],
+    ['AFA-74 fraction boundary', '5½2 lb'],
+    ['AFA-74 decimal whole', '5.5 ½ ft'],
+  ])('%s', (_, raw) => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
+
+  it('AFA-107 positive result invariant', () => {
+    expect(
+      parseMeasurement(`0.${'0'.repeat(322)}1`, {
+        type: 'height',
+        allowUnqualified: true,
+        normalizedUnit: 'ft',
+      })?.value
+    ).toBeGreaterThan(0);
+  });
+
+  it.each([
+    ['ft', 'm', 3.048e306],
+    ['in', 'm', 2.54e305],
+    ['m', 'ft', 3.280839895013123e307],
+    ['m', 'in', 3.937007874015748e308],
+  ] as const)('finite conversion of 1e307 %s to %s', (from, to, expected) => {
+    const value = parseMeasurement(`1${'0'.repeat(307)} ${from}`, { normalizedUnit: to });
+    if (Number.isFinite(expected)) {
+      expect(value?.value).toBeGreaterThan(0);
+      expect(Math.abs(value!.value / expected - 1)).toBeLessThan(1e-14);
+    } else {
+      expect(value).toBeNull();
+    }
+  });
+
+  it('finite conversion of 1e308 inches to meters', () => {
+    expect(parseMeasurement(`1${'0'.repeat(308)} in`, { normalizedUnit: 'm' })).toMatchObject({
+      value: 2.54e306,
+      unit: 'm',
+      type: 'height',
+    });
+  });
+
+  it('repeating a failing input does not repair the comma transition', () => {
+    const actual = Array.from(
+      { length: 3 },
+      () => parseMeasurement('my son is two, thirty pounds')?.value
+    );
+    expect(actual).toEqual([30, 30, 30]);
+  });
+
+  it('retries after null, throws, fuzzy matches and mutated results are isolated', async () => {
+    const options: ParseOptions = Object.freeze({ type: 'weight', normalizedUnit: 'kg' });
+    expect.hasAssertions();
+    await Promise.all(
+      Array.from({ length: 100 }, async () => {
+        expect(parseMeasurement('150-180 lbs')).toBeNull();
+        expect(() => parseMeasurement('72', { allowUnqualified: true })).toThrow('requires type');
+        expect(parseMeasurement('5 foots 10 inc', { fuzziness: 2 })?.value).toBe(70);
+        const first = parseMeasurement('70 kg', options)!;
+        first.value = -1;
+        first.matches[0].value = -1;
+        expect(parseMeasurement('70 kg', options)).toEqual({
+          value: 70,
+          unit: 'kg',
+          type: 'weight',
+          raw: '70 kg',
+          matches: [{ value: 70, unit: 'kg' }],
+        });
+        expect(parseMeasurement('0 feet; actual 1.8 meters')?.value).toBe(1.8);
+      })
+    );
+  });
+
+  it('four independent workers each repeat public API calls 200 times', async () => {
+    const modulePath = new URL('../dist/index.js', import.meta.url).href;
+    const results = await Promise.all(
+      Array.from(
+        { length: 4 },
+        () =>
+          new Promise((resolve, reject) => {
+            const worker = new Worker(
+              `
+        const { parentPort, workerData } = require('node:worker_threads');
+        (async () => {
+          const { parseMeasurement } = await import(workerData);
+          for (let i = 0; i < 200; i++) {
+            if (parseMeasurement('150-180 lbs') !== null) throw new Error('range');
+            try { parseMeasurement('72', {allowUnqualified:true}); throw new Error('missing throw'); }
+            catch (error) { if (!error.message.includes('requires type')) throw error; }
+            const result = parseMeasurement('70 kg');
+            if (result.value !== 70 || result.unit !== 'kg') throw new Error('state leak');
+          }
+          parentPort.postMessage('ok');
+        })().catch(error => { throw error; });
+      `,
+              { eval: true, workerData: modulePath }
+            );
+            worker.once('message', resolve);
+            worker.once('error', reject);
+            worker.once('exit', code => {
+              if (code !== 0) reject(new Error(`worker ${code}`));
+            });
+          })
+      )
+    );
+    expect(results).toEqual(['ok', 'ok', 'ok', 'ok']);
+  });
+});
+```
