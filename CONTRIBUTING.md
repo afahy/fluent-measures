@@ -99,6 +99,11 @@ argument and defaults to `docs/index.html`. A URL, such as `http://localhost:808
   is missing, too tall or collides. It checks each width again with the hero demo expanded, and
   marks a problem that only the expanded card has with `[expanded]`. It also checks that four
   curated rows expand to all eight in order, then collapse back to the same four and card height.
+  At the first and last widths, and at 390 and 1440px when included, it also presses Tab and
+  Shift+Tab from beside option links, code tabs, copy buttons and disclosures placed under the
+  sticky header. After scrolling settles, it checks focus, the outline's position and hit
+  testing in both motion settings. These keyboard checks use a height of 844px below 600px wide,
+  and 900px otherwise.
   Each line names a problem and the widths where it appears. The script exits 1 when it finds a problem, and 2 when it can't run.
   Run it after each change to `docs/` and before you open the PR. `--from`, `--to` and `--step`
   change the widths, and `--touch` emulates a touch screen. The checks use the page's class
