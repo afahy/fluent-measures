@@ -472,6 +472,8 @@
                 >
                 <button
                   class="copy-button"
+                  hidden
+                  disabled
                   type="button"
                   data-copy="#hero-command"
                   aria-label="Copy install command"
@@ -655,14 +657,13 @@
               <p class="measure">Add the package with your package manager.</p>
               <div class="code on-code">
                 <div class="code-head">
-                  <div class="tabs" role="tablist" aria-label="Package manager" data-tab-group="pm">
+                  <div class="tabs" hidden aria-label="Package manager" data-tab-group="pm">
                     <button
                       class="tab"
                       type="button"
-                      role="tab"
+                      disabled
                       id="tab-npm"
                       aria-controls="panel-npm"
-                      aria-selected="true"
                       data-value="npm"
                     >
                       npm
@@ -670,11 +671,9 @@
                     <button
                       class="tab"
                       type="button"
-                      role="tab"
+                      disabled
                       id="tab-yarn"
                       aria-controls="panel-yarn"
-                      aria-selected="false"
-                      tabindex="-1"
                       data-value="yarn"
                     >
                       yarn
@@ -682,11 +681,9 @@
                     <button
                       class="tab"
                       type="button"
-                      role="tab"
+                      disabled
                       id="tab-pnpm"
                       aria-controls="panel-pnpm"
-                      aria-selected="false"
-                      tabindex="-1"
                       data-value="pnpm"
                     >
                       pnpm
@@ -694,6 +691,8 @@
                   </div>
                   <button
                     class="copy-button"
+                    hidden
+                    disabled
                     type="button"
                     data-copy
                     aria-label="Copy install command"
@@ -706,29 +705,38 @@
                     ><span data-copy-label>Copied</span>
                   </button>
                 </div>
-                <div role="tabpanel" id="panel-npm" aria-labelledby="tab-npm" data-value="npm">
+                <div
+                  role="group"
+                  data-example-panel
+                  id="panel-npm"
+                  aria-labelledby="label-npm"
+                  data-value="npm"
+                >
+                  <p class="code-head code-label" id="label-npm" data-example-label>npm</p>
                   <pre
                     tabindex="0"
                   ><code class="language-bash code-cmd">npm install @afahy/fluent-measures</code></pre>
                 </div>
                 <div
-                  role="tabpanel"
+                  role="group"
+                  data-example-panel
                   id="panel-yarn"
-                  aria-labelledby="tab-yarn"
+                  aria-labelledby="label-yarn"
                   data-value="yarn"
-                  hidden
                 >
+                  <p class="code-head code-label" id="label-yarn" data-example-label>yarn</p>
                   <pre
                     tabindex="0"
                   ><code class="language-bash code-cmd">yarn add @afahy/fluent-measures</code></pre>
                 </div>
                 <div
-                  role="tabpanel"
+                  role="group"
+                  data-example-panel
                   id="panel-pnpm"
-                  aria-labelledby="tab-pnpm"
+                  aria-labelledby="label-pnpm"
                   data-value="pnpm"
-                  hidden
                 >
+                  <p class="code-head code-label" id="label-pnpm" data-example-label>pnpm</p>
                   <pre
                     tabindex="0"
                   ><code class="language-bash code-cmd">pnpm add @afahy/fluent-measures</code></pre>
@@ -757,19 +765,13 @@
               </p>
               <div class="code on-code">
                 <div class="code-head">
-                  <div
-                    class="tabs"
-                    role="tablist"
-                    aria-label="Module format"
-                    data-tab-group="module"
-                  >
+                  <div class="tabs" hidden aria-label="Module format" data-tab-group="module">
                     <button
                       class="tab"
                       type="button"
-                      role="tab"
+                      disabled
                       id="tab-esm"
                       aria-controls="panel-esm"
-                      aria-selected="true"
                       data-value="esm"
                     >
                       ES modules
@@ -777,17 +779,22 @@
                     <button
                       class="tab"
                       type="button"
-                      role="tab"
+                      disabled
                       id="tab-cjs"
                       aria-controls="panel-cjs"
-                      aria-selected="false"
-                      tabindex="-1"
                       data-value="cjs"
                     >
                       CommonJS
                     </button>
                   </div>
-                  <button class="copy-button" type="button" data-copy aria-label="Copy quick start">
+                  <button
+                    class="copy-button"
+                    hidden
+                    disabled
+                    type="button"
+                    data-copy
+                    aria-label="Copy quick start"
+                  >
                     <svg class="icon icon-sm icon-copy" aria-hidden="true">
                       <use href="#i-copy" />
                     </svg>
@@ -796,7 +803,14 @@
                     ><span data-copy-label>Copied</span>
                   </button>
                 </div>
-                <div role="tabpanel" id="panel-esm" aria-labelledby="tab-esm" data-value="esm">
+                <div
+                  role="group"
+                  data-example-panel
+                  id="panel-esm"
+                  aria-labelledby="label-esm"
+                  data-value="esm"
+                >
+                  <p class="code-head code-label" id="label-esm" data-example-label>ES modules</p>
                   <pre
                     class="code-wide"
                     tabindex="0"
@@ -829,12 +843,13 @@ if (result) {
 }</code></pre>
                 </div>
                 <div
-                  role="tabpanel"
+                  role="group"
+                  data-example-panel
                   id="panel-cjs"
-                  aria-labelledby="tab-cjs"
+                  aria-labelledby="label-cjs"
                   data-value="cjs"
-                  hidden
                 >
+                  <p class="code-head code-label" id="label-cjs" data-example-label>CommonJS</p>
                   <pre
                     class="code-wide"
                     tabindex="0"
@@ -976,6 +991,8 @@ if (result) {
                     <span class="code-label">TypeScript</span
                     ><button
                       class="copy-button"
+                      hidden
+                      disabled
                       type="button"
                       data-copy
                       aria-label="Copy type example"
@@ -1056,30 +1073,22 @@ const rejected = parseMeasurement(
                 </p>
                 <div class="code on-code">
                   <div class="code-head">
-                    <div
-                      class="tabs"
-                      role="tablist"
-                      aria-label="Conversion input"
-                      data-tab-group="convert"
-                    >
+                    <div class="tabs" hidden aria-label="Conversion input" data-tab-group="convert">
                       <button
                         class="tab"
                         type="button"
-                        role="tab"
+                        disabled
                         id="tab-convert-height"
                         aria-controls="panel-convert-height"
-                        aria-selected="true"
                         data-value="height"
                       >
                         5' 11"</button
                       ><button
                         class="tab"
                         type="button"
-                        role="tab"
+                        disabled
                         id="tab-convert-weight"
                         aria-controls="panel-convert-weight"
-                        aria-selected="false"
-                        tabindex="-1"
                         data-value="weight"
                       >
                         150 lbs
@@ -1087,6 +1096,8 @@ const rejected = parseMeasurement(
                     </div>
                     <button
                       class="copy-button"
+                      hidden
+                      disabled
                       type="button"
                       data-copy
                       aria-label="Copy conversion example"
@@ -1101,11 +1112,15 @@ const rejected = parseMeasurement(
                     </button>
                   </div>
                   <div
-                    role="tabpanel"
+                    role="group"
+                    data-example-panel
                     id="panel-convert-height"
-                    aria-labelledby="tab-convert-height"
+                    aria-labelledby="label-convert-height"
                     data-value="height"
                   >
+                    <p class="code-head code-label" id="label-convert-height" data-example-label>
+                      Height conversion
+                    </p>
                     <pre
                       class="code-wide"
                       tabindex="0"
@@ -1142,12 +1157,15 @@ const rejected = parseMeasurement(
                     </div>
                   </div>
                   <div
-                    role="tabpanel"
+                    role="group"
+                    data-example-panel
                     id="panel-convert-weight"
-                    aria-labelledby="tab-convert-weight"
+                    aria-labelledby="label-convert-weight"
                     data-value="weight"
-                    hidden
                   >
+                    <p class="code-head code-label" id="label-convert-weight" data-example-label>
+                      Weight conversion
+                    </p>
                     <pre
                       class="code-wide"
                       tabindex="0"
@@ -1222,6 +1240,8 @@ const rejected = parseMeasurement(
                     <span class="code-label">TypeScript</span
                     ><button
                       class="copy-button"
+                      hidden
+                      disabled
                       type="button"
                       data-copy
                       aria-label="Copy unit inference example"
@@ -1284,6 +1304,8 @@ const rejected = parseMeasurement(
                     <span class="code-label">TypeScript</span
                     ><button
                       class="copy-button"
+                      hidden
+                      disabled
                       type="button"
                       data-copy
                       aria-label="Copy spelling errors example"
@@ -2134,7 +2156,7 @@ const strict = parseMeasurement(
         );
         const object = results.find(result => result !== 'null');
         const full =
-          code.closest('[role="tabpanel"], .code').querySelector('[data-full-object]') ??
+          code.closest('[data-example-panel], .code').querySelector('[data-full-object]') ??
           code.closest('.code').querySelector('[data-full-object]');
         if (full && object) {
           full.querySelector('code').textContent = object;
@@ -2167,8 +2189,8 @@ const strict = parseMeasurement(
       referrerpolicy="no-referrer"
     ></script>
     <script>
-      // Copy buttons. If the browser blocked clipboard.js, or cdnjs is down, a copy button shows
-      // the error toast.
+      // Copy actions stay hidden and disabled until the library and feedback handlers are ready.
+      // Failed copy attempts still explain how to select and copy the code manually.
       document.addEventListener('DOMContentLoaded', () => {
         const successToast = document.getElementById('success-toast');
         const errorToast = document.getElementById('error-toast');
@@ -2190,7 +2212,7 @@ const strict = parseMeasurement(
           toastTimer = setTimeout(hideToasts, toast === errorToast ? 4000 : 2000);
         }
 
-        if (typeof ClipboardJS === 'undefined') {
+        if (typeof ClipboardJS === 'undefined' || !ClipboardJS.isSupported('copy')) {
           document.querySelectorAll('.copy-button').forEach(button => {
             button.addEventListener('click', () => showToast(errorToast));
           });
@@ -2223,6 +2245,10 @@ const strict = parseMeasurement(
           setTimeout(() => button.classList.remove('copied'), 2000);
         });
         clipboard.on('error', () => showToast(errorToast));
+        document.querySelectorAll('.copy-button').forEach(button => {
+          button.disabled = false;
+          button.hidden = false;
+        });
       });
     </script>
     <script>
@@ -2307,13 +2333,13 @@ const strict = parseMeasurement(
 
         // Tabs: every tab list in a group shares one selection.
         const PERSISTED_GROUPS = ['pm', 'module'];
-        const tabLists = [...document.querySelectorAll('[role="tablist"][data-tab-group]')];
+        const tabLists = [...document.querySelectorAll('[data-tab-group]')];
 
         function selectTab(group, value, { save = true } = {}) {
           tabLists
             .filter(list => list.dataset.tabGroup === group)
             .forEach(list => {
-              list.querySelectorAll('[role="tab"]').forEach(tab => {
+              list.querySelectorAll('.tab').forEach(tab => {
                 const selected = tab.dataset.value === value;
                 tab.setAttribute('aria-selected', String(selected));
                 tab.tabIndex = selected ? 0 : -1;
@@ -2338,7 +2364,7 @@ const strict = parseMeasurement(
 
         tabLists.forEach(list => {
           const group = list.dataset.tabGroup;
-          const tabs = [...list.querySelectorAll('[role="tab"]')];
+          const tabs = [...list.querySelectorAll('.tab')];
           list.addEventListener('click', event => {
             const tab = event.target.closest('[role="tab"]');
             if (tab) selectTab(group, tab.dataset.value);
@@ -2356,6 +2382,18 @@ const strict = parseMeasurement(
             selectTab(group, tabs[next].dataset.value);
             tabs[next].focus();
           });
+          // Keep labeled static groups until both interaction handlers are attached.
+          list.setAttribute('role', 'tablist');
+          tabs.forEach(tab => {
+            tab.setAttribute('role', 'tab');
+            tab.disabled = false;
+            const panel = document.getElementById(tab.getAttribute('aria-controls'));
+            panel.setAttribute('role', 'tabpanel');
+            panel.setAttribute('aria-labelledby', tab.id);
+            panel.querySelector('[data-example-label]').hidden = true;
+          });
+          selectTab(group, tabs[0].dataset.value, { save: false });
+          list.hidden = false;
         });
 
         PERSISTED_GROUPS.forEach(group => {
