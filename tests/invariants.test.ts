@@ -16,6 +16,9 @@ const WORDS = [
   // A number too large for a float, and one so small that it reads as 0.
   '9'.repeat(400),
   `0.${'0'.repeat(330)}1`,
+  // AFA-107: positive subnormals that can underflow only after unit conversion.
+  `0.${'0'.repeat(322)}1`,
+  `0.${'0'.repeat(323)}5`,
   '0',
   '-3',
   '1/2',
@@ -124,7 +127,25 @@ describe('invariants', () => {
         expect(result.type).toBe(parseOptions.type ?? result.type);
         expect(result.unit).toBe(parseOptions.normalizedUnit ?? result.unit);
       }),
-      { numRuns: NUM_RUNS, seed: 26 }
+      {
+        numRuns: NUM_RUNS,
+        seed: 26,
+        // Always reach conversion underflow, including in the shorter mutation runs.
+        examples: [
+          [
+            `0.${'0'.repeat(322)}1`,
+            { type: 'height', allowUnqualified: true, normalizedUnit: 'ft' },
+          ],
+          [
+            `0.${'0'.repeat(322)}1`,
+            { type: 'height', allowUnqualified: true, normalizedUnit: 'm' },
+          ],
+          [
+            `0.${'0'.repeat(323)}5`,
+            { type: 'weight', allowUnqualified: true, normalizedUnit: 'kg' },
+          ],
+        ],
+      }
     );
     // Most inputs give null, so check that some give each type, or a parser that returns null for
     // every input would pass.
