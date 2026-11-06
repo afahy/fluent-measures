@@ -35,7 +35,7 @@ describe('unqualified measurement normalization', () => {
 
   // Inches to feet divides by 12, so the smallest number underflows to zero. A metric height
   // can't show this since AFA-66: a lone number below 3 is meters, and meters only multiply.
-  it('retains an inferred result when conversion underflows to zero', () => {
+  it('rejects an inferred result when conversion underflows to zero', () => {
     const raw = `0.${'0'.repeat(323)}5`;
     expect(
       parseMeasurement(raw, {
@@ -44,13 +44,7 @@ describe('unqualified measurement normalization', () => {
         inferUnit: 'imperial',
         normalizedUnit: 'ft',
       })
-    ).toEqual({
-      matches: [{ value: Number.MIN_VALUE, unit: 'in' }],
-      value: 0,
-      unit: 'ft',
-      type: 'height',
-      raw,
-    });
+    ).toBeNull();
   });
 
   it('rejects normalization to a unit of another measurement type', () => {
