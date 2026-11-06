@@ -48,16 +48,16 @@ const LABEL_PATTERN = new RegExp(
 // A number in a fraction: digits with an optional decimal part, or a decimal part alone. The two
 // forms can't overlap, so a long number that isn't a fraction fails in linear time.
 const FRACTION_NUMBER = String.raw`(\d+(?:\.\d+)?|\.\d+)`;
-// Across punctuation, a quote owns inches only when it follows a numeric height.
+// Retain the preceding feet/mark context when normalizing a range substring.
 const FRACTION_OWNER = String.raw`(?:(?<!\p{L})(?:feet|foot|ft)|(?<=[\d¼-¾⅐-⅞↉])['"])[\s,()[\]]*`;
 // A whole number is optional. Without one, the numerator can't follow a letter or quote mark,
 // even after spaces: there the slash separates two measurements, as in "5'10/180" and
-// "5 ft 10/180 lbs". Feet or marks keep that ownership across brackets and commas too.
-// The lookahead keeps those lookbehinds from running at every space. Both slash characters
-// block a second fraction match in a date/code.
+// "5 ft 10/180 lbs". Punctuation breaks that context: fractions after a comma or bracket
+// retain their ordinary meaning. Both slash characters block partial matches in dates/codes.
+// The lookahead keeps the lookbehind from running at every space.
 const SLASH_FRACTION = new RegExp(
-  String.raw`(${FRACTION_OWNER})?(?<![\d/⁄.])(?:${FRACTION_NUMBER}\s+|(?=[\d.])(?<![\p{L}'"]\s*))${FRACTION_NUMBER}[/⁄]${FRACTION_NUMBER}(?![\d/⁄])(?=([\s,()[\]]*(?:in(?:ch(?:es)?)?\b|"|''(?!')))?)`,
-  'giu'
+  String.raw`(?<![\d/⁄.])(?:${FRACTION_NUMBER}\s+|(?=[\d.])(?<![\p{L}'"]\s*))${FRACTION_NUMBER}[/⁄]${FRACTION_NUMBER}(?![\d/⁄])`,
+  'gu'
 );
 
 /** Writes a fraction as a decimal, or as "x" when it isn't a proper fraction of whole numbers. */
@@ -104,20 +104,7 @@ function normalizeFractionParts(input: string): string {
         return trailing ? 'x' : writeFraction(text, whole, numerator, denominator);
       }
     )
-    .replace(
-      SLASH_FRACTION,
-      (
-        text,
-        owner: string | undefined,
-        whole,
-        numerator,
-        denominator,
-        inches: string | undefined
-      ) =>
-        owner && !whole && !inches
-          ? text
-          : (owner || '') + writeFraction(text, whole, numerator, denominator)
-    );
+    .replace(SLASH_FRACTION, writeFraction);
 }
 
 /**

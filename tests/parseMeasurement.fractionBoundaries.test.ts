@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
 
-// Exact failure inputs and expected results from AFA-74 and its mixed-slash comment.
+// AFA-74 inputs; the maintainer retained proper fractions after punctuation on 2026-11-06.
 describe('fraction boundaries', () => {
   it.each(['5/2-180 lbs', '5.5 ½ ft', '5½2 lb'])(
     'rejects the malformed fraction or range in %s',
@@ -11,13 +11,13 @@ describe('fraction boundaries', () => {
   );
 
   it.each(['5 ft (10/180 lbs)', '5 ft, 10/180 lbs'])(
-    'keeps the weight after the height separator in %s',
+    'preserves the approved proper-fraction weight in %s',
     raw => {
       expect(parseMeasurement(raw, { type: 'weight' })).toMatchObject({
-        value: 180,
+        value: 0.05555555555555555, // 10 / 180
         unit: 'lb',
         type: 'weight',
-        matches: [{ value: 180, unit: 'lb' }],
+        matches: [{ value: 0.05555555555555555, unit: 'lb' }],
       });
     }
   );
@@ -67,9 +67,19 @@ describe('fraction boundaries', () => {
     '5 (ft) 10/180 lbs',
     '5 [ft] 10/180 lbs',
     '5 ft, (10⁄180 lbs)',
-  ])('retains the separated weight with feet or marks in %s', raw => {
-    expect(parseMeasurement(raw, { type: 'weight' })).toMatchObject({ value: 180, unit: 'lb' });
+  ])('preserves a proper fraction after punctuation in %s', raw => {
+    expect(parseMeasurement(raw, { type: 'weight' })).toMatchObject({
+      value: 0.05555555555555555, // 10 / 180
+      unit: 'lb',
+    });
   });
+
+  it.each(['5 ft, 1/2 lbs', '5 ft (1/2 lbs)'])(
+    'preserves a half-pound weight after punctuation in %s',
+    raw => {
+      expect(parseMeasurement(raw, { type: 'weight' })).toMatchObject({ value: 0.5, unit: 'lb' });
+    }
+  );
 
   // Punctuation after prose is not a feet/inch owner. Fractions still mean 1 / 2 pound.
   it.each(['weight (1/2 lbs)', 'left (1/2 lbs)', 'heft (1/2 lbs)', 'weight, 1/2 lbs'])(
@@ -119,22 +129,19 @@ describe('fraction boundaries', () => {
     }
   );
 
-  it('normalizes only the weight selected across the slash', () => {
+  it('normalizes the approved fractional weight', () => {
     expect(parseMeasurement('5 ft (10/180 lbs)', { normalizedUnit: 'kg' })).toMatchObject({
-      value: 81.6466266, // 180 × 0.45359237
+      value: 0.02519957611111111, // (10 / 180) × 0.45359237
       unit: 'kg',
-      matches: [{ value: 180, unit: 'lb' }],
+      matches: [{ value: 0.05555555555555555, unit: 'lb' }],
     });
   });
 
-  it('keeps the height selected across the slash', () => {
+  it('keeps the independent height before a fractional weight', () => {
     expect(parseMeasurement('5 ft (10/180 lbs)', { type: 'height' })).toMatchObject({
-      value: 70, // 5 × 12 + 10
-      unit: 'in',
-      matches: [
-        { value: 5, unit: 'ft' },
-        { value: 10, unit: 'in' },
-      ],
+      value: 5,
+      unit: 'ft',
+      matches: [{ value: 5, unit: 'ft' }],
     });
   });
 

@@ -477,8 +477,8 @@
 {"id": "word-comma-age-weight", "input": "age one, twenty pounds", "expected": {"value": 20, "unit": "lb", "type": "weight"}, "category": "commas", "source": "AFA-75"}
 {"id": "word-comma-quoted-digits", "input": "phase twenty, “5” cm", "expected": {"value": 5, "unit": "cm", "type": "height"}, "category": "commas", "source": "AFA-75"}
 {"id": "fraction-improper-range", "input": "5/2-180 lbs", "expected": null, "category": "mixed-numbers", "source": "AFA-74"}
-{"id": "fraction-bracketed-height-weight", "input": "5 ft (10/180 lbs)", "expected": {"value": 180, "unit": "lb", "type": "weight"}, "category": "multiple-measurements", "source": "AFA-74", "options": {"type": "weight"}}
-{"id": "fraction-comma-height-weight", "input": "5 ft, 10/180 lbs", "expected": {"value": 180, "unit": "lb", "type": "weight"}, "category": "multiple-measurements", "source": "AFA-74", "options": {"type": "weight"}}
+{"id":"fraction-bracketed-height-weight","input":"5 ft (10/180 lbs)","expected":{"value":0.05555555555555555,"unit":"lb","type":"weight"},"category":"multiple-measurements","source":"AFA-74","options":{"type":"weight"},"note":"Maintainer decision 2026-11-06: preserve proper fractions after punctuation; 10 / 180."}
+{"id":"fraction-comma-height-weight","input":"5 ft, 10/180 lbs","expected":{"value":0.05555555555555555,"unit":"lb","type":"weight"},"category":"multiple-measurements","source":"AFA-74","options":{"type":"weight"},"note":"Maintainer decision 2026-11-06: preserve proper fractions after punctuation; 10 / 180."}
 {"id": "fraction-decimal-unicode-whole", "input": "5.5 ½ ft", "expected": null, "category": "mixed-numbers", "source": "AFA-74"}
 {"id": "fraction-unicode-trailing-digit", "input": "5½2 lb", "expected": null, "category": "mixed-numbers", "source": "AFA-74"}
 {"id": "fraction-mixed-slash-separators", "input": "1⁄2/180 lbs", "expected": {"value": 180, "unit": "lb", "type": "weight"}, "category": "mixed-numbers", "source": "AFA-74"}
@@ -517,3 +517,5 @@
 {"id":"fraction-review-explicit-inch-6","input":"6 ft, 1⁄2″","options":{"type":"height"},"expected":{"value":72.5,"unit":"in","type":"height"},"category":"mixed-numbers","source":"AFA-74","note":"Review preservation: explicit inch unit, whole feet × 12 + 1 / 2."}
 {"id":"fraction-review-explicit-inch-7","input":"6 ft (1/2) in","options":{"type":"height"},"expected":{"value":72.5,"unit":"in","type":"height"},"category":"mixed-numbers","source":"AFA-74","note":"Review preservation: explicit inch unit, whole feet × 12 + 1 / 2."}
 {"id":"fraction-review-explicit-inch-8","input":"6 ft, 1/2''","options":{"type":"height"},"expected":{"value":72.5,"unit":"in","type":"height"},"category":"mixed-numbers","source":"AFA-74","note":"Review preservation: explicit inch unit, whole feet × 12 + 1 / 2."}
+{"id":"fraction-approved-half-weight-1","input":"5 ft, 1/2 lbs","options":{"type":"weight"},"expected":{"value":0.5,"unit":"lb","type":"weight"},"category":"multiple-measurements","source":"AFA-74","note":"Maintainer decision 2026-11-06: preserve proper fractions after punctuation; 1 / 2."}
+{"id":"fraction-approved-half-weight-2","input":"5 ft (1/2 lbs)","options":{"type":"weight"},"expected":{"value":0.5,"unit":"lb","type":"weight"},"category":"multiple-measurements","source":"AFA-74","note":"Maintainer decision 2026-11-06: preserve proper fractions after punctuation; 1 / 2."}
