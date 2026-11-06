@@ -81,6 +81,39 @@ describe('header menu focus', () => {
     }
   });
 
+  it('keeps pointer choices available when pressing them clears keyboard focus', () => {
+    expect.hasAssertions();
+    const { menus, events } = headerMenus();
+    for (const menu of menus) {
+      events.pointerdown?.({ target: menu.child });
+      menu.events.focusout?.({ relatedTarget: null });
+      expect(menu.open).toBe(true);
+      events.pointerup?.({});
+      menu.child.closest = () => menu.child;
+      menu.events.click({ target: menu.child });
+      expect(menu.open).toBe(false);
+    }
+  });
+
+  it.each(['pointerup', 'pointercancel'])('clears the pointer guard after %s', event => {
+    expect.hasAssertions();
+    const { menus, events } = headerMenus();
+    for (const menu of menus) {
+      events.pointerdown?.({ target: menu.child });
+      events[event]?.({});
+      menu.events.focusout?.({ relatedTarget: null });
+      expect(menu.open).toBe(false);
+    }
+  });
+
+  it('still dismisses menus when a pointer press outside clears focus', () => {
+    const { menus, events } = headerMenus();
+    events.pointerdown?.({ target: menus[0].child });
+    events.pointerdown?.({ target: { closest: () => null } });
+    menus[0].events.focusout?.({ relatedTarget: null });
+    expect(menus[0].open).toBe(false);
+  });
+
   it('still returns focus to the summary on Escape', () => {
     const { menus, events } = headerMenus();
     menus[1].open = false;

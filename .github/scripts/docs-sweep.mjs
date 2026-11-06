@@ -8,6 +8,7 @@
 // expanded, checks that all eight rows append in order, then collapses back to the same four
 // curated rows and card height. It also checks keyboard focus leaving the phone menu at 390×844
 // in both themes. The page defaults to docs/index.html. --touch emulates a touch screen.
+// It also checks no-script anchor visibility with keyboard and pointer at phone/desktop sizes.
 //
 // It exits 0 when it finds no problem, 1 when it finds one, and 2 when it can't run. The checks
 // use the class names of docs/index.html, so a change to those names needs a change here.
@@ -22,6 +23,7 @@ import {
   sweepWidths,
 } from './docs-chrome.mjs';
 import { checkMenuFocus } from './docs-menu-focus.mjs';
+import { noScriptNavigation } from './docs-no-script-navigation.mjs';
 
 /** Runs in the page. Returns a list of the problems at the current width, without repeats. */
 function probe() {
@@ -307,6 +309,9 @@ try {
       }
     }
   }
+  for (const { problem, scheme, width } of await noScriptNavigation(browser, url)) {
+    problems.set(problem, [...(problems.get(problem) ?? []), { scheme, width }]);
+  }
 } catch (error) {
   console.error(error.message);
   process.exitCode = EXIT_ERROR;
@@ -322,10 +327,14 @@ if (process.exitCode !== EXIT_ERROR) {
   if (problems.size) {
     const places = new Set([...problems.values()].flat().map(p => `${p.scheme} ${p.width}`));
     const visited = 2 * sweepWidths(from, to, step).length;
-    console.log(`\nProblems at ${places.size} of ${visited} widths, counting each color scheme.`);
+    console.log(
+      `\nProblems at ${places.size} theme/width combinations (${visited} layout checks plus no-script navigation).`
+    );
     process.exitCode = 1;
   } else {
-    console.log(`No problems between ${from} and ${to}px, in light and dark.`);
+    console.log(
+      `No problems between ${from} and ${to}px, in light and dark, or with no-script navigation at 390 and 1440px.`
+    );
   }
   if (keyboardProblems.length) process.exitCode = 1;
   else console.log('Phone menu keyboard focus passes at 390×844, in light and dark.');

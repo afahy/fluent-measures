@@ -2396,6 +2396,16 @@ const strict = parseMeasurement(
         const menus = [...document.querySelectorAll('[data-page-menu], [data-theme-menu]')];
         const pageMenu = document.querySelector('[data-page-menu]');
         const scrim = document.querySelector('[data-page-scrim]');
+        let pressedMenu = null;
+        // Some browsers clear focus on a pointer press without focusing the clicked choice.
+        document.addEventListener('pointerdown', event => {
+          pressedMenu = menus.find(menu => menu.contains(event.target));
+        });
+        ['pointerup', 'pointercancel'].forEach(type => {
+          document.addEventListener(type, () => {
+            pressedMenu = null;
+          });
+        });
         menus.forEach(menu => {
           menu.addEventListener('toggle', () => {
             if (menu.open) menus.forEach(other => other !== menu && (other.open = false));
@@ -2405,6 +2415,7 @@ const strict = parseMeasurement(
             if (event.target.closest('a, button[data-theme-choice]')) menu.open = false;
           });
           menu.addEventListener('focusout', event => {
+            if (event.relatedTarget === null && pressedMenu === menu) return;
             if (!menu.contains(event.relatedTarget)) menu.open = false;
           });
         });

@@ -680,6 +680,11 @@ a:hover {
   .header-bar .site-nav {
     display: none;
   }
+
+  /* Native anchor jumps cannot close the menu without scripts; let it scroll away. */
+  html:not([data-js]) .site-header {
+    position: relative;
+  }
 }
 
 .brand,

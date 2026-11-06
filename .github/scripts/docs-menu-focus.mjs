@@ -101,5 +101,61 @@ export async function checkMenuFocus(browser) {
       problems.push('MENU-FOCUS Shift+Tab out leaves focus obscured or the overlay open');
     }
   }
+
+  // Emulate a browser that clears keyboard focus on a press without focusing the choice.
+  // Real pointer events must still deliver the subsequent click to the link or theme button.
+  for (const [selector, choice, result] of [
+    ['[data-page-menu]', 'a[href="#api"]', 'location.hash === "#api"'],
+    [
+      '[data-theme-menu]',
+      'button[data-theme-choice="dark"]',
+      'document.documentElement.dataset.themePref === "dark"',
+    ],
+  ]) {
+    await browser.evaluate(`(() => {
+      scrollTo({ top: 0, behavior: 'instant' });
+      const menu = document.querySelector(${JSON.stringify(selector)});
+      menu.open = false;
+      menu.querySelector('summary').focus();
+    })()`);
+    await press('Enter', 'Enter', 13);
+    await sleep(60);
+    const point = await browser.evaluate(`(() => {
+      const menu = document.querySelector(${JSON.stringify(selector)});
+      const choice = menu.querySelector(${JSON.stringify(choice)});
+      window.pointerFocusCheck = {};
+      menu.addEventListener('focusout', event => {
+        window.pointerFocusCheck.nullTarget = event.relatedTarget === null;
+      }, { once: true });
+      choice.addEventListener('mousedown', event => {
+        event.preventDefault();
+        document.activeElement.blur();
+        window.pointerFocusCheck.openDuringPress = menu.open;
+      }, { once: true });
+      const r = choice.getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    })()`);
+    await browser.send('Input.dispatchMouseEvent', {
+      type: 'mousePressed',
+      button: 'left',
+      clickCount: 1,
+      ...point,
+    });
+    await browser.send('Input.dispatchMouseEvent', {
+      type: 'mouseReleased',
+      button: 'left',
+      clickCount: 1,
+      ...point,
+    });
+    await sleep(500);
+    const worked = await browser.evaluate(`Boolean(window.pointerFocusCheck.nullTarget &&
+      window.pointerFocusCheck.openDuringPress && (${result}) &&
+      !document.querySelector(${JSON.stringify(selector)}).open)`);
+    if (!worked) problems.push(`MENU-FOCUS pointer choice lost when focus clears: ${choice}`);
+  }
+  // Leave subsequent layout checks governed by their requested system color scheme.
+  await browser.evaluate(
+    `localStorage.removeItem('fluent-measures:theme'); window.fluentMeasuresTheme()`
+  );
   return problems;
 }
