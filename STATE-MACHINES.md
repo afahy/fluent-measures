@@ -434,7 +434,7 @@ production edits through source, ESM and CommonJS:
 | `1⁄2/180 lbs`                    | 0.011111111111111112 lb | 180 lb            |
 
 Permanent regressions: `tests/parseMeasurement.fractionBoundaries.test.ts`; the package runner
-reuses the same assertions through ESM and CommonJS. Twenty-two ticket-sourced corpus entries and
+reuses the same assertions through ESM and CommonJS. Thirty-three ticket-sourced corpus entries and
 the affected feature maps record the paths. The original fractions, numeric commas, valid
 shorthand, range ownership and F1 quoted-digit boundary remain covered. No exported type or
 public example changes, and no tokenizer refactor is included.
@@ -452,6 +452,22 @@ One induced change beyond the exact ticket inputs is recorded under decision rul
 `six kg 1.75´,5½-centimeter` changes from `null` to 6 kg with default options or fuzziness 2.
 Rejecting the decimal-whole Unicode fragment permits the existing weight fallback; height-only
 still returns `null` and weight-only still returns 6 kg. No existing corpus agreement is lost.
+
+Review follow-up on `d182e37`: the first bot round reproduced eleven preservation regressions.
+Closing prose quotes such as `"weight" (1/2 lbs)` must retain 0.5 lb; extracting
+`10/180-190` from `5'10/180-190 lbs` must retain the preceding height context and 70 in;
+explicit inch fractions such as `5' (1/2 in)` and `6 ft, 1/2 in` must retain 60.5 in and
+72.5 in. These eleven assertions pass on main `b74d185`, failed on the reviewed branch in
+source and both package formats, and pass with local corrections in the same regression file.
+
+The PR remains **draft / needs-decision** for the ambiguous weight forms. Both `1/2` and
+`10/180` are proper fractions after identical feet/comma/bracket context: main returns
+0.5 lb and 0.05555555555555555 lb, while the ticket requires a 180 lb separator interpretation
+for the latter. The maintainer decision is whether to preserve punctuation-separated proper
+fractions (revising those two ticket expectations) or approve the consistent separator rule and
+its 0.5 lb → 2 lb induced changes. No magnitude/denominator heuristic or public-example change
+is authorized or implemented. Local review fixes still need full mutation/check validation and
+push hooks after that decision; the shared heavy slot has been released meanwhile.
 
 ### F9 correction — finite conversion after intermediate overflow
 
@@ -586,13 +602,13 @@ Each fix session must:
 
 ### Session ledger
 
-| Session                                                                                                                           | Assigned work                                                       | Launch state                                                                                                                                                            |
-| --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:ab3e225544f4690efa2764d0a191792e86a687eff06d7b4e3bb8c5380b1b736d> | AFA-235 publication and review of this document                     | [PR #228](https://github.com/afahy/fluent-measures/pull/228) merged at `527f7b5`; main CI passed                                                                        |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:9df9034c3ce42adbebf696dd9b9d990bec04b84a9494a53e3c9bf77d6c1fc1d4> | AFA-75, then fresh successor sessions for AFA-74, AFA-202, AFA-62   | [PR #229](https://github.com/afahy/fluent-measures/pull/229) merged at `fa73fd5`; all 12 main CI jobs passed; AFA-74 successor launched                                 |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1a5f5b908ee23500b3eab3c85521ed6236b310c0f375af966f353457aef7d25e> | AFA-78, then fresh successor sessions for AFA-203, AFA-116, AFA-107 | AFA-78 claimed In Progress; successors not yet started                                                                                                                  |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:437846f95d8fc1b59e8b6aed92f360110a4df975347393dec096581adc8de82f> | AFA-236 finite conversion overflow                                  | F9 validated; [PR #230](https://github.com/afahy/fluent-measures/pull/230) merged at `b74d185`                                                                          |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:e814642ff8608ad682438ef18ee4080fc919744b9ea078fd9ad8e24e7597c9b4> | AFA-74; fresh AFA-202 then AFA-62 sessions after each merge/main CI | [PR #232](https://github.com/afahy/fluent-measures/pull/232): F4 validated at `1e1a23b`; full checks and changed-lines mutation validation passed; review/merge pending |
+| Session                                                                                                                           | Assigned work                                                       | Launch state                                                                                                                                                                   |
+| --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:ab3e225544f4690efa2764d0a191792e86a687eff06d7b4e3bb8c5380b1b736d> | AFA-235 publication and review of this document                     | [PR #228](https://github.com/afahy/fluent-measures/pull/228) merged at `527f7b5`; main CI passed                                                                               |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:9df9034c3ce42adbebf696dd9b9d990bec04b84a9494a53e3c9bf77d6c1fc1d4> | AFA-75, then fresh successor sessions for AFA-74, AFA-202, AFA-62   | [PR #229](https://github.com/afahy/fluent-measures/pull/229) merged at `fa73fd5`; all 12 main CI jobs passed; AFA-74 successor launched                                        |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1a5f5b908ee23500b3eab3c85521ed6236b310c0f375af966f353457aef7d25e> | AFA-78, then fresh successor sessions for AFA-203, AFA-116, AFA-107 | AFA-78 claimed In Progress; successors not yet started                                                                                                                         |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:437846f95d8fc1b59e8b6aed92f360110a4df975347393dec096581adc8de82f> | AFA-236 finite conversion overflow                                  | F9 validated; [PR #230](https://github.com/afahy/fluent-measures/pull/230) merged at `b74d185`                                                                                 |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:e814642ff8608ad682438ef18ee4080fc919744b9ea078fd9ad8e24e7597c9b4> | AFA-74; fresh AFA-202 then AFA-62 sessions after each merge/main CI | [PR #232](https://github.com/afahy/fluent-measures/pull/232): F4 validated at `1e1a23b`; initial full checks passed; PR is draft pending the punctuation/slash policy decision |
 
 Sessions use isolated prepared worktrees. Full checks and mutation runs have one shared execution
 slot. Current handoff is AFA-236 → replacement AFA-78 delegate → AFA-74; each next owner

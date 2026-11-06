@@ -48,13 +48,15 @@ const LABEL_PATTERN = new RegExp(
 // A number in a fraction: digits with an optional decimal part, or a decimal part alone. The two
 // forms can't overlap, so a long number that isn't a fraction fails in linear time.
 const FRACTION_NUMBER = String.raw`(\d+(?:\.\d+)?|\.\d+)`;
+// Across punctuation, a quote owns inches only when it follows a numeric height.
+const FRACTION_OWNER = String.raw`(?:(?<!\p{L})(?:feet|foot|ft)|(?<=[\d¼-¾⅐-⅞↉])['"])[\s,()[\]]*`;
 // A whole number is optional. Without one, the numerator can't follow a letter or quote mark,
 // even after spaces: there the slash separates two measurements, as in "5'10/180" and
 // "5 ft 10/180 lbs". Feet or marks keep that ownership across brackets and commas too.
 // The lookahead keeps those lookbehinds from running at every space. Both slash characters
 // block a second fraction match in a date/code.
 const SLASH_FRACTION = new RegExp(
-  String.raw`(?<![\d/⁄.])(?:${FRACTION_NUMBER}\s+|(?=[\d.])(?<![\p{L}'"]\s*)(?<!(?:(?<!\p{L})(?:feet|foot|ft)|['"])[\s,()[\]]*))${FRACTION_NUMBER}[/⁄]${FRACTION_NUMBER}(?![\d/⁄])`,
+  String.raw`(${FRACTION_OWNER})?(?<![\d/⁄.])(?:${FRACTION_NUMBER}\s+|(?=[\d.])(?<![\p{L}'"]\s*))${FRACTION_NUMBER}[/⁄]${FRACTION_NUMBER}(?![\d/⁄])(?=(\s*(?:in(?:ch(?:es)?)?\b|"))?)`,
   'giu'
 );
 
@@ -83,11 +85,14 @@ const UNICODE_FRACTION = new RegExp(
 
 // Range endpoints can contain either fraction form, including malformed Unicode whole/tail
 // digits. Match the complete range before a local fraction can erase one of its boundaries.
-const RANGE_NUMBER = String.raw`(?:${FRACTION_NUMBER}(?:\s+${FRACTION_NUMBER}[/⁄]${FRACTION_NUMBER}|[/⁄]${FRACTION_NUMBER}|\s*[${FRACTIONS}]\d*)?|[${FRACTIONS}]\d*)`;
+// Range matching doesn't need the fraction writer's capture groups.
+const RANGE_DIGITS = `(?:${FRACTION_NUMBER.slice(1, -1)})`;
+const RANGE_NUMBER = String.raw`(?:${RANGE_DIGITS}(?:\s+${RANGE_DIGITS}[/⁄]${RANGE_DIGITS}|[/⁄]${RANGE_DIGITS}|\s*[${FRACTIONS}]\d*)?|[${FRACTIONS}]\d*)`;
 const FRACTION_RANGE = new RegExp(
-  String.raw`(?<![\d/⁄.])${RANGE_NUMBER}(?:\s*\p{Dash}\s*${RANGE_NUMBER})+(?![\d/⁄.])`,
-  'gu'
+  String.raw`(${FRACTION_OWNER})?(?<![\d/⁄.])(${RANGE_NUMBER})((?:\s*\p{Dash}\s*${RANGE_NUMBER})+)(?![\d/⁄.])`,
+  'giu'
 );
+const FRACTION_MARK = new RegExp(`[/⁄${FRACTIONS}]`, 'u');
 
 /** Normalize individual fractions after their surrounding range has been preserved. */
 function normalizeFractionParts(input: string): string {
@@ -99,7 +104,20 @@ function normalizeFractionParts(input: string): string {
         return trailing ? 'x' : writeFraction(text, whole, numerator, denominator);
       }
     )
-    .replace(SLASH_FRACTION, writeFraction);
+    .replace(
+      SLASH_FRACTION,
+      (
+        text,
+        owner: string | undefined,
+        whole,
+        numerator,
+        denominator,
+        inches: string | undefined
+      ) =>
+        owner && !whole && !inches
+          ? text
+          : (owner || '') + writeFraction(text, whole, numerator, denominator)
+    );
 }
 
 /**
@@ -111,10 +129,16 @@ function normalizeFractionParts(input: string): string {
  */
 export function normalizeFractions(input: string): string {
   return normalizeFractionParts(
-    input.replace(FRACTION_RANGE, range => {
-      const normalized = normalizeFractionParts(range);
-      return normalized.includes('x') ? '0-0-0' : normalized;
-    })
+    input.replace(
+      FRACTION_RANGE,
+      (_text, owner: string | undefined, first: string, rest: string) => {
+        // Keep the inches before a slash-separated numeric weight range: 5'10/180-190 lbs.
+        // A fractional right endpoint instead identifies a complete fraction range.
+        const context = owner && !FRACTION_MARK.test(rest) ? owner : '';
+        const normalized = normalizeFractionParts(context + first + rest).slice(context.length);
+        return (owner || '') + (normalized.includes('x') ? '0-0-0' : normalized);
+      }
+    )
   );
 }
 

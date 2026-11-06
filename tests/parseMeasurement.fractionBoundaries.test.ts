@@ -79,6 +79,36 @@ describe('fraction boundaries', () => {
     }
   );
 
+  // PARSING.md Feet and Inches and 1 / 2: an explicit inch unit keeps a proper fraction.
+  it.each([
+    ["5' (1/2 in)", 60.5],
+    ['6 ft, 1/2 in', 72.5],
+    ['6 feet, 1/2 inch', 72.5],
+    ['6 foot (1/2 inches)', 72.5],
+    ['6 ft, 1/2"', 72.5],
+    ['6 ft, 1⁄2″', 72.5],
+  ] as const)('keeps the explicit fraction of an inch in %s', (raw, value) => {
+    expect(parseMeasurement(raw, { type: 'height' })).toMatchObject({ value, unit: 'in' });
+  });
+
+  // Review findings: closing prose quotes are not height marks; a weight range owns no inches.
+  it.each(['"weight" (1/2 lbs)', 'weight "today", 1/2 lbs'])(
+    'keeps a fraction after quoted prose in %s',
+    raw => {
+      expect(parseMeasurement(raw)).toMatchObject({ value: 0.5, unit: 'lb' });
+    }
+  );
+
+  it.each(["5'10/180-190 lbs", '5 ft 10/180-190 lbs', '5 feet 10/180–190 lbs'])(
+    'keeps the independent height before a weight range in %s',
+    raw => {
+      expect(parseMeasurement(raw, { type: 'height' })).toMatchObject({
+        value: 70, // 5 × 12 + 10; PARSING.md Ranges omits only the weight range.
+        unit: 'in',
+      });
+    }
+  );
+
   // AFA-74 and PARSING.md: an omitted range does not take an independent measurement's unit.
   it.each(['5/2-180 lbs; 70 kg', '180-5/2 lbs; 70 kg'])(
     'keeps the later measurement after %s',
