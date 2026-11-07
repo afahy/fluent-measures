@@ -443,6 +443,24 @@ row already rejects the malformed phrase. Exact observations and independent nul
 remain in `/tmp/afa247-default-mutant-dispositions.json` and the triage logs. No existing
 committed assertion is changed to pin these incidental outputs.
 
+Final test-only commit `9284e40303021b555f5a7f4b18a70f8970d13fd4` retains the exact
+`2367ef8` runtime source tree `338424673c2c947e807a170839b4b33899b0af3e`.
+Its necessary fresh mutation run, without incremental reuse, passes 99.74% (1,500 killed, 21 timeouts,
+four unchanged-line survivors, zero uncovered/errors, 32 existing ignores); every changed-line
+mutant is killed. All eight selected sources and six report bodies match the committed source.
+Report SHA256: `b769407c9da78010845202aee85c8c0bd84ec4af87bba3d94642da0abbab8de5`;
+archive `/tmp/afa247-mutation-9284e40.json`, verification
+`/tmp/afa247-field-prefix-final-mutation-verification.json`. The final test tree
+`b187e699d4f241f46df571faecc84b71b4d89592` passes 5,320 ESM/CommonJS package tests;
+the prior full coverage check stays pinned to `2367ef8` rather than being relabeled.
+Brotli is 5,641 ESM / 5,694 CommonJS bytes, versus main's 5,401 / 5,455,
+within unchanged 6,000-byte limits. Corpus is 914 total / 893 agree / six wrong / 15 missed;
+all 881 prior rows and outcomes remain. Logs:
+`/tmp/afa247-review-final-field-prefix-final-mutation.log`,
+`/tmp/afa247-field-prefix-final-changed-lines.log`,
+`/tmp/afa247-review-final-field-prefix-final-package.log`.
+This following audit-only commit changes no runtime or test content.
+
 M2 now retains `RANGE` as the token's text instead of writing `-`. This keeps M3's discarded
 ranges distinct from literal minus signs in M5. The existing recovery contract still applies:
 `6 ft 1-2 eleven point five in` is 83.5 in (6 × 12 + 11.5), and `kg seventy point five 1-2`
