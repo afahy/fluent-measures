@@ -208,7 +208,7 @@ const WORD_COMMA = new RegExp(
 // A comma and space, bracketed conversion, or semicolon before another number ends a spoken
 // decimal. Retain the boundary without splitting a semicolon between a number and its unit.
 const DECIMAL_BOUNDARY = new RegExp(
-  String.raw`(\bpoint(?:[\s-]+(?:${NUMBER_WORD}|[\d.]+|and))*)\s*(?:,\s+|[;(\[](?=\s*(?:${NUMBER_WORD}|point|\.?\d)))`,
+  String.raw`(\bpoint(?:[\s-]+(?:${NUMBER_WORD}|[\d.]+|and))*)\s*(?:,\s+|(?:(;)|[(\[])(?=\s*(?:${NUMBER_WORD}|point|\.?\d)))`,
   'g'
 );
 
@@ -383,7 +383,8 @@ export function tokenizeNormalized(
       // Keep this boundary as a non-number token in both reading directions. The uppercase word
       // can't come from input, which is lowercase, and can't match a unit even with fuzziness.
       .replace(WORD_COMMA, '$1 COMMA ')
-      .replace(DECIMAL_BOUNDARY, '$1 COMMA ')
+      // Retain a captured semicolon: signed-field ownership still needs its field boundary.
+      .replace(DECIMAL_BOUNDARY, '$1 $2 COMMA ')
       // Split punctuation, hyphens that join two values after a feet or inch mark, as in `5'-11`,
       // `5"-5 in`, `5'-eleven` and `five'-10"`, and underscores before minus signs.
       .replace(PUNCTUATION, ' ')

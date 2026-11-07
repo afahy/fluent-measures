@@ -105,8 +105,9 @@ function readNumberPhrase(
     }
   }
   if (phrase.includes('point') && (!barePart || words(stopped!) === 'point')) {
-    // Bare inches keep their integer stopping point before a separate number, as in
-    // "11 two hundred point five pounds". An invalid decimal starting at "point" stays invalid.
+    // A compound part keeps its integer stopping point before a separate number, as in
+    // "ft 5 eleven point five" or "11 two hundred point five pounds". A decimal starting at
+    // "point" still reads as one phrase and cannot recover an invalid suffix.
     return [half(end - 1) ? null : read(), end];
   }
   end = stopped ?? end;
@@ -133,9 +134,10 @@ function readSignedPhrase(
   words: Words,
   start: number,
   step = 1,
-  readHalf = true
+  readHalf = true,
+  barePart = false
 ): [value: number | null, end: number, signed: boolean] {
-  const [value, end] = readNumberPhrase(words, start, step, readHalf);
+  const [value, end] = readNumberPhrase(words, start, step, readHalf, barePart);
   // Stryker disable next-line EqualityOperator: step is 1 or -1, so "step >= 0" is the same.
   const forward = step > 0;
   const at = forward ? start : end;
@@ -204,8 +206,15 @@ function readValueAfter(
   label: boolean,
   fuzziness?: number
 ): [value: number | null, end: number] {
-  // This read takes a signed value too, so the check for a label's value finds it, as in "kg: -5".
-  const [value, end] = readSignedPhrase(words, skipSemicolons(words, start));
+  // Feet can start a compound, so an unsigned prefix keeps the first part's integer stop.
+  // Signed phrases still read whole for the label ownership check, as in "kg: -5".
+  const [value, end] = readSignedPhrase(
+    words,
+    skipSemicolons(words, start),
+    1,
+    undefined,
+    unit === 'ft'
+  );
   // A label doesn't take a number that has its own unit, as in "weigh in: 180 lbs" and
   // "180 lbs = 82 kg", even an unsupported one, as in "kg=400 g", so the check for stone, ounces
   // and grams still sees that part. A semicolon or a unit label can be that unit, as in

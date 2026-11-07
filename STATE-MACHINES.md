@@ -372,6 +372,39 @@ bytes, below unchanged 6,000-byte limits. Logs: `/tmp/afa247-review-final-semico
 The earlier `af45a89` full check remains historical. This evidence-only audit update leaves
 the validated source and test trees unchanged; no second unchanged-source mutation run occurs.
 
+Final-head review of `51e084c` found two additional decimal-boundary interactions.
+M2's decimal-boundary normalization must preserve a semicolon's field identity as well as
+M5's numeric stopping boundary: later signed-field ownership must not discard a separate
+valid field. `kg -seventy point five; 80 kg` was `null` on that head versus 80 kg on main;
+the correction retains the captured semicolon beside the existing non-number marker.
+M4/M5's unsigned feet-prefix reader must also retain its first component's integer stop:
+`ft 5 eleven point five` is 71.5 in (5 × 12 + 11.5), and
+`ft 5 11 two hundred point five pounds` keeps the independent 71-in height. The existing
+integer-stop mode is forwarded to the unsigned feet-prefix read; signed phrases keep their
+whole-phrase ownership behavior. No extra scan, grammar, public type, or policy is added.
+
+`tests/parseMeasurement.spokenDecimalFields.test.ts` has 32 independent cases covering plain
+and labeled prefixes, explicit and bare fractional inches, signed/Unicode-signed fields,
+semicolon number/unit joins, full decimal scalars, half phrases, and both explicit selectors.
+The same assertions fail 14 cases and pass 18 controls on published `51e084c`, and fail 14
+and pass 18 on exact main `0e0284d`; all 32 pass the focused correction. Final focused
+checks passed 1,044 cases in 22 files, including resource bounds, F3, calculator, range,
+feature-map and generated-result controls; scoped ESLint/format/spelling checks pass. Thirty-two corpus additions all agree; all 881 prior rows and outcomes are retained.
+The generated result snapshot is unchanged. These are focused observations, not final
+full-check, mutation, build, size, or package validation of the uncommitted correction.
+
+Two exploratory expectations were not adopted as a new recovery contract. Unmarked
+`kg -seventy point five; ft 5 11` can attach `ft` to the preceding signed number under the
+existing semicolon rule (main 65 in; published/focused `null`); the positive independent-label
+control uses `ft:`. Weight-selected `ft 5 11 two hundred point five pounds` has no explicit
+boundary before its weight phrase (main 5 lb; published/focused `null`); its proposed 200.5-lb
+oracle remains separate from the documented height/default preservation. The positive weight
+control uses `pounds:` after a semicolon. Approved AFA-250 owns rejection of the malformed
+signed entry and whitespace-only pair. Original trial expectations, exact observations, and
+reasons remain in `/tmp/afa247-field-prefix-exploratory-dispositions.json` and the failing-first
+logs; no committed assertion was deleted or loosened. The historical `e69d594` full-check
+and report evidence above does not validate this later source correction.
+
 M2 now retains `RANGE` as the token's text instead of writing `-`. This keeps M3's discarded
 ranges distinct from literal minus signs in M5. The existing recovery contract still applies:
 `6 ft 1-2 eleven point five in` is 83.5 in (6 × 12 + 11.5), and `kg seventy point five 1-2`
