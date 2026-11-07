@@ -495,8 +495,8 @@ public example or exported type changes. Paired-apostrophe quotations retain the
 
 ### F3 correction — Unicode signs after numeric labels
 
-Status: implemented and under validation in this fix session; PR link will be recorded when
-opened. Before: current main `bfac12a943720390c60afd26a522cb67dfa20fa3`. The original
+Status: corrected at `93c7c72`, with full validation passed at `b80d68a`; the PR link will be
+recorded when opened. Before: current main `bfac12a943720390c60afd26a522cb67dfa20fa3`. The original
 `b79eae0` audit row and embedded 22-test harness remain historical evidence.
 
 | Input                              | Before (`bfac12a9`) | After  |
@@ -1012,7 +1012,7 @@ Each fix session must:
 | <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:461b3a6bdd48f18b59aa264dedf46356fae143e0f5f4b90936f49716e134a37a>                                                       | AFA-107 inferred conversion underflow; no successor                  | [PR #233](https://github.com/afahy/fluent-measures/pull/233) at `7426e3e` implementation; full checks and independent probes pass; merged at `b76070d`; exact-merge main ci-ok passed                                                                                                                                                                                                                                                                                                                                                                                                 |
 | <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1e5640d2dbe8ef251e2bb479d46cc5f4fc59c1597ecd270e7941a88df6893b76>                                                       | Fresh AFA-203 implementation, review and PR stewardship              | Complete: [PR #234](https://github.com/afahy/fluent-measures/pull/234), reviewed head `0a33c40`, merge `77bd5ce`; 19 PR checks, pre/post-merge audits and all 12 exact-merge main CI jobs passed (run 42314274182, ci-ok 2026-11-06T23:54:24Z). Earlier validation at `9030111` and `5c9eab1` retained                                                                                                                                                                                                                                                                                |
 | <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:2d4a60308bdfb6191174b5f92be891f2f90bd42e44ea1218e394ed52840c6148>                                                       | Fresh AFA-116 signed other-type ownership and named test groups      | Source `1eb0a1b`; focused checks passed against `77bd5ce`. Independent review complete (125/126 agree; existing finding filed as AFA-241); full check and fresh changed-line mutation validation passed at `f80b4be`; [PR #235](https://github.com/afahy/fluent-measures/pull/235) merged as `b90ea36` from reviewed `28c3d21`; all 19 PR checks, exact-head Codex review, final audits and all 12 exact-merge main CI jobs passed (run 42319687195, ci-ok 2026-11-07T00:47:02Z). Ticket Done; merged worktree/local branch removed; audit `513b4c3` preserved. No successor assigned |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:462bb758094ab0a59a27217f4fb643589704bceca25e2bf1c7aba94be4f52c28>                                                       | Fresh AFA-202 Unicode-minus label correction; then fresh AFA-62 only | Started from main `bfac12a9` after the predecessor merged and all 12 exact-main CI jobs passed; ticket claimed In Progress. Focused failing-first source/ESM/CommonJS checks pass with the correction; independent review and parent replay completed with the scoped judgments above; corrected-source full validation pending. Exclusive heavy-check/mutation/push slot explicitly granted by audit coordinator.                                                                                                                                                                    |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:462bb758094ab0a59a27217f4fb643589704bceca25e2bf1c7aba94be4f52c28>                                                       | Fresh AFA-202 Unicode-minus label correction; then fresh AFA-62 only | Started from main `bfac12a9` after the predecessor merged and all 12 exact-main CI jobs passed; ticket claimed In Progress. Focused failing-first source/ESM/CommonJS checks pass with the correction; independent review and parent replay completed with the scoped judgments above; corrected source `93c7c72` passed full validation and fresh changed-line mutation checks at `b80d68a`. Exclusive heavy-check/mutation/push slot explicitly granted by audit coordinator.                                                                                                       |
 
 Sessions use isolated prepared worktrees. Full checks, mutation runs and mandatory push hooks
 have one shared execution slot. AFA-74 released its integration window after `70419bd`.
@@ -1039,8 +1039,25 @@ no throws. The existing F3 failure improves, all 42 correction/control additions
 two AFA-244 additions record unchanged pre-existing wrong results. The generated result inventory
 is unchanged. The independent review and parent replay are recorded in F3 above. The initial full run passed
 lint, 3,924 unit tests with 100% coverage and TypeScript; its mutation phase was interrupted
-when independent findings required a correction. Final full checks and fresh mutation validation
-are running on the corrected source; no success is claimed for the interrupted run.
+when independent findings required a correction. The first corrected-source full run passed 3,949 of 3,950 tests but the unchanged Git-isolation
+subprocess timed out at 180,054 ms while another worktree ran mutation testing. Its log is
+retained for the existing AFA-224 tooling issue; no assertion or timeout is relaxed. The
+coordinator confirmed the competing processes had ended and explicitly cleared an unchanged
+rerun. No success is claimed for either incomplete run.
+
+Final F3 `pnpm check` passed on corrected source `93c7c72` (head `b80d68a`) on 2026-11-07:
+3,950 unit tests with 100% statement/branch/function/line coverage, TypeScript, 99.65% fresh
+mutation score (1,416 killed, 12 timed out, five unchanged-line survivors), build, size,
+exported-API checks and 4,586 ESM/CommonJS tests. Fresh changed-line validation with
+`node .github/scripts/mutation-check.mjs --base origin/main --report reports/mutation/mutation.json`
+passes: every mutant on an added or changed line is killed. No mutation suppression is added.
+The five survivors are the unchanged zero-part skip, two zero-inference gate variants, numeric
+comma rejection marker and fuzzy-unit regex; none belongs to this fix. Bundle sizes are
+5.28 kB ESM / 5.34 kB CommonJS versus main's 5.17 / 5.24 kB, within unchanged 5.5 kB limits.
+Lint has only the two existing warnings in unchanged test files. The unchanged rerun's
+Git-isolation subprocess passed in 100,276 ms; the failed-overlap and successful rerun evidence
+is recorded on AFA-224. Whole-diff self-review preserves all predecessor source/tests/corpus
+and the complete historical audit harness. Mandatory push hooks and hosted review follow.
 
 The parent audit passed `pnpm install`, `pnpm build`, and the unchanged invariant, semantic
 property, corpus, README and parsing-example suites: 361 tests across five files.
