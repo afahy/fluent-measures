@@ -995,6 +995,122 @@ The obscure `1 m seventy, 5 cm` recovery remains a separate simplification candi
 AFA-250–254 policy/API change is included. Bundle measurements and performance claims remain
 pending; focused test elapsed time is not a benchmark.
 
+Final-validation follow-up at source commit `03609786b2bb26c3ab825d50b594625c00e2846d`:
+the first complete coverage attempt stopped with 4,138 passing tests and seven failures
+before mutation/build/package stages. One rejection assertion contradicted the ticket's exact
+`kgs` alias, five compact mark/hyphen assertions reflected previously unreadable heights,
+and the generated snapshot had 160 changed rows across 33 unchanged inputs. This is partial
+validation evidence, not a completed coverage/check result.
+
+The parent confirmed the ticket-directed compact-to-spaced migrations. Each original literal
+is retained with a strict result, with height/weight selectors added. Exact-main `24add56`
+spaced counterparts passed four tests (the two spellings `5ft` and `5 ft` share one counterpart):
+
+| Original input                      | Main   | Final  | Exact-main spaced counterpart / rationale                                      |
+| ----------------------------------- | ------ | ------ | ------------------------------------------------------------------------------ |
+| `5ft11"-185 lbs`, `5 ft11"-185 lbs` | 185 lb | 71 in  | `5 ft 11"-185 lbs`: 5 × 12 + 11 = 71 in; weight selector stays 185 lb          |
+| `five ft11"-185 lbs`                | 185 lb | 71 in  | `five ft 11"-185 lbs`: same arithmetic; weight selector stays 185 lb           |
+| `5;ft11"-185 lbs`                   | 185 lb | 71 in  | `5;ft 11"-185 lbs`: existing semicolon ownership; weight selector stays 185 lb |
+| `1m80"-5 in`                        | 5 in   | `null` | `1 m 80"-5 in`: 1 meter, 80 inches and 5 inches disagree                       |
+
+The exact `kgs`/`cms` aliases are asserted even with fuzziness enabled; independent `kgg`
+and `fts` typo rejections remain. No mark/hyphen exception was added. Thirteen corpus rows
+pin the five original literals and both explicit selectors, bringing the corpus to 762 rows:
+753 agree, 6 wrong, 3 missed, no throws. All former agreements remain, and the 719 baseline
+rows remain unchanged. The strict semantic assertions passed before refreshing the generated
+snapshot; its generator and option sets are unchanged. Full inventory:
+
+<details>
+<summary>All 160 generated result changes (33 inputs)</summary>
+
+<!-- Intentional typo inputs from the fixed generator. cspell:ignore poundz feetlbs -->
+
+Options: `-` default; `h` height; `w` weight; `cm` normalized centimeters; `f2` fuzziness 2; `hu` unqualified metric height. Inputs and option sets are unchanged. These rows arise from the same compact unit splitting and bare-centimeter rules; fractional larger parts expose conflicting measurements, and explicit unit ownership/type selection applies to newly readable compact units.
+
+| Input                                      | Options                    | Before                                              | After                                       |
+| ------------------------------------------ | -------------------------- | --------------------------------------------------- | ------------------------------------------- |
+| `hundred,m-1/2`                            | `-`, `h`, `f2`, `hu`       | 100 m height                                        | 10000.5 cm height = 100 m + 0.5 cm          |
+| `hundred,m-1/2`                            | `cm`                       | 10000 cm height = 100 m                             | 10000.5 cm height = 100 m + 0.5 cm          |
+| `1/2,metres,11 2 ounces`                   | `-`, `h`, `f2`, `hu`       | 0.5 m height                                        | null                                        |
+| `1/2,metres,11 2 ounces`                   | `cm`                       | 50 cm height = 0.5 m                                | null                                        |
+| `10/180 m-80`                              | `-`, `h`, `f2`, `hu`       | 0.05555555555555555 m height                        | null                                        |
+| `10/180 m-80`                              | `cm`                       | 5.555555555555555 cm height = 0.05555555555555555 m | null                                        |
+| `.5-meter6-kilograms`                      | `-`, `h`, `hu`             | null                                                | 0.5 m height                                |
+| `.5-meter6-kilograms`                      | `w`                        | null                                                | 6 kg weight                                 |
+| `.5-meter6-kilograms`                      | `cm`                       | null                                                | 50 cm height = 0.5 m                        |
+| `5 ¼-m 2`                                  | `-`, `h`, `f2`, `hu`       | 5.25 m height                                       | null                                        |
+| `5 ¼-m 2`                                  | `cm`                       | 525 cm height = 5.25 m                              | null                                        |
+| `in,eighty meter1,8 #`                     | `-`, `h`, `cm`, `hu`       | null                                                | 8001.8 cm height = 80 m + 1.8 cm            |
+| `in,eighty meter1,8 #`                     | `f2`                       | 80 m height                                         | 8001.8 cm height = 80 m + 1.8 cm            |
+| `;180.0-meters.5 lbs`                      | `-`, `h`, `f2`, `hu`       | null                                                | 180 m height                                |
+| `;180.0-meters.5 lbs`                      | `w`                        | null                                                | 5 lb weight                                 |
+| `;180.0-meters.5 lbs`                      | `cm`                       | null                                                | 18000 cm height = 180 m                     |
+| `72,5-meters5G`                            | `f2`                       | 72.5 m height                                       | null                                        |
+| `150 meter12 pounds 5.5 centimeter`        | `-`, `h`, `cm`, `f2`, `hu` | 5.5 cm height                                       | 15005.5 cm height = 150 m + 5.5 cm          |
+| `150 meter12 pounds 5.5 centimeter`        | `w`                        | 5.5 lb weight                                       | 12 lb weight                                |
+| `180 feet6`                                | `-`, `h`, `hu`             | null                                                | 2166 in height = 180 ft + 6 in              |
+| `180 feet6`                                | `cm`                       | null                                                | 5501.639999999999 cm height = 180 ft + 6 in |
+| `180 feet6`                                | `f2`                       | 180 ft height                                       | 2166 in height = 180 ft + 6 in              |
+| `m-hundred,meters5.5`                      | `-`, `h`, `cm`, `f2`, `hu` | null                                                | 10005.5 cm height = 100 m + 5.5 cm          |
+| `five pounds 72 meter eleven`              | `-`, `h`, `f2`, `hu`       | 72 m height                                         | 7211 cm height = 72 m + 11 cm               |
+| `five pounds 72 meter eleven`              | `cm`                       | 7200 cm height = 72 m                               | 7211 cm height = 72 m + 11 cm               |
+| `feet1/2 #`                                | `-`, `h`, `hu`             | null                                                | 14 in height = 1 ft + 2 in                  |
+| `feet1/2 #`                                | `cm`                       | null                                                | 35.56 cm height = 1 ft + 2 in               |
+| `feet1/2 #`                                | `f2`                       | 2 ft height                                         | 14 in height = 1 ft + 2 in                  |
+| `1/2meter1/2-stone-5.11centimeters`        | `-`, `h`, `cm`, `hu`       | 5.11 cm height                                      | null                                        |
+| `6,kilogram 12 m1′`                        | `-`, `f2`                  | 6 kg weight                                         | null                                        |
+| `.5 metres,eleven ''`                      | `-`, `h`, `f2`, `hu`       | 0.5 m height                                        | null                                        |
+| `.5 metres,eleven ''`                      | `cm`                       | 50 cm height = 0.5 m                                | null                                        |
+| `1000 m5.11-lbs-180.0`                     | `-`, `f2`                  | 180 lb weight                                       | 1000 m height                               |
+| `1000 m5.11-lbs-180.0`                     | `h`, `hu`                  | null                                                | 1000 m height                               |
+| `1000 m5.11-lbs-180.0`                     | `w`                        | 180 lb weight                                       | 5.11 lb weight                              |
+| `1000 m5.11-lbs-180.0`                     | `cm`                       | null                                                | 100000 cm height = 1000 m                   |
+| `180.0,kg-5.5metres-12`                    | `-`, `h`, `f2`, `hu`       | 5.5 m height                                        | null                                        |
+| `180.0,kg-5.5metres-12`                    | `cm`                       | 550 cm height = 5.5 m                               | null                                        |
+| `5-pounds 5.5,meters 80,poundz`            | `-`, `h`, `hu`             | 5.5 m height                                        | null                                        |
+| `5-pounds 5.5,meters 80,poundz`            | `cm`                       | 550 cm height = 5.5 m                               | null                                        |
+| `2 ft½ kilo`                               | `-`, `h`, `f2`, `hu`       | null                                                | 2 ft height                                 |
+| `2 ft½ kilo`                               | `w`                        | null                                                | 0.5 kg weight                               |
+| `2 ft½ kilo`                               | `cm`                       | null                                                | 60.96 cm height = 2 ft                      |
+| `1,234.5,feet180.0,kilogram-72 centimeter` | `w`                        | null                                                | 180 kg weight                               |
+| `six,feet5.5,feetlbs`                      | `-`, `h`, `f2`, `hu`       | null                                                | 77.5 in height = 6 ft + 5.5 in              |
+| `six,feet5.5,feetlbs`                      | `cm`                       | null                                                | 196.85 cm height = 6 ft + 5.5 in            |
+| `180.0meter70 kg`                          | `-`, `h`, `f2`, `hu`       | null                                                | 180 m height                                |
+| `180.0meter70 kg`                          | `w`                        | null                                                | 70 kg weight                                |
+| `180.0meter70 kg`                          | `cm`                       | null                                                | 18000 cm height = 180 m                     |
+| `in=1,8-meter0-′`                          | `-`, `h`, `f2`, `hu`       | 1.8 in height                                       | 1.8 m height                                |
+| `in=1,8-meter0-′`                          | `cm`                       | 4.572 cm height = 1.8 in                            | 180 cm height = 1.8 m                       |
+| `1,8 m,eighty,12,kilogram`                 | `-`, `h`, `f2`, `hu`       | 1.8 m height                                        | null                                        |
+| `1,8 m,eighty,12,kilogram`                 | `cm`                       | 180 cm height = 1.8 m                               | null                                        |
+| `one meters 80`                            | `-`, `h`, `f2`, `hu`       | 1 m height                                          | 180 cm height = 1 m + 80 cm                 |
+| `one meters 80`                            | `cm`                       | 100 cm height = 1 m                                 | 180 cm height = 1 m + 80 cm                 |
+| `1,8,m70,kg`                               | `-`, `h`, `f2`, `hu`       | null                                                | 1.8 m height                                |
+| `1,8,m70,kg`                               | `w`                        | null                                                | 70 kg weight                                |
+| `1,8,m70,kg`                               | `cm`                       | null                                                | 180 cm height = 1.8 m                       |
+| `foot1`                                    | `-`, `h`, `f2`, `hu`       | null                                                | 1 ft height                                 |
+| `foot1`                                    | `cm`                       | null                                                | 30.48 cm height = 1 ft                      |
+| `10/180,kilograms 11 feet12pounds`         | `-`, `f2`                  | 0.05555555555555555 kg weight                       | 11 ft height                                |
+| `10/180,kilograms 11 feet12pounds`         | `h`, `hu`                  | null                                                | 11 ft height                                |
+| `10/180,kilograms 11 feet12pounds`         | `w`                        | 0.05555555555555555 kg weight                       | null                                        |
+| `10/180,kilograms 11 feet12pounds`         | `cm`                       | null                                                | 335.28000000000003 cm height = 11 ft        |
+| `72m72 kilo`                               | `-`, `h`, `f2`, `hu`       | null                                                | 72 m height                                 |
+| `72m72 kilo`                               | `w`                        | null                                                | 72 kg weight                                |
+| `72m72 kilo`                               | `cm`                       | null                                                | 7200 cm height = 72 m                       |
+| `5 meters80,′-tall`                        | `-`, `h`, `cm`, `f2`, `hu` | null                                                | 580 cm height = 5 m + 80 cm                 |
+| `six meters2`                              | `-`, `h`, `cm`, `hu`       | null                                                | 602 cm height = 6 m + 2 cm                  |
+| `six meters2`                              | `f2`                       | 6 m height                                          | 602 cm height = 6 m + 2 cm                  |
+| `meters,5 2`                               | `-`, `h`, `f2`, `hu`       | 5 m height                                          | 502 cm height = 5 m + 2 cm                  |
+| `meters,5 2`                               | `cm`                       | 500 cm height = 5 m                                 | 502 cm height = 5 m + 2 cm                  |
+
+</details>
+
+A separate serialized build measured exact `b632655` and restored source `0360978` byte for
+byte: ESM 5,294 → 5,371 bytes (+77), CJS 5,329 → 5,427 bytes (+98), both below the
+5,500-byte limits. The API report passes. No size allowance, parser compression or performance
+claim is needed. Logs: `/tmp/afa-62-size-base.json`, `/tmp/afa-62-size-head.json`, and
+`/tmp/afa-62-mark-spaced-main.log`. The final committed-test validation will follow the normal
+correction hooks; the failed check remains separately recorded.
+
 The earlier full-coverage attempt was interrupted with exit 130 during the coordinator hold;
 it supplies no completed coverage evidence. Fresh source/package/mutation checks, bundle
 measurements, corrected implementation revision and PR link remain pending the

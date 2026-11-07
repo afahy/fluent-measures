@@ -15,14 +15,13 @@ describe('a hyphen after a feet or inch mark', () => {
     // A number word before the mark, as `five ft-eleven` and `five;in-5 in`.
     [`five'-eleven`, {}, 71, 'in'],
     ['five;"-5 in', {}, 5, 'in'],
-    // Digits after a number and a unit count as a number, as `5ft11in-185 lbs` and `1m80in-5 in`.
-    ['5ft11"-185 lbs', {}, 185, 'lb'],
-    ['5 ft11"-185 lbs', {}, 185, 'lb'],
+    // Compact heights now read like spaced units: 5 × 12 + 11 = 71 inches.
+    ['5ft11"-185 lbs', {}, 71, 'in'],
+    ['5 ft11"-185 lbs', {}, 71, 'in'],
     // A number word or a semicolon before the unit, as `five ft11in-185 lbs` and
     // `5;ft11in-185 lbs`.
-    ['five ft11"-185 lbs', {}, 185, 'lb'],
-    ['5;ft11"-185 lbs', {}, 185, 'lb'],
-    ['1m80"-5 in', {}, 5, 'in'],
+    ['five ft11"-185 lbs', {}, 71, 'in'],
+    ['5;ft11"-185 lbs', {}, 71, 'in'],
     // "Must not change" in AFA-112.
     [`5'-11"`, {}, 71, 'in'],
     ['5"-5 in', {}, 5, 'in'],
@@ -46,8 +45,31 @@ describe('a hyphen after a feet or inch mark', () => {
     // "Must not change" in AFA-112: two heights.
     '72"-74"',
     `5'11"-6'1"`,
+    // The compact meter is now visible; 1 meter, 80 inches and 5 inches disagree.
+    '1m80"-5 in',
   ])('returns null for %s', raw => {
     expect(parseMeasurement(raw)).toBeNull();
+  });
+
+  it.each(['5ft11"-185 lbs', '5 ft11"-185 lbs', 'five ft11"-185 lbs', '5;ft11"-185 lbs'])(
+    'keeps both explicit type selections for %s',
+    raw => {
+      expect(parseMeasurement(raw, { type: 'height' })).toMatchObject({ value: 71, unit: 'in' });
+      expect(parseMeasurement(raw, { type: 'weight' })).toMatchObject({ value: 185, unit: 'lb' });
+    }
+  );
+
+  it.each(['5 ft 11"-185 lbs', 'five ft 11"-185 lbs', '5;ft 11"-185 lbs'])(
+    'spaced counterpart keeps the height and weight of %s',
+    raw => {
+      expect(parseMeasurement(raw)).toMatchObject({ value: 71, unit: 'in' });
+      expect(parseMeasurement(raw, { type: 'height' })).toMatchObject({ value: 71, unit: 'in' });
+      expect(parseMeasurement(raw, { type: 'weight' })).toMatchObject({ value: 185, unit: 'lb' });
+    }
+  );
+
+  it('spaced counterpart exposes the conflicting metric and inch heights', () => {
+    expect(parseMeasurement('1 m 80"-5 in')).toBeNull();
   });
 
   // The "11" comes after a hyphen, not at a token's start, so the second hyphen stays a minus
