@@ -191,6 +191,13 @@ const WORD_COMMA = new RegExp(
   'g'
 );
 
+// A bracketed conversion after a spoken decimal starts another number, not more decimal
+// digits. Preserve that boundary before punctuation removal joins "point zero (101 kg)".
+const DECIMAL_BRACKET = new RegExp(
+  String.raw`(\bpoint(?:[\s-]+(?:${NUMBER_WORD}|[\d.]+|and))*)\s*[(\[](?=\s*(?:${NUMBER_WORD}|\d))`,
+  'g'
+);
+
 // A minus sign before a number, when no number comes earlier: no digit, Unicode fraction or number
 // word. The number can be a word too, as in "−five'", also after "a" or "an", as in "−a hundred"
 // and "−a-hundred". After a number, a minus sign joins two parts or values, as in "1 m−80 cm" and
@@ -329,6 +336,7 @@ export function tokenizeNormalized(
       // Keep this boundary as a non-number token in both reading directions. The uppercase word
       // can't come from input, which is lowercase, and can't match a unit even with fuzziness.
       .replace(WORD_COMMA, '$1 COMMA ')
+      .replace(DECIMAL_BRACKET, '$1 COMMA ')
       // Split punctuation, hyphens that join two values after a feet or inch mark, as in `5'-11`,
       // `5"-5 in`, `5'-eleven` and `five'-10"`, and underscores before minus signs.
       .replace(PUNCTUATION, ' ')

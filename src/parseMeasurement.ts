@@ -91,8 +91,7 @@ function readNumberPhrase(
       !NUMBER_WORDS.has(word) &&
       !MULTIPLIERS.has(word) &&
       !/^[\d.]+$/.test(word) &&
-      word !== 'point' &&
-      word !== 'and'
+      !['point', 'and', 'oh', 'o', '-'].includes(word)
     )
       break;
     phrase.push(word);
@@ -104,7 +103,7 @@ function readNumberPhrase(
       else value = candidate;
     }
   }
-  if (phrase.includes('point')) return [read(), end];
+  if (phrase.includes('point')) return [half(end - 1) ? null : read(), end];
   end = stopped ?? end;
   // Reading forward, the loop skips "and" and stops at "a". A read backward never stops just
   // before "a half", because "half" isn't a number.

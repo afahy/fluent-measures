@@ -15,6 +15,8 @@ export const MULTIPLIERS = new Map<string, number>([
 /** Parse a complete number phrase, including zero, hundreds, and thousands. */
 export function wordsToNumber(input: string): number | null {
   const tokens = input.toLowerCase().split(/\s+/);
+  // A trailing conjunction can introduce the next field, as after an integer phrase.
+  while (tokens[tokens.length - 1] === 'and') tokens.pop();
   const point = tokens.indexOf('point');
   if (point !== -1) {
     const whole = point ? wordsToNumber(tokens.slice(0, point).join(' ')) : 0;
