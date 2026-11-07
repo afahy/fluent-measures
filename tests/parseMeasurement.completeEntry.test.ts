@@ -4,6 +4,17 @@ import { parseMeasurement, type ParseOptions } from '../src';
 // AFA-250 option A, approved 2026-11-07. Expected values are identity, 12 in/ft,
 // 100 cm/m, and complete-number arithmetic. Rejections follow complete-entry consumption.
 describe('approved complete-entry contract', () => {
+  // One balanced wrapper is permitted; mismatched/nested wrappers and incomplete fixed
+  // introductions are not complete expressions, regardless of the selected dimension.
+  it.each(['(kg]70', '70 (kg]', '((70 kg)), 180 cm', 'weigh in 180 lbs', 'weigh-in 180 lbs'])(
+    'rejects the malformed wrapper or introduction %s',
+    raw => {
+      expect(parseMeasurement(raw)).toBeNull();
+      expect(parseMeasurement(raw, { type: 'height' })).toBeNull();
+      expect(parseMeasurement(raw, { type: 'weight' })).toBeNull();
+    }
+  );
+
   it.each([
     ['6 ft', 6, 'ft'],
     ['150 lbs', 150, 'lb'],

@@ -15,20 +15,14 @@ describe('"N in" in ordinary text next to another measurement', () => {
     }
   );
 
-  // The `type` option reads only that measurement (ParseOptions). Without a type, the corpus
-  // accepts the height, the weight or null for text with both (multiple-height-weight-no-type),
-  // and the ticket's row gives 10 in, so this test pins that.
-  it.each([
-    [{ type: 'weight' }, 180, 'lb'],
-    [{ type: 'height' }, 10, 'in'],
-    [{}, 10, 'in'],
-  ] as const)('reads 180 lbs, top 10 in the class with %j as %s %s', (options, value, unit) => {
-    expect(parseMeasurement('180 lbs, top 10 in the class', options)).toMatchObject({
-      value,
-      unit,
-      matches: [{ value, unit }],
-    });
-  });
+  // AFA-250: selectors cannot discard unrelated prose or make it a complete second expression.
+  // Preserve the historical literal and all three original option paths.
+  it.each([{ type: 'weight' }, { type: 'height' }, {}] as const)(
+    'rejects 180 lbs, top 10 in the class with %j',
+    options => {
+      expect(parseMeasurement('180 lbs, top 10 in the class', options)).toBeNull();
+    }
+  );
 
   // Weight: a capital G right after a number makes a network generation, as in "5G", so "in"
   // comes after a word, not a number, and isn't inches. Only 6 ft is read, unlike

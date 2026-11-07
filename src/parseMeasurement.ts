@@ -97,7 +97,6 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   const trimmed = normalize(input.trim());
   if (!trimmed) return null;
   const tokens = tokenizeNormalized(trimmed);
-  if (!tokens.length) return null;
   // Preserve today's option interface/order here. AFA-251 supplies the separately approved
   // early canonical validation and defaultUnit alternative at integration.
   if (options.allowUnqualified && !options.type) throw new Error('allowUnqualified requires type');
@@ -291,10 +290,12 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     const at = part.end;
     const word = text(at);
     if (word === ';' || word === '/' || word === ':' || word === '=') return null;
+    // The caller reaches joins only for today's ft/in and m/cm NEXT_PART pairs.
+    // A future weight compound must define its own stricter sign/connector eligibility.
     // F3 preserves Unicode height connectors after a comma, including prefix labels.
     // The comma still requires an explicit eligible smaller part; ASCII signs stay signs.
     if (word === ',' && (text(at + 1) === '−' || text(at + 1) === '﹣'))
-      return part.unit === 'ft' || part.unit === 'm' ? { start: at + 2, bare: false } : null;
+      return { start: at + 2, bare: false };
     if (word === ',' || word === 'and') return { start: at + 1, bare: word !== ',' };
     if (word === '(' || word === '[') return { start: at + 1, close: CLOSE[word], bare: false };
     if (/^[\p{Dash}−]$/u.test(word)) {

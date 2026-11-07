@@ -64,6 +64,9 @@ describe.each(weightOptions)('signed supported weight ownership with %o', option
   ])('rejects the complete entry %s (AFA-250)', raw => {
     expect(parseMeasurement(raw)).toBeNull();
   });
+  it('rejects an unknown introductory field with the original options', () => {
+    expect(parseMeasurement('phase twenty, 5 kg', options)).toBeNull();
+  });
   it.each([
     ['twenty five kg', 25, 'kg'],
     ['kg 70', 70, 'kg'],
@@ -75,7 +78,6 @@ describe.each(weightOptions)('signed supported weight ownership with %o', option
     ['1,000 lbs', 1000, 'lb'],
     ['72,5 kg', 72.5, 'kg'],
     ['1,234,56 kg', 1234.56, 'kg'],
-    ['phase twenty, 5 kg', 5, 'kg'],
     ['185#', 185, 'lb'],
   ] as const)('preserves %s as %s %s', (raw, value, unit) => {
     expect(parseMeasurement(raw, options)).toEqual({

@@ -2578,3 +2578,47 @@ Exact patches, hashes, immutable-probe checks and changed-result ledgers are ret
 final committed-source validation and publication remain pending. AFA-250 remains its own
 ticket/PR, without API or stone composition. Historical F6/F9 completion and deferred findings
 above are preserved; publication of their closeout layer remains pending the same AFA-250 PR.
+
+### AFA-250 allocated validation follow-up — publication pending
+
+The prefix correction and preceding audit were committed with normal hooks as
+`7c32bbbc7b7c162b829cc82b83f19e8604bccc32`. Hooks changed only Markdown table formatting;
+every cell and prose line was verified against the parent-reviewed audit. Frozen installation
+left dependency metadata and the lockfile unchanged. The first full check stopped during
+unit coverage with 5,176 passes and seven failures; no later stage ran in that attempt.
+
+Six failures were missed assertions from the retired extraction policy: three consecutive
+calls for `my son is two, thirty pounds`, `phase twenty, 5 kg` with default/weight selection,
+and `180 lbs, top 10 in the class` with default/height/weight selection. Their exact literals,
+options, retry counts and old expectations are archived. They now assert complete-entry null.
+
+The seventh exposes a configuration-error-order consequence of retaining punctuation:
+`parseMeasurement(',', { type: 'height', normalizedUnit: 'kg' })` now throws the existing
+`normalizedUnit kg is not a height unit` error instead of returning null. The parent approved
+this exact disposition. A comma with default options and empty input with contradictory
+options still return null. No other punctuation-only result is claimed here. This is not a
+numeric fix or AFA-251's separate default-unit/early-validator implementation.
+
+The package reproduction found 24 failing private-reader spy assertions, with 146 semantic
+passes: ESM/CJS builds cannot call a separate source-module spy. All public malformed-run
+cases remain in package-selected tests. The unchanged positive-call and parsed-character
+assertions now live in source-only `numberReadingWork.test.ts`; no test is skipped and no
+package selector is weakened. The same 170 ESM/CJS cases then pass, alongside 297 focused
+source tests. Historical failure logs remain separate from these passing runs.
+
+Source coverage exposed two redundant branches. After nonempty normalized text, the private
+stream necessarily contains a token: normalization either rejects the whole entry or retains
+a non-whitespace character, and the token stream retains every such character. The earlier empty
+normalized-text guard remains. The comma/Unicode join is called only for current `NEXT_PART`
+keys ft and m, so its non-height alternative is unreachable. Extending that table with stone
+requires an explicit height-only join policy at composition: stone minus, Unicode-minus and
+comma/Unicode-negative components must not borrow the ft/m connector invariant. No stone
+support or normalization change is made here.
+
+Policy-derived controls cover mismatched unit brackets, nested expression wrappers and a
+missing colon after the fixed weigh-in introduction. All 3,665 parser-facing tests then pass
+with 100% statements, branches, functions and lines. This targeted report is not the final
+full-check/mutation report. Twenty additional authored corpus controls retain all previous
+2,064 rows byte-for-byte, giving 2,084 expected agreements. Full committed-source validation
+and PR publication remain pending at this checkpoint; evidence is archived outside the
+checkout under `final-validation/` beside the earlier design/probe/correction archives.

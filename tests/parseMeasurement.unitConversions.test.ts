@@ -76,9 +76,20 @@ describe('unit conversions', () => {
     expect(() => parseMeasurement(raw, options)).toThrow('allowUnqualified requires type');
   });
 
-  // The tokenizer drops a lone comma, so this input has no token and returns null.
-  it('returns null for an input without a token, even with contradicting options', () => {
-    expect(parseMeasurement(',', { type: 'height', normalizedUnit: 'kg' })).toBeNull();
+  // AFA-250 preserves punctuation tokens, so a comma reaches the existing option check.
+  // This does not implement AFA-251's separate early validation/default-unit interface.
+  it('reports contradicting options when the complete-entry stream retains a comma', () => {
+    expect(() => parseMeasurement(',', { type: 'height', normalizedUnit: 'kg' })).toThrow(
+      'normalizedUnit kg is not a height unit'
+    );
+  });
+
+  it('still rejects a lone comma with default options', () => {
+    expect(parseMeasurement(',')).toBeNull();
+  });
+
+  it('keeps an empty input ahead of the existing option checks', () => {
+    expect(parseMeasurement('', { type: 'height', normalizedUnit: 'kg' })).toBeNull();
   });
 
   // JavaScript callers can pass values that TypeScript rejects.

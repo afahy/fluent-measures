@@ -13,12 +13,11 @@ describe('commas between number words', () => {
     }
   );
 
-  it('keeps the corrected boundary on three consecutive retries', () => {
-    const values = Array.from(
-      { length: 3 },
-      () => parseMeasurement('my son is two, thirty pounds')?.value
+  it('rejects the complete prose entry on three consecutive retries', () => {
+    const results = Array.from({ length: 3 }, () =>
+      parseMeasurement('my son is two, thirty pounds')
     );
-    expect(values).toEqual([30, 30, 30]);
+    expect(results).toEqual([null, null, null]);
   });
 
   // The ticket's independent quote-review finding: opening quotes don't erase a comma.
