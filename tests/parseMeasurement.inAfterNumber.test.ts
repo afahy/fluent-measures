@@ -5,24 +5,14 @@ import { parseMeasurement } from '../src';
 // what such inches do next to another measurement. Each reason is a rule or an option in the
 // README or PARSING.md, or the ticket's row.
 describe('"N in" in ordinary text next to another measurement', () => {
-  it.each([
-    // More Than One Measurement (PARSING.md): feet then inches, which are the next smaller unit,
-    // form one height. 6 × 12 + 3 = 75.
-    ['6 ft and ranked 3 in the state', 75, 6, 3],
-    // The same join with a comma between the parts. PARSING.md says that a comma doesn't
-    // separate the parts of a measurement. 6 × 12 + 10 = 82.
-    ['6 ft, top 10 in the class', 82, 6, 10],
-  ] as const)('joins the feet and the inches in %s: %s in', (raw, value, feet, inches) => {
-    expect(parseMeasurement(raw)).toMatchObject({
-      value,
-      unit: 'in',
-      type: 'height',
-      matches: [
-        { value: feet, unit: 'ft' },
-        { value: inches, unit: 'in' },
-      ],
-    });
-  });
+  // AFA-51's approved policy: words other than "and" separate independent heights.
+  // 6 ft is 72 in, so neither 3 in nor 10 in agrees. Keep the ordinary inch match itself.
+  it.each(['6 ft and ranked 3 in the state', '6 ft, top 10 in the class'])(
+    'rejects the independent heights in %s',
+    raw => {
+      expect(parseMeasurement(raw)).toBeNull();
+    }
+  );
 
   // The `type` option reads only that measurement (ParseOptions). Without a type, the corpus
   // accepts the height, the weight or null for text with both (multiple-height-weight-no-type),

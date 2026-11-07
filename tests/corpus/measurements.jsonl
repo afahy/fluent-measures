@@ -717,3 +717,29 @@
 {"id":"afa-202-prefix-cost-periods-small-minus","input":"...5, ﹣11 in","expected":null,"category":"unicode","source":"AFA-202","note":"AFA-202 automatic review: the unowned numeric prefix ends at the comma, leaving a negative measurement. Short counterpart of the long-prefix CPU regression; PARSING.md Commas and negative-number policy."}
 {"id":"afa-202-prefix-cost-slashes-minus","input":"///5, −11 in","expected":null,"category":"unicode","source":"AFA-202","note":"AFA-202 automatic review: the unowned numeric prefix ends at the comma, leaving a negative measurement. Short counterpart of the long-prefix CPU regression; PARSING.md Commas and negative-number policy."}
 {"id":"afa-202-prefix-cost-slashes-small-minus","input":"///5, ﹣11 in","expected":null,"category":"unicode","source":"AFA-202","note":"AFA-202 automatic review: the unowned numeric prefix ends at the comma, leaving a negative measurement. Short counterpart of the long-prefix CPU regression; PARSING.md Commas and negative-number policy."}
+{"id":"afa-51-zero-actual","input":"0 m; actual 80 cm","options":{},"expected":{"value":80,"unit":"cm","type":"height"},"category":"multiple-measurements","source":"AFA-51"}
+{"id":"afa-51-actual","input":"5 ft; actual 11 in","options":{},"expected":null,"category":"multiple-measurements","source":"AFA-51"}
+{"id":"afa-51-note","input":"height 5 ft; note 11 in","options":{},"expected":null,"category":"multiple-measurements","source":"AFA-51"}
+{"id":"afa-51-semicolon","input":"5 ft; 11 in","options":{},"expected":null,"category":"multiple-measurements","source":"AFA-51"}
+{"id":"afa-51-shorter","input":"5 ft tall, 2 in shorter than last year","options":{"type":"height","normalizedUnit":"cm"},"expected":null,"category":"multiple-measurements","source":"AFA-51"}
+{"id":"afa-51-heels","input":"5 ft tall, with 2 in heels","options":{"type":"height","normalizedUnit":"cm"},"expected":null,"category":"multiple-measurements","source":"AFA-51"}
+{"id":"afa-51-metric","input":"1 m tall, 80 cm","options":{},"expected":null,"category":"multiple-measurements","source":"AFA-51"}
+{"id":"afa-51-prefix","input":"m: 1; cm: 80","options":{},"expected":null,"category":"multiple-measurements","source":"AFA-51"}
+{"id":"afa-51-word-greek","input":"5 ft τώρα 11 in","expected":null,"category":"multiple-measurements","source":"AFA-51"}
+{"id":"afa-51-word-cyrillic","input":"5 ft сейчас 11 in","expected":null,"category":"multiple-measurements","source":"AFA-51"}
+{"id":"afa-51-word-han","input":"5 ft 实际 11 in","expected":null,"category":"multiple-measurements","source":"AFA-51"}
+{"id":"afa-51-word-accent","input":"5 ft à 11 in","expected":null,"category":"multiple-measurements","source":"AFA-51"}
+{"id":"afa-51-word-ranked","input":"6 ft and ranked 3 in the state","expected":null,"category":"multiple-measurements","source":"AFA-51"}
+{"id":"afa-51-word-top","input":"6 ft, top 10 in the class","expected":null,"category":"multiple-measurements","source":"AFA-51"}
+{"id":"afa-51-attached-1","input":"5µm","expected":null,"category":"unicode","source":"AFA-51","note":"Unicode letters remain part of the word; deleting them must not expose a number or supported unit."}
+{"id":"afa-51-attached-2","input":"5éft","expected":null,"category":"unicode","source":"AFA-51","note":"Unicode letters remain part of the word; deleting them must not expose a number or supported unit."}
+{"id":"afa-51-attached-3","input":"é5 ft","expected":null,"category":"unicode","source":"AFA-51","note":"Unicode letters remain part of the word; deleting them must not expose a number or supported unit."}
+{"id":"afa-51-attached-4","input":"5 fté","expected":null,"category":"unicode","source":"AFA-51","note":"Unicode letters remain part of the word; deleting them must not expose a number or supported unit."}
+{"id":"afa-51-attached-5","input":"µ5 kg","expected":null,"category":"unicode","source":"AFA-51","note":"Unicode letters remain part of the word; deleting them must not expose a number or supported unit."}
+{"id":"afa-51-attached-6","input":"70kgé","expected":null,"category":"unicode","source":"AFA-51","note":"Unicode letters remain part of the word; deleting them must not expose a number or supported unit."}
+{"id":"afa-51-attached-7","input":"5 µft","expected":null,"category":"unicode","source":"AFA-51","note":"Unicode letters remain part of the word; deleting them must not expose a number or supported unit."}
+{"id":"afa-51-attached-8","input":"é5ft","expected":null,"category":"unicode","source":"AFA-51","note":"Unicode letters remain part of the word; deleting them must not expose a number or supported unit."}
+{"id":"afa-51-attached-9","input":"fiveé ft","expected":null,"category":"unicode","source":"AFA-51","note":"Unicode letters remain part of the word; deleting them must not expose a number or supported unit."}
+{"id":"afa-51-attached-part-1","input":"5 fté 11 in","expected":{"value":11,"unit":"in","type":"height"},"category":"unicode","source":"AFA-51","note":"Only the intact supported number-unit pair is a measurement."}
+{"id":"afa-51-attached-part-2","input":"5éft 11 in","expected":{"value":11,"unit":"in","type":"height"},"category":"unicode","source":"AFA-51","note":"Only the intact supported number-unit pair is a measurement."}
+{"id":"afa-51-attached-part-3","input":"5 ft 11éin","expected":{"value":5,"unit":"ft","type":"height"},"category":"unicode","source":"AFA-51","note":"Only the intact supported number-unit pair is a measurement."}
