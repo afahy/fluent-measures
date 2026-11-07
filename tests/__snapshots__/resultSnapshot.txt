@@ -2344,12 +2344,12 @@ one-eighty,pound(kg)half	hu	null
 ¼ meters 1,234.5,′	cm	null
 ¼ meters 1,234.5,′	f2	null
 ¼ meters 1,234.5,′	hu	null
-1000,' ′-11pound	-	null
-1000,' ′-11pound	h	null
+1000,' ′-11pound	-	1000 ft height
+1000,' ′-11pound	h	1000 ft height
 1000,' ′-11pound	w	null
-1000,' ′-11pound	cm	null
-1000,' ′-11pound	f2	null
-1000,' ′-11pound	hu	null
+1000,' ′-11pound	cm	30480 cm height = 1000 ft
+1000,' ′-11pound	f2	1000 ft height
+1000,' ′-11pound	hu	1000 ft height
 80inches	-	80 in height
 80inches	h	80 in height
 80inches	w	null

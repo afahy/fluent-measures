@@ -487,7 +487,6 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       // As for a value without a sign, one with its own unit isn't, as in "180 cm = -82 kg".
       const valueAt = skipSemicolons(remaining, i + 1);
       const valueSigned = readSignedPhrase(remaining, valueAt)[2];
-      const signedValue = label && valueSigned;
       // A field name takes any number after it, but not a signed one with its own unit, as in
       // "72 in: -180 lbs".
       const valueFollows = labelHasValue(tokens, remaining, i, unit, fuzziness);
@@ -517,10 +516,30 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         (num === null || unit !== 'ft' || (!label && remaining(i - 1) === ';')) &&
         !LABEL_ALIASES.has(remaining(i))
       ) {
-        // A label's signed value with its own unit isn't the label's value, as in
-        // "in: -180 lbs, 72 in", so it doesn't drop the label's field. Its own unit drops its field.
-        if (valueSigned && (!signedValue || valueFollows)) {
-          signedFields.add(fieldOf[i]).add(fieldOf[valueAt]);
+        // A signed value with its own unit isn't the prefix's value, marked or not, as in
+        // "kg -6 ft, 70 kg". Check ownership before rejecting the prefix's field; the value's
+        // own unit still rejects its field. Unsigned prefixes keep their existing ownership.
+        if (valueSigned) {
+          const [value, valueEnd] = readValueAfter(
+            tokens,
+            remaining,
+            matchEnd,
+            unit,
+            true,
+            fuzziness
+          );
+          // An unmarked prefix keeps its existing same-type/unsupported-part rejection.
+          if (
+            value !== null ||
+            (!label &&
+              !matchUnit(
+                remaining(skipSemicolons(remaining, valueEnd)),
+                type === 'height' ? 'weight' : 'height',
+                fuzziness
+              ))
+          ) {
+            signedFields.add(fieldOf[i]).add(fieldOf[valueAt]);
+          }
           continue;
         }
         // After a zero in the same field, the unit doesn't take a number that has its own unit, as a
