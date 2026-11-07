@@ -495,8 +495,8 @@ public example or exported type changes. Paired-apostrophe quotations retain the
 
 ### F3 correction — Unicode signs after numeric labels
 
-Status: corrected at `93c7c72`, with full validation passed at `b80d68a`; the PR link will be
-recorded when opened. Before: current main `bfac12a943720390c60afd26a522cb67dfa20fa3`. The original
+Status: corrected in [PR #236](https://github.com/afahy/fluent-measures/pull/236) at
+`93c7c72`, with full validation passed at `b80d68a`. Before: current main `bfac12a943720390c60afd26a522cb67dfa20fa3`. The original
 `b79eae0` audit row and embedded 22-test harness remain historical evidence.
 
 | Input                              | Before (`bfac12a9`) | After  |
@@ -1012,7 +1012,7 @@ Each fix session must:
 | <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:461b3a6bdd48f18b59aa264dedf46356fae143e0f5f4b90936f49716e134a37a>                                                       | AFA-107 inferred conversion underflow; no successor                  | [PR #233](https://github.com/afahy/fluent-measures/pull/233) at `7426e3e` implementation; full checks and independent probes pass; merged at `b76070d`; exact-merge main ci-ok passed                                                                                                                                                                                                                                                                                                                                                                                                 |
 | <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1e5640d2dbe8ef251e2bb479d46cc5f4fc59c1597ecd270e7941a88df6893b76>                                                       | Fresh AFA-203 implementation, review and PR stewardship              | Complete: [PR #234](https://github.com/afahy/fluent-measures/pull/234), reviewed head `0a33c40`, merge `77bd5ce`; 19 PR checks, pre/post-merge audits and all 12 exact-merge main CI jobs passed (run 42314274182, ci-ok 2026-11-06T23:54:24Z). Earlier validation at `9030111` and `5c9eab1` retained                                                                                                                                                                                                                                                                                |
 | <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:2d4a60308bdfb6191174b5f92be891f2f90bd42e44ea1218e394ed52840c6148>                                                       | Fresh AFA-116 signed other-type ownership and named test groups      | Source `1eb0a1b`; focused checks passed against `77bd5ce`. Independent review complete (125/126 agree; existing finding filed as AFA-241); full check and fresh changed-line mutation validation passed at `f80b4be`; [PR #235](https://github.com/afahy/fluent-measures/pull/235) merged as `b90ea36` from reviewed `28c3d21`; all 19 PR checks, exact-head Codex review, final audits and all 12 exact-merge main CI jobs passed (run 42319687195, ci-ok 2026-11-07T00:47:02Z). Ticket Done; merged worktree/local branch removed; audit `513b4c3` preserved. No successor assigned |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:462bb758094ab0a59a27217f4fb643589704bceca25e2bf1c7aba94be4f52c28>                                                       | Fresh AFA-202 Unicode-minus label correction; then fresh AFA-62 only | Started from main `bfac12a9` after the predecessor merged and all 12 exact-main CI jobs passed; ticket claimed In Progress. Focused failing-first source/ESM/CommonJS checks pass with the correction; independent review and parent replay completed with the scoped judgments above; corrected source `93c7c72` passed full validation and fresh changed-line mutation checks at `b80d68a`. Exclusive heavy-check/mutation/push slot explicitly granted by audit coordinator.                                                                                                       |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:462bb758094ab0a59a27217f4fb643589704bceca25e2bf1c7aba94be4f52c28>                                                       | Fresh AFA-202 Unicode-minus label correction; then fresh AFA-62 only | [PR #236](https://github.com/afahy/fluent-measures/pull/236). Started from main `bfac12a9` after the predecessor merged and all 12 exact-main CI jobs passed; ticket claimed In Progress. Focused failing-first source/ESM/CommonJS checks pass with the correction; independent review and parent replay completed with the scoped judgments above; corrected source `93c7c72` passed full validation and fresh changed-line mutation checks at `b80d68a`. Exclusive heavy-check/mutation/push slot explicitly granted by audit coordinator.                                         |
 
 Sessions use isolated prepared worktrees. Full checks, mutation runs and mandatory push hooks
 have one shared execution slot. AFA-74 released its integration window after `70419bd`.
@@ -1057,7 +1057,9 @@ comma rejection marker and fuzzy-unit regex; none belongs to this fix. Bundle si
 Lint has only the two existing warnings in unchanged test files. The unchanged rerun's
 Git-isolation subprocess passed in 100,276 ms; the failed-overlap and successful rerun evidence
 is recorded on AFA-224. Whole-diff self-review preserves all predecessor source/tests/corpus
-and the complete historical audit harness. Mandatory push hooks and hosted review follow.
+and the complete historical audit harness. The initial mandatory push hook passed all 3,950
+unit tests, TypeScript, build and size checks at `7a28e88`; Git-isolation passed in 100,025 ms.
+Hosted review and exact-head lifecycle checks continue on PR #236.
 
 The parent audit passed `pnpm install`, `pnpm build`, and the unchanged invariant, semantic
 property, corpus, README and parsing-example suites: 361 tests across five files.
