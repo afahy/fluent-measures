@@ -21,7 +21,8 @@ two that disagree. Your app can then ask the person again.
 - Reads unit names with spelling errors when you set `fuzziness`, as in `5 foot 11 inc`
 - Converts the result to the unit that you set in `normalizedUnit`
 - Has no dependencies
-- Is at most 5.5 kB, minified and compressed with Brotli, because CI fails a build that goes over
+- Is at most 5.5 kB for ESM and 6.0 kB for CommonJS, minified and compressed with Brotli; CI
+  enforces these limits
 - Supports ESM and CommonJS
 
 ## Installation
