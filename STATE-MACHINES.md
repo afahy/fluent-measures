@@ -357,9 +357,20 @@ One initial proposed control, `age twenty point five; kg 80`, lacked an explicit
 separator. Its 80-kg draft expectation was not adopted: the existing semicolon rule permits
 20.5 to attach to `kg`. The original draft and reasoning remain in
 `/tmp/afa247-semicolon-oracle-review.json`; `kg=80` and `kg: 80` are explicit-label controls.
-Focused preparation passed 619 tests and scoped static checks. The preceding `af45a89` full
-validation is historical for this new source; final mutation, build/size/package and hooks
-remain pending until the separately allocated committed-source validation completes.
+Focused preparation passed 619 tests and scoped static checks. Correction source
+`e69d59428d3a4d6a2e80a3959f2240d0237fb7d1` then passed one fresh full `pnpm check`:
+4,320 unit tests, 100% coverage, TypeScript, mutation 99.74% (1,492 killed, 24 timeouts,
+four unchanged-line survivors, zero uncovered/errors, 32 existing ignores), build/API/size
+and 5,254 ESM/CommonJS package tests. Every changed-line mutant is killed against `0426248`.
+All eight selected committed source hashes and six report source bodies match; report SHA256
+is `4f79385d896705663bc0fbce811659a167d92eb651144277ec165e4a58147745`.
+Source/test trees are `4f45dc7c8de99e37549b6920a65cc97664fba33a` /
+`70e7fa3469cde1c20fe11dc7541633951bbf1f6b`. Final Brotli is 5,623 ESM / 5,684 CommonJS
+bytes, below unchanged 6,000-byte limits. Logs: `/tmp/afa247-review-final-semicolon-check.log`,
+`/tmp/afa247-semicolon-changed-lines.log`; report and verification:
+`/tmp/afa247-mutation-e69d594.json`, `/tmp/afa247-semicolon-mutation-verification.json`.
+The earlier `af45a89` full check remains historical. This evidence-only audit update leaves
+the validated source and test trees unchanged; no second unchanged-source mutation run occurs.
 
 M2 now retains `RANGE` as the token's text instead of writing `-`. This keeps M3's discarded
 ranges distinct from literal minus signs in M5. The existing recovery contract still applies:
