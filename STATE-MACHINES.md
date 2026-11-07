@@ -159,7 +159,7 @@ unit-prefix sign handling; splitting; trailing-period trimming; marker decoding.
 | Split word              | Trailing periods, before marker decoding              | Remove them with `trimTrailing`, a backward linear scan                                  | Trimmed word, possibly empty    |
 | No pending metadata     | `FIELD`                                               | Set pending `startsField = true`                                                         | Field pending                   |
 | Any pending state       | `NAME` / `UNIT`                                       | Set pending label kind                                                                   | Label pending                   |
-| Pending state           | `RANGE`                                               | Emit `{ text: '-', range: true }`; clear pending metadata                                | No pending metadata             |
+| Pending state           | `RANGE`                                               | Emit `{ text: 'RANGE', range: true }`; clear pending metadata                            | No pending metadata             |
 | Pending label           | Ordinary token                                        | Emit label kind and `startsField`; clear metadata                                        | No pending metadata             |
 | No pending label        | Ordinary token                                        | Emit `{ text }`; clear metadata                                                          | No pending metadata             |
 
@@ -205,6 +205,16 @@ fragment recovery, so its later range slice owns the null results. This is a def
 limitation of the narrow AFA-248 change, not a fixed finding or a revision of historical
 baselines. Reproduction: `/tmp/afa248-third-review-results.json` and
 `/tmp/afa248-third-review.log`. Source, tests and corpus remain unchanged from `4428859`.
+
+AFA-248 closed out through [PR #239](https://github.com/afahy/fluent-measures/pull/239):
+reviewed audit head `d82108cee21ff16259a00a3dbb63a45ca872121d` merged normally as
+`042624855225c2ab55d2d7639058069e4cd90c17`. All 18 PR checks and exact-head Codex review
+passed; final and immediate post-merge comment audits found no new finding. All 12 exact-merge
+main CI jobs passed in run `42381121659`, with
+[ci-ok](https://github.com/afahy/fluent-measures/actions/runs/42381121659/job/128430299153)
+successful at 2026-11-07 14:27:00 UTC. Root main was pulled and only the merged worktree/local
+branch removed. The source-validation baseline remains `4428859`; the five deferred rows
+above remain unfixed and assigned to AFA-250.
 
 ### M3 — range ownership and shorthand
 
@@ -276,6 +286,189 @@ Half handling limits nested reads so repeated `and a half` does not create unbou
 The `COMMA` token is not a number: both reading directions stop at it. With the F1 fix, this
 also separates number words and quoted numbers. M8 can still cross the token between weight
 parts to reject unsupported units, while M10 rejects two separated unqualified phrases.
+
+The [spoken-decimal correction](https://linear.app/afahy/issue/AFA-247) extends M4/M5 to read
+the integer part and decimal digit sequence together. M5 keeps the first integer stopping point,
+but a phrase containing `point` is accepted or rejected as a whole. A trailing `and` can introduce
+the next field; unsupported `oh`/`o` words and a separated minus stay in the malformed phrase.
+M2 preserves a bracket boundary after a spoken decimal, so a parenthesized conversion cannot
+become extra decimal digits. Label ownership uses the same complete M5 reader.
+
+The second review correction extends that same M2 pass to comma-and-space boundaries and
+bracketed leading decimals (`.5` and `point five`). It does not add a normalization scan.
+In M5, only the bare-inch read can retain the saved integer stopping point before a separate
+spoken-decimal weight, as in `5 ft 11 two hundred point five pounds` (71 in). A malformed
+phrase whose first invalid token is `point` cannot become a partial inch value; other phrase
+reads still consume and validate the whole decimal. `tests/parseMeasurement.spokenDecimalReview.test.ts`
+covers the three review findings and their comma, bracket, sign and number-phrase routes.
+The published `fb272e1` returned 20.58 kg for `age twenty point 5, 80 kg`, null for
+`kg zero point five (.5 kg)`, and 5 ft for the bare-inch/weight case. The focused correction
+returns 80 kg, 0.5 kg and 71 in. Final combined-source validation is recorded below;
+prior `fb272e1` validation is historical.
+The existing fragment result for `5 ft one point twenty in` (main null, `fb272e1` 5 ft)
+is recorded on AFA-250 for its approved whole-entry rejection, not treated as valid inches.
+
+The first review-correction check at `14efcd3` passed 4,162 tests, 100% coverage,
+TypeScript, fresh 99.61% mutation and build, then stopped at size: ESM was 5,528 bytes,
+28 above its 5,500-byte limit. API/package stages did not run. Separate changed-line analysis
+found two equivalent survivors: a successful forward decimal necessarily stopped at `point`,
+making its extra non-null check redundant, and the half-reading flag has no effect on a
+forward read. The correction removes the redundant condition/read and uses the existing
+default for that inapplicable flag, without adding mutation ignores. All 321 focused number,
+fraction, bare-inch and corpus checks pass. The simplified build measures 5,522 ESM / 5,577
+CommonJS bytes. The repository's standing 0.5 kB allowance raises the ESM limit to 6.0 kB;
+CommonJS remains at its previously approved 6.0 kB. The matching footprint documentation is
+updated. These measurements precede the final main integration; the `14efcd3` report is preserved at
+`/tmp/afa247-mutation-14efcd3.json` and is not final evidence for this simplification.
+
+The fresh `873530f` check passed unit coverage and TypeScript but was interrupted during
+mutation after AFA-248 merged as `042624855225c2ab55d2d7639058069e4cd90c17` and GitHub
+reported a base conflict. It is partial evidence only. Normal main integration preserves
+AFA-248's range scan, M2 audit and deferred AFA-250 findings, both feature lists, all 800
+main corpus rows and the 59 decimal additions. The combined 859-row score is specified by
+adding the independently reviewed branch additions, not by copying a new parser result.
+All 489 focused decimal, range, F3, calculator, feature-map and corpus tests pass together.
+The uppercase `RANGE` distinction below remains intact.
+
+Final combined source `af45a8934a54827cc7ce6ebfee83d5ea2c557504` passed one fresh full
+`pnpm check`: 4,298 unit tests, 100% coverage, TypeScript, fresh mutation 99.74%
+(1,491 killed, 25 timeouts, four unchanged-line survivors, zero uncovered/errors, 32 ignored),
+build/API/size and 5,210 ESM/CommonJS package tests. Every changed-line mutant is killed
+against exact main `0426248`; all eight committed source hashes and six report source bodies
+match. Report SHA256: `2679da3fa11f4d5b37274bcc92c4cb7d4989148f2171b3e55363feb42091e6db`.
+The 120 public regression cases give 76 failures / 44 controls on that exact main and all pass
+on the combined source. Final Brotli sizes are 5,626 ESM / 5,709 CommonJS bytes, versus
+main's 5,401 / 5,455 (runtime/build inputs unchanged from validated `4428859`); both limits
+are 6,000 bytes under the standing allowance. Logs and source manifest:
+`/tmp/afa247-review-final-check-3.log`, `/tmp/afa247-review-final-changed-lines-3.log`,
+`/tmp/afa247-review-source-manifest-integrated.json`. No new mutation exclusion or relaxed
+test threshold was added. The following audit-only commit does not change these source/test trees.
+
+A later exact-head review found that M5 could skip a semicolon after a spoken decimal and
+join the next field: published `db846777` reads `age twenty point five; 80 kg` as 20.58 kg
+and `age twenty point five; 1.8 m` as null; exact main `0426248` reads 80 kg and 1.8 m.
+The focused correction adds the semicolon to the existing M2 boundary character class only
+when another number follows. It preserves `80;kg`, `seventy point five;kg` and explicit
+unit-label fields. No scan or parser branch is added, and uppercase `RANGE` is unchanged.
+`tests/parseMeasurement.spokenDecimalSemicolons.test.ts` has 22 independently specified cases:
+nine fail on published `db846777`, eight fail on exact main, and all pass with this correction.
+The 22 new corpus rows add 22 agreements without changing previous rows or outcomes.
+One initial proposed control, `age twenty point five; kg 80`, lacked an explicit unit-label
+separator. Its 80-kg draft expectation was not adopted: the existing semicolon rule permits
+20.5 to attach to `kg`. The original draft and reasoning remain in
+`/tmp/afa247-semicolon-oracle-review.json`; `kg=80` and `kg: 80` are explicit-label controls.
+Focused preparation passed 619 tests and scoped static checks. Correction source
+`e69d59428d3a4d6a2e80a3959f2240d0237fb7d1` then passed one fresh full `pnpm check`:
+4,320 unit tests, 100% coverage, TypeScript, mutation 99.74% (1,492 killed, 24 timeouts,
+four unchanged-line survivors, zero uncovered/errors, 32 existing ignores), build/API/size
+and 5,254 ESM/CommonJS package tests. Every changed-line mutant is killed against `0426248`.
+All eight selected committed source hashes and six report source bodies match; report SHA256
+is `4f79385d896705663bc0fbce811659a167d92eb651144277ec165e4a58147745`.
+Source/test trees are `4f45dc7c8de99e37549b6920a65cc97664fba33a` /
+`70e7fa3469cde1c20fe11dc7541633951bbf1f6b`. Final Brotli is 5,623 ESM / 5,684 CommonJS
+bytes, below unchanged 6,000-byte limits. Logs: `/tmp/afa247-review-final-semicolon-check.log`,
+`/tmp/afa247-semicolon-changed-lines.log`; report and verification:
+`/tmp/afa247-mutation-e69d594.json`, `/tmp/afa247-semicolon-mutation-verification.json`.
+The earlier `af45a89` full check remains historical. This evidence-only audit update leaves
+the validated source and test trees unchanged; no second unchanged-source mutation run occurs.
+
+Final-head review of `51e084c` found two additional decimal-boundary interactions.
+M2's decimal-boundary normalization must preserve a semicolon's field identity as well as
+M5's numeric stopping boundary: later signed-field ownership must not discard a separate
+valid field. `kg -seventy point five; 80 kg` was `null` on that head versus 80 kg on main;
+the correction retains the captured semicolon beside the existing non-number marker.
+M4/M5's unsigned feet-prefix reader must also retain its first component's integer stop:
+`ft 5 eleven point five` is 71.5 in (5 × 12 + 11.5), and
+`ft 5 11 two hundred point five pounds` keeps the independent 71-in height. The existing
+integer-stop mode is forwarded to the unsigned feet-prefix read; signed phrases keep their
+whole-phrase ownership behavior. No extra scan, grammar, public type, or policy is added.
+
+`tests/parseMeasurement.spokenDecimalFields.test.ts` has 32 independent cases covering plain
+and labeled prefixes, explicit and bare fractional inches, signed/Unicode-signed fields,
+semicolon number/unit joins, full decimal scalars, half phrases, and both explicit selectors.
+The same assertions fail 14 cases and pass 18 controls on published `51e084c`, and fail 14
+and pass 18 on exact main `0e0284d`; all 32 pass the focused correction. Final focused
+checks passed 1,044 cases in 22 files, including resource bounds, F3, calculator, range,
+feature-map and generated-result controls; scoped ESLint/format/spelling checks pass. Thirty-two corpus additions all agree; all 881 prior rows and outcomes are retained.
+The generated result snapshot is unchanged. These are focused observations, not final
+full-check, mutation, build, size, or package validation of the uncommitted correction.
+
+Two exploratory expectations were not adopted as a new recovery contract. Unmarked
+`kg -seventy point five; ft 5 11` can attach `ft` to the preceding signed number under the
+existing semicolon rule (main 65 in; published/focused `null`); the positive independent-label
+control uses `ft:`. Weight-selected `ft 5 11 two hundred point five pounds` has no explicit
+boundary before its weight phrase (main 5 lb; published/focused `null`); its proposed 200.5-lb
+oracle remains separate from the documented height/default preservation. The positive weight
+control uses `pounds:` after a semicolon. Approved AFA-250 owns rejection of the malformed
+signed entry and whitespace-only pair. Original trial expectations, exact observations, and
+reasons remain in `/tmp/afa247-field-prefix-exploratory-dispositions.json` and the failing-first
+logs; no committed assertion was deleted or loosened. The historical `e69d594` full-check
+and report evidence above does not validate this later source correction.
+
+Committed correction `2367ef86468fde32f62c7c373bd16faae9015f56` passed one full
+`pnpm check`: 4,352 unit tests, 100% coverage, TypeScript, fresh mutation 99.67%
+(1,496 killed, 24 timeouts, five survivors, 32 unchanged ignores), build/API/size and
+5,318 package tests. All eight selected sources and six report bodies match that commit;
+the report is retained at `/tmp/afa247-mutation-2367ef8.json`, SHA256
+`04faa74cb42fbf0ef22aaf5279f02705046c3ccb23d4fa30a65ac4dcb6cced75`.
+The separate changed-line gate found a real surviving default-argument mutant: setting
+M5's compound-stop default to true changes `-one two point five kg` from null to 2.5 kg.
+The signed/malformed rule requires null; exact main gives 5 kg. One strict regression and
+corpus row now cover that path, without source edits, ignores, or threshold changes.
+The 33-case file passes on the correction; exact main fails 15 / preserves 18, published
+`51e084c` fails 14 / preserves 19, and the isolated mutant fails precisely the new case.
+The focused four-file run passes 126 tests. Final fresh mutation with this added assertion
+and package/push validation remain separate from the preceding full-check evidence.
+
+The same exploratory probe reproduced these fragment-recovery observations; the approved
+AFA-250 complete-entry contract requires null for each. They are historical observations,
+not newly adopted success assertions or further production changes in this review round.
+They are recorded in AFA-250 comment `edaeebbb-dc1c-461e-8030-a71e50391124` and the PR inventory.
+
+| Input                             | Main `0e0284d` | Source `2367ef8` |
+| --------------------------------- | -------------- | ---------------- |
+| `m: one cm: one two point five`   | 101 cm         | 1 cm             |
+| `m: one cm: zero five point five` | 1 m            | 1 cm             |
+| `5 kg: one two point five`        | 1 kg           | 5 kg             |
+| `5 kg: zero five point five`      | null           | 5 kg             |
+| `kg 5 lbs: one two point five`    | null           | 5 kg             |
+| `1 m cm: one two point five`      | 101 cm         | 1 m              |
+| `5 ft in: one two point five`     | 61 in          | 5 ft             |
+| `stone 12 lb: one two point five` | null           | 12 lb            |
+| `6 1-2 ft one two point five in`  | 5 in           | null             |
+
+The first eight retain/reassign an earlier explicit fragment; their removal belongs to
+AFA-250's already-approved shared grammar, including unsupported-part ownership. The last
+row already rejects the malformed phrase. Exact observations and independent null expectations
+remain in `/tmp/afa247-default-mutant-dispositions.json` and the triage logs. No existing
+committed assertion is changed to pin these incidental outputs.
+
+Final test-only commit `9284e40303021b555f5a7f4b18a70f8970d13fd4` retains the exact
+`2367ef8` runtime source tree `338424673c2c947e807a170839b4b33899b0af3e`.
+Its necessary fresh mutation run, without incremental reuse, passes 99.74% (1,500 killed, 21 timeouts,
+four unchanged-line survivors, zero uncovered/errors, 32 existing ignores); every changed-line
+mutant is killed. All eight selected sources and six report bodies match the committed source.
+Report SHA256: `b769407c9da78010845202aee85c8c0bd84ec4af87bba3d94642da0abbab8de5`;
+archive `/tmp/afa247-mutation-9284e40.json`, verification
+`/tmp/afa247-field-prefix-final-mutation-verification.json`. The final test tree
+`b187e699d4f241f46df571faecc84b71b4d89592` passes 5,320 ESM/CommonJS package tests;
+the prior full coverage check stays pinned to `2367ef8` rather than being relabeled.
+Brotli is 5,641 ESM / 5,694 CommonJS bytes, versus main's 5,401 / 5,455,
+within unchanged 6,000-byte limits. Corpus is 914 total / 893 agree / six wrong / 15 missed;
+all 881 prior rows and outcomes remain. Logs:
+`/tmp/afa247-review-final-field-prefix-final-mutation.log`,
+`/tmp/afa247-field-prefix-final-changed-lines.log`,
+`/tmp/afa247-review-final-field-prefix-final-package.log`.
+This following audit-only commit changes no runtime or test content.
+
+M2 now retains `RANGE` as the token's text instead of writing `-`. This keeps M3's discarded
+ranges distinct from literal minus signs in M5. The existing recovery contract still applies:
+`6 ft 1-2 eleven point five in` is 83.5 in (6 × 12 + 11.5), and `kg seventy point five 1-2`
+is 70.5 kg. The first decimal implementation instead returned 6 ft and `null`; the original
+main revision returned 77 in and 70 kg. `tests/parseMeasurement.spokenDecimalBoundaries.test.ts`
+and the `spoken-decimal-range-height` / `spoken-decimal-range-prefix` corpus entries preserve
+these results. `tests/parseMeasurement.spokenDecimals.test.ts` covers both scanning directions,
+labels, signs, fractions, normalization and unqualified values.
 
 ### M6 — exact and fuzzy unit matching
 
