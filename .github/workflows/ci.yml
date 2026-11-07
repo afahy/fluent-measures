@@ -85,8 +85,14 @@ jobs:
 
           // Bundlers that ignore exports read module, so it must name the same file.
           const manifest = import.meta.resolve('@afahy/fluent-measures/package.json');
-          const { module } = JSON.parse(readFileSync(new URL(manifest), 'utf8'));
+          const { module, homepage } = JSON.parse(readFileSync(new URL(manifest), 'utf8'));
           assert.equal(new URL(module, manifest).href, resolved, `module is ${module}`);
+          assert.equal(homepage, 'https://afahy.github.io/fluent-measures/');
+          const readme = readFileSync(new URL('README.md', manifest), 'utf8');
+          for (const link of [homepage, `${homepage}README.md`, `${homepage}llms.txt`]) {
+            assert.ok(readme.includes(`](${link})`), `Packed README is missing ${link}`);
+          }
+          assert.ok(readme.includes('## Documentation for your version'));
           EOF
 
       - name: Require the package from CJS

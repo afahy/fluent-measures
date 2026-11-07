@@ -13,7 +13,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execPath } from 'node:process';
 import { fileURLToPath } from 'node:url';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { readDocsArtifact, verifyPublicDocs } from '../.github/scripts/docs-verify-public.mjs';
 import { git, withoutGitRepository } from './gitEnvironment';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -124,6 +125,24 @@ describe('published documentation', () => {
     expect(parsing).toContain('[two-part rules](#more-than-one-measurement)');
   });
 
+  it('exposes version guidance without rewriting verified release links to main', () => {
+    const output = build(fixture());
+    const readme = read(output, 'README.md');
+    const index = read(output, 'llms.txt');
+    expect(readme).toContain('npm ls @afahy/fluent-measures');
+    expect(readme).toContain('https://github.com/afahy/fluent-measures/blob/v0.2.0/README.md');
+    expect(readme).toContain('https://github.com/afahy/fluent-measures/blob/v0.2.0/PARSING.md');
+    expect(index).toContain(
+      'https://raw.githubusercontent.com/afahy/fluent-measures/v0.2.0/README.md'
+    );
+    expect(index).toContain(
+      'https://raw.githubusercontent.com/afahy/fluent-measures/v0.2.0/PARSING.md'
+    );
+    expect(index).toContain('Older tags v0.1.0 and v0.1.1 have no PARSING.md');
+    expect(index).toContain(`${site}README.md#documentation-for-your-version`);
+    expect(read(output, 'index.html')).toContain('href="README.md#documentation-for-your-version"');
+  });
+
   it('refreshes the copied sources and revision and removes stale output on every build', () => {
     const directory = fixture();
     const output = build(directory);
@@ -185,7 +204,11 @@ describe('published documentation', () => {
       const urls = [...index.matchAll(/\]\((https:\/\/afahy\.github\.io\/[^)]+)\)/g)].map(
         ([, url]) => url
       );
-      expect(urls).toEqual([`${site}README.md`, `${site}PARSING.md`]);
+      expect(urls).toEqual([
+        `${site}README.md`,
+        `${site}PARSING.md`,
+        `${site}README.md#documentation-for-your-version`,
+      ]);
       for (const url of urls) {
         const response = await fetch(new URL(new URL(url).pathname, base));
         expect(response.status).toBe(200);
@@ -209,5 +232,139 @@ describe('published documentation', () => {
       '<html><head></head><body>Docs</body></html>'
     );
     expect(() => build(directory)).toThrow('Docs page needs one source marker');
+  });
+});
+
+describe('public documentation verification', () => {
+  function setup(): {
+    output: string;
+    artifact: ReturnType<typeof readDocsArtifact>;
+    fetchImpl: ReturnType<typeof vi.fn<typeof fetch>>;
+    sleepImpl: ReturnType<typeof vi.fn<(ms: number) => Promise<void>>>;
+    report: ReturnType<typeof vi.fn<(message: string) => void>>;
+  } {
+    const output = build(fixture());
+    const artifact = readDocsArtifact(output);
+    return {
+      output,
+      artifact,
+      fetchImpl: vi.fn<typeof fetch>(async input => {
+        const file = new URL(String(input)).pathname.split('/').pop() || 'index.html';
+        return new Response(read(output, file));
+      }),
+      sleepImpl: vi.fn(async () => {}),
+      report: vi.fn(),
+    };
+  }
+
+  it('checks all four public subpath URLs against the actual artifact revision', async () => {
+    const { artifact, ...options } = setup();
+    await verifyPublicDocs(artifact, options);
+    expect(options.fetchImpl.mock.calls.map(([url]) => String(url))).toEqual(
+      ['', 'README.md', 'PARSING.md', 'llms.txt'].map(
+        file => `${site}${file}?revision=${artifact.revision}`
+      )
+    );
+    expect(options.fetchImpl.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
+    expect(options.fetchImpl.mock.calls[0][1]?.cache).toBe('no-store');
+    expect(options.sleepImpl).not.toHaveBeenCalled();
+    expect(options.report).toHaveBeenCalledWith(
+      `Verified all four public documents at source revision ${artifact.revision} (attempt 1/6).`
+    );
+  });
+
+  it('retries propagation failures and verifies every document again', async () => {
+    const { artifact, ...options } = setup();
+    options.fetchImpl.mockResolvedValueOnce(new Response('not deployed', { status: 404 }));
+    await verifyPublicDocs(artifact, options);
+    expect(options.fetchImpl).toHaveBeenCalledTimes(8);
+    expect(options.sleepImpl).toHaveBeenCalledExactlyOnceWith(10_000);
+    expect(options.report.mock.calls[0][0]).toContain('HTTP 404');
+    expect(options.report.mock.calls[1][0]).toContain('(attempt 2/6)');
+  });
+
+  it.each(['index.html', 'README.md', 'PARSING.md', 'llms.txt'])(
+    'rejects a stale revision in %s even when the response succeeds',
+    async file => {
+      const { artifact, ...options } = setup();
+      writeFileSync(
+        join(options.output, file),
+        read(options.output, file).split(artifact.revision).join('f'.repeat(40))
+      );
+      await expect(verifyPublicDocs(artifact, { ...options, attempts: 1 })).rejects.toThrow(
+        `${file === 'index.html' ? site : site + file}?revision=${artifact.revision}: content, links or source revision differ`
+      );
+      expect(options.sleepImpl).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each([
+    ['README.md', 'A TypeScript library', 'A different library'],
+    ['index.html', 'href="llms.txt"', 'href="missing.txt"'],
+    ['llms.txt', `${site}PARSING.md`, `${site}missing.md`],
+  ])('rejects changed content or links in %s with an unchanged SHA', async (file, from, to) => {
+    const { artifact, ...options } = setup();
+    writeFileSync(join(options.output, file), read(options.output, file).replace(from, to));
+    await expect(verifyPublicDocs(artifact, { ...options, attempts: 1 })).rejects.toThrow(
+      'content, links or source revision differ'
+    );
+  });
+
+  it('bounds persistent HTTP failures and explains how to investigate', async () => {
+    const { artifact, ...options } = setup();
+    options.fetchImpl.mockResolvedValue(new Response('unavailable', { status: 503 }));
+    await expect(verifyPublicDocs(artifact, options)).rejects.toThrow(
+      /Public docs verification 6\/6[\s\S]*HTTP 503[\s\S]*Check the Pages deployment/
+    );
+    expect(options.fetchImpl).toHaveBeenCalledTimes(24);
+    expect(options.sleepImpl).toHaveBeenCalledTimes(5);
+  });
+
+  it('bounds stalled requests and reports the failed files', async () => {
+    const { artifact, ...options } = setup();
+    options.fetchImpl.mockImplementation(
+      async (_url, init) =>
+        await new Promise<Response>((_resolve, reject) => {
+          init!.signal!.addEventListener('abort', () => reject(init!.signal!.reason));
+        })
+    );
+    await expect(
+      verifyPublicDocs(artifact, { ...options, attempts: 1, timeoutMs: 5 })
+    ).rejects.toThrow(/README.md:.*timeout/i);
+    expect(options.fetchImpl).toHaveBeenCalledTimes(4);
+  });
+
+  it('reports response body failures as well as connection failures', async () => {
+    const { artifact, ...options } = setup();
+    options.fetchImpl.mockRejectedValueOnce(new Error('connection reset'));
+    options.fetchImpl.mockResolvedValueOnce(
+      new Response(
+        new ReadableStream({
+          start: (controller): void => controller.error(new Error('body reset')),
+        })
+      )
+    );
+    await expect(verifyPublicDocs(artifact, { ...options, attempts: 1 })).rejects.toThrow(
+      /index.html: connection reset[\s\S]*README.md: body reset/
+    );
+  });
+
+  it.each([0, 7, 1.5])('rejects an invalid attempt bound of %s', async attempts => {
+    const { artifact, ...options } = setup();
+    await expect(verifyPublicDocs(artifact, { ...options, attempts })).rejects.toThrow(
+      'between 1 and 6 attempts'
+    );
+    expect(options.fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['index.html', 'docs-source-revision', 'missing-revision'],
+    ['README.md', 'Source revision:', 'Missing revision:'],
+    ['PARSING.md', '# Parsing rules', '# Wrong document'],
+    ['llms.txt', `${site}PARSING.md`, `${site}wrong.md`],
+  ])('rejects an incomplete expected artifact in %s before fetching', (file, from, to) => {
+    const { output } = setup();
+    writeFileSync(join(output, file), read(output, file).replace(from, to));
+    expect(() => readDocsArtifact(output)).toThrow(/Pages artifact/);
   });
 });

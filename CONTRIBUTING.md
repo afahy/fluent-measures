@@ -126,6 +126,22 @@ registry release. Local builds identify `HEAD`, so commit edits before verifying
 Run `pnpm exec vitest run tests/docsPublishing.test.ts` to check artifact generation, ordinary
 HTTP reads under the project subpath, link targets, revision updates and preview isolation.
 
+After a successful Pages deployment, the workflow downloads the uploaded artifact and compares
+the public HTML, README, parsing rules and agent index with its exact contents. The source
+revision comes from that artifact, not the workflow event or a newer checkout. Verification
+makes at most six attempts, with ten-second request timeouts and ten seconds between attempts;
+the workflow step also has a three-minute limit. A failure names the affected files and URLs.
+For a manual retry, extract that deployment's `github-pages` artifact and run
+`node .github/scripts/docs-verify-public.mjs /path/to/extracted/artifact`. Do not rebuild from a
+newer `main` to verify an older deployment. Public network checks run only after deployment;
+unit tests use fake responses and waits.
+
+The root README explains how to select release-specific documentation and the caveats for old
+tags. Keep its verified links and the agent index in sync when adding a release reference.
+README and homepage changes reach the npm listing with the normal next release; a docs
+deployment does not publish a package. The separate registry-examples workflow already checks
+the latest published package against the examples on `main`.
+
 After generating the preview, focused tests can be run with
 `pnpm exec vitest run tests/docsPalettePreview.test.ts`. For browser contrast, axe, keyboard,
 theme and responsive checks across every preview palette, run

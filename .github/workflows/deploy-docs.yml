@@ -46,3 +46,23 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      # Read the uploaded artifact, not a rebuild or the event's possibly different SHA.
+      - uses: actions/download-artifact@v4
+        with:
+          name: github-pages
+
+      - name: Verify public documentation
+        timeout-minutes: 3
+        run: |
+          mkdir -p "$RUNNER_TEMP/pages-expected"
+          tar -xf artifact.tar -C "$RUNNER_TEMP/pages-expected"
+          node .github/scripts/docs-verify-public.mjs "$RUNNER_TEMP/pages-expected"

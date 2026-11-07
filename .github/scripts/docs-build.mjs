@@ -62,6 +62,13 @@ ${metadata}
 
 - [README](${site}README.md): Installation, usage, API reference, supported units and troubleshooting.
 - [Parsing rules](${site}PARSING.md): The authoritative parsing specification and examples, including ambiguity and unsupported input.
+
+## Installed versions
+
+Find your installed version with \`npm ls @afahy/fluent-measures\`. This site tracks main, not that release.
+See [documentation for your version](${site}README.md#documentation-for-your-version) for tag selection and historical caveats.
+Version 0.2.0 has a verified [README](https://raw.githubusercontent.com/afahy/fluent-measures/v0.2.0/README.md) and [parsing reference](https://raw.githubusercontent.com/afahy/fluent-measures/v0.2.0/PARSING.md).
+Older tags v0.1.0 and v0.1.1 have no PARSING.md and have package metadata mismatches; use the README shipped with those packages.
 `
   );
   return output;
