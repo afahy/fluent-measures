@@ -304,7 +304,10 @@
             href="https://www.npmjs.com/package/@afahy/fluent-measures?activeTab=versions"
             data-npm-version
             hidden
-          ></a>
+          >
+            <svg class="icon" aria-hidden="true"><use href="#i-tag" /></svg>
+            <span data-npm-version-text></span>
+          </a>
           <details class="page-menu" data-page-menu>
             <summary class="icon-link">
               <svg class="icon icon-sm" aria-hidden="true"><use href="#i-list" /></svg>
@@ -398,7 +401,10 @@
                   href="https://www.npmjs.com/package/@afahy/fluent-measures?activeTab=versions"
                   data-npm-version
                   hidden
-                ></a>
+                >
+                  <svg class="icon" aria-hidden="true"><use href="#i-tag" /></svg>
+                  <span data-npm-version-text></span>
+                </a>
               </div>
             </div>
           </details>
@@ -430,7 +436,7 @@
             <div>
               <h1 class="hero-title">
                 Parse <span class="title-long">everyday </span>height and weight text into
-                structured data.
+                structured data
               </h1>
               <p class="hero-intro">
                 <span class="intro-long"
@@ -2515,7 +2521,7 @@ const strict = parseMeasurement(
             .then(data => {
               if (!data || !/^\d+\.\d+\.\d+/.test(data.version ?? '')) return;
               versionPills.forEach(pill => {
-                pill.textContent = 'v' + data.version;
+                pill.querySelector('[data-npm-version-text]').textContent = 'v' + data.version;
                 pill.setAttribute('aria-label', `Latest npm release: v${data.version}`);
                 pill.title = 'Latest release on npm';
                 pill.hidden = false;
