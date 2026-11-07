@@ -649,3 +649,29 @@
 {"id":"signed-other-type-disagreement-2","input":"70 kg; kg -6 ft, 80 kg","options":{"type":"weight"},"expected":null,"category":"multiple-measurements","source":"AFA-116","note":"Both independent measurements remain; 70/80 kg or 180/190 cm disagree by more than 1%."}
 {"id":"signed-other-type-disagreement-3","input":"180 cm; centimeters -180 lbs, 190 cm","options":{},"expected":null,"category":"multiple-measurements","source":"AFA-116","note":"Both independent measurements remain; 70/80 kg or 180/190 cm disagree by more than 1%."}
 {"id":"signed-other-type-disagreement-4","input":"180 cm; centimeters -180 lbs, 190 cm","options":{"type":"height"},"expected":null,"category":"multiple-measurements","source":"AFA-116","note":"Both independent measurements remain; 70/80 kg or 180/190 cm disagree by more than 1%."}
+{"id":"afa-202-minus-label-1-1","input":"phase twenty, −5 cm","expected":null,"category":"unicode","source":"AFA-202"}
+{"id":"afa-202-minus-label-1-2","input":"phase 20, −5 cm","expected":null,"category":"unicode","source":"AFA-202"}
+{"id":"afa-202-minus-label-1-3","input":"phase twenty, −5 cm","expected":null,"category":"unicode","source":"AFA-202","options":{"type":"height"}}
+{"id":"afa-202-minus-label-1-4","input":"phase 20, −5 cm","expected":null,"category":"unicode","source":"AFA-202","options":{"normalizedUnit":"in"}}
+{"id":"afa-202-minus-label-1-5","input":"phase 20, −,5 kg","expected":null,"category":"unicode","source":"AFA-202"}
+{"id":"afa-202-minus-label-1-6","input":"phase twenty, −72,5 kg","expected":null,"category":"unicode","source":"AFA-202","options":{"type":"weight"}}
+{"id":"afa-202-minus-label-1-7","input":"phase 20, −1,000 lbs","expected":null,"category":"unicode","source":"AFA-202","options":{"normalizedUnit":"kg"}}
+{"id":"afa-202-minus-label-1-8","input":"phase twenty, −½ lb","expected":null,"category":"unicode","source":"AFA-202"}
+{"id":"afa-202-minus-label-1-9","input":"phase 20, −1/2 lb","expected":null,"category":"unicode","source":"AFA-202","options":{"type":"weight"}}
+{"id":"afa-202-minus-label-1-10","input":"phase twenty, −five feet","expected":null,"category":"unicode","source":"AFA-202"}
+{"id":"afa-202-minus-label-1-11","input":"phase 20, −a hundred pounds","expected":null,"category":"unicode","source":"AFA-202","options":{"type":"weight"}}
+{"id":"afa-202-minus-label-1-12","input":"phase 20, kg: −70","expected":null,"category":"unicode","source":"AFA-202","options":{"type":"weight"}}
+{"id":"afa-202-later-field-1","input":"phase twenty, −5 cm; actual 6 cm","expected":{"value":6,"unit":"cm","type":"height"},"category":"unicode","source":"AFA-202"}
+{"id":"afa-202-minus-label-2-1","input":"phase twenty, ﹣5 cm","expected":null,"category":"unicode","source":"AFA-202"}
+{"id":"afa-202-minus-label-2-2","input":"phase 20, ﹣5 cm","expected":null,"category":"unicode","source":"AFA-202"}
+{"id":"afa-202-minus-label-2-3","input":"phase twenty, ﹣5 cm","expected":null,"category":"unicode","source":"AFA-202","options":{"type":"height"}}
+{"id":"afa-202-minus-label-2-4","input":"phase 20, ﹣5 cm","expected":null,"category":"unicode","source":"AFA-202","options":{"normalizedUnit":"in"}}
+{"id":"afa-202-minus-label-2-5","input":"phase 20, ﹣,5 kg","expected":null,"category":"unicode","source":"AFA-202"}
+{"id":"afa-202-minus-label-2-6","input":"phase twenty, ﹣72,5 kg","expected":null,"category":"unicode","source":"AFA-202","options":{"type":"weight"}}
+{"id":"afa-202-minus-label-2-7","input":"phase 20, ﹣1,000 lbs","expected":null,"category":"unicode","source":"AFA-202","options":{"normalizedUnit":"kg"}}
+{"id":"afa-202-minus-label-2-8","input":"phase twenty, ﹣½ lb","expected":null,"category":"unicode","source":"AFA-202"}
+{"id":"afa-202-minus-label-2-9","input":"phase 20, ﹣1/2 lb","expected":null,"category":"unicode","source":"AFA-202","options":{"type":"weight"}}
+{"id":"afa-202-minus-label-2-10","input":"phase twenty, ﹣five feet","expected":null,"category":"unicode","source":"AFA-202"}
+{"id":"afa-202-minus-label-2-11","input":"phase 20, ﹣a hundred pounds","expected":null,"category":"unicode","source":"AFA-202","options":{"type":"weight"}}
+{"id":"afa-202-minus-label-2-12","input":"phase 20, kg: ﹣70","expected":null,"category":"unicode","source":"AFA-202","options":{"type":"weight"}}
+{"id":"afa-202-later-field-2","input":"phase twenty, ﹣5 cm; actual 6 cm","expected":{"value":6,"unit":"cm","type":"height"},"category":"unicode","source":"AFA-202"}

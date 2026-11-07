@@ -191,13 +191,14 @@ const WORD_COMMA = new RegExp(
   'g'
 );
 
-// A minus sign before a number, when no number comes earlier: no digit, Unicode fraction or number
-// word. The number can be a word too, as in "−five'", also after "a" or "an", as in "−a hundred"
+// A minus sign before a number, when no number comes earlier since the last comma: no digit,
+// Unicode fraction or number word. A numeric label before a comma doesn't own the signed value.
+// The number can be a word too, as in "−five'", also after "a" or "an", as in "−a hundred"
 // and "−a-hundred". After a number, a minus sign joins two parts or values, as in "1 m−80 cm" and
 // "½ lb−180 lbs". The parser would read a hyphen-minus there as a sign. The lookbehind runs only
 // after a minus sign, and its lazy part stops at the nearest earlier number.
 const MINUS_SIGN = new RegExp(
-  String.raw`[−﹣](?=[.,]?\d|[${FRACTIONS}]|(?:an?[\s-]+)?(?:${NUMBER_WORD})\b)(?<!(?:[\d${FRACTIONS}]|\b(?:${NUMBER_WORD})\b)[\s\S]*?.)`,
+  String.raw`[−﹣](?=[.,]?\d|[${FRACTIONS}]|(?:an?[\s-]+)?(?:${NUMBER_WORD})\b)(?<!(?:[\d${FRACTIONS}]|\b(?:${NUMBER_WORD})\b)[^,]*?.)`,
   'gi'
 );
 
@@ -235,7 +236,8 @@ const PUNCTUATION = new RegExp(
  * or a digit immediately follows the mark, as in the existing compact-height syntax.
  * Full-width characters and the units "㎝" and "㎏" become their ASCII forms. Other characters
  * stay, so normalizeFractions still sees "½". The minus signs "−" and "﹣" become a hyphen-minus
- * "-" right before a number when no number comes earlier, so "−5 ft" is negative.
+ * "-" right before a number when no number comes earlier since the last comma, so "−5 ft"
+ * and "phase twenty, −5 cm" are negative.
  */
 export function normalizeForms(input: string): string {
   return input
