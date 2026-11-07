@@ -2669,3 +2669,61 @@ under `final-validation/mutation-corrections/` in the external evidence archive.
 committed-source mutation and final validation remain pending a new coordinator grant. No
 mutation-kill, performance or final-readiness claim is made from these focused results. F6/F9
 historical closeout and all earlier deferred findings remain intact; publication is pending.
+
+### AFA-250 second mutation report and wrapper boundary — publication pending
+
+The next coordinator grant committed the focused correction as
+`329deb9950c812025aebd59513e64436f18a12ec`. Normal hooks passed without a file delta.
+Its fresh clean-source full check passed 5,285 tests, 100% coverage and TypeScript, then
+stopped at mutation: 1,411 killed, 42 timed out, 36 survived, none uncovered and one ignored,
+score 97.58%, below the unchanged 98% threshold. No build, size, API or package stage ran.
+The actual report hash is
+`af6e738cf4b9a4a4305ba60b43029c17331dbb59eb8bd9c1c8f1166bd0609330`;
+all eight selected sources and six report bodies match that commit. This failed run remains
+separate from every earlier failed or partial run.
+
+The follow-up fixes one real wrapper-boundary defect: a closing entry quote could be read
+as the suffix unit of its final bare smaller part. The existing part cursor now checks
+`at < limit` before reading a suffix. Both ASCII quote styles preserve `5 ft 11` as
+71 inches with `[5 ft, 11 in]`, and `1 m 80` as 180 centimeters with `[1 m, 80 cm]`.
+The four bare quoted forms and both selected pair orders produce 20 corrected paths from
+`329deb99`; explicit smaller-unit counterparts and malformed quote controls are preserved.
+The original two-failure run was on dirty preparation source, not exact main or the commit.
+A separate source-pinned replay on `329deb99` confirms all 20 failures. Exact main `70f3169`
+already passes `ft five 0 in` and double-quoted `5 ft 11`; it drops the zero part from
+`m: one 0 cm` (1 meter with one match) and rejects single-quoted `1 m 80`. These controls
+are separate from branch-introduced regressions and the earlier written-zero correction.
+
+Remaining cleanup retains a single bounded number split and the shared reader. The two
+wrapper loops use exclusive equality bounds: their cursors advance by one, begin no later
+than the limit, and cannot pass it. Unwrapped expression calls retain the full token limit;
+bounded recursive calls are wrapped and skip that loop. The outer limit changes only
+immediately before a break. The redundant join-start bound is removed, but a null join
+still rejects; an excluded closing token cannot advance the join, and an empty bounded
+numeric phrase cannot form a part. Additional empty reader attempts are bounded and remain
+covered by the positive-call and parsed-character assertions.
+
+The local `next.end <= limit` guard is retained. Two new malformed-wrapper controls,
+`„0 ft “11”` and `‚0 m ‘80’`, return null with default and valid normalized units. With
+today's unsupported JavaScript `normalizedUnit: 'st'`, they also return null because the
+zero first part cannot reach conversion. Applying only actual mutant 853's replacement
+causes premature inch/centimeter conversion errors; the exact source was then restored.
+This is stronger coverage of an existing guard, not a production fix. The separate early
+validation and stone work must revise the unsupported-unit premise when those changes land.
+
+Three individually justified annotations cover only the invalid-article object, invalid-quote
+object and adjacent-conjunction arithmetic alternatives (actual mutants 99, 376 and 134).
+The conjunction reader backs either adjacent member to the same run boundary. No bound-wide
+EqualityOperator annotation, threshold change or blanket survivor exemption was added.
+New independent controls cover semicolon/sign rejection, repeated decorations and depth
+inside a valid wrapped pair. The actual-report disposition ledger does not claim new kills.
+
+The focused follow-up passes 971 tests across 14 named source files. All 302 frozen probe
+results and 243 authored full results remain unchanged. Another 128 independently specified
+full results pass, including raw input and matches; their exact-main and `329deb99` outputs
+are recorded separately. All 2,086 prior corpus rows remain a byte-identical prefix, with
+128 additions giving 2,214 expected agreements. The approved generated result snapshot is
+unchanged. The corpus report counts are derived from independent labels, not observations.
+Evidence is under `final-validation/actual-survivor-followup/` in the external archive.
+Fresh committed-source validation is still required; these focused results make no mutation
+score, performance or final-readiness claim. Historical F6/F9 publication remains pending.

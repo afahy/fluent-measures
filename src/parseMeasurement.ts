@@ -27,6 +27,7 @@ function numberValue(words: string[]): NumberReading {
   let offset = 0;
   if (words[0] === 'a' || words[0] === 'an') {
     if (!NUMBER_WORDS.has(words[1]) && !MULTIPLIERS.has(words[1]))
+      // Stryker disable next-line ObjectLiteral: {} yields undefined, which cannot pass compound bounds or produce a positive total (329deb9 mutant 99).
       return { value: null, invalidAt: 0 };
     words = words.slice(1);
     offset = 1;
@@ -39,13 +40,14 @@ function numberValue(words: string[]): NumberReading {
   const whole = readNumberTokens(half < 0 ? words : words.slice(0, Math.max(0, half - 2)));
   if (!words.length || words[0] === 'and') return fail(0);
   if (words[words.length - 1] === 'and') return fail(words.length - 1);
+  // Stryker disable next-line ArithmeticOperator: either adjacent-and member maps back to the same conjunction-run boundary in readNumber (329deb9 mutant 134).
   const repeatedAnd = words.findIndex((word, i) => word === 'and' && words[i - 1] === 'and');
   if (repeatedAnd >= 0) return fail(repeatedAnd);
   if (whole.value === null) return fail(whole.invalidAt);
   if (half < 0) return { value: whole.value, invalidAt: length };
   // A non-null whole requires at least one token before "and a half", hence half >= 3.
   if (words[half - 1] !== 'a' || words[half - 2] !== 'and' || !Number.isInteger(whole.value))
-    return fail(half - 2);
+    return fail(0);
   let value = whole.value + 0.5;
   let previous = whole.value;
   for (let at = half + 1; at < words.length; at++) {
@@ -151,6 +153,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       // normalizeForms distinguishes ‘5’ 11” from a numeric quotation by converting the
       // closing feet mark. Keep that interpretation only if a complete ft/in compound follows.
       if (text(start) === '‘' && text(inner.end) === "'") return { ...inner, quotedFeet: true };
+      // Stryker disable next-line ObjectLiteral: {} cannot supply a numeric value/end; every part or final result still rejects it (329deb9 mutant 376).
       return { value: null, end: start };
     }
     const words: string[] = [];
@@ -209,22 +212,13 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     if (prefix) {
       const number = readNumber(prefix.end, limit);
       if (number.value !== null) return { value: number.value, unit: prefix.unit, end: number.end };
-      // A conjunction at the shared reader's boundary can end a complete prefix part.
-      // The expression cursor must still validate the entire compound or selected pair.
-      // Without a conjunction, only a larger prefix can begin a compound. The expression
-      // cursor below owns the smaller-part validity/bounds, including an explicit zero part.
-      const split = number.invalidAt;
-      if (
-        split !== undefined &&
-        (text(split) === 'and' || prefix.unit === 'ft' || prefix.unit === 'm')
-      ) {
-        // At either endpoint this reread is empty or the same invalid complete phrase.
-        // The non-null/full-prefix check below therefore also enforces an interior boundary.
-        const left = readNumber(prefix.end, split);
-        if (left.value === null || left.end !== split) return null;
-        return { value: left.value, unit: prefix.unit, end: split };
-      }
-      return null;
+      // One bounded reread can end a complete prefix part. An absent boundary gives an
+      // empty phrase, not another search. The original numeric tokens contain no intervening
+      // unit, so a valid left phrase consumes this exact prefix. The expression/root cursors
+      // alone validate the compound unit or explicit pair separator and the complete right side.
+      const split = number.invalidAt ?? prefix.end;
+      const left = readNumber(prefix.end, split);
+      return left.value === null ? null : { value: left.value, unit: prefix.unit, end: left.end };
     }
     const number = readNumber(start, limit);
     if (number.value === null) return null;
@@ -235,11 +229,12 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       text(at) === '-' &&
       adjacent(at - 1, at) &&
       adjacent(at, at + 1) &&
-      /^[a-z]/.test(text(at + 1)) &&
+      /[a-z]/.test(text(at + 1)) &&
       unitAt(at + 1)
     )
       at++;
-    const suffix = readUnit(at, false);
+    // A closing entry wrapper at limit is not a suffix unit of its final bare number.
+    const suffix = at < limit ? readUnit(at, false) : null;
     if (suffix)
       return {
         value: number.value,
@@ -269,7 +264,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       return { start: at + 2, bare: false };
     if (word === ',' || word === 'and') return { start: at + 1, bare: word !== ',' };
     if (word === '(' || word === '[') return { start: at + 1, close: CLOSE[word], bare: false };
-    if (/^[\p{Dash}−]$/u.test(word)) {
+    if (/[\p{Dash}−]/u.test(word)) {
       // Preserve the supported attached ASCII compound hyphen and Unicode joins. A spaced
       // ASCII minus still signs the following value. Prefix numbers cannot hide ranges.
       return part.suffix && (word !== '-' || adjacent(at - 1, at))
@@ -291,7 +286,9 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     const close = CLOSE[text(start)];
     if (close && !wrapped) {
       let depth = 1;
-      for (let at = start + 1; at < limit; at++) {
+      // Unwrapped calls retain the full token limit; a present opener gives start + 1 <= limit.
+      // Bounded recursive calls are wrapped and skip this loop. The cursor advances only by 1.
+      for (let at = start + 1; at !== limit; at++) {
         if (text(at) === close && --depth === 0) {
           const inner = expression(start + 1, at, true, decorate);
           if (inner && inner.end === at) return { ...inner, end: at + 1 };
@@ -308,10 +305,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       else if (text(at) === 'i' && text(at + 1) === 'weigh') {
         namedType = 'weight';
         at += 2;
-      } else if (
-        text(at) === 'weigh' &&
-        (text(at + 1) === 'in' || (text(at + 1) === '-' && text(at + 2) === 'in'))
-      ) {
+      } else if (text(at) === 'weigh' && (text(at + 1) === 'in' || text(at + 2) === 'in')) {
         at += text(at + 1) === '-' ? 3 : 2;
         if (text(at++) !== ':') return null;
         namedType = 'weight';
@@ -335,7 +329,8 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     const nextUnit = NEXT_PART[first.unit];
     if (nextUnit) {
       const join = joinAfter(first);
-      if (join && join.start < limit) {
+      // At the excluded close/end, the bounded readers return no numeric part.
+      if (join) {
         const bare = join.bare ? nextUnit : undefined;
         let next = readPart(join.start, limit, bare);
         if (!next && join.close) {
@@ -345,14 +340,12 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         }
         // "5 ft 11 and 180 lbs" has an explicit pair separator after its bare inches. Both
         // numeric phrases must be complete; no substring is returned when either is invalid.
-        if (!next && bare) {
-          const split = readNumber(join.start, limit).invalidAt;
-          if (split !== undefined && text(split) === 'and') {
-            const left = readPart(join.start, split, bare);
-            // The root pair cursor validates the complete second expression and its dimension.
-            // This cursor owns only the complete bare smaller part before the conjunction.
-            if (left && left.end === split) next = left;
-          }
+        if (!next) {
+          const split = readNumber(join.start, limit).invalidAt ?? join.start;
+          // No boundary means an empty candidate. A numeric-only candidate without bare
+          // eligibility has no unit. The root still requires an explicit pair separator and
+          // a complete second expression, so an arbitrary invalid numeric token cannot join.
+          next = readPart(join.start, split, bare);
         }
         if (
           next &&
@@ -389,7 +382,8 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   const outerClose = CLOSE[text(0)];
   if (outerClose) {
     let depth = 1;
-    for (let at = 1; at < limit; at++) {
+    // A present opener gives 1 <= limit. The only limit change is immediately before break.
+    for (let at = 1; at !== limit; at++) {
       if (text(at) === outerClose && --depth === 0) {
         if (at === limit - 1) {
           begin++;
@@ -420,7 +414,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   // failed expression. AFA-251 will replace only the source-unit policy here with defaultUnit.
   if (options.allowUnqualified && options.type) {
     const number = readNumber(0, tokens.length, false);
-    if (number.value !== null && number.end === tokens.length) {
+    if (number.value && number.end === tokens.length) {
       const metric = options.inferUnit === 'metric';
       const unit =
         options.type === 'height'

@@ -4,6 +4,148 @@ import { parseMeasurement, type ParseOptions } from '../src';
 // AFA-250 option A, approved 2026-11-07. Expected values are identity, 12 in/ft,
 // 100 cm/m, and complete-number arithmetic. Rejections follow complete-entry consumption.
 describe('approved complete-entry contract', () => {
+  // A closing outer quote cannot also close a numeric quotation inside that entry.
+  // Keep the local part limit before result/conversion, including a zero first part.
+  it.each(['„0 ft “11”', '‚0 m ‘80’'])(
+    'rejects a reused closing quote before conversion in %s',
+    raw => {
+      expect(parseMeasurement(raw)).toBeNull();
+      expect(parseMeasurement(raw, { normalizedUnit: 'cm' })).toBeNull();
+      expect(parseMeasurement(raw, { normalizedUnit: 'kg' })).toBeNull();
+      // This preserves today's JS option order; the separate early-validation/stone work
+      // will replace st's role here when it becomes a supported unit.
+      const options = { normalizedUnit: 'st' } as unknown as ParseOptions;
+      expect(parseMeasurement(raw, options)).toBeNull();
+    }
+  );
+
+  // Both ASCII entry quotes keep their closing marks outside the final part. The
+  // explicit-unit counterparts and both pair orders preserve the same written components.
+  it.each([
+    ['"5 ft 11"', 71, 'in', 5, 'ft', 11],
+    ["'5 ft 11'", 71, 'in', 5, 'ft', 11],
+    ['"1 m 80"', 180, 'cm', 1, 'm', 80],
+    ["'1 m 80'", 180, 'cm', 1, 'm', 80],
+    ['"5 ft 11 in"', 71, 'in', 5, 'ft', 11],
+    ["'5 ft 11 in'", 71, 'in', 5, 'ft', 11],
+    ['"1 m 80 cm"', 180, 'cm', 1, 'm', 80],
+    ["'1 m 80 cm'", 180, 'cm', 1, 'm', 80],
+  ] as const)(
+    'keeps the closing entry quote outside the complete height in %s',
+    (raw, value, unit, larger, largerUnit, smaller) => {
+      expect.assertions(7);
+      const matches = [
+        { value: larger, unit: largerUnit },
+        { value: smaller, unit },
+      ];
+      expect(parseMeasurement(raw)).toEqual({ value, unit, type: 'height', raw, matches });
+      for (const pair of [raw + ', 70 kg', '70 kg, ' + raw]) {
+        expect(parseMeasurement(pair, { type: 'height' })).toEqual({
+          value,
+          unit,
+          type: 'height',
+          raw: pair,
+          matches,
+        });
+        expect(parseMeasurement(pair, { type: 'weight' })).toEqual({
+          value: 70,
+          unit: 'kg',
+          type: 'weight',
+          raw: pair,
+          matches: [{ value: 70, unit: 'kg' }],
+        });
+        expect(parseMeasurement(pair)).toBeNull();
+      }
+    }
+  );
+
+  it.each([
+    '"5 ft 11',
+    "'1 m 80",
+    '"5 ft 11\'',
+    '\'1 m 80"',
+    '"(5 ft 11)"',
+    "'[1 m 80]'",
+    '"5 ft -11"',
+    "'1 m -80'",
+    '"5 ft 0"',
+    "'1 m 0'",
+    '"5 ft 12"',
+    "'1 m 100'",
+  ])('rejects malformed or nested whole-entry quotes in %s', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+    expect(parseMeasurement(raw, { type: 'height' })).toBeNull();
+    expect(parseMeasurement(raw, { type: 'weight' })).toBeNull();
+  });
+
+  it.each([
+    '5 ft; −11 in',
+    'm: 1; −80 cm',
+    '5 ft and −11 in',
+    'about (around 70 kg)',
+    'height (height 180 cm)',
+    '5 ft in: and 70 kg',
+    '1 m cm: and 70 kg',
+  ])('rejects the invalid join or incomplete wrapped expression in %s', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+    expect(parseMeasurement(raw, { type: 'height' })).toBeNull();
+    expect(parseMeasurement(raw, { type: 'weight' })).toBeNull();
+  });
+
+  it.each(['(5 ft (11 in), 70 kg)', '[5 ft [11 in]; 70 kg]'])(
+    'keeps compound-part depth inside a single wrapped pair in %s',
+    raw => {
+      expect(parseMeasurement(raw, { type: 'height' })).toEqual({
+        value: 71,
+        unit: 'in',
+        type: 'height',
+        raw,
+        matches: [
+          { value: 5, unit: 'ft' },
+          { value: 11, unit: 'in' },
+        ],
+      });
+      expect(parseMeasurement(raw, { type: 'weight' })).toEqual({
+        value: 70,
+        unit: 'kg',
+        type: 'weight',
+        raw,
+        matches: [{ value: 70, unit: 'kg' }],
+      });
+      expect(parseMeasurement(raw)).toBeNull();
+    }
+  );
+
+  it('allows one approximation before a numeric entry wrapper', () => {
+    const raw = 'about (70 kg)';
+    expect(parseMeasurement(raw)).toEqual({
+      value: 70,
+      unit: 'kg',
+      type: 'weight',
+      raw,
+      matches: [{ value: 70, unit: 'kg' }],
+    });
+  });
+
+  it.each([
+    ['ft: 5,−11 in', 71, 'in', 5, 'ft', 11],
+    ['m: 1,−80 cm', 180, 'cm', 1, 'm', 80],
+  ] as const)(
+    'retains the specifically allowed comma and Unicode height join in %s',
+    (raw, value, unit, larger, largerUnit, smaller) => {
+      expect(parseMeasurement(raw)).toEqual({
+        value,
+        unit,
+        type: 'height',
+        raw,
+        matches: [
+          { value: larger, unit: largerUnit },
+          { value: smaller, unit },
+        ],
+      });
+    }
+  );
+
   // Prefix and suffix orientations share the same compound bounds and sign rules.
   it.each([
     'ft five 0',
