@@ -206,6 +206,16 @@ limitation of the narrow AFA-248 change, not a fixed finding or a revision of hi
 baselines. Reproduction: `/tmp/afa248-third-review-results.json` and
 `/tmp/afa248-third-review.log`. Source, tests and corpus remain unchanged from `4428859`.
 
+AFA-248 closed out through [PR #239](https://github.com/afahy/fluent-measures/pull/239):
+reviewed audit head `d82108cee21ff16259a00a3dbb63a45ca872121d` merged normally as
+`042624855225c2ab55d2d7639058069e4cd90c17`. All 18 PR checks and exact-head Codex review
+passed; final and immediate post-merge comment audits found no new finding. All 12 exact-merge
+main CI jobs passed in run `42381121659`, with
+[ci-ok](https://github.com/afahy/fluent-measures/actions/runs/42381121659/job/128430299153)
+successful at 2026-11-07 14:27:00 UTC. Root main was pulled and only the merged worktree/local
+branch removed. The source-validation baseline remains `4428859`; the five deferred rows
+above remain unfixed and assigned to AFA-250.
+
 ### M3 — range ownership and shorthand
 
 Source: `parseMeasurement.ts:361–453`.
@@ -293,8 +303,8 @@ reads still consume and validate the whole decimal. `tests/parseMeasurement.spok
 covers the three review findings and their comma, bracket, sign and number-phrase routes.
 The published `fb272e1` returned 20.58 kg for `age twenty point 5, 80 kg`, null for
 `kg zero point five (.5 kg)`, and 5 ft for the bare-inch/weight case. The focused correction
-returns 80 kg, 0.5 kg and 71 in. Final-source full/mutation/package/size validation remains
-pending its separate coordinator grant; prior `fb272e1` validation is historical.
+returns 80 kg, 0.5 kg and 71 in. Final combined-source validation is recorded below;
+prior `fb272e1` validation is historical.
 The existing fragment result for `5 ft one point twenty in` (main null, `fb272e1` 5 ft)
 is recorded on AFA-250 for its approved whole-entry rejection, not treated as valid inches.
 
@@ -308,7 +318,7 @@ default for that inapplicable flag, without adding mutation ignores. All 321 foc
 fraction, bare-inch and corpus checks pass. The simplified build measures 5,522 ESM / 5,577
 CommonJS bytes. The repository's standing 0.5 kB allowance raises the ESM limit to 6.0 kB;
 CommonJS remains at its previously approved 6.0 kB. The matching footprint documentation is
-updated. Fresh final-source validation is still required; the `14efcd3` report is preserved at
+updated. These measurements precede the final main integration; the `14efcd3` report is preserved at
 `/tmp/afa247-mutation-14efcd3.json` and is not final evidence for this simplification.
 
 The fresh `873530f` check passed unit coverage and TypeScript but was interrupted during
@@ -318,8 +328,21 @@ AFA-248's range scan, M2 audit and deferred AFA-250 findings, both feature lists
 main corpus rows and the 59 decimal additions. The combined 859-row score is specified by
 adding the independently reviewed branch additions, not by copying a new parser result.
 All 489 focused decimal, range, F3, calculator, feature-map and corpus tests pass together.
-Fresh committed combined-source validation follows this merge; the uppercase `RANGE`
-distinction below remains intact.
+The uppercase `RANGE` distinction below remains intact.
+
+Final combined source `af45a8934a54827cc7ce6ebfee83d5ea2c557504` passed one fresh full
+`pnpm check`: 4,298 unit tests, 100% coverage, TypeScript, fresh mutation 99.74%
+(1,491 killed, 25 timeouts, four unchanged-line survivors, zero uncovered/errors, 32 ignored),
+build/API/size and 5,210 ESM/CommonJS package tests. Every changed-line mutant is killed
+against exact main `0426248`; all eight committed source hashes and six report source bodies
+match. Report SHA256: `2679da3fa11f4d5b37274bcc92c4cb7d4989148f2171b3e55363feb42091e6db`.
+The 120 public regression cases give 76 failures / 44 controls on that exact main and all pass
+on the combined source. Final Brotli sizes are 5,626 ESM / 5,709 CommonJS bytes, versus
+main's 5,401 / 5,455 (runtime/build inputs unchanged from validated `4428859`); both limits
+are 6,000 bytes under the standing allowance. Logs and source manifest:
+`/tmp/afa247-review-final-check-3.log`, `/tmp/afa247-review-final-changed-lines-3.log`,
+`/tmp/afa247-review-source-manifest-integrated.json`. No new mutation exclusion or relaxed
+test threshold was added. The following audit-only commit does not change these source/test trees.
 
 M2 now retains `RANGE` as the token's text instead of writing `-`. This keeps M3's discarded
 ranges distinct from literal minus signs in M5. The existing recovery contract still applies:
