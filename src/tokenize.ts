@@ -98,9 +98,9 @@ const FRACTION_MARK = new RegExp(`[/⁄${FRACTIONS}]`);
 // Require whole connector words and keep "and" meaningful only after "between", so compound
 // heights and integer number words retain their existing reads. Consume "from" too, so the
 // resulting boundary has the same neighbors as a dash range in either reading direction.
-const WORD_RANGE = new RegExp(
-  String.raw`(?:\bfrom\s+)?(?<![\d.])${RANGE_DIGITS}\s+to\s+${RANGE_DIGITS}|\bbetween\s+${RANGE_DIGITS}\s+and\s+${RANGE_DIGITS}`,
-  'g'
+const NUMERIC_RANGE = new RegExp(
+  String.raw`(?<![\d.])[\d.]+(?:\s*\p{Dash}\s*[\d.]+)+|(?:\bfrom\s+)?(?<![\d.])${RANGE_DIGITS}\s+to\s+${RANGE_DIGITS}|\bbetween\s+${RANGE_DIGITS}\s+and\s+${RANGE_DIGITS}`,
+  'gu'
 );
 
 /** Normalize individual fractions after their surrounding range has been preserved. */
@@ -318,10 +318,7 @@ export function tokenizeNormalized(
       .toLowerCase()
       // Replace ranges after lowercasing so no input can supply the internal marker. Keep the
       // whole text together: the quote rules below need opening quotes from before a range.
-      .replace(/(?<![\d.])[\d.]+(?:\s*\p{Dash}\s*[\d.]+)+/gu, range =>
-        rangeBoundaries ? ` ${RANGE_WORD} ` : range
-      )
-      .replace(WORD_RANGE, range => (rangeBoundaries ? ` ${RANGE_WORD} ` : range))
+      .replace(NUMERIC_RANGE, range => (rangeBoundaries ? ` ${RANGE_WORD} ` : range))
       // Mark labels before the punctuation that marks them is removed, so the parser knows what
       // kind of label each one is, and spell out the short aliases. A bracket label keeps its
       // opening bracket, and a label after a field separator gets a field word first.
