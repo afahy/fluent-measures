@@ -66,8 +66,6 @@ export function normalizeFractions(input: string): string {
 
 const NUMBER_WORD = [...NUMBER_WORDS.keys(), ...MULTIPLIERS.keys()].join('|');
 
-// A number as it can stand in quotes: digits, separators, spaces, slashes and fractions.
-const QUOTED_NUMBER = String.raw`[\d.,\s/⁄${FRACTIONS}]*[\d${FRACTIONS}]`;
 // Number words have the same boundary and "and a half" rules as the later token split.
 const WORD_END = String.raw`(?:\b(?:${NUMBER_WORD})|(?:\d|\b(?:${NUMBER_WORD}))[\s-]+and[\s-]+a[\s-]+half)`;
 // An apostrophe inside a word does not close the surrounding single quotation.
@@ -81,7 +79,7 @@ function curlyMark(open: string, close: string): RegExp {
   const nextNumber = String.raw`(?=${close}(?:\d${close === '’' ? String.raw`|\s*${inches}` : ''}))`;
   const quotation = close === '’' ? SINGLE_QUOTATION : '[^”]*';
   return new RegExp(
-    String.raw`(?=${close})(?:(?<=[\d${FRACTIONS}]['’]?\s*)(?:(?<!${open}${QUOTED_NUMBER}\s*)|${nextNumber})|(?<=${WORD_END}\s*)(?!${close}[a-z])(?:(?<!${open}${quotation})|${nextNumber}))${close}`,
+    String.raw`(?=${close})(?:(?<=[\d${FRACTIONS}]['’]?\s*)(?:(?<!${open}${quotation})|${nextNumber})|(?<=${WORD_END}\s*)(?!${close}[a-z])(?:(?<!${open}${quotation})|${nextNumber}))${close}`,
     'gi'
   );
 }
@@ -102,7 +100,7 @@ const MINUS_SIGN = new RegExp(
  * Write feet and inch marks as ASCII, so "5’11”", "5′11″" and "5´11´´" read like 5'11". Primes
  * and acute accents are always marks. A curly quote can follow digits, fractions or number
  * words, with optional spaces. A following unit word keeps the number in that unit; otherwise
- * a matching numeric quotation stays a quotation unless an inch component follows a feet mark
+ * a matching entry or numeric quotation stays a quotation unless an inch component follows a feet mark
  * or a digit immediately follows the mark, as in the existing compact-height syntax.
  * Full-width characters and the units "㎝" and "㎏" become their ASCII forms. Other characters
  * stay, so normalizeFractions still sees "½". The minus signs "−" and "﹣" become a hyphen-minus
@@ -172,11 +170,15 @@ export function tokenizeNormalized(input: string): Token[] {
     match => {
       const token = { text: match[0], start: match.index, end: match.index + match[0].length };
       const word = token.text.slice(0, -1);
-      // A number word's period belongs to the expression, not the numeric phrase. Retain it
-      // as punctuation; only the cursor can accept a final period or reject an internal one.
+      // A number word or complete decimal can precede a final period. Retain that period
+      // as punctuation; only the cursor can accept it or reject it inside an expression.
+      // Keep the established integer-with-decimal-point spelling ("72. kg") unchanged.
       if (
         token.text.endsWith('.') &&
-        (NUMBER_WORDS.has(word) || MULTIPLIERS.has(word) || word === 'half')
+        (NUMBER_WORDS.has(word) ||
+          MULTIPLIERS.has(word) ||
+          word === 'half' ||
+          /^\d*\.\d+$/.test(word))
       ) {
         return [
           { text: word, start: token.start, end: token.end - 1 },

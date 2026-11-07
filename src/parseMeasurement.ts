@@ -310,8 +310,27 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         if (text(at) === close && --depth === 0) {
           const inner = expression(start + 1, at, true, decorate);
           if (inner && inner.end === at) {
-            const period = text(at + 1) === '.' && !text(at - 1).endsWith('.');
-            return { ...inner, end: at + (period ? 2 : 1) };
+            let end = at + 1;
+            const innerLast = text(at - 1);
+            const tall = text(end) === 'tall' || text(end) === 'tall.';
+            if (tall) {
+              // The close does not hide a previous height suffix or terminator.
+              if (
+                inner.parsed.type !== 'height' ||
+                innerLast === '.' ||
+                innerLast === 'tall' ||
+                innerLast === 'tall.'
+              )
+                return null;
+              end++;
+            }
+            if (
+              text(end) === '.' &&
+              (tall || !innerLast.endsWith('.')) &&
+              !text(end - 1).endsWith('.')
+            )
+              end++;
+            return { ...inner, end };
           }
           break;
         }

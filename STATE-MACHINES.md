@@ -2939,3 +2939,55 @@ Exact logs, report, source-byte verification, size comparison and self-review ar
 `final-validation/review-round-1-validation/`. Normal publication hooks and the final feature
 push are the next local steps. PR #247 remains subject to hosted review and qualifying merge;
 F6/F9 historical audit publication remains pending until that merge.
+
+### AFA-250 second PR review corrections — focused evidence only
+
+Published `87039159e1aea4de27165a5c701e7b89b8e22b41` rejected six approved complete
+entries: `(180 cm) tall`, `height is (180 cm) tall`, `about (5 ft 11) tall`, `“5 ft 11”`,
+`kg 72.5.` and `kg: ½.`. Exact main `70f3169` returns their independently expected full
+objects: 180 cm, 180 cm, 71 in, 71 in, 72.5 kg and 0.5 kg, with written matches preserved.
+All six have failing-first records and strict regression/corpus assertions.
+
+The existing wrapper completion now owns one outer height `tall` suffix, rejecting weight
+and duplicate suffixes. A prior standalone period still cannot precede that suffix. Dotted
+unit spellings remain units: `(72 in.) tall`, `(180 cm.) tall` and `(180 cm.) tall.` retain
+their complete scalars. An outer `tall` owns its own final period, attached or separated by
+space. Without that suffix, the existing double-period guard still rejects `(180 cm.).`.
+No global dot count or additional scan was introduced.
+
+The existing curly-mark normalization expression uses its quotation-context guard for both
+numeric and word endings. A closing whole-entry quote therefore cannot become an inch or
+feet mark merely because the smaller component is bare. The separate quoted-feet and compact
+mark controls remain intact. The unused numeric-only quotation pattern was removed; no new
+normalization pass or general quote policy was added. The existing token split retains a
+period after a complete decimal as punctuation. Malformed dot runs remain invalid, and the
+established `72. kg` numeric spelling stays unchanged. The shared number reader, its supplied
+indices, public types, option policy and single compact split are unchanged.
+
+An initially authored `(180 cm.) tall` null assertion was a trial-oracle error: it confused a
+dotted unit with a standalone terminator. The parent resolved it from existing spelling and
+wrapper rules. The original assertion, six proposed trial records and failed candidate/main
+trial commands remain archived; their observed outputs did not supply the corrected oracle.
+Likewise, the private `5.5. ft` token expectation now retains `5.5`, `.`, `ft`, while the
+public result remains null because the period interrupts the number/unit expression.
+
+The final 155-path ledger has 58 null-to-valid changes and 97 full-object controls against
+published `87039159`; exact main has 63 full-object changes and 92 controls. It combines the
+154 corpus additions with the extra `(72 in.) tall . .` public null control. The latter
+already rejects on the published branch; exact main recovers 72 in, contrary to the approved
+one-period/complete-consumption rule. All 2,450 prior
+corpus objects and all 243 earlier authored objects are unchanged. All 302 frozen allowed
+outcomes still agree, but two full objects change from null to their independently permitted
+positive alternative: `my height is (181 cm) tall` and `I am “six feet” tall.`. Both match
+exact main; a separate two-row ledger and strict new positives retain this oracle limitation.
+The other 300 frozen objects and every original fixture byte remain unchanged.
+
+The corpus now has 2,604 rows, preserving all 2,450 earlier rows as a byte-identical prefix.
+Its report counts derive from fixture labels; the approved generated snapshot is unchanged.
+The 16 named focused suites pass 1,484 tests, including scalar one-read and positive-call
+reader bounds, mark/quote controls, compact notation, corpus and result snapshot. Exact
+source-pinned observations, arithmetic/oracle ledgers, failed trials and process proofs are
+under `final-validation/review-round-2-corrections/` in the external archive. This is focused
+evidence only: `4a04e92` full-check/report qualification remains historical for the changed
+source. Fresh full validation, mutation, package/build/size and publication hooks require a
+separate coordinated grant. F6/F9 publication remains pending until the qualifying merge.

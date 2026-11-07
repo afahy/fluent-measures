@@ -80,7 +80,7 @@ describe('complete-entry tokens', () => {
     ['NAME UNIT kg FIELD 5', ['name', 'unit', 'kg', 'field', '5']],
     ['5 _unit kg', ['5', '_unit', 'kg']],
     ['6 ft.. 70 kg...', ['6', 'ft.', '.', '70', 'kg.', '..']],
-    ['5.5. ft', ['5.5.', 'ft']],
+    ['5.5. ft', ['5.5', '.', 'ft']],
     ['a.b. 5 ft', ['a.', 'b.', '5', 'ft']],
     ['“+5” kg', ['“', '+', '5', '”', 'kg']],
     ['70 kg 🧊', ['70', 'kg', '🧊']],
@@ -124,5 +124,19 @@ describe('complete-entry tokens', () => {
     expect(tokenTexts('in. 73')).toEqual(['in.', '73']);
     expect(tokenTexts('kg mystery.')).toEqual(['kg', 'mystery.']);
     expect(tokenTexts('kg seventy two..')).toEqual(['kg', 'seventy', 'two', '.', '.']);
+  });
+
+  it('retains one period after a complete decimal without splitting malformed dot runs', () => {
+    expect(tokenizeNormalized('kg 72.5.')).toEqual([
+      { text: 'kg', start: 0, end: 2 },
+      { text: '72.5', start: 3, end: 7 },
+      { text: '.', start: 7, end: 8 },
+    ]);
+    expect(tokenTexts('kg: ½.')).toEqual(['kg', ':', '0.5', '.']);
+    expect(tokenTexts('kg .5.')).toEqual(['kg', '.5', '.']);
+    expect(tokenTexts('72. kg')).toEqual(['72.', 'kg']);
+    expect(tokenTexts('kg 72.5..')).toEqual(['kg', '72.5..']);
+    expect(tokenTexts('kg 72..5.')).toEqual(['kg', '72..5.']);
+    expect(tokenTexts('kg mystery.')).toEqual(['kg', 'mystery.']);
   });
 });

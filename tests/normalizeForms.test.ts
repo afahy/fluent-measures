@@ -38,6 +38,12 @@ describe('normalizeForms', () => {
     '5\'11"',
     '‘180 lbs’',
     '“180 lbs”',
+    // A closing entry quote cannot become an inch or feet mark after bare smaller parts.
+    '“5 ft 11”',
+    '‘5 ft 11’',
+    '“1 m 80”',
+    '‘1 m 80’',
+    '“kg 72.5”',
     'she’s',
     'the 70s’ fashion',
     '5−11',

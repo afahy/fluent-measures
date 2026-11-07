@@ -75,6 +75,8 @@ describe('complete prefix-pair reader work', () => {
 describe('complete prefix scalar reader work', () => {
   it.each([
     ['kg seventy two', 72, 'kg', 'weight'],
+    ['kg 72.5.', 72.5, 'kg', 'weight'],
+    ['kg: ½.', 0.5, 'kg', 'weight'],
     ['m: one point eight', 1.8, 'm', 'height'],
     ['ft five', 5, 'ft', 'height'],
     ['m: one and eighty', 180, 'm', 'height'],
