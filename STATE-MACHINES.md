@@ -538,7 +538,7 @@ fractions, decimal/thousands commas, article-led words, unit labels, marks, fuzz
 explicit type, normalized unit and unqualified options. Preservation cases include the ticket's
 ranges/multipart values, commas after units, positive comma boundaries, F1 quoted digits and
 the approved F4 proper fractions. A minor changeset records the changed non-null results.
-Fifty-two new ticket-sourced correction/control rows agree; the existing F3 row also becomes an
+Sixty-two new ticket-sourced correction/control rows agree; the existing F3 row also becomes an
 agreement. Two additional rows sourced to AFA-244 record its existing signed-prefix failures.
 No prior row or expected result is edited, and the generated result inventory is unchanged.
 
@@ -559,6 +559,20 @@ before a digit inside that existing guard. Numeric-comma grammar remains validat
 normalization pass. Decimal-point and semicolon controls retain their results. The expanded
 158-case suite still fails 56 source/112 package assertions on main, with 102 controls per format.
 Ten additional ticket-sourced corpus rows agree; no original corpus row changes.
+
+Round-two Codex review found prefix punctuation missing from the same joining guard:
+`(ft.) 5, −11 in` and `ft;5, −11 in`, and both small-minus forms, return `null` at reviewed
+head `49ecd4a` versus 71 in on main `bfac12a9`. The same cause also affects `ft!5, −11 in`,
+`ft & 5, −11 in` and `(m.) 1, −80 cm` (71 in, 71 in and 180 cm), with both signs.
+Ten source/twenty ESM/CommonJS assertions fail on that head. The guard now crosses prefix
+punctuation without crossing words, quotes or signs. Ten more controls cover periods, commas,
+slashes, braces and the `in.` label. All 178 focused source cases pass; main still fails the
+same 56 assertions and passes 122 controls. Ten additional ticket-sourced corpus rows agree.
+The 715-row corpus has 694 agreements, 6 wrong, 15 missed and no throws; its original 651 rows
+remain byte identical. Package and full validation will run under the next coordinator grant.
+Focused source CPU probes with `maxLength: Infinity` include 1,000/10,000 prefix punctuation
+and period characters; the largest new-prefix cost was 7 ms, with the earlier repeated-context
+probes also passing (largest 95 ms at 10,000 repeats). No production scope is added.
 
 Self-review reproduced a distinct pre-existing M3/M7 ownership limitation:
 `phase 20, kg−70.5` returns **20 kg** on main `bfac12a9`, expected **`null`**.

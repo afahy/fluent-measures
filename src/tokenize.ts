@@ -198,10 +198,11 @@ const NUMBER_END = String.raw`(?:[\d${FRACTIONS}]|\b(?:${NUMBER_WORD})\b)`;
 // A value can have its unit before it ("ft: 5, −11 in") or across the separator
 // ("5;ft −11 in"). Neither is an unrelated numeric label. Keep their existing joining
 // context, including number words and numeric commas (validated by the next normalization pass).
+// Prefix punctuation keeps the tokenizer's word, quote and sign boundaries.
 // A label after the separator, as in "phase 20, kg: −70",
 // instead owns the signed value and must retain its sign.
 const NUMBER_TEXT = String.raw`(?:[\d./⁄${FRACTIONS}-]|,(?=\d)|\b(?:${NUMBER_WORD}|and|an?|half)\b)`;
-const MINUS_JOIN = String.raw`(?:(?<![a-z])(?:${LABELS}|['"′″’”])[:=()\[\]\s]*${NUMBER_TEXT}(?:\s*${NUMBER_TEXT})*\s*[,;][^,;]*?|${NUMBER_END}\s*[,;]\s*(?:${LABELS})\s*)`;
+const MINUS_JOIN = String.raw`(?:(?<![a-z])(?:${LABELS}|['"′″’”])[^\w'"−﹣-]*${NUMBER_TEXT}(?:\s*${NUMBER_TEXT})*\s*[,;][^,;]*?|${NUMBER_END}\s*[,;]\s*(?:${LABELS})\s*)`;
 
 // A minus sign before a number, with no earlier number since that label boundary.
 // The boundary includes spaces before its separator, but not digits within a comma group.
