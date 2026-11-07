@@ -632,9 +632,10 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
 
 This library is designed to be lightweight and performant. When contributing, keep in mind:
 
-1. **Bundle Size**: Avoid adding dependencies when possible. Each build, `dist/index.js` and
-   `dist/index.cjs`, has a budget of 5.5 kB after minifying and compressing with Brotli. The
-   limits are set in `.size-limit.cjs`, and if this note disagrees with that file, the file is
+1. **Bundle Size**: Avoid adding dependencies when possible. After minifying and compressing
+   with Brotli, the budgets are 5.5 kB for ESM (`dist/index.js`) and 6.0 kB for CommonJS
+   (`dist/index.cjs`). The limits are set in `.size-limit.cjs`, and if this note disagrees with
+   that file, the file is
    right. CI fails when a build goes over its budget. To check, run `pnpm build` and then
    `pnpm check:size`. To see how much minified code each source file adds, run
    `pnpm exec tsup --metafile` and load `dist/metafile-esm.json` into

@@ -10,6 +10,6 @@ module.exports = [
   },
   {
     path: 'dist/index.cjs',
-    limit: '5.5 kB',
+    limit: '6.0 kB',
   },
 ];

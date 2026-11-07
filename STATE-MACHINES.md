@@ -159,7 +159,7 @@ unit-prefix sign handling; splitting; trailing-period trimming; marker decoding.
 | Split word              | Trailing periods, before marker decoding              | Remove them with `trimTrailing`, a backward linear scan                                  | Trimmed word, possibly empty    |
 | No pending metadata     | `FIELD`                                               | Set pending `startsField = true`                                                         | Field pending                   |
 | Any pending state       | `NAME` / `UNIT`                                       | Set pending label kind                                                                   | Label pending                   |
-| Pending state           | `RANGE`                                               | Emit `{ text: '-', range: true }`; clear pending metadata                                | No pending metadata             |
+| Pending state           | `RANGE`                                               | Emit `{ text: 'RANGE', range: true }`; clear pending metadata                            | No pending metadata             |
 | Pending label           | Ordinary token                                        | Emit label kind and `startsField`; clear metadata                                        | No pending metadata             |
 | No pending label        | Ordinary token                                        | Emit `{ text }`; clear metadata                                                          | No pending metadata             |
 
@@ -244,6 +244,22 @@ Half handling limits nested reads so repeated `and a half` does not create unbou
 The `COMMA` token is not a number: both reading directions stop at it. With the F1 fix, this
 also separates number words and quoted numbers. M8 can still cross the token between weight
 parts to reject unsupported units, while M10 rejects two separated unqualified phrases.
+
+The [spoken-decimal correction](https://linear.app/afahy/issue/AFA-247) extends M4/M5 to read
+the integer part and decimal digit sequence together. M5 keeps the first integer stopping point,
+but a phrase containing `point` is accepted or rejected as a whole. A trailing `and` can introduce
+the next field; unsupported `oh`/`o` words and a separated minus stay in the malformed phrase.
+M2 preserves a bracket boundary after a spoken decimal, so a parenthesized conversion cannot
+become extra decimal digits. Label ownership uses the same complete M5 reader.
+
+M2 now retains `RANGE` as the token's text instead of writing `-`. This keeps M3's discarded
+ranges distinct from literal minus signs in M5. The existing recovery contract still applies:
+`6 ft 1-2 eleven point five in` is 83.5 in (6 × 12 + 11.5), and `kg seventy point five 1-2`
+is 70.5 kg. The first decimal implementation instead returned 6 ft and `null`; the original
+main revision returned 77 in and 70 kg. `tests/parseMeasurement.spokenDecimalBoundaries.test.ts`
+and the `spoken-decimal-range-height` / `spoken-decimal-range-prefix` corpus entries preserve
+these results. `tests/parseMeasurement.spokenDecimals.test.ts` covers both scanning directions,
+labels, signs, fractions, normalization and unqualified values.
 
 ### M6 — exact and fuzzy unit matching
 

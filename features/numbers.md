@@ -8,6 +8,8 @@ fractions, decimal commas and thousands groups.
 ## How a user reaches it
 
 - Decimals: `72.5 kg`, `.5 m`.
+- Spoken decimals: `seventy point five kilograms`, `kg point five`; malformed decimal phrases
+  return `null` rather than a numeric suffix.
 - Words: `eighty kilograms`, `one hundred and 50 pounds`, `six and a half feet`.
 - Fractions: `5 1/2 ft`, `5½ ft`.
 - Commas: `1,000 lbs`, `72,5 kg`, `1,234,56 kg`.
@@ -26,7 +28,7 @@ fractions, decimal commas and thousands groups.
 ## How to verify it
 
 - Source: `src/wordsToNumber.ts`, `src/tokenize.ts`, `src/parseMeasurement.ts`
-- Tests: `tests/parseMeasurement.calculator.test.ts`, `tests/parseMeasurement.unicodeMinusCost.test.ts`, `tests/parseMeasurement.unicodeMinusLabels.test.ts`, `tests/parseMeasurement.signedOtherTypeOwnership.test.ts`, `tests/parseMeasurement.signedWeightOwnership.test.ts`, `tests/parseMeasurement.quoteContext.test.ts`, `tests/parseMeasurement.fractionBoundaries.test.ts`, `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.andAHalf.test.ts`, `tests/parseMeasurement.commaBoundaries.test.ts`,
+- Tests: `tests/parseMeasurement.calculator.test.ts`, `tests/parseMeasurement.spokenDecimalBoundaries.test.ts`, `tests/parseMeasurement.spokenDecimals.test.ts`, `tests/parseMeasurement.unicodeMinusCost.test.ts`, `tests/parseMeasurement.unicodeMinusLabels.test.ts`, `tests/parseMeasurement.signedOtherTypeOwnership.test.ts`, `tests/parseMeasurement.signedWeightOwnership.test.ts`, `tests/parseMeasurement.quoteContext.test.ts`, `tests/parseMeasurement.fractionBoundaries.test.ts`, `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.andAHalf.test.ts`, `tests/parseMeasurement.commaBoundaries.test.ts`,
   `tests/parseMeasurement.numberWordCommas.test.ts`, `tests/parseMeasurement.commaBetweenWords.test.ts`,
   `tests/parseMeasurement.commaWeightOwnership.test.ts`,
   `tests/parseMeasurement.commaFractions.test.ts`, `tests/parseMeasurement.commaGroups.test.ts`,
