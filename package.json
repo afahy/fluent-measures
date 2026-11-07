@@ -39,6 +39,7 @@
     "clean:output": "node -e \"for (const dir of ['dist', 'coverage']) require('fs').rmSync(dir, { recursive: true, force: true })\"",
     "dev": "tsup --watch",
     "docs:audit": "node .github/scripts/docs-audit.mjs",
+    "docs:preview": "node .github/scripts/docs-preview.mjs",
     "docs:shot": "node .github/scripts/docs-shot.mjs",
     "docs:sweep": "node .github/scripts/docs-sweep.mjs",
     "lint": "pnpm lint:eslint && pnpm lint:format && pnpm lint:spell",
