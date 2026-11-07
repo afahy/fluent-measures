@@ -4,7 +4,7 @@
 `palettes.json` with `switcher.js`, copies `switcher.css`, and adds only those two asset tags
 to the copied page. Open `.docs-preview/index.html` directly; no server is required. Repeating
 the command replaces that output. Never put these assets or a loader in `docs/`: the Pages
-workflow uploads that entire directory.
+builder copies that entire directory into its deployment artifact.
 
 Atlas is the production default. Its light tokens live in `docs/site.css` (built into
 `tailwind.css`), and its dark tokens live in the existing media-controlled stylesheet in

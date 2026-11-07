@@ -105,10 +105,26 @@ back to Atlas. **Copy link** preserves the palette and section, while the theme 
 reader's preference. If copying is unavailable, use the fallback link. **Exit preview** returns
 to `docs/index.html` at the same section. Local links require a copy of this checkout.
 
-The production page has no palette loader, controls or URL opt-in. GitHub Pages uploads only
-`docs/`; neither the preview source assets nor `.docs-preview/` are in that artifact. Keep that
-boundary when changing the generator or deployment workflow. Preview assets must stay outside
-`docs/`. See `.github/docs-preview/README.md` for token sources and maintenance details.
+The production page has no palette loader, controls or URL opt-in. `pnpm docs:build` generates
+the GitHub Pages artifact in `build/docs/` from `docs/` and the authoritative root `README.md`
+and `PARSING.md`. The workflow runs the same builder and uploads only that artifact. Neither
+the preview source assets nor `.docs-preview/` are included. Keep that boundary when changing
+the generator or deployment workflow. Preview assets must stay outside `docs/`. See
+`.github/docs-preview/README.md` for token sources and maintenance details.
+
+The generated `README.md`, `PARSING.md` and `llms.txt` are available under
+`https://afahy.github.io/fluent-measures/`. The Markdown references come from the root files;
+edit those sources, never the generated copies. The builder preserves their examples, sends
+links between the references to Pages, and pins other repository file links to the deployed
+source commit. HTML discovery links and the visible **View Markdown** and **Agent index** links
+work without JavaScript. The index follows the [llms.txt convention](https://llmstxt.org/);
+client support varies.
+
+The HTML, Markdown and index identify the checked-out Git commit at build time. These docs
+track `main` and may contain unreleased changes; the npm badge separately identifies the latest
+registry release. Local builds identify `HEAD`, so commit edits before verifying a revision.
+Run `pnpm exec vitest run tests/docsPublishing.test.ts` to check artifact generation, ordinary
+HTTP reads under the project subpath, link targets, revision updates and preview isolation.
 
 After generating the preview, focused tests can be run with
 `pnpm exec vitest run tests/docsPalettePreview.test.ts`. For browser contrast, axe, keyboard,
@@ -160,11 +176,13 @@ argument and defaults to `docs/index.html`. A URL, such as `http://localhost:808
 For example, `pnpm docs:shot --width 1440 --scheme dark --full` takes the whole page at desktop
 width in dark, and writes `docs-shots/1440-dark-full.png`.
 
-`pnpm docs:audit` serves the committed docs files locally and runs Lighthouse three times on
-mobile and three times on desktop. Every run must score 100 in Performance, Accessibility,
-Best Practices and SEO. It uses Lighthouse's standard presets, including their normal network
-and CPU throttling. The local server compresses responses like GitHub Pages; it does not build
-or substitute page content. To audit the deployment, run:
+`pnpm docs:audit` builds and serves the Pages artifact under `/fluent-measures/` locally and
+runs Lighthouse three times on mobile and three times on desktop. Every run must score 100 in
+Performance, Accessibility, Best Practices and SEO. It uses Lighthouse's standard presets,
+including their normal network and CPU throttling. The local server compresses responses like
+GitHub Pages and serves the generated files unchanged. CI also runs
+`pnpm docs:sweep build/docs/index.html` on that artifact.
+To audit the deployment, run:
 
 ```bash
 pnpm docs:audit --url https://afahy.github.io/fluent-measures/

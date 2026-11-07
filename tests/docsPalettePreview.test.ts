@@ -59,10 +59,11 @@ describe('Atlas production and preview boundary', () => {
     );
   });
 
-  it('uploads only docs, with no switcher assets, loader, control or query opt-in', () => {
+  it('builds Pages from production docs, with no switcher assets, loader or query opt-in', () => {
     expect.hasAssertions();
     const workflow = readFileSync(join(root, '.github/workflows/deploy-docs.yml'), 'utf8');
-    expect(workflow.match(/\bpath:\s*([^\n]+)/g)).toEqual(['path: docs']);
+    expect(workflow.match(/\bpath:\s*([^\n]+)/g)).toEqual(['path: build/docs']);
+    expect(workflow).toContain('run: node .github/scripts/docs-build.mjs');
     expect(readFileSync(join(root, '.gitignore'), 'utf8')).toContain('/.docs-preview/');
     const deployed = files(join(root, 'docs'));
     expect(Object.keys(deployed).some(name => /palette|switcher|preview/i.test(name))).toBe(false);
