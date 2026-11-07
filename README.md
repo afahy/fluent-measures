@@ -12,6 +12,33 @@ Use it to read measurements that people type, for example in health apps, fitnes
 web forms. The result is `null` when the text has no measurement that the library can read, or has
 two that disagree. Your app can then ask the person again.
 
+[Documentation](https://afahy.github.io/fluent-measures/) ·
+[Markdown reference](https://afahy.github.io/fluent-measures/README.md) ·
+[Agent index (llms.txt)](https://afahy.github.io/fluent-measures/llms.txt)
+
+## Documentation for your version
+
+The documentation site tracks `main` and may describe changes not yet released on npm. To find
+your installed version, run `npm ls @afahy/fluent-measures` in your app (or `pnpm list` / `yarn why`
+with the same package name). Use that exact version, not the `latest` dist-tag or the version
+on `main`.
+
+Releases use `v<version>` tags in the
+[repository's tag list](https://github.com/afahy/fluent-measures/tags). For version **0.2.0**, use
+the [tagged README](https://github.com/afahy/fluent-measures/blob/v0.2.0/README.md) and
+[tagged parsing rules](https://github.com/afahy/fluent-measures/blob/v0.2.0/PARSING.md), or their
+[raw README](https://raw.githubusercontent.com/afahy/fluent-measures/v0.2.0/README.md) and
+[raw parsing rules](https://raw.githubusercontent.com/afahy/fluent-measures/v0.2.0/PARSING.md).
+The [tagged package manifest](https://github.com/afahy/fluent-measures/blob/v0.2.0/package.json)
+confirms version 0.2.0. When following links inside an older README, stay on that tag: its links
+to `main` are not pinned to the release.
+
+For another version, first inspect its tag's file list and package manifest. Older tags
+`v0.1.0` and `v0.1.1` have a README but no `PARSING.md`. They also have historical metadata
+mismatches: `v0.1.0` names the unscoped package, and `v0.1.1` still declares version 0.1.0.
+For those versions, use the README shipped in your installed package as the release reference;
+do not treat the current parsing rules as their specification.
+
 ## Features
 
 - Reads heights and weights in `ft`, `in`, `cm`, `m`, `lb` and `kg`
