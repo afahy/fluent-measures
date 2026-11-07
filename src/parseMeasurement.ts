@@ -484,7 +484,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
           text !== 'and' &&
           text !== 'COMMA' &&
           (text === ';' ||
-            (/\p{L}/u.test(text) &&
+            (/[\p{L}]/u.test(text) &&
               !NUMBER_WORDS.has(text) &&
               !MULTIPLIERS.has(text) &&
               !matchUnit(text, 'weight', fuzziness) &&
@@ -614,7 +614,9 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         ) {
           const inchesMatch: QualifiedMatch = { value: inches, unit: 'in' };
           // The inches' number starts at matchEnd, and reading forward stops at a semicolon.
-          spans.set(inchesMatch, [matchEnd, inchesEnd - (nextUnit === 'in' ? 0 : 1)]);
+          // Its optional unit is in the same field. Inches never precede a smaller part, so
+          // the number's end also suffices for grouping.
+          spans.set(inchesMatch, [matchEnd, inchesEnd - 1]);
           // Stryker disable next-line ConditionalExpression: "true" keeps zero parts, which add up to zero and don't count. The tests kill "false".
           if (num || inches) matches.push(inchesMatch);
           else matches.pop();
