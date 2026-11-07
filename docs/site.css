@@ -752,26 +752,6 @@ html:not([data-js]) .site-header {
   }
 }
 
-.hero-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 18px;
-  padding: 3px 12px 3px 10px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface);
-  font-family: var(--font-mono);
-  font-size: var(--mono-sm);
-  font-weight: 600;
-  line-height: 1.5;
-  color: var(--heading);
-}
-
-.hero-eyebrow .icon {
-  color: var(--accent);
-}
-
 .hero-title {
   max-width: 20ch;
   font-size: clamp(2.25rem, 1.5rem + 2.2vw, 3.125rem);
@@ -785,9 +765,8 @@ html:not([data-js]) .site-header {
   display: none;
 }
 
-/* Phones: a shorter headline and intro, and no eyebrow (the install box names the package). */
+/* Phones: a shorter headline and intro. */
 @media (max-width: 639px) {
-  .hero-eyebrow,
   .title-long,
   .intro-long {
     display: none;
