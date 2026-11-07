@@ -94,12 +94,13 @@ const FRACTION_RANGE = new RegExp(
 );
 const FRACTION_MARK = new RegExp(`[/⁄${FRACTIONS}]`);
 
-// Conventional shared-unit ranges use digit endpoints after comma/fraction normalization.
+// Conventional shared-unit ranges use numeric endpoints, including any slash fractions that
+// normalization left intact after a connector word such as "to" or "and".
 // Require whole connector words and keep "and" meaningful only after "between", so compound
 // heights and integer number words retain their existing reads. Consume "from" too, so the
 // resulting boundary has the same neighbors as a dash range in either reading direction.
 const NUMERIC_RANGE = new RegExp(
-  String.raw`(?<![\d.])[\d.]+(?:\s*\p{Dash}\s*[\d.]+)+|(?:\bfrom\s+)?(?<![\d.])${RANGE_DIGITS}\s+to\s+${RANGE_DIGITS}|\bbetween\s+${RANGE_DIGITS}\s+and\s+${RANGE_DIGITS}`,
+  String.raw`(?<![\d.])[\d.]+(?:\s*\p{Dash}\s*[\d.]+)+|(?:\bfrom\s+)?(?<![\d.])${RANGE_NUMBER}\s+to\s+${RANGE_NUMBER}|\bbetween\s+${RANGE_NUMBER}\s+and\s+${RANGE_NUMBER}`,
   'gu'
 );
 

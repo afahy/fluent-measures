@@ -17,6 +17,15 @@ describe('shared-unit ranges with word connectors', () => {
     'between 1,250 and 1,500 lbs',
     '.5 to .75 kg',
     'between ½ and ¾ kg',
+    '1/2 to 3/4 kg',
+    '.5 to 3/4 kg',
+    '1 to 1/2 kg',
+    'from 1/2 to 3/4 kg',
+    'from .5 to 3/4 kg',
+    'from 1 to 1/2 kg',
+    'between 1/2 and 3/4 kg',
+    'between .5 and 3/4 kg',
+    'between 1 and 1/2 kg',
     'between 150 and 180; pounds',
   ])('does not return an endpoint for %s', raw => {
     expect(parseMeasurement(raw)).toBeNull();
@@ -58,6 +67,9 @@ describe('shared-unit ranges with word connectors', () => {
     ['between 150 and 180 lbs 70 kg', 70, 'kg'],
     ['age=20 to 30, kg=70', 70, 'kg'],
     ['age=between 20 and 30; kg=70', 70, 'kg'],
+    ['1/2 to 3/4 kg; recorded 180 lbs', 180, 'lb'],
+    ['from 1/2 to 3/4 kg; recorded 180 lbs', 180, 'lb'],
+    ['between 1/2 and 3/4 kg; recorded 180 lbs', 180, 'lb'],
   ] as const)('keeps the independent measurement in %s', (raw, value, unit) => {
     expect(parseMeasurement(raw, { type: 'weight' })).toEqual({
       value,
@@ -75,6 +87,17 @@ describe('shared-unit ranges with word connectors', () => {
       type: 'weight',
       raw: 'between 50 and 70 kg, 180 lbs',
       matches: [{ value: 180, unit: 'lb' }],
+    });
+  });
+
+  it('keeps inches after an omitted slash-fraction range', () => {
+    expect(parseMeasurement('6 ft 1/2 to 3/4 11 in', { type: 'height' })).toMatchObject({
+      value: 83,
+      unit: 'in',
+      matches: [
+        { value: 6, unit: 'ft' },
+        { value: 11, unit: 'in' },
+      ],
     });
   });
 
