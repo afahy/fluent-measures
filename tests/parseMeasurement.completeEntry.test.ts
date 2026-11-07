@@ -4,6 +4,208 @@ import { parseMeasurement, type ParseOptions } from '../src';
 // AFA-250 option A, approved 2026-11-07. Expected values are identity, 12 in/ft,
 // 100 cm/m, and complete-number arithmetic. Rejections follow complete-entry consumption.
 describe('approved complete-entry contract', () => {
+  // Prefix and suffix orientations share the same compound bounds and sign rules.
+  it.each([
+    'ft five 0',
+    'm: one 0',
+    'ft five 12 in',
+    'm: one 100 cm',
+    'ft 5.5 1 in',
+    'm: 1.5 1 cm',
+    'ft five -1 in',
+    'm: one −1 cm',
+    'ft five 1 kg',
+    'm: one 80 kg',
+    'ft five 1 pounds',
+    'ft five and and eleven in',
+    'ft five and eleven and in',
+    'ft five and one half in',
+    'ft five one a half in',
+    'five-and -a-half kg',
+    'five-and- a-half kg',
+    'five-and-x-half kg',
+    'five-and/a-half kg',
+    'five-and--a-half kg',
+    '(5 ft junk), 70 kg',
+    '180 cm (70 kg junk)',
+    '((180 cm) and 70 kg)',
+    '(180 cm and (70 kg))',
+    '[(180 cm)]',
+    '(5 ft) in',
+    '(5 ft): 70 kg',
+    '(5 ft)=70 kg',
+    'twenty zero kg',
+    'in: twenty zero',
+    '“5\'11"',
+    '‘5 ft 11 in',
+    '‘5 and eleven in',
+  ])('rejects incomplete or ineligible parts in %s for either selector', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+    expect(parseMeasurement(raw, { type: 'height' })).toBeNull();
+    expect(parseMeasurement(raw, { type: 'weight' })).toBeNull();
+  });
+
+  it.each(['(5 ft (11 in))', '[5 ft [11 in]]'])(
+    'allows a compound part wrapper inside the single entry wrapper in %s',
+    raw => {
+      expect(parseMeasurement(raw)).toEqual({
+        value: 71,
+        unit: 'in',
+        type: 'height',
+        raw,
+        matches: [
+          { value: 5, unit: 'ft' },
+          { value: 11, unit: 'in' },
+        ],
+      });
+    }
+  );
+
+  it.each(['(5 ft (11 in)), 70 kg', '70 kg, (5 ft (11 in))'])(
+    'consumes the entire wrapped compound within a selected pair in %s',
+    raw => {
+      expect(parseMeasurement(raw, { type: 'height' })).toEqual({
+        value: 71,
+        unit: 'in',
+        type: 'height',
+        raw,
+        matches: [
+          { value: 5, unit: 'ft' },
+          { value: 11, unit: 'in' },
+        ],
+      });
+      expect(parseMeasurement(raw, { type: 'weight' })).toEqual({
+        value: 70,
+        unit: 'kg',
+        type: 'weight',
+        raw,
+        matches: [{ value: 70, unit: 'kg' }],
+      });
+    }
+  );
+
+  it.each(['an hundred kg', 'five-and-a-half kg', 'five and-a-half kg'])(
+    'retains an article or an attached number-word hyphen in %s',
+    raw => {
+      const value = raw === 'an hundred kg' ? 100 : 5.5;
+      expect(parseMeasurement(raw)).toEqual({
+        value,
+        unit: 'kg',
+        type: 'weight',
+        raw,
+        matches: [{ value, unit: 'kg' }],
+      });
+    }
+  );
+
+  it.each([
+    [
+      'ft five 0 in',
+      60,
+      'in',
+      [
+        { value: 5, unit: 'ft' },
+        { value: 0, unit: 'in' },
+      ],
+    ],
+    [
+      'm: one 0 cm',
+      100,
+      'cm',
+      [
+        { value: 1, unit: 'm' },
+        { value: 0, unit: 'cm' },
+      ],
+    ],
+    [
+      'm: 1 80',
+      180,
+      'cm',
+      [
+        { value: 1, unit: 'm' },
+        { value: 80, unit: 'cm' },
+      ],
+    ],
+    [
+      'm: one 80',
+      180,
+      'cm',
+      [
+        { value: 1, unit: 'm' },
+        { value: 80, unit: 'cm' },
+      ],
+    ],
+    [
+      'ft a hundred five eleven',
+      1271,
+      'in',
+      [
+        { value: 105, unit: 'ft' },
+        { value: 11, unit: 'in' },
+      ],
+    ],
+  ] as const)('keeps the independently written prefix parts in %s', (raw, value, unit, matches) => {
+    expect(parseMeasurement(raw)).toEqual({ value, unit, type: 'height', raw, matches });
+  });
+
+  it.each(['around 70 kg', 'approx. 70 kg', "'70 kg'", '"70 kg"'])(
+    'accepts the exact finite wrapper in %s',
+    raw => {
+      expect(parseMeasurement(raw)).toEqual({
+        value: 70,
+        unit: 'kg',
+        type: 'weight',
+        raw,
+        matches: [{ value: 70, unit: 'kg' }],
+      });
+    }
+  );
+
+  it.each(['"180” cm', "'180’ cm"])('retains a recognized closing numeric quotation in %s', raw => {
+    expect(parseMeasurement(raw)).toEqual({
+      value: 180,
+      unit: 'cm',
+      type: 'height',
+      raw,
+      matches: [{ value: 180, unit: 'cm' }],
+    });
+  });
+
+  it.each([
+    '5 and one half kg',
+    'five one a half kg',
+    'five and a half and kg',
+    '"180’ cm',
+    "'180” cm",
+    "'180) cm",
+    "'one two' ft 11 in",
+    'I eat 70 kg',
+    'weigh on: 70 kg',
+    'weigh-on: 70 kg',
+    'weigh in: 180 cm',
+    'my height (70 kg)',
+    'my weight (180 cm)',
+    'height (weight 70 kg)',
+    '5 ft (11 in]',
+    '5 ft [11 in)',
+  ])('rejects the incomplete phrase or mismatched ownership in %s', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
+
+  // A leading decimal point is part of the number, independent of the one final period.
+  it.each([
+    ['.5 in .', 'in', 'height'],
+    ['kg .5 .', 'kg', 'weight'],
+  ] as const)('keeps a leading decimal and a final period in %s', (raw, unit, type) => {
+    expect(parseMeasurement(raw)).toEqual({
+      value: 0.5,
+      unit,
+      type,
+      raw,
+      matches: [{ value: 0.5, unit }],
+    });
+  });
+
   // One balanced wrapper is permitted; mismatched/nested wrappers and incomplete fixed
   // introductions are not complete expressions, regardless of the selected dimension.
   it.each(['(kg]70', '70 (kg]', '((70 kg)), 180 cm', 'weigh in 180 lbs', 'weigh-in 180 lbs'])(

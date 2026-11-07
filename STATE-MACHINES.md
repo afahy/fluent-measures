@@ -2622,3 +2622,50 @@ full-check/mutation report. Twenty additional authored corpus controls retain al
 2,064 rows byte-for-byte, giving 2,084 expected agreements. Full committed-source validation
 and PR publication remain pending at this checkpoint; evidence is archived outside the
 checkout under `final-validation/` beside the earlier design/probe/correction archives.
+
+### AFA-250 failed mutation and focused correction — publication pending
+
+Normal hooks committed the validation follow-up as
+`7ffc2e49d4ecd553a2b5fcc969ec06b137d8ccc5`. The earlier editorial commit attempt failed
+spelling; an orchestration error then launched a non-qualifying lint-only check on the dirty
+checkout. Both logs remain separate. The subsequent clean committed-source full check passed
+5,202 tests, 100% coverage and TypeScript, then stopped at the default non-incremental mutation
+stage: 1,438 killed, 55 timed out, 185 survived, one uncovered and one ignored, score 88.92%.
+No build, size, API or package stage ran in that full check. All eight selected source files
+and all six report source bodies were verified against the committed bytes. The failed report hash is
+`d71974c73c822e45cf3c961c84b33405f28722fcf27eb72b0807b3b22af66c02`.
+
+The coordinator's scheduling hold began at the failed-stage boundary. Every owned process
+group was verified empty and the allocation was explicitly released. Subsequent work here is
+focused source testing and static diagnosis only; no new mutation, coverage, full check,
+build, install or hook run is claimed.
+
+Two focused regressions expose a real prefix-compound result defect: `ft five 0 in` and
+`m: one 0 cm` returned null. The approved written-zero rule requires 60 inches with matches
+`[5 ft, 0 in]` and 100 centimeters with matches `[1 m, 0 cm]`, respectively. Their failing-first
+assertions and two new corpus rows are retained. Smaller-part validity now belongs to the
+existing expression cursor, including explicit zero, integral larger values, upper bounds,
+signs and dimensions. This result-changing fix is separate from redundant-code cleanup.
+
+The cleanup removes the unused unsupported-unit regex, unused label-map values and unused
+wrapper default. It centralizes part and pair validation in their existing cursors, retaining
+one bounded numeric split and the original shared reader. The supplied-token index contract,
+compact split and normalization remain unchanged. Current compound joins rely on `NEXT_PART`
+containing only ft and m; later stone composition still requires explicit height-only sign
+and bare-part eligibility. Nested compound-part brackets remain valid, while nested whole-entry
+wrappers and incomplete phrases remain invalid. Individual failed-report mutant dispositions
+record the precise caller and token preconditions; none is a blanket equivalence exclusion.
+
+The final focused candidate passes 795 tests in 12 named source files, including real-reader
+positive-call/work bounds, the approved generated result snapshot and the corpus report.
+All 2,084 previous corpus rows remain byte-identical; the two arithmetic regressions give
+2,086 expected agreements. The frozen 302-input probe and the separately authored 243 full
+results are replayed without changing their expectations. An initial trial incorrectly
+expected `.5 in .` to reject; it remains archived as a test-oracle mistake, not a production
+bug. Both `.5 in .` and `kg .5 .` retain the approved 0.5 final-period result.
+
+The complete failed-report disposition ledger, focused logs, replay and source hashes are
+under `final-validation/mutation-corrections/` in the external evidence archive. Fresh exact
+committed-source mutation and final validation remain pending a new coordinator grant. No
+mutation-kill, performance or final-readiness claim is made from these focused results. F6/F9
+historical closeout and all earlier deferred findings remain intact; publication is pending.

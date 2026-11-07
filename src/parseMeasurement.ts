@@ -6,7 +6,7 @@ import { ParseOptions, ParsedValue, Match, MeasurementType, Unit } from './types
 
 type QualifiedMatch = Match & { unit: NonNullable<Match['unit']> };
 type NumberRead = { value: number | null; end: number; invalidAt?: number; quotedFeet?: boolean };
-type Part = QualifiedMatch & { end: number; suffix: boolean; quotedFeet?: boolean };
+type Part = QualifiedMatch & { end: number; suffix?: boolean; quotedFeet?: boolean };
 const CLOSE: Readonly<Record<string, string>> = Object.assign(Object.create(null), {
   '(': ')',
   '[': ']',
@@ -18,11 +18,12 @@ const CLOSE: Readonly<Record<string, string>> = Object.assign(Object.create(null
   '"': '"',
   "'": "'",
 });
-const NUMBER_CONNECTORS = new Set(['and', 'a', 'an', 'half', 'point', 'oh', 'o']);
+const NUMBER_CONNECTORS = new Set(['and', 'a', 'an', 'half', 'point']);
 const QUALIFIERS = new Set(['about', 'around', 'roughly', 'approximately', 'approx.']);
 
 /** Read exactly this phrase, never a valid prefix or suffix of an invalid phrase. */
 function numberValue(words: string[]): NumberReading {
+  const length = words.length;
   let offset = 0;
   if (words[0] === 'a' || words[0] === 'an') {
     if (!NUMBER_WORDS.has(words[1]) && !MULTIPLIERS.has(words[1]))
@@ -41,14 +42,10 @@ function numberValue(words: string[]): NumberReading {
   const repeatedAnd = words.findIndex((word, i) => word === 'and' && words[i - 1] === 'and');
   if (repeatedAnd >= 0) return fail(repeatedAnd);
   if (whole.value === null) return fail(whole.invalidAt);
-  if (half < 0) return { value: whole.value, invalidAt: words.length + offset };
-  if (
-    half < 3 ||
-    words[half - 1] !== 'a' ||
-    words[half - 2] !== 'and' ||
-    !Number.isInteger(whole.value)
-  )
-    return fail(Math.max(0, half - 2));
+  if (half < 0) return { value: whole.value, invalidAt: length };
+  // A non-null whole requires at least one token before "and a half", hence half >= 3.
+  if (words[half - 1] !== 'a' || words[half - 2] !== 'and' || !Number.isInteger(whole.value))
+    return fail(half - 2);
   let value = whole.value + 0.5;
   let previous = whole.value;
   for (let at = half + 1; at < words.length; at++) {
@@ -57,7 +54,7 @@ function numberValue(words: string[]): NumberReading {
     value *= multiplier;
     previous = multiplier;
   }
-  return { value, invalidAt: words.length + offset };
+  return { value, invalidAt: length };
 }
 
 function total(parts: QualifiedMatch[], targetUnit: Unit): number {
@@ -108,11 +105,12 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   const text = (at: number): string => tokens[at]?.text;
   const adjacent = (left: number, right: number): boolean =>
     tokens[left]?.end === tokens[right]?.start;
+  const digitToken = (word: string): boolean => /^[\d.]+$/.test(word);
   const numeric = (word: string): boolean =>
     NUMBER_WORDS.has(word) ||
     MULTIPLIERS.has(word) ||
     NUMBER_CONNECTORS.has(word) ||
-    /^[\d.]+$/.test(word);
+    digitToken(word);
   const unitAt = (at: number): Unit | null => {
     const word = text(at)?.replace(/\.$/, '');
     return word
@@ -145,11 +143,9 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     if (close) {
       const inner = readNumber(start + 1, limit, false);
       if (
-        inner.value !== null &&
-        inner.end < limit &&
-        (text(inner.end) === close ||
-          (text(start) === '"' && text(inner.end) === '”') ||
-          (text(start) === "'" && text(inner.end) === '’'))
+        text(inner.end) === close ||
+        (text(start) === '"' && text(inner.end) === '”') ||
+        (text(start) === "'" && text(inner.end) === '’')
       )
         return { value: inner.value, end: inner.end + 1 };
       // normalizeForms distinguishes ‘5’ 11” from a numeric quotation by converting the
@@ -164,18 +160,6 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       const word = text(end);
       if (word === '.') break;
       if (numeric(word)) {
-        // A conjunction before a unit prefix belongs to the part/pair join, not this number.
-        if (
-          word === 'and' &&
-          !numeric(text(end + 1)) &&
-          !(
-            text(end + 1) === '-' &&
-            adjacent(end, end + 1) &&
-            adjacent(end + 1, end + 2) &&
-            numeric(text(end + 2))
-          )
-        )
-          break;
         positions.push(end);
         words.push(word);
         end++;
@@ -185,7 +169,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         adjacent(end, end + 1) &&
         numeric(text(end + 1)) &&
         words.length &&
-        (!/^[\d.]+$/.test(words[words.length - 1]) || !/^[\d.]+$/.test(text(end + 1)))
+        (!digitToken(words[words.length - 1]) || !digitToken(text(end + 1)))
       ) {
         // Word hyphens retain ordinary number phrases; digit-to-digit ranges never do.
         end++;
@@ -224,32 +208,21 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     const prefix = quotedNumber?.value != null ? null : readUnit(start, true);
     if (prefix) {
       const number = readNumber(prefix.end, limit);
-      if (number.value !== null)
-        return { value: number.value, unit: prefix.unit, end: number.end, suffix: false };
+      if (number.value !== null) return { value: number.value, unit: prefix.unit, end: number.end };
       // A conjunction at the shared reader's boundary can end a complete prefix part.
       // The expression cursor must still validate the entire compound or selected pair.
-      // Without a conjunction, only one bounded larger-prefix split such as "ft 5 11" applies.
+      // Without a conjunction, only a larger prefix can begin a compound. The expression
+      // cursor below owns the smaller-part validity/bounds, including an explicit zero part.
       const split = number.invalidAt;
       if (
         split !== undefined &&
-        split > prefix.end &&
-        split < number.end &&
         (text(split) === 'and' || prefix.unit === 'ft' || prefix.unit === 'm')
       ) {
+        // At either endpoint this reread is empty or the same invalid complete phrase.
+        // The non-null/full-prefix check below therefore also enforces an interior boundary.
         const left = readNumber(prefix.end, split);
         if (left.value === null || left.end !== split) return null;
-        if (text(split) === 'and')
-          return { value: left.value, unit: prefix.unit, end: split, suffix: false };
-        const right = readNumber(split, number.end);
-        if (
-          right.value !== null &&
-          right.end === number.end &&
-          Number.isInteger(left.value) &&
-          right.value > 0 &&
-          right.value < unitConversions[prefix.unit][NEXT_PART[prefix.unit]!]!(1)
-        ) {
-          return { value: left.value, unit: prefix.unit, end: split, suffix: false };
-        }
+        return { value: left.value, unit: prefix.unit, end: split };
       }
       return null;
     }
@@ -280,7 +253,6 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
           value: number.value,
           unit: bareUnit,
           end: number.end,
-          suffix: false,
           quotedFeet: number.quotedFeet,
         }
       : null;
@@ -289,7 +261,6 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   function joinAfter(part: Part): { start: number; close?: string; bare: boolean } | null {
     const at = part.end;
     const word = text(at);
-    if (word === ';' || word === '/' || word === ':' || word === '=') return null;
     // The caller reaches joins only for today's ft/in and m/cm NEXT_PART pairs.
     // A future weight compound must define its own stricter sign/connector eligibility.
     // F3 preserves Unicode height connectors after a comma, including prefix labels.
@@ -301,9 +272,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     if (/^[\p{Dash}−]$/u.test(word)) {
       // Preserve the supported attached ASCII compound hyphen and Unicode joins. A spaced
       // ASCII minus still signs the following value. Prefix numbers cannot hide ranges.
-      return (part.unit === 'ft' || part.unit === 'm') &&
-        part.suffix &&
-        (word !== '-' || adjacent(at - 1, at))
+      return part.suffix && (word !== '-' || adjacent(at - 1, at))
         ? { start: at + 1, bare: true }
         : null;
     }
@@ -314,7 +283,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   function expression(
     start: number,
     limit: number,
-    wrapped = false,
+    wrapped: boolean,
     decorate = true
   ): Expression | null {
     // A whole expression can have one balanced wrapper. A bracketed number or unit label
@@ -324,13 +293,11 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       let depth = 1;
       for (let at = start + 1; at < limit; at++) {
         if (text(at) === close && --depth === 0) {
-          if (!unitAt(at + 1) && text(at + 1) !== ':' && text(at + 1) !== '=') {
-            const inner = expression(start + 1, at, true, decorate);
-            if (inner && inner.end === at) return { ...inner, end: at + 1 };
-          }
+          const inner = expression(start + 1, at, true, decorate);
+          if (inner && inner.end === at) return { ...inner, end: at + 1 };
           break;
         }
-        if (text(at) === text(start) && close !== text(start)) depth++;
+        if (text(at) === text(start)) depth++;
       }
     }
     let at = start;
@@ -369,13 +336,12 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     if (nextUnit) {
       const join = joinAfter(first);
       if (join && join.start < limit) {
-        const bare =
-          join.bare && (first.unit === 'ft' || first.unit === 'm') ? nextUnit : undefined;
+        const bare = join.bare ? nextUnit : undefined;
         let next = readPart(join.start, limit, bare);
         if (!next && join.close) {
           // A bracket can wrap the number alone when its explicit unit follows outside it.
           next = readPart(first.end, limit);
-          if (next) join.close = undefined;
+          join.close = undefined;
         }
         // "5 ft 11 and 180 lbs" has an explicit pair separator after its bare inches. Both
         // numeric phrases must be complete; no substring is returned when either is invalid.
@@ -383,14 +349,9 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
           const split = readNumber(join.start, limit).invalidAt;
           if (split !== undefined && text(split) === 'and') {
             const left = readPart(join.start, split, bare);
-            const right = readPart(split + 1, limit);
-            if (
-              left &&
-              left.end === split &&
-              right &&
-              UNIT_TYPES[right.unit] !== UNIT_TYPES[first.unit]
-            )
-              next = left;
+            // The root pair cursor validates the complete second expression and its dimension.
+            // This cursor owns only the complete bare smaller part before the conjunction.
+            if (left && left.end === split) next = left;
           }
         }
         if (
@@ -406,8 +367,8 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         }
       }
     }
-    if (first.quotedFeet && (parts.length !== 2 || first.unit !== 'ft' || parts[1].unit !== 'in'))
-      return null;
+    // quotedFeet originates only before the retained feet mark; NEXT_PART supplies inches.
+    if (first.quotedFeet && parts.length !== 2) return null;
     const type = UNIT_TYPES[first.unit];
     if (namedType && namedType !== type) return null;
     if (text(end) === 'tall' || text(end) === 'tall.') {
@@ -426,7 +387,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   let begin = 0;
   let limit = tokens.length;
   const outerClose = CLOSE[text(0)];
-  if (outerClose && text(limit - 1) === outerClose) {
+  if (outerClose) {
     let depth = 1;
     for (let at = 1; at < limit; at++) {
       if (text(at) === outerClose && --depth === 0) {
@@ -436,7 +397,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         }
         break;
       }
-      if (text(at) === text(0) && outerClose !== text(0)) depth++;
+      if (text(at) === text(0)) depth++;
     }
   }
   const first = expression(begin, limit, begin !== 0);

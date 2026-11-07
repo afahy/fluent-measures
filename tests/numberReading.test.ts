@@ -10,6 +10,8 @@ describe('shared complete number reading', () => {
     [['one', 'hundred', 'and', 'two', 'hundred'], 4],
     [['one', 'thousand', 'and', 'two', 'thousand'], 4],
     [['5', '11'], 1],
+    [['twenty', 'zero'], 1],
+    [['twenty', 'and', 'zero'], 2],
     [['five', 'and', 'eleven', 'point', 'five'], 2],
     [['one', 'hundred', 'and', 'five', 'eleven', 'point', 'five'], 4],
     [['one', 'and', 'two', 'point', 'five'], 2],

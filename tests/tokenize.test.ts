@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { tokenize, tokenizeNormalized } from '../src/tokenize';
+import { normalizeForms, tokenize, tokenizeNormalized } from '../src/tokenize';
 
 const tokenTexts = (input: string): string[] => tokenize(input).map(({ text }) => text);
 
@@ -7,6 +7,23 @@ const tokenTexts = (input: string): string[] => tokenize(input).map(({ text }) =
 // every boundary for the complete-entry reader. Original label/field/erasure expectations are
 // in design/afa-250/tokenize.test.ts.before.txt; no exported package type changed.
 describe('complete-entry tokens', () => {
+  // These existing form rules retain quotation boundaries before the strict parser sees
+  // them. A rejected prose quotation must not become unit marks during normalization.
+  it.each([
+    ['‘5’', '‘5’'],
+    ['“72”', '“72”'],
+    ['‘it’s five’', '‘it’s five’'],
+    ['“it’s five”', '“it’s five”'],
+    ['‘a” five’', '‘a” five’'],
+    ['“a’ five”', '“a’ five”'],
+    ['70” KG', '70” KG'],
+    ['‘5’ eleven inches', "‘5' eleven inches"],
+    ['“72” 60 inches', '“72” 60 inches'],
+    ['“72”60 cm', '“72"60 cm'],
+  ])('retains the intended quote or unit-mark boundary in %s', (raw, expected) => {
+    expect(normalizeForms(raw)).toBe(expected);
+  });
+
   it.each([
     ['180 lbs', ['180', 'lbs']],
     ['six feet', ['six', 'feet']],
@@ -25,6 +42,8 @@ describe('complete-entry tokens', () => {
     ['12,345,678.9 lbs', ['12345678.9', 'lbs']],
     ['-72,5 kg', ['-', '72.5', 'kg']],
     ['-1,000 lbs', ['-', '1000', 'lbs']],
+    ['12,34,567 kg', []],
+    ['1234,567 kg', []],
     ['weight, 72 kg', ['weight', ',', '72', 'kg']],
     ['72, kg', ['72', ',', 'kg']],
     ['72, 5 kg', ['72', ',', '5', 'kg']],
