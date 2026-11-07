@@ -48,11 +48,15 @@ const LABEL_PATTERN = new RegExp(
 // A number in a fraction: digits with an optional decimal part, or a decimal part alone. The two
 // forms can't overlap, so a long number that isn't a fraction fails in linear time.
 const FRACTION_NUMBER = String.raw`(\d+(?:\.\d+)?|\.\d+)`;
+// Retain the preceding feet/mark context when normalizing a range substring.
+const FRACTION_OWNER = String.raw`(?:(?<!\p{L})(?:feet|foot|ft)|['"])\s*`;
 // A whole number is optional. Without one, the numerator can't follow a letter or quote mark,
 // even after spaces: there the slash separates two measurements, as in "5'10/180" and
-// "5 ft 10/180 lbs". The lookahead keeps that lookbehind from running at every space.
+// "5 ft 10/180 lbs". Punctuation breaks that context: fractions after a comma or bracket
+// retain their ordinary meaning. Both slash characters block partial matches in dates/codes.
+// The lookahead keeps the lookbehind from running at every space.
 const SLASH_FRACTION = new RegExp(
-  String.raw`(?<![\d/.])(?:${FRACTION_NUMBER}\s+|(?=[\d.])(?<![\p{L}'"]\s*))${FRACTION_NUMBER}[/⁄]${FRACTION_NUMBER}(?![\d/])`,
+  String.raw`(?<![\d/⁄.])(?:${FRACTION_NUMBER}\s+|(?=[\d.])(?<![\p{L}'"]\s*))${FRACTION_NUMBER}[/⁄]${FRACTION_NUMBER}(?![\d/⁄])`,
   'gu'
 );
 
@@ -74,26 +78,72 @@ function trimTrailing(text: string, mark: string): string {
 
 // The Unicode fractions ¼ to ¾, ⅐ to ⅞ and ↉, as the inside of a character class.
 const FRACTIONS = '¼-¾⅐-⅞↉';
-const UNICODE_FRACTION = new RegExp(String.raw`(?<![\d/.])(?:(\d+)\s*)?([${FRACTIONS}])`, 'gu');
+const UNICODE_FRACTION = new RegExp(
+  String.raw`(?<![\d/.])(?:${FRACTION_NUMBER}\s*)?([${FRACTIONS}])(\d+)?`,
+  'gu'
+);
+
+// Range endpoints can contain either fraction form, including malformed Unicode whole/tail
+// digits. Match the complete range before a local fraction can erase one of its boundaries.
+// Range matching doesn't need the fraction writer's capture groups.
+const RANGE_DIGITS = `(?:${FRACTION_NUMBER.slice(1, -1)})`;
+const RANGE_NUMBER = String.raw`(?:${RANGE_DIGITS}(?:\s+${RANGE_DIGITS}[/⁄]${RANGE_DIGITS}|[/⁄]${RANGE_DIGITS}|\s*[${FRACTIONS}]\d*)?|[${FRACTIONS}]\d*)`;
+const FRACTION_RANGE = new RegExp(
+  String.raw`(${FRACTION_OWNER})?(?<![\d/⁄.])(${RANGE_NUMBER})((?:\s*\p{Dash}\s*${RANGE_NUMBER})+)(?![\d/⁄]|\.\d)`,
+  'giu'
+);
+const FRACTION_MARK = new RegExp(`[/⁄${FRACTIONS}]`);
+
+/** Normalize individual fractions after their surrounding range has been preserved. */
+function normalizeFractionParts(input: string): string {
+  return input
+    .replace(
+      UNICODE_FRACTION,
+      (text: string, whole: string | undefined, fraction: string, trailing: string | undefined) => {
+        const [numerator, denominator] = fraction.normalize('NFKD').split('⁄');
+        // Keep an invalid fragment as one non-number, including any following decimal tail.
+        // Its period prevents it from owning a later slash fraction, then trims off in M2.
+        return trailing || whole?.includes('.')
+          ? 'x.'
+          : writeFraction(text, whole, numerator, denominator);
+      }
+    )
+    .replace(SLASH_FRACTION, writeFraction);
+}
 
 /**
- * Write each proper fraction as a decimal, so "150 1/2" and "150½" are 150.5. A whole number
- * before the fraction is part of it. Other numbers with a slash between them become "x", with
- * their whole number, so "5/2" and "150 5/2" can't be read as a value. So does a fraction with a
- * decimal in it, or one whose result needs an exponent. A date such as "12/25/2020" has two
- * slashes and stays as it is. Run this after normalizeNumericCommas, so "1,000 1/2" is 1000.5.
+ * Write proper fractions as decimals after normalizing commas, so "1,000 1/2" is 1000.5.
+ * Invalid fractions become "x". Inside a range, preserve a numeric range instead, so its unit
+ * cannot claim an unrelated value. Three endpoints prevent an invalid range becoming shorthand.
+ * Proper shorthand such as "5-1/2" keeps its value; Unicode dashes keep their existing meaning.
+ * Dates and codes with two slash characters stay as they are.
  */
 export function normalizeFractions(input: string): string {
-  return input
-    .replace(UNICODE_FRACTION, (text: string, whole: string | undefined, fraction: string) => {
-      const [numerator, denominator] = fraction.normalize('NFKD').split('⁄');
-      return writeFraction(text, whole, numerator, denominator);
-    })
-    .replace(SLASH_FRACTION, writeFraction);
+  return normalizeFractionParts(
+    input.replace(
+      FRACTION_RANGE,
+      (text, owner: string | undefined, first: string, rest: string, offset: number) => {
+        // Keep slash-separated inches even when the weight range has fractional endpoints.
+        // A following inch component instead owns the height: 6 ft 1/2-3/4 11 in.
+        const range = first + rest;
+        const separateInches =
+          FRACTION_MARK.test(rest) && RANGE_INCHES.test(input.slice(offset + text.length));
+        const normalized =
+          owner && !separateInches
+            ? normalizeFractionParts(owner + range).slice(owner.length)
+            : normalizeFractionParts(range);
+        return (owner || '') + (normalized.includes('x') ? '0-0-0' : normalized);
+      }
+    )
+  );
 }
 
 // The number words, as alternatives in a pattern.
 const NUMBER_WORD = [...NUMBER_WORDS.keys(), ...MULTIPLIERS.keys()].join('|');
+const RANGE_INCHES = new RegExp(
+  String.raw`^\s+(?:${RANGE_NUMBER}|(?:${NUMBER_WORD})\b(?:[\s-]+(?:${NUMBER_WORD}|and|a|half)\b)*)\s*(?:(?:"|'')(?![a-z])|in(?:ch(?:es)?)?\b)`,
+  'i'
+);
 
 // A number as it can stand in quotes: digits, separators, spaces, slashes and fractions.
 const QUOTED_NUMBER = String.raw`[\d.,\s/⁄${FRACTIONS}]*[\d${FRACTIONS}]`;

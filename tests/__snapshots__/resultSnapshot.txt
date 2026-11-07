@@ -4624,11 +4624,11 @@ zero metres-180.0 kilos 72 meters	hu	72 m height
 5/2 centimeter 0-’	cm	null
 5/2 centimeter 0-’	f2	null
 5/2 centimeter 0-’	hu	null
-six kg 1.75´,5½-centimeter	-	null
+six kg 1.75´,5½-centimeter	-	6 kg weight
 six kg 1.75´,5½-centimeter	h	null
 six kg 1.75´,5½-centimeter	w	6 kg weight
 six kg 1.75´,5½-centimeter	cm	null
-six kg 1.75´,5½-centimeter	f2	null
+six kg 1.75´,5½-centimeter	f2	6 kg weight
 six kg 1.75´,5½-centimeter	hu	null
 5 '	-	5 ft height
 5 '	h	5 ft height
@@ -8794,12 +8794,12 @@ one,' and,eleven	w	null
 one,' and,eleven	cm	58.42 cm height = 1 ft + 11 in
 one,' and,eleven	f2	23 in height = 1 ft + 11 in
 one,' and,eleven	hu	23 in height = 1 ft + 11 in
-5/2 ½6 centimeter	-	0.56 cm height
-5/2 ½6 centimeter	h	0.56 cm height
+5/2 ½6 centimeter	-	null
+5/2 ½6 centimeter	h	null
 5/2 ½6 centimeter	w	null
-5/2 ½6 centimeter	cm	0.56 cm height
-5/2 ½6 centimeter	f2	0.56 cm height
-5/2 ½6 centimeter	hu	0.56 cm height
+5/2 ½6 centimeter	cm	null
+5/2 ½6 centimeter	f2	null
+5/2 ½6 centimeter	hu	null
 70	-	null
 70	h	null
 70	w	null
