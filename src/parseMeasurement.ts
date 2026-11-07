@@ -285,7 +285,8 @@ function combineParts(
   matches: QualifiedMatch[],
   type: MeasurementType,
   input: string,
-  normalizedUnit: Unit | undefined
+  normalizedUnit: Unit | undefined,
+  canJoin: (previous: QualifiedMatch, next: QualifiedMatch) => boolean
 ): ParsedValue | null | undefined {
   // Parts form one measurement only while each unit is the next smaller one, the larger part
   // is a whole number and the smaller part is less than one of the larger unit, as in
@@ -299,7 +300,8 @@ function combineParts(
       previous &&
       Number.isInteger(previous.value) &&
       NEXT_PART[previous.unit] === match.unit &&
-      match.value < unitConversions[previous.unit][match.unit]!(1)
+      match.value < unitConversions[previous.unit][match.unit]!(1) &&
+      canJoin(previous, match)
     ) {
       last.push(match);
     } else {
@@ -361,6 +363,8 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   let tokens = tokenizeNormalized(trimmed, fuzziness, true);
 
   const words: Words = at => tokens[at]?.text;
+  // Preserve the established surrounding-range compound, including its semicolons.
+  const rangeParts = new Map<Token, Token>();
   const unitAt = (at: number): Unit | null => {
     const word = words(at);
     return word
@@ -414,6 +418,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       nextUnit === 'in'
     ) {
       token.used = true;
+      rangeParts.set(tokens[at], tokens[nextAt]);
     } else {
       // Stryker disable next-line StringLiteral: any non-unit, non-number token is the same boundary as an empty token.
       tokens[at].text = '';
@@ -464,7 +469,20 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     // A measurement can't be negative. A signed part, as in "-5 ft" or "kg -5", drops each part of
     // its type in its field. So the rest of that field can't decide the result, as in "-5 ft 6 ft".
     const signedFields = new Set<number>();
-    const matchFields = new Map<QualifiedMatch, number[]>();
+    const spans = new Map<QualifiedMatch, [start: number, last: number]>();
+    const canJoin = (previous: QualifiedMatch, next: QualifiedMatch): boolean => {
+      const previousEnd = spans.get(previous)![1] + 1;
+      let [start, last] = spans.get(next)!;
+      // A backward number read skips leading "and" and semicolons. They are between the
+      // parts, not inside the number. Semicolons between a number and its unit still work.
+      while (allWords(start) === 'and' || allWords(start) === ';') start++;
+      if (rangeParts.get(tokens[previousEnd - 1]) === tokens[last]) return true;
+      return !tokens.slice(previousEnd, start).some(
+        ({ text }) =>
+          // Words are lowercase. The internal COMMA boundary and omitted ranges aren't words.
+          text !== 'and' && (text === ';' || /[a-z]/.test(text))
+      );
+    };
 
     for (let i = 0; i < tokens.length; i++) {
       const unit = matchUnit(remaining(i), type, fuzziness);
@@ -565,7 +583,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       const match = { value: num, unit };
       matches.push(match);
       // A number and its unit can stand in two fields, as in "180;lbs".
-      matchFields.set(match, [fieldOf[matchStart], fieldOf[matchEnd - 1]]);
+      spans.set(match, [matchStart, matchEnd - 1]);
 
       use(matchStart, matchEnd);
 
@@ -588,7 +606,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         ) {
           const inchesMatch: QualifiedMatch = { value: inches, unit: 'in' };
           // The inches' number starts at matchEnd, and reading forward stops at a semicolon.
-          matchFields.set(inchesMatch, [fieldOf[matchEnd]]);
+          spans.set(inchesMatch, [matchEnd, inchesEnd - (nextUnit === 'in' ? 0 : 1)]);
           // Stryker disable next-line ConditionalExpression: "true" keeps zero parts, which add up to zero and don't count. The tests kill "false".
           if (num || inches) matches.push(inchesMatch);
           else matches.pop();
@@ -600,7 +618,9 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       }
     }
 
-    matches = matches.filter(match => matchFields.get(match)!.every(at => !signedFields.has(at)));
+    matches = matches.filter(match =>
+      spans.get(match)!.every(at => !signedFields.has(fieldOf[at]))
+    );
 
     // Inferred units use the same normalization and result handling as explicit units.
     const inferred = !matches.length && options.allowUnqualified && options.type;
@@ -622,7 +642,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     }
 
     if (matches.length) {
-      const result = combineParts(matches, type, input, options.normalizedUnit);
+      const result = combineParts(matches, type, input, options.normalizedUnit, canJoin);
       if (result !== undefined) return result;
     }
   }

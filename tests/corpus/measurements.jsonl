@@ -649,3 +649,11 @@
 {"id":"signed-other-type-disagreement-2","input":"70 kg; kg -6 ft, 80 kg","options":{"type":"weight"},"expected":null,"category":"multiple-measurements","source":"AFA-116","note":"Both independent measurements remain; 70/80 kg or 180/190 cm disagree by more than 1%."}
 {"id":"signed-other-type-disagreement-3","input":"180 cm; centimeters -180 lbs, 190 cm","options":{},"expected":null,"category":"multiple-measurements","source":"AFA-116","note":"Both independent measurements remain; 70/80 kg or 180/190 cm disagree by more than 1%."}
 {"id":"signed-other-type-disagreement-4","input":"180 cm; centimeters -180 lbs, 190 cm","options":{"type":"height"},"expected":null,"category":"multiple-measurements","source":"AFA-116","note":"Both independent measurements remain; 70/80 kg or 180/190 cm disagree by more than 1%."}
+{"id":"afa-51-zero-actual","input":"0 m; actual 80 cm","options":{},"expected":{"value":80,"unit":"cm","type":"height"},"category":"multiple-measurements","source":"AFA-51"}
+{"id":"afa-51-actual","input":"5 ft; actual 11 in","options":{},"expected":null,"category":"multiple-measurements","source":"AFA-51"}
+{"id":"afa-51-note","input":"height 5 ft; note 11 in","options":{},"expected":null,"category":"multiple-measurements","source":"AFA-51"}
+{"id":"afa-51-semicolon","input":"5 ft; 11 in","options":{},"expected":null,"category":"multiple-measurements","source":"AFA-51"}
+{"id":"afa-51-shorter","input":"5 ft tall, 2 in shorter than last year","options":{"type":"height","normalizedUnit":"cm"},"expected":null,"category":"multiple-measurements","source":"AFA-51"}
+{"id":"afa-51-heels","input":"5 ft tall, with 2 in heels","options":{"type":"height","normalizedUnit":"cm"},"expected":null,"category":"multiple-measurements","source":"AFA-51"}
+{"id":"afa-51-metric","input":"1 m tall, 80 cm","options":{},"expected":null,"category":"multiple-measurements","source":"AFA-51"}
+{"id":"afa-51-prefix","input":"m: 1; cm: 80","options":{},"expected":null,"category":"multiple-measurements","source":"AFA-51"}
