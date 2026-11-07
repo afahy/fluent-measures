@@ -496,9 +496,9 @@ public example or exported type changes. Paired-apostrophe quotations retain the
 ### F3 correction — Unicode signs after numeric labels
 
 Status: corrected in [PR #236](https://github.com/afahy/fluent-measures/pull/236) at
-`d6e2ce7`, with full validation and fresh changed-line mutation passed. A later automatic review
-found the quadratic prefix-guard issue below; its narrow correction is awaiting full validation.
-Earlier source
+`f50c9c5`, with full validation and fresh changed-line mutation passed, including the later
+quadratic prefix-guard correction below. Earlier source `d6e2ce7` passed its checks before that
+automatic-review finding. Earlier source
 `93c7c72` passed validation at `b80d68a` before the round-one preservation correction. Before: current main `bfac12a943720390c60afd26a522cb67dfa20fa3`. The original
 `b79eae0` audit row and embedded 22-test harness remain historical evidence.
 
@@ -651,9 +651,18 @@ Four ticket-sourced short corpus rows make 719 rows, 698 agreements, 6 wrong, 15
 throws; all original rows remain intact. The combined 186-case suites fail 64 source and 128
 ESM/CommonJS assertions on main, with 122 controls passing per format. Independent focused
 review found no new actionable issue; its 461 tests across eight files passed, including the
-178 preservation cases and new timing cases. Final validation is pending; earlier full results
-stay attributed to `d6e2ce7`, and the audit-only `50ba961` hooks remain separate. The new guard's
-backtracking defect is separate from the original audit's library concurrency/isolation evidence.
+178 preservation cases and new timing cases. Final `pnpm check` at committed source `f50c9c5`
+passed 3,998 unit tests, 100% coverage (457 statements, 428 branches, 71 functions, 391 lines),
+TypeScript, fresh 99.65% mutation (1,416 killed, 13 timed out and the same five unchanged-line
+survivors explained above), build/API/size and 4,682 ESM/CommonJS tests. Fresh changed-line
+validation kills every mutant on changed lines 194–212, 217 and 255–256. Bundles are 5.29 kB
+ESM / 5.33 kB CommonJS, within unchanged 5.5 kB limits. Focused package replay passes all 372
+assertions and its eight timing cases take 3–9 ms CPU. Git-isolation passed in 98,603 ms.
+Logs: `/tmp/afa202-cost-check.log`, `/tmp/afa202-cost-changed-lines.log`,
+`/tmp/afa202-cost-fixed-package.log`; fresh report: `/tmp/afa202-mutation-f50c9c5.json`.
+Earlier full results stay attributed to `d6e2ce7`, and the audit-only `50ba961` hooks remain
+separate. The new guard's backtracking defect is separate from the original audit's library
+concurrency/isolation evidence.
 
 Self-review reproduced a distinct pre-existing M3/M7 ownership limitation:
 `phase 20, kg−70.5` returns **20 kg** on main `bfac12a9`, expected **`null`**.
