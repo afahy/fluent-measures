@@ -242,21 +242,23 @@ cross-call cache.
 
 ### M7 — ownership and consumption
 
-Source: `remainingWords`, `readValueAfter`, `labelHasValue`, `parseMeasurement.ts:455–577`.
+Source: `remainingWords`, `readValueAfter`, `labelHasValue`, and the type loop in
+`parseMeasurement.ts`; F7 ownership correction at `1eb0a1b`.
 
-| From              | Guard / event                                                                                      | Action                                                                   | To                 |
-| ----------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------ |
-| Unused token      | Not a unit of this pass                                                                            | Inspect unsupported weight relationship if applicable                    | Next token         |
-| Unit candidate    | Label owns following value, or starts a field                                                      | Suppress backward number read                                            | Forward candidate  |
-| Unit candidate    | Otherwise                                                                                          | Read preceding signed phrase                                             | Backward candidate |
-| Candidate         | Owned signed phrase                                                                                | Record rejected fields; do not consume match                             | Next token via M8  |
-| Candidate         | No preceding number, or eligible zero; raw alias is not bare `in`/`m`                              | Read following signed/unsigned value                                     | Forward candidate  |
-| Forward candidate | Label/zero value has its own unit (except next compound part or separate label with its own value) | Reject ownership of that number                                          | No match           |
-| Candidate         | No number                                                                                          | Leave tokens available                                                   | Next token         |
-| Candidate         | Number accepted                                                                                    | Append match and its field endpoints; set `used` over its token interval | Consumed           |
-| Feet accepted     | Following number has inch unit, or is bare 0 < n < 12 without another supported/unsupported unit   | Append inch match; consume number and explicit inch unit if present      | Compound candidate |
-| Feet accepted     | Isolated zero without inches                                                                       | Remove zero feet match                                                   | Next token         |
-| End of pass       | All candidates visited                                                                             | Apply signed-field filter                                                | M8 then M9/M10     |
+| From                     | Guard / event                                                                                      | Action                                                                   | To                 |
+| ------------------------ | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------ |
+| Unused token             | Not a unit of this pass                                                                            | Inspect unsupported weight relationship if applicable                    | Next token         |
+| Unit candidate           | Label owns following value, or starts a field                                                      | Suppress backward number read                                            | Forward candidate  |
+| Unit candidate           | Otherwise                                                                                          | Read preceding signed phrase                                             | Backward candidate |
+| Forward signed candidate | Unmarked prefix before a signed value with its own other-type unit                                 | Leave the prefix field valid; do not consume the value                   | Next token         |
+| Candidate                | Owned signed phrase                                                                                | Record rejected fields; do not consume match                             | Next token via M8  |
+| Candidate                | No preceding number, or eligible zero; raw alias is not bare `in`/`m`                              | Read following signed/unsigned value                                     | Forward candidate  |
+| Forward candidate        | Label/zero value has its own unit (except next compound part or separate label with its own value) | Reject ownership of that number                                          | No match           |
+| Candidate                | No number                                                                                          | Leave tokens available                                                   | Next token         |
+| Candidate                | Number accepted                                                                                    | Append match and its field endpoints; set `used` over its token interval | Consumed           |
+| Feet accepted            | Following number has inch unit, or is bare 0 < n < 12 without another supported/unsupported unit   | Append inch match; consume number and explicit inch unit if present      | Compound candidate |
+| Feet accepted            | Isolated zero without inches                                                                       | Remove zero feet match                                                   | Next token         |
+| End of pass              | All candidates visited                                                                             | Apply signed-field filter                                                | M8 then M9/M10     |
 
 `readValueAfter` checks the next unit across semicolons but not across a new field label. Short
 aliases expanded to label words retain their label metadata. A zero is a recognized candidate,
@@ -268,7 +270,8 @@ does not disconnect its separately numbered unsupported weight part.
 
 ### M8 — field rejection and unsupported-part relationships
 
-Source: `parseMeasurement.ts:97–102`, `234–280`, `452–585`.
+Source: `parseMeasurement.ts`, field indexing, `hasUnsupportedPart` and the type loop;
+F5 correction at `488bced`, F7 correction at `1eb0a1b`.
 
 | From                 | Event / guard                                                                 | Action                                                                       | To                              |
 | -------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------- |
@@ -291,9 +294,12 @@ at `488bced` also crosses semicolons immediately before the sign to find the own
 commas at that internal boundary remain unchanged. Thus `kg -20 5 grams`
 retains two connected parts even though the signed kg field was rejected. The unsigned and
 unsupported-prefix ownership guards stay unchanged: `stone -5 lb; actual 70 kg` still has only
-the independent 70 kg match. A bare supported prefix still rejects its field before applying
-the other-type ownership exception used for labels (F7); that distinct correction remains
-separate, as does F10 prefix ownership.
+the independent 70 kg match. At baseline a bare supported prefix rejected its field before
+applying the other-type ownership exception used for labels (F7). At `1eb0a1b`, a signed
+forward candidate first uses the existing label ownership check. An unmarked prefix leaves
+its field valid only when the signed value has its own unit of the other type; that unit
+still rejects the signed value's field in its type pass. Unsigned, same-type and unsupported-part
+ownership keep their earlier behavior. F10 prefix ownership remains separate.
 
 ### M9 — grouping, conversion, agreement and terminal result
 
@@ -461,10 +467,14 @@ public example or exported type changes. Paired-apostrophe quotations retain the
 
 ### F5 correction — signed supported weight ownership
 
-Status: implemented at `938c2ff`, with the review correction at `488bced`. Focused checks
-and independent review are complete; full validation passed at `9030111`, with fresh merged-main
-validation at `5c9eab1`. [PR #234](https://github.com/afahy/fluent-measures/pull/234) tracks review
-and merge. Before: `ef39a7b5fde9a33fd10789a2f25365fed30d0d43` (main).
+Status: complete. [PR #234](https://github.com/afahy/fluent-measures/pull/234) merged reviewed
+head `0a33c40cae92536b69dcf961349ece4ec5ac5c2f` as
+`77bd5ce63549ca25c4bdb6a425add7f0c5687787`. All 19 PR checks and final pre/post-merge
+comment audits passed. All 12 exact-merge main CI jobs passed in
+[run 42314274182](https://github.com/afahy/fluent-measures/actions/runs/42314274182);
+`ci-ok` completed at 2026-11-06T23:54:24Z. Implementation remains `938c2ff`, with the review
+correction at `488bced`, full validation at `9030111` and fresh merged-main validation at
+`5c9eab1`. Before: `ef39a7b5fde9a33fd10789a2f25365fed30d0d43` (main).
 The original `b79eae0` audit row and 22-test evidence remain historical.
 
 All four ticket inputs now return `null`, with default options and with `type: 'weight'`:
@@ -495,6 +505,35 @@ lookup. It also changes `kg;; -twenty five 5 grams; actual 70 kg` and
 options. These follow PARSING.md's existing semicolon and unsupported-unit rules. Decision
 rule 2 keeps the same-location finding here, with a ticket comment and PR scope disclosure.
 No existing semicolon-field, cross-type or Unicode-sign assertion changes.
+
+### F7 correction — signed values with their own other-type unit
+
+Status: implemented at `1eb0a1b`; focused checks passed. Independent input review, full
+validation and PR review/merge are pending. Before: current main
+`77bd5ce63549ca25c4bdb6a425add7f0c5687787`. The original `b79eae0` finding and the
+22-test baseline remain historical evidence; this fix is not yet merged.
+
+Both `kg -6 ft, 70 kg` and `kilograms -6 ft, 70 kg` change from `null` to 70 kg.
+The forward signed branch now decides ownership before recording invalid fields. It reuses
+`readValueAfter`'s existing label/own-unit rules, applying the new exception to unmarked
+prefixes only for an own other-type unit. The same-type, unsupported-part and unsigned paths
+retain their previous rejection/ownership behavior. No tokenizer, Unicode sign, public type
+or public-example change is included.
+
+Permanent regressions: `tests/parseMeasurement.signedOtherTypeOwnership.test.ts`, through
+source, ESM and CommonJS. They cover the two exact inputs, explicit type and normalized-unit
+selection, aliases, words, fractions, marks, semicolons, reversed types, fuzziness and
+conversion. All existing `signedParts` rows are retained; its three duplicated tables now
+have distinct named groups for marked other-type labels, semicolon joins and signed words.
+The ticket's unsigned 6 ft result, marked-label results and `-5 ft, 150 lbs` → 150 lb remain.
+
+The generated inventory also reaches the same defect through a repeated prime:
+`1000,' ′-11pound` changes `null` → 1000 ft for default, height, fuzziness 2 and height with
+unqualified metric inference; normalized cm changes `null` → 30480 cm (1000 × 30.48).
+Weight-only remains `null`. Five explicit assertions and two corpus rows independently
+cover these changes, disclosed on the ticket under decision rule 3. All observed changes
+are from `null`, so the changeset is patch. The 18 new ticket-sourced corpus rows agree;
+no prior input, expectation, option or source is changed.
 
 ### F8 correction — inferred conversion underflow
 
@@ -586,7 +625,7 @@ concerns but have different failure causes and existing preservation requirement
 | Publish this audit            | [AFA-235][audit]                   | [PR #228](https://github.com/afahy/fluent-measures/pull/228) merged at `527f7b5`; main CI passed                                                                     |
 | Separate tokenizer refactor   | [AFA-88][refactor]                 | In Progress; preserve existing remote branch `apfahy/afa-88-read-every-number-form-in-one-tokenizer-pass`, last observed `ded9ee0`; requires maintainer merge        |
 | Boundary and number fixes     | AFA-75 → AFA-74 → AFA-202 → AFA-62 | Pause lifted by maintainer on 2026-11-06; fresh sessions fix one ticket per PR                                                                                       |
-| Quote and ownership fixes     | AFA-78 → AFA-203 → AFA-116         | AFA-78 merged at `ef39a7b`; exact-merge main CI passed. AFA-203 active; coordinator launches AFA-116 only after its merge and exact-merge main CI                    |
+| Quote and ownership fixes     | AFA-78 → AFA-203 → AFA-116         | AFA-78 and AFA-203 complete; F5 merged at `77bd5ce` with exact-merge main CI passed. Fresh AFA-116 owns F7; no successor assigned                                    |
 | Numeric conversion            | [AFA-236][overflow]                | `units.ts` correction at `ecf7a2e`; full validation passes; [PR #230](https://github.com/afahy/fluent-measures/pull/230) tracks review/merge                         |
 | Inferred conversion underflow | [AFA-107][underflow]               | Pulled forward during AFA-74’s separate decision wait; implementation `7426e3e`; [PR #233](https://github.com/afahy/fluent-measures/pull/233); no successor assigned |
 
@@ -615,16 +654,17 @@ Each fix session must:
 
 <!-- cspell:ignore Amcp Adelegate -->
 
-| Session                                                                                                                                                                                 | Assigned work                                                       | Launch state                                                                                                                                                                                                                       |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:ab3e225544f4690efa2764d0a191792e86a687eff06d7b4e3bb8c5380b1b736d>                                                       | AFA-235 publication and review of this document                     | [PR #228](https://github.com/afahy/fluent-measures/pull/228) merged at `527f7b5`; main CI passed                                                                                                                                   |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:9df9034c3ce42adbebf696dd9b9d990bec04b84a9494a53e3c9bf77d6c1fc1d4>                                                       | AFA-75, then fresh successor sessions for AFA-74, AFA-202, AFA-62   | F1 validated; [PR #229](https://github.com/afahy/fluent-measures/pull/229) tracks review/merge; successors start after merge and main CI                                                                                           |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1a5f5b908ee23500b3eab3c85521ed6236b310c0f375af966f353457aef7d25e>                                                       | Original AFA-78 implementation and recorded successor queue         | Stopped for the maintainer-requested takeover; clean history preserved through `02d463a`                                                                                                                                           |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/thread:delegated-task:command%3Amcp%3A07e37d08-94dc-4f21-9274-996c2a7a8c00%3Adelegate-task%3A632fca4a-3251-4d46-b64c-68aa393e85be> | AFA-78 implementation takeover, final validation and PR preparation | Validated at `133aac5`; [PR #231](https://github.com/afahy/fluent-measures/pull/231) prepared for parent stewardship; no successor work                                                                                            |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/b61ed010-1655-4d08-b5ee-8c6e4d3e7ad4>                                                                                              | AFA-78 PR steward                                                   | Completed PR #231 merge at `ef39a7b`; all 12 exact-merge main CI jobs passed. Retains possible future AFA-88 assessment; no refactor started                                                                                       |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:437846f95d8fc1b59e8b6aed92f360110a4df975347393dec096581adc8de82f>                                                       | AFA-236 finite conversion overflow                                  | F9 validated; [PR #230](https://github.com/afahy/fluent-measures/pull/230) tracks review/merge; no successor assigned                                                                                                              |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1e5640d2dbe8ef251e2bb479d46cc5f4fc59c1597ecd270e7941a88df6893b76>                                                       | Fresh AFA-203 implementation, review and PR stewardship             | Source `488bced`; full checks at `9030111`, merged-main checks and fresh changed-line mutation validation at `5c9eab1`. [PR #234](https://github.com/afahy/fluent-measures/pull/234) in review; coordinator retains AFA-116 launch |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:461b3a6bdd48f18b59aa264dedf46356fae143e0f5f4b90936f49716e134a37a>                                                       | AFA-107 inferred conversion underflow; no successor                 | Implementation `7426e3e`; [PR #233](https://github.com/afahy/fluent-measures/pull/233) merged at `b76070d`; exact-merge main CI pending under this owner                                                                           |
+| Session                                                                                                                                                                                 | Assigned work                                                       | Launch state                                                                                                                                                                                                                                                                                           |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:ab3e225544f4690efa2764d0a191792e86a687eff06d7b4e3bb8c5380b1b736d>                                                       | AFA-235 publication and review of this document                     | [PR #228](https://github.com/afahy/fluent-measures/pull/228) merged at `527f7b5`; main CI passed                                                                                                                                                                                                       |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:9df9034c3ce42adbebf696dd9b9d990bec04b84a9494a53e3c9bf77d6c1fc1d4>                                                       | AFA-75, then fresh successor sessions for AFA-74, AFA-202, AFA-62   | F1 validated; [PR #229](https://github.com/afahy/fluent-measures/pull/229) tracks review/merge; successors start after merge and main CI                                                                                                                                                               |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1a5f5b908ee23500b3eab3c85521ed6236b310c0f375af966f353457aef7d25e>                                                       | Original AFA-78 implementation and recorded successor queue         | Stopped for the maintainer-requested takeover; clean history preserved through `02d463a`                                                                                                                                                                                                               |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/thread:delegated-task:command%3Amcp%3A07e37d08-94dc-4f21-9274-996c2a7a8c00%3Adelegate-task%3A632fca4a-3251-4d46-b64c-68aa393e85be> | AFA-78 implementation takeover, final validation and PR preparation | Validated at `133aac5`; [PR #231](https://github.com/afahy/fluent-measures/pull/231) prepared for parent stewardship; no successor work                                                                                                                                                                |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/b61ed010-1655-4d08-b5ee-8c6e4d3e7ad4>                                                                                              | AFA-78 PR steward                                                   | Completed PR #231 merge at `ef39a7b`; all 12 exact-merge main CI jobs passed. Retains possible future AFA-88 assessment; no refactor started                                                                                                                                                           |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:437846f95d8fc1b59e8b6aed92f360110a4df975347393dec096581adc8de82f>                                                       | AFA-236 finite conversion overflow                                  | F9 validated; [PR #230](https://github.com/afahy/fluent-measures/pull/230) tracks review/merge; no successor assigned                                                                                                                                                                                  |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1e5640d2dbe8ef251e2bb479d46cc5f4fc59c1597ecd270e7941a88df6893b76>                                                       | Fresh AFA-203 implementation, review and PR stewardship             | Complete: [PR #234](https://github.com/afahy/fluent-measures/pull/234), reviewed head `0a33c40`, merge `77bd5ce`; 19 PR checks, pre/post-merge audits and all 12 exact-merge main CI jobs passed (run 42314274182, ci-ok 2026-11-06T23:54:24Z). Earlier validation at `9030111` and `5c9eab1` retained |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:461b3a6bdd48f18b59aa264dedf46356fae143e0f5f4b90936f49716e134a37a>                                                       | AFA-107 inferred conversion underflow; no successor                 | Implementation `7426e3e`; [PR #233](https://github.com/afahy/fluent-measures/pull/233) merged at `b76070d`; exact-merge main CI pending under this owner                                                                                                                                               |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:2d4a60308bdfb6191174b5f92be891f2f90bd42e44ea1218e394ed52840c6148>                                                       | Fresh AFA-116 signed other-type ownership and named test groups     | Source `1eb0a1b`; focused checks passed against `77bd5ce`. Independent review/full validation/PR lifecycle pending; heavy slot reserved after AFA-74, not granted. No successor assigned                                                                                                               |
 
 Sessions use isolated prepared worktrees. Full checks and mutation runs have one shared execution
 slot, initially publication → AFA-75 → AFA-78 → AFA-236; sessions pass it by message. Focused tests
@@ -778,6 +818,18 @@ ESM/CommonJS tests across F1, F2, F8, F9, invariants, corpus and result snapshot
 TypeScript also pass. A fresh `pnpm test:mutation --mutate src/parseMeasurement.ts` run
 at `2c0f762` scores 99.63% (802 killed, 7 timed out, 3 equivalent survivors described above).
 The changed-lines mutation check passes again after this merge.
+
+F7 focused validation at `1eb0a1b`: `pnpm install` passed. The initial 61-test suite fails
+39 assertions on current main `77bd5ce` in source and in each package format (78 package
+failures), with 22 controls passing per format. Both exact ticket inputs fail for default,
+weight and normalized-kg options. A further fuzzy signed-value control catches an eager
+missing-unit lookup found during local self-review; the final suite has 62 tests. With the
+fix, all 942 focused source and 1,884 ESM/CommonJS feature checks pass, including every
+existing signedParts row, public examples, Unicode signs, ownership and unsupported parts.
+The corpus has 581 entries, 564 agreements, 5 wrong, 12 missed and no throws; all 563 prior
+entries and their outcomes remain intact. The generated snapshot changes only the five
+other-type prime results recorded above. Independent review, full checks, fresh changed-line
+mutation validation and hosted lifecycle results will be recorded after they complete.
 
 ## Reproducing the audit
 
