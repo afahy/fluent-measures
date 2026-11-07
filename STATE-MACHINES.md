@@ -2889,3 +2889,53 @@ Positive-call work assertions distinguish its exact replacement while public res
 No new ignore or threshold change was added. The 909-test focused run and captured exact
 replacements establish bounded evidence, not fresh mutation qualification. All earlier
 failed/partial reports and F6/F9 publication-pending history remain unchanged.
+
+### AFA-250 first-review corrected-source qualification
+
+Clean `4a04e92be6f87485702c123eb69af596e82d3c51` passed the fresh serial `pnpm check`
+on November 7, 2026. The source tree is `8f9c06c9e61bc5951d484f59bccf320cb3dd1019`
+and test tree is `8708fd3fff968b603f54ef8854e8d2d066e88724`. All 319 committed file
+hashes remained unchanged through the run. This qualifies the corrected source separately
+from the earlier `6a024c9a` command success whose changed-line gate failed.
+
+The run passed 5,575 source tests in 127 files, TypeScript, and 100% coverage: 454 statements,
+494 branches, 55 functions and 374 lines. Fresh default non-incremental mutation scored
+99.93%: 1,435 killed, 50 timed out, one survivor, no uncovered mutants and four ignored
+alternatives. Report SHA256
+`eec8143a7a5034614aceb28d83f6b8b762307821fc7ab054d80e3e21d7d82da4` selects all eight
+sources; all six report source bodies equal the committed and live bytes. The four ignores
+match the prior reviewed alternatives exactly. The official changed-line gate passes against
+pinned main `70f3169`. The sole survivor remains actual 40 in unchanged `matchUnit.ts`;
+removing its initial anchor can affect higher fuzzy settings, so it is not globally equivalent
+or fixed here. No threshold, assertion or exclusion was weakened.
+
+The actual report kills the retained unit-end guard alternative (514) and the failed-left
+retry alternative (527). The latter is caught by the positive-call reader test: four nonempty
+reads instead of the required two. Removed redundant conditions have no claimed kills;
+their caller proofs and the selected-pair behavior correction remain recorded above.
+Build, unchanged exported API and all 7,582 ESM/CJS tests in 138 files passed. Exact sizes
+are 4,668 bytes ESM and 4,706 bytes CJS, minified and Brotli-compressed, versus the preserved
+same-toolchain pinned-main build's 5,736 and 5,795 bytes. The 6,000-byte limits are unchanged.
+All eight baseline source files, shared build/lock settings and six baseline/final build
+outputs were reverified. These measurements make no speed or accuracy claim.
+
+A prior run on the same `4a04e92` stopped during coverage when the unchanged Git-isolation
+nested suite timed out after 180,023 ms. Its 5,574 passing tests, sole failure, full nested
+output, source pins and empty process group are archived; no coverage report or later stage
+was produced. One unchanged targeted diagnosis passed all 11 tests, with the nested suite
+at 100,499 ms on Node 24.21.0. The fresh qualifying full run passed that suite at 99,550 ms.
+The original timeout's cause remains unexplained; no contention or intermittent-defect
+classification is inferred. The real timeout, assertions and configuration were unchanged.
+
+The 133, seven, eight and 88 review ledgers retain 236 rows across 235 distinct input/options
+paths, with 130 full-result changes and 105 controls against exact main. Their one overlap
+is explicit; the unsupported-option error-message comparison remains separate. All earlier
+2,362 corpus objects, 302 frozen objects and 243 authored objects are preserved by the final
+selected-pair correction. The earlier seven permissive-probe changes remain disclosed rather
+than described as identical results. The 2,450-row corpus and approved generated snapshot
+passed; all historical fixtures, ledgers and failed reports remain in the external archive.
+
+Exact logs, report, source-byte verification, size comparison and self-review are under
+`final-validation/review-round-1-validation/`. Normal publication hooks and the final feature
+push are the next local steps. PR #247 remains subject to hosted review and qualifying merge;
+F6/F9 historical audit publication remains pending until that merge.
