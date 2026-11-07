@@ -211,7 +211,22 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     const prefix = quotedNumber?.value != null ? null : readUnit(start, true);
     if (prefix) {
       const number = readNumber(prefix.end, limit);
-      if (number.value !== null) return { value: number.value, unit: prefix.unit, end: number.end };
+      if (number.value !== null) {
+        // An explicit smaller suffix can make "m: one and eighty cm" a compound,
+        // although its unsplit number is also valid spoken hundreds. Try one conjunction
+        // boundary only; ordinary complete scalars keep their single numeric read.
+        const smaller = number.end < limit ? readUnit(number.end, false) : null;
+        if (smaller && smaller.end <= limit && smaller.unit === NEXT_PART[prefix.unit]) {
+          for (let split = prefix.end; split < number.end; split++) {
+            if (text(split) !== 'and') continue;
+            const left = readNumber(prefix.end, split);
+            return left.value === null
+              ? null
+              : { value: left.value, unit: prefix.unit, end: left.end };
+          }
+        }
+        return { value: number.value, unit: prefix.unit, end: number.end };
+      }
       // One bounded reread can end a complete prefix part. An absent boundary gives an
       // empty phrase, not another search. The original numeric tokens contain no intervening
       // unit, so a valid left phrase consumes this exact prefix. The expression/root cursors
@@ -291,7 +306,10 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       for (let at = start + 1; at !== limit; at++) {
         if (text(at) === close && --depth === 0) {
           const inner = expression(start + 1, at, true, decorate);
-          if (inner && inner.end === at) return { ...inner, end: at + 1 };
+          if (inner && inner.end === at) {
+            const period = text(at + 1) === '.' && !text(at - 1).endsWith('.');
+            return { ...inner, end: at + (period ? 2 : 1) };
+          }
           break;
         }
         if (text(at) === text(start)) depth++;
@@ -385,9 +403,10 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     // A present opener gives 1 <= limit. The only limit change is immediately before break.
     for (let at = 1; at !== limit; at++) {
       if (text(at) === outerClose && --depth === 0) {
-        if (at === limit - 1) {
+        const finalPeriod = at === limit - 2 && text(at + 1) === '.' && !text(at - 1).endsWith('.');
+        if (at === limit - 1 || finalPeriod) {
           begin++;
-          limit--;
+          limit = at;
         }
         break;
       }

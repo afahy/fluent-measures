@@ -2786,3 +2786,50 @@ The sole unchanged matching survivor can affect higher fuzzy settings; it is not
 equivalent or fixed by this PR. Hosted checks, review, qualifying merge and exact-main CI
 remain with the parent. At this local handoff, F6/F9 audit publication is pending: a feature
 push or an open PR does not publish the historical closeout to main.
+
+### AFA-250 first PR review corrections — focused evidence only
+
+Published `7dcd18e140869304a45638c00eaaf4b4bdcfa6f7` rejected `(180 cm).`, `[180 cm].`,
+`about (180 cm).` and `m: one and eighty cm`. All four now have failing-first regression
+records and policy-derived full-result assertions. Exact main `70f3169` returns 180 cm
+for these inputs, but its metric prefix result has only `[180 cm]` in `matches`; the
+corrected compound retains the written `[1 m, 80 cm]`. This provenance change is distinct
+from restoring its total. The existing wrapper cursor owns one external final period;
+a period on each side, as in `(180 cm.).`, still rejects.
+
+A successful prefix phrase followed by its explicit smaller unit can use the first
+conjunction as a compound boundary. The unit lookahead must start and end within the
+expression limit, so an excluded closing quotation cannot become inches. This adds one
+bounded walk over the already-read numeric token span, stopping at the first conjunction,
+and one bounded left-phrase read; it is not a retry search or a normalization pass. The
+cursor advances by one over a fixed span and never retries another conjunction. The
+existing supplied-token failure boundary still handles an invalid whole phrase. Numeric
+reader spies count numeric work, not this token walk. Successful unanchored scalars still
+use one nonempty shared-reader call, including half and multiplier controls.
+
+The explicit interpretation also means `m: one hundred and eighty cm` is 10,080 cm with
+`[100 m, 80 cm]`, while `m: one hundred and eighty` remains the complete 180 m scalar.
+`m: one and eighty and five cm` is 185 cm with `[1 m, 85 cm]`; the complete larger phrase
+in `m: one hundred and one and eighty cm` instead yields `[101 m, 80 cm]` and 10,180 cm.
+These arithmetic and boundary choices are explicit in the review ledger.
+
+The separate 133-case ledger records 53 null-to-valid paths and 80 full-result controls
+against published `7dcd18e`; against exact main it records 70 full-result changes and 63
+controls, including match provenance. All 2,214 prior corpus full objects and all 243
+earlier authored full objects are unchanged. All 302 frozen probe expectations still
+agree, but seven wrapper-period objects change from null to 72 kg within their original
+allowed alternatives. That permissive oracle did not assert rejection; its archive is
+unchanged. A separate seven-row ledger and strict positive tests preserve this distinction.
+Five match main; ASCII-quoted weight entries correct main's 72 in/72 ft to the written 72 kg.
+
+The new corpus has 140 appended rows; all 2,214 earlier rows remain a byte-identical prefix.
+Its 2,354-row report counts come from independent fixture labels. The approved generated
+result snapshot remains unchanged. Focused evidence comprises 1,029 source tests before
+the seven supplemental cases and a final 206-test run covering those cases, work bounds,
+corpus, result snapshot and feature links. Captures pin all eight source bodies for main,
+published and candidate sources, with temporary observation changes restored. Full-result
+oracles, both ledgers, captures, exact hashes and verification limitations are archived in
+`final-validation/review-round-1-corrections/` under the external evidence root above.
+No fresh full check, coverage, mutation, build, package or size result is claimed for these
+corrections. Prior successful evidence retains its original SHA. F6/F9 publication remains
+pending; the parent owns hosted replies, final validation allocation and qualifying merge.
