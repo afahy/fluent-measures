@@ -21,7 +21,8 @@ two that disagree. Your app can then ask the person again.
 - Reads unit names with spelling errors when you set `fuzziness`, as in `5 foot 11 inc`
 - Converts the result to the unit that you set in `normalizedUnit`
 - Has no dependencies
-- Is at most 5.5 kB, minified and compressed with Brotli, because CI fails a build that goes over
+- Is at most 6.0 kB for ESM and 6.0 kB for CommonJS, minified and compressed with Brotli; CI
+  enforces these limits
 - Supports ESM and CommonJS
 
 ## Installation
@@ -177,13 +178,13 @@ interface ParsedValue {
 ### Height
 
 - **Imperial**: `ft` (feet, foot, `'`) and `in` (inch, inches, `"`)
-- **Metric**: `cm` (centimeter, centimeters, centimetre, centimetres) and `m` (meter, meters,
+- **Metric**: `cm` (cms, centimeter, centimeters, centimetre, centimetres) and `m` (meter, meters,
   metre, metres)
 
 ### Weight
 
 - **Imperial**: `lb` (lbs, pound, pounds, and `#` directly after a number, as in `185#`)
-- **Metric**: `kg` (kilo, kilos, kilogram, kilograms)
+- **Metric**: `kg` (kgs, kilo, kilos, kilogram, kilograms)
 
 Most units can also come before their number, as in `kg 70`. The short forms `in` and `m` can
 come first only as a label, because before a number they are usually ordinary words.

@@ -151,6 +151,20 @@ const RANGE_INCHES = new RegExp(
   'i'
 );
 
+// Numeric ranges must not consume only the digit prefix of "2 hundred" or "2 and a half".
+// Trailing periods are punctuation; a decimal tail or number word continues the endpoint.
+// Blocking a following digit/fraction mark also prevents backtracking to a shorter endpoint.
+// Consume the punctuation so it cannot become an empty token between a range and its unit.
+const RANGE_END = String.raw`(?![\d/⁄]|\.+\d|\.*[\s-]*(?:and[\s-]+)?(?:${NUMBER_WORD}|a[\s-]+half|point)\b)\.*`;
+// Keep an optional feet owner so a slash before the range retains the same measurement
+// boundary as fraction normalization, without consuming another slash in a date or code.
+// A preceding number word keeps the complete text intact;
+// consuming that prefix in this scan prevents retrying at its final digit token.
+const NUMERIC_RANGE = new RegExp(
+  String.raw`(?<![\d.])[\d.]+(?:\s*\p{Dash}\s*[\d.]+)+|(?:\bfrom\s+|(${FRACTION_OWNER})(?:(${RANGE_DIGITS})[/⁄](?=${RANGE_DIGITS}\s+to\b))?|(\b(?:${NUMBER_WORD})[\s-]+(?:and[\s-]+)?))?(?<![\d.])${RANGE_NUMBER}\s+to\s+${RANGE_NUMBER}${RANGE_END}|\bbetween\s+${RANGE_NUMBER}\s+and\s+${RANGE_NUMBER}${RANGE_END}`,
+  'gu'
+);
+
 // A number as it can stand in quotes: digits, separators, spaces, slashes and fractions.
 const QUOTED_NUMBER = String.raw`[\d.,\s/⁄${FRACTIONS}]*[\d${FRACTIONS}]`;
 // Number words have the same boundary and "and a half" rules as the later token split.
@@ -193,7 +207,14 @@ const CURLY_DOUBLE = curlyMark('“', '”');
 // before spaced digits, as in "phase twenty, 5 cm". Numeric commas keep their existing rules.
 // Look past an opening curly quote too: punctuation removal mustn't join "twenty, “5” cm".
 const WORD_COMMA = new RegExp(
-  String.raw`(\b(?:${NUMBER_WORD}))\s*,(?=\s+(?:[“‘]\s*)?\.?\d|\s*(?:[“‘]\s*)?(?:${NUMBER_WORD})\b)`,
+  String.raw`(\b(?:${NUMBER_WORD}|point))\s*,(?=\s+(?:[“‘]\s*)?\.?\d|\s*(?:[“‘]\s*)?(?:${NUMBER_WORD}|point)\b)`,
+  'g'
+);
+
+// A comma and space, bracketed conversion, or semicolon before another number ends a spoken
+// decimal. Retain the boundary without splitting a semicolon between a number and its unit.
+const DECIMAL_BOUNDARY = new RegExp(
+  String.raw`(\bpoint(?:[\s-]+(?:${NUMBER_WORD}|[\d.]+|and))*)\s*(?:,\s+|(?:(;)|[(\[])(?=\s*(?:${NUMBER_WORD}|point|\.?\d)))`,
   'g'
 );
 
@@ -220,7 +241,7 @@ const MINUS_JOIN = String.raw`(?:(?<![a-z])(?:${LABELS}|['"′″’”])[^\w'"�
 // "½ lb−180 lbs". The parser would read a hyphen-minus there as a sign. The lookbehind runs only
 // after a minus sign, and its lazy part stops at the nearest earlier number.
 const MINUS_SIGN = new RegExp(
-  String.raw`[−﹣](?=[.,]?\d|[${FRACTIONS}]|(?:an?[\s-]+)?(?:${NUMBER_WORD})\b)(?<!${NUMBER_END}(?:[^,;]|(?<!${NUMBER_END}\s*)[,;])*?.)(?<!${MINUS_JOIN}.)`,
+  String.raw`[−﹣](?=[.,]?\d|[${FRACTIONS}]|(?:an?[\s-]+)?(?:${NUMBER_WORD}|point)\b)(?<!${NUMBER_END}(?:[^,;]|(?<!${NUMBER_END}\s*)[,;])*?.)(?<!${MINUS_JOIN}.)`,
   'gi'
 );
 
@@ -340,8 +361,23 @@ export function tokenizeNormalized(
       .toLowerCase()
       // Replace ranges after lowercasing so no input can supply the internal marker. Keep the
       // whole text together: the quote rules below need opening quotes from before a range.
-      .replace(/(?<![\d.])[\d.]+(?:\s*\p{Dash}\s*[\d.]+)+/gu, range =>
-        rangeBoundaries ? ` ${RANGE_WORD} ` : range
+      .replace(
+        NUMERIC_RANGE,
+        (
+          range,
+          owner: string | undefined,
+          inches: string | undefined,
+          wordPrefix: string | undefined,
+          offset: number,
+          input: string
+        ) => {
+          if (!rangeBoundaries || wordPrefix) return range;
+          // As in normalizeFractions, a later inch component owns the height instead.
+          if (inches && !RANGE_INCHES.test(input.slice(offset + range.length))) {
+            return `${owner}${inches} / ${RANGE_WORD} `;
+          }
+          return `${owner || ''} ${RANGE_WORD} `;
+        }
       )
       // Mark labels before the punctuation that marks them is removed, so the parser knows what
       // kind of label each one is, and spell out the short aliases. A bracket label keeps its
@@ -360,6 +396,8 @@ export function tokenizeNormalized(
       // Keep this boundary as a non-number token in both reading directions. The uppercase word
       // can't come from input, which is lowercase, and can't match a unit even with fuzziness.
       .replace(WORD_COMMA, '$1 COMMA ')
+      // Retain a captured semicolon: signed-field ownership still needs its field boundary.
+      .replace(DECIMAL_BOUNDARY, '$1 $2 COMMA ')
       // Split punctuation, hyphens that join two values after a feet or inch mark, as in `5'-11`,
       // `5"-5 in`, `5'-eleven` and `five'-10"`, and underscores before minus signs.
       .replace(PUNCTUATION, ' ')
@@ -399,7 +437,7 @@ export function tokenizeNormalized(
     else if (text === UNIT_WORD) label = 'unit';
     else {
       if (text === RANGE_WORD) {
-        tokens.push({ text: '-', range: true });
+        tokens.push({ text, range: true });
       } else tokens.push(label ? { text, label, startsField } : { text });
       startsField = false;
       label = undefined;

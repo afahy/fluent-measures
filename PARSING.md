@@ -102,6 +102,20 @@ parseMeasurement('5-12', { type: 'height' }); // null: the inches must be less t
 parseMeasurement('5-11', { type: 'height', normalizedUnit: 'm' }); // { value: 1.8034, unit: 'm', ... }
 ```
 
+## Compact Heights
+
+Spaces may be omitted between numbers and height units: `5ft11` and `5ft11in` give 71 inches,
+just as `5 ft 11` does. A bare number after meters means centimeters, so `1m80` and `1 m 80`
+give 180 centimeters. A single `1 m` still gives 1 meter.
+
+A bare centimeter part must be greater than zero and less than 100. A following explicit unit
+owns its number instead: `1 m 80 kg` keeps a height of 1 meter and a weight of 80 kilograms.
+The [two-part rules](#more-than-one-measurement) still apply: a fractional larger part does not
+form a compound. Its readings are compared as separate measurements.
+
+A zero-meter part can start a valid compound: `0 meter 80` gives 80 centimeters. An oversized
+bare part does not become a meter value, so `0 meter 100` returns `null`.
+
 ## Semicolons
 
 A semicolon can come between a number and its unit, as in `180;lbs`:

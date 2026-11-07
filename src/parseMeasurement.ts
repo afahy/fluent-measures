@@ -31,13 +31,14 @@ const remainingWords =
 
 /**
  * Read the longest adjacent number phrase and return its first unconsumed token index. With
- * `readHalf` false, a phrase that ends in "and a half" isn't read.
+ * `readHalf` false on a backward read, a phrase that ends in "and a half" isn't read.
  */
 function readNumberPhrase(
   words: Words,
   start: number,
   step = 1,
-  readHalf = true
+  readHalf = true,
+  barePart = false
 ): [value: number | null, end: number] {
   // "and a half" after a whole number adds 0.5, as in "six and a half feet" and
   // "5 foot 10 and a half". Number.isInteger is false for null.
@@ -79,17 +80,37 @@ function readNumberPhrase(
   }
   let end = start;
   let value: number | null = null;
+  let stopped: number | undefined;
   const phrase: string[] = [];
+  const read = (): number | null =>
+    // Stryker disable next-line EqualityOperator: step is 1 or -1, so "step >= 0" is the same.
+    wordsToNumber((step > 0 ? phrase : [...phrase].reverse()).join(' '));
   for (let word = words(end); word !== undefined; word = words((end += step))) {
     // Stryker disable next-line EqualityOperator: step is 1 or -1, so "step <= 0" is the same.
-    if (word === 'and' || (step < 0 && word === ';')) continue;
-    // Stryker disable next-line EqualityOperator: step is 1 or -1, so "step >= 0" is the same.
-    if (step > 0) phrase.push(word);
-    else phrase.unshift(word);
-    const candidate = wordsToNumber(phrase.join(' '));
-    if (candidate === null) break;
-    value = candidate;
+    if (step < 0 && word === ';') continue;
+    if (
+      !NUMBER_WORDS.has(word) &&
+      !MULTIPLIERS.has(word) &&
+      !/^[\d.]+$/.test(word) &&
+      !['point', 'and', 'oh', 'o', '-'].includes(word)
+    )
+      break;
+    phrase.push(word);
+    // Keep the integer reader's first stopping point, but collect the adjacent number tokens.
+    // A later "point" makes them one decimal: "zero five" is valid after it, not an integer.
+    if (stopped === undefined && word !== 'and') {
+      const candidate = read();
+      if (candidate === null) stopped = end;
+      else value = candidate;
+    }
   }
+  if (phrase.includes('point') && (!barePart || words(stopped!) === 'point')) {
+    // A compound part keeps its integer stopping point before a separate number, as in
+    // "ft 5 eleven point five" or "11 two hundred point five pounds". A decimal starting at
+    // "point" still reads as one phrase and cannot recover an invalid suffix.
+    return [half(end - 1) ? null : read(), end];
+  }
+  end = stopped ?? end;
   // Reading forward, the loop skips "and" and stops at "a". A read backward never stops just
   // before "a half", because "half" isn't a number.
   return Number.isInteger(value) && half(end - 1) ? [value! + 0.5, end + 2] : [value, end];
@@ -113,9 +134,10 @@ function readSignedPhrase(
   words: Words,
   start: number,
   step = 1,
-  readHalf = true
+  readHalf = true,
+  barePart = false
 ): [value: number | null, end: number, signed: boolean] {
-  const [value, end] = readNumberPhrase(words, start, step, readHalf);
+  const [value, end] = readNumberPhrase(words, start, step, readHalf, barePart);
   // Stryker disable next-line EqualityOperator: step is 1 or -1, so "step >= 0" is the same.
   const forward = step > 0;
   const at = forward ? start : end;
@@ -131,7 +153,7 @@ function readSignedPhrase(
     if (NUMBER_WORDS.has(next) || MULTIPLIERS.has(next)) {
       return forward ? [...readNumberPhrase(words, at + 1), true] : [value, at - 1, true];
     }
-  } else if (wordsToNumber(word) !== null) {
+  } else if (word === 'point' || wordsToNumber(word) !== null) {
     // Read again with the word in place of the token.
     const [signedValue, signedEnd] = readNumberPhrase(
       index => (index === at ? word : words(index)),
@@ -186,10 +208,11 @@ function readValueAfter(
   fuzziness?: number,
   bare = false
 ): [value: number | null, end: number] {
-  // This read takes a signed value too, so the check for a label's value finds it, as in "kg: -5".
+  // Bare centimeters start immediately and keep the compound part's integer stop.
+  // Feet prefixes keep that stop too; signed phrases still read whole for suffix ownership.
   const [value, end] = bare
-    ? readNumberPhrase(words, start)
-    : readSignedPhrase(words, skipSemicolons(words, start));
+    ? readNumberPhrase(words, start, 1, undefined, true)
+    : readSignedPhrase(words, skipSemicolons(words, start), 1, undefined, unit === 'ft');
   // A label doesn't take a number that has its own unit, as in "weigh in: 180 lbs" and
   // "180 lbs = 82 kg", even an unsupported one, as in "kg=400 g", so the check for stone, ounces
   // and grams still sees that part. A semicolon or a unit label can be that unit, as in
@@ -207,8 +230,7 @@ function readValueAfter(
     (nextUnit || UNSUPPORTED_WEIGHT_UNITS.test(next)) &&
     !(
       (nextUnit === NEXT_PART[unit] || nextToken.label === 'unit') &&
-      // Stryker disable next-line StringLiteral: "Stryker was here!" isn't a number, as "" isn't.
-      wordsToNumber(words(skipSemicolons(words, unitAt + 1)) ?? '') !== null
+      readNumberPhrase(words, skipSemicolons(words, unitAt + 1))[0] !== null
     );
   return [ownUnit ? null : value, end];
 }
@@ -589,7 +611,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
                 fuzziness,
                 true
               )
-            : readNumberPhrase(remaining, matchEnd);
+            : readNumberPhrase(remaining, matchEnd, 1, undefined, true);
         // A label's value comes after it, so it isn't the unit of the smaller part before it.
         // Stryker disable next-line StringLiteral: "Stryker was here!" is no unit, as "" is.
         const nextWord = (!tokens[partEnd]?.label && remaining(partEnd)) || '';

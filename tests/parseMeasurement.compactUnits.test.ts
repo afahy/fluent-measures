@@ -256,4 +256,28 @@ describe('compact units and metric height shorthand', () => {
     expect(parseMeasurement('70 kgsx', { fuzziness })).toBeNull();
     expect(parseMeasurement('175 cmsx', { fuzziness })).toBeNull();
   });
+
+  // Composition with the merged spoken-decimal and numeric-range rules. Expectations use
+  // meters × 100 + centimeters, feet × 12 + inches, and explicit suffix/field ownership.
+  it.each([
+    ['1 m eighty point five', { normalizedUnit: 'cm' }, 180.5, 'cm'],
+    ['one meter eighty point five', { normalizedUnit: 'cm' }, 180.5, 'cm'],
+    ['1m80 point five', { normalizedUnit: 'cm' }, 180.5, 'cm'],
+    ['5ft eleven point five', { type: 'height' }, 71.5, 'in'],
+    ['5ft11 point five', { type: 'height' }, 71.5, 'in'],
+    ['ft5 eleven point five', { type: 'height' }, 71.5, 'in'],
+    ['1 m 80 two hundred point five pounds', { type: 'height' }, 180, 'cm'],
+    ['1 m eighty point five;kg', { normalizedUnit: 'cm' }, 100, 'cm'],
+    ['1 m eighty point five;kg', { type: 'weight' }, 80.5, 'kg'],
+    ['5ft10/180 to 200 lbs', { type: 'height' }, 70, 'in'],
+    ['6ft1/2 to 3/4 11 in', { type: 'height' }, 83, 'in'],
+    ['1 m -eighty point five', { type: 'height' }, 1, 'm'],
+    ['1 m; eighty point five', { type: 'height' }, 1, 'm'],
+    ['1 m one point twenty', { type: 'height' }, 1, 'm'],
+  ] as const)(
+    'composes compact parts with decimal/range parsing: %s',
+    (raw, options, value, unit) => {
+      expect(parseMeasurement(raw, options)).toMatchObject({ value, unit });
+    }
+  );
 });
