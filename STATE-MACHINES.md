@@ -1578,6 +1578,30 @@ This follow-up changes only the audit; source and test trees remain identical to
 The normal mandatory push hooks and exact published head are recorded separately in the PR,
 ticket and parent handoff after they finish. Hosted lifecycle stays with the parent.
 
+Third-round Codex review of `c7e3f1fa` reported two further families. Both reproduce and remain
+unfixed here, filed with the existing AFA-250 complete-entry owner in comment
+[`685016b0`](https://linear.app/afahy/issue/AFA-250#comment-685016b0-2653-43a4-af7c-a7c141f0be3a).
+These are new late inputs, not failures of an existing example/test, a throw, security issue or
+required check. The three-round rule defers them; the successful source validation above does
+not imply these inputs are correct.
+
+| Input and selector                            | Main `c670d12` | PR `c7e3f1fa` | Current contract           | Approved AFA-250 contract |
+| --------------------------------------------- | -------------- | ------------- | -------------------------- | ------------------------- |
+| `one meter eighty, 5ft11`                     | 1 m            | null          | 180 cm (agreeing readings) | null (duplicate readings) |
+| `one meter eighty, seventy kilograms`, height | 1 m            | 1 m           | 180 cm                     | 180 cm (selected pair)    |
+| `0 meters -80, 180 cm`                        | null           | 180 cm        | null                       | null                      |
+| `zero meters -eighty, 180 cm`                 | null           | 180 cm        | null                       | null                      |
+
+The comma exclusion preserves `1 m seventy, 5 cm` but drops other spoken smaller parts; the
+zero-meter compound path bypasses signed-prefix field rejection. Fourteen public-input checks
+were specified before execution: four fail and ten controls pass, using the repository's narrow
+unit script and the verified exact-main build. The controls retain explicit centimeter ownership,
+digit counterparts, independent semicolon fields, other-type signed ownership, Unicode signs,
+zero-meter shorthand and `kg-70.5` rejection. Evidence remains outside the checkout in
+`/tmp/afa62-late-review-c7e3f1f/`; no parser, test, corpus or snapshot changes accompany this
+disposition. AFA-250 must distinguish its intentional duplicate/prose policy migration from
+these historical failures. This is deferred evidence, separate from the F6 fixes completed here.
+
 ### F7 correction — signed values with their own other-type unit
 
 Status: complete. [PR #235](https://github.com/afahy/fluent-measures/pull/235) merged reviewed
