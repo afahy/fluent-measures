@@ -344,6 +344,23 @@ are 6,000 bytes under the standing allowance. Logs and source manifest:
 `/tmp/afa247-review-source-manifest-integrated.json`. No new mutation exclusion or relaxed
 test threshold was added. The following audit-only commit does not change these source/test trees.
 
+A later exact-head review found that M5 could skip a semicolon after a spoken decimal and
+join the next field: published `db846777` reads `age twenty point five; 80 kg` as 20.58 kg
+and `age twenty point five; 1.8 m` as null; exact main `0426248` reads 80 kg and 1.8 m.
+The focused correction adds the semicolon to the existing M2 boundary character class only
+when another number follows. It preserves `80;kg`, `seventy point five;kg` and explicit
+unit-label fields. No scan or parser branch is added, and uppercase `RANGE` is unchanged.
+`tests/parseMeasurement.spokenDecimalSemicolons.test.ts` has 22 independently specified cases:
+nine fail on published `db846777`, eight fail on exact main, and all pass with this correction.
+The 22 new corpus rows add 22 agreements without changing previous rows or outcomes.
+One initial proposed control, `age twenty point five; kg 80`, lacked an explicit unit-label
+separator. Its 80-kg draft expectation was not adopted: the existing semicolon rule permits
+20.5 to attach to `kg`. The original draft and reasoning remain in
+`/tmp/afa247-semicolon-oracle-review.json`; `kg=80` and `kg: 80` are explicit-label controls.
+Focused preparation passed 619 tests and scoped static checks. The preceding `af45a89` full
+validation is historical for this new source; final mutation, build/size/package and hooks
+remain pending until the separately allocated committed-source validation completes.
+
 M2 now retains `RANGE` as the token's text instead of writing `-`. This keeps M3's discarded
 ranges distinct from literal minus signs in M5. The existing recovery contract still applies:
 `6 ft 1-2 eleven point five in` is 83.5 in (6 × 12 + 11.5), and `kg seventy point five 1-2`

@@ -205,10 +205,10 @@ const WORD_COMMA = new RegExp(
   'g'
 );
 
-// A comma and space or a bracketed conversion ends a spoken decimal. Keep that boundary
-// before punctuation removal joins its digits to another number, including leading decimals.
+// A comma and space, bracketed conversion, or semicolon before another number ends a spoken
+// decimal. Retain the boundary without splitting a semicolon between a number and its unit.
 const DECIMAL_BOUNDARY = new RegExp(
-  String.raw`(\bpoint(?:[\s-]+(?:${NUMBER_WORD}|[\d.]+|and))*)\s*(?:,\s+|[(\[](?=\s*(?:${NUMBER_WORD}|point|\.?\d)))`,
+  String.raw`(\bpoint(?:[\s-]+(?:${NUMBER_WORD}|[\d.]+|and))*)\s*(?:,\s+|[;(\[](?=\s*(?:${NUMBER_WORD}|point|\.?\d)))`,
   'g'
 );
 
