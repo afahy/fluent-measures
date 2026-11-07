@@ -94,16 +94,6 @@ const FRACTION_RANGE = new RegExp(
 );
 const FRACTION_MARK = new RegExp(`[/⁄${FRACTIONS}]`);
 
-// Conventional shared-unit ranges use numeric endpoints, including any slash fractions that
-// normalization left intact after a connector word such as "to" or "and".
-// Require whole connector words and keep "and" meaningful only after "between", so compound
-// heights and integer number words retain their existing reads. Consume "from" too, so the
-// resulting boundary has the same neighbors as a dash range in either reading direction.
-const NUMERIC_RANGE = new RegExp(
-  String.raw`(?<![\d.])[\d.]+(?:\s*\p{Dash}\s*[\d.]+)+|(?:\bfrom\s+)?(?<![\d.])${RANGE_NUMBER}\s+to\s+${RANGE_NUMBER}|\bbetween\s+${RANGE_NUMBER}\s+and\s+${RANGE_NUMBER}`,
-  'gu'
-);
-
 /** Normalize individual fractions after their surrounding range has been preserved. */
 function normalizeFractionParts(input: string): string {
   return input
@@ -153,6 +143,17 @@ const NUMBER_WORD = [...NUMBER_WORDS.keys(), ...MULTIPLIERS.keys()].join('|');
 const RANGE_INCHES = new RegExp(
   String.raw`^\s+(?:${RANGE_NUMBER}|(?:${NUMBER_WORD})\b(?:[\s-]+(?:${NUMBER_WORD}|and|a|half)\b)*)\s*(?:(?:"|'')(?![a-z])|in(?:ch(?:es)?)?\b)`,
   'i'
+);
+
+// Numeric ranges must not consume only the digit prefix of "2 hundred" or "2 and a half".
+// Blocking a following digit/fraction mark also prevents backtracking to a shorter endpoint.
+const RANGE_END = String.raw`(?![\d./⁄]|[\s-]+(?:and[\s-]+)?(?:${NUMBER_WORD}|a[\s-]+half|point)\b)`;
+// Keep an optional feet owner so a slash before the range retains the same measurement
+// boundary as fraction normalization. A preceding number word keeps the complete text intact;
+// consuming that prefix in this scan prevents retrying at its final digit token.
+const NUMERIC_RANGE = new RegExp(
+  String.raw`(?<![\d.])[\d.]+(?:\s*\p{Dash}\s*[\d.]+)+|(?:\bfrom\s+|(${FRACTION_OWNER})|(\b(?:${NUMBER_WORD})[\s-]+(?:and[\s-]+)?))?(?<![\d.])(${RANGE_NUMBER})\s+to\s+${RANGE_NUMBER}${RANGE_END}|\bbetween\s+${RANGE_NUMBER}\s+and\s+${RANGE_NUMBER}${RANGE_END}`,
+  'gu'
 );
 
 // A number as it can stand in quotes: digits, separators, spaces, slashes and fractions.
@@ -319,7 +320,27 @@ export function tokenizeNormalized(
       .toLowerCase()
       // Replace ranges after lowercasing so no input can supply the internal marker. Keep the
       // whole text together: the quote rules below need opening quotes from before a range.
-      .replace(NUMERIC_RANGE, range => (rangeBoundaries ? ` ${RANGE_WORD} ` : range))
+      .replace(
+        NUMERIC_RANGE,
+        (
+          range,
+          owner: string | undefined,
+          wordPrefix: string | undefined,
+          first: string,
+          offset: number,
+          input: string
+        ) => {
+          if (!rangeBoundaries || wordPrefix) return range;
+          if (owner) {
+            const slash = first.search(/[/⁄]/);
+            // As in normalizeFractions, a later inch component owns the height instead.
+            if (slash !== -1 && !RANGE_INCHES.test(input.slice(offset + range.length))) {
+              return `${owner}${first.slice(0, slash)} / ${RANGE_WORD} `;
+            }
+          }
+          return `${owner || ''} ${RANGE_WORD} `;
+        }
+      )
       // Mark labels before the punctuation that marks them is removed, so the parser knows what
       // kind of label each one is, and spell out the short aliases. A bracket label keeps its
       // opening bracket, and a label after a field separator gets a field word first.
