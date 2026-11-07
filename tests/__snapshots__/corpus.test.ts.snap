@@ -2,25 +2,25 @@
 
 exports[`measurement corpus > matches the committed score 1`] = `
 "Category                 total   agree   wrong  missed  throws
-all                        683     663       5      15       0
+all                        753     732       6      15       0
 
 symbols                     84      84       0       0       0
 words                       31      31       0       0       0
 mixed-numbers               40      40       0       0       0
-decimals                    40      39       1       0       0
-commas                      32      31       1       0       0
+decimals                    42      41       1       0       0
+commas                      32      32       0       0       0
 hyphens                     49      49       0       0       0
 compact                     24      12       0      12       0
-unicode                     29      29       0       0       0
+unicode                     67      65       2       0       0
 typos                       32      32       0       0       0
 surrounding-text            60      57       0       3       0
-multiple-measurements      104     104       0       0       0
+multiple-measurements      134     134       0       0       0
 unqualified                 25      25       0       0       0
 conversion                  41      41       0       0       0
 unsupported                 60      60       0       0       0
 prose                       32      29       3       0       0
 
-Entries with the outcome "wrong" (5):
+Entries with the outcome "wrong" (6):
 
 decimals-5-11-ft (decimals)
   input:    "5.11 ft"
@@ -46,11 +46,17 @@ prose-kilns-fuzzy (prose)
   expected: null
   actual:   2 kg (weight)
 
-unicode-minus-after-number-word-label (commas)
-  input:    "phase twenty, \\u22125 cm"
-  options:  {}
+afa-202-review-minus-unit-first-negative (unicode)
+  input:    "phase 20, kg\\u221270.5"
+  options:  {"type":"weight"}
   expected: null
-  actual:   25 cm (height)
+  actual:   20 kg (weight)
+
+afa-202-review-small-unit-first-negative (unicode)
+  input:    "phase 20, kg\\ufe6370.5"
+  options:  {"type":"weight"}
+  expected: null
+  actual:   20 kg (weight)
 
 Entries with the outcome "missed" (15):
 

@@ -81,6 +81,8 @@ describe('spoken decimal measurements', () => {
     '-point five kg',
     'kg -point five',
     '−point five kg',
+    'phase twenty, −point five kg',
+    'phase 20; ﹣point five kg',
     '-a hundred point five kg',
     'seventy point zero kg, -seventy point five kg',
   ])('keeps signed decimals invalid: %s', raw => {

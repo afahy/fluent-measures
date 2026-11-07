@@ -198,13 +198,30 @@ const DECIMAL_BRACKET = new RegExp(
   'g'
 );
 
-// A minus sign before a number, when no number comes earlier: no digit, Unicode fraction or number
-// word. The number can be a word too, as in "−five'", also after "a" or "an", as in "−a hundred"
+// A comma or semicolon directly after a number ends its label context. Separators after units
+// keep joining context: "phase twenty, −5 cm" is signed but "5 ft, −11 in" joins both parts.
+const NUMBER_END = String.raw`(?:[\d${FRACTIONS}]|\b(?:${NUMBER_WORD})\b)`;
+
+// A value can have its unit before it ("ft: 5, −11 in") or across the separator
+// ("5;ft −11 in"). Neither is an unrelated numeric label. Keep their existing joining
+// context, including number words and numeric commas (validated by the next normalization pass).
+// Prefix punctuation keeps the tokenizer's word, quote and sign boundaries.
+// A label after the separator, as in "phase 20, kg: −70",
+// instead owns the signed value and must retain its sign.
+const NUMBER_TEXT = String.raw`(?:[\d./⁄${FRACTIONS}-]|,(?=\d)|\b(?:${NUMBER_WORD}|and|an?|half)\b)`;
+// Lookbehind runs right to left: capture the value first, then consume that exact text.
+// The backreference cannot give periods or slashes back to the punctuation prefix one at a time.
+const MINUS_VALUE = String.raw`\k<minusValue>(?<=(?<minusValue>${NUMBER_TEXT}(?:\s*${NUMBER_TEXT})*))`;
+const MINUS_JOIN = String.raw`(?:(?<![a-z])(?:${LABELS}|['"′″’”])[^\w'"−﹣-]*${MINUS_VALUE}\s*[,;][^,;]*?|${NUMBER_END}\s*[,;]\s*(?:${LABELS})\s*)`;
+
+// A minus sign before a number, with no earlier number since that label boundary.
+// The boundary includes spaces before its separator, but not digits within a comma group.
+// The number can be a word too, as in "−five'", also after "a" or "an", as in "−a hundred"
 // and "−a-hundred". After a number, a minus sign joins two parts or values, as in "1 m−80 cm" and
 // "½ lb−180 lbs". The parser would read a hyphen-minus there as a sign. The lookbehind runs only
 // after a minus sign, and its lazy part stops at the nearest earlier number.
 const MINUS_SIGN = new RegExp(
-  String.raw`[−﹣](?=[.,]?\d|[${FRACTIONS}]|(?:an?[\s-]+)?(?:${NUMBER_WORD}|point)\b)(?<!(?:[\d${FRACTIONS}]|\b(?:${NUMBER_WORD})\b)[\s\S]*?.)`,
+  String.raw`[−﹣](?=[.,]?\d|[${FRACTIONS}]|(?:an?[\s-]+)?(?:${NUMBER_WORD}|point)\b)(?<!${NUMBER_END}(?:[^,;]|(?<!${NUMBER_END}\s*)[,;])*?.)(?<!${MINUS_JOIN}.)`,
   'gi'
 );
 
@@ -242,7 +259,8 @@ const PUNCTUATION = new RegExp(
  * or a digit immediately follows the mark, as in the existing compact-height syntax.
  * Full-width characters and the units "㎝" and "㎏" become their ASCII forms. Other characters
  * stay, so normalizeFractions still sees "½". The minus signs "−" and "﹣" become a hyphen-minus
- * "-" right before a number when no number comes earlier, so "−5 ft" is negative.
+ * "-" right before a number when no number comes earlier since a numeric label separator, so "−5 ft"
+ * and "phase twenty, −5 cm" are negative.
  */
 export function normalizeForms(input: string): string {
   return input
