@@ -149,10 +149,11 @@ const RANGE_INCHES = new RegExp(
 // Blocking a following digit/fraction mark also prevents backtracking to a shorter endpoint.
 const RANGE_END = String.raw`(?![\d./⁄]|[\s-]+(?:and[\s-]+)?(?:${NUMBER_WORD}|a[\s-]+half|point)\b)`;
 // Keep an optional feet owner so a slash before the range retains the same measurement
-// boundary as fraction normalization. A preceding number word keeps the complete text intact;
+// boundary as fraction normalization, without consuming another slash in a date or code.
+// A preceding number word keeps the complete text intact;
 // consuming that prefix in this scan prevents retrying at its final digit token.
 const NUMERIC_RANGE = new RegExp(
-  String.raw`(?<![\d.])[\d.]+(?:\s*\p{Dash}\s*[\d.]+)+|(?:\bfrom\s+|(${FRACTION_OWNER})|(\b(?:${NUMBER_WORD})[\s-]+(?:and[\s-]+)?))?(?<![\d.])(${RANGE_NUMBER})\s+to\s+${RANGE_NUMBER}${RANGE_END}|\bbetween\s+${RANGE_NUMBER}\s+and\s+${RANGE_NUMBER}${RANGE_END}`,
+  String.raw`(?<![\d.])[\d.]+(?:\s*\p{Dash}\s*[\d.]+)+|(?:\bfrom\s+|(${FRACTION_OWNER})(?:(${RANGE_DIGITS})[/⁄](?=${RANGE_DIGITS}\s+to\b))?|(\b(?:${NUMBER_WORD})[\s-]+(?:and[\s-]+)?))?(?<![\d.])${RANGE_NUMBER}\s+to\s+${RANGE_NUMBER}${RANGE_END}|\bbetween\s+${RANGE_NUMBER}\s+and\s+${RANGE_NUMBER}${RANGE_END}`,
   'gu'
 );
 
@@ -343,18 +344,15 @@ export function tokenizeNormalized(
         (
           range,
           owner: string | undefined,
+          inches: string | undefined,
           wordPrefix: string | undefined,
-          first: string,
           offset: number,
           input: string
         ) => {
           if (!rangeBoundaries || wordPrefix) return range;
-          if (owner) {
-            const slash = first.search(/[/⁄]/);
-            // As in normalizeFractions, a later inch component owns the height instead.
-            if (slash !== -1 && !RANGE_INCHES.test(input.slice(offset + range.length))) {
-              return `${owner}${first.slice(0, slash)} / ${RANGE_WORD} `;
-            }
+          // As in normalizeFractions, a later inch component owns the height instead.
+          if (inches && !RANGE_INCHES.test(input.slice(offset + range.length))) {
+            return `${owner}${inches} / ${RANGE_WORD} `;
           }
           return `${owner || ''} ${RANGE_WORD} `;
         }

@@ -65,4 +65,24 @@ describe('worded range boundaries', () => {
       expect(parseMeasurement(raw, { type: 'weight' })).toBeNull();
     }
   );
+
+  it.each(['5 ft 10 to 20 lbs', '5 ft 10 to 20 in'])(
+    'keeps a complete range endpoint out of the independent height: %s',
+    raw => {
+      expect(parseMeasurement(raw, { type: 'height' })).toMatchObject({
+        value: 5,
+        unit: 'ft',
+        matches: [{ value: 5, unit: 'ft' }],
+      });
+    }
+  );
+
+  // Two slash separators are not one fraction. Keep both conflicting inch readings
+  // visible rather than discarding the ten and accepting 5*12+11.
+  it.each(['5 ft 10/180/200 to 20 11 in', "5'10/180/200 to 3/4 11 in"])(
+    'does not consume another slash-separated field in %s',
+    raw => {
+      expect(parseMeasurement(raw, { type: 'height' })).toBeNull();
+    }
+  );
 });
