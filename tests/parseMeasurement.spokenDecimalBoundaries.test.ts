@@ -23,6 +23,8 @@ describe('spoken decimal boundaries', () => {
     ['meters one point eight (180 centimeters)', {}, { value: 1.8, unit: 'm', type: 'height' }],
     ['pounds one hundred point zero (100 lbs)', {}, { value: 100, unit: 'lb', type: 'weight' }],
     ['inches seventy point zero (70")', {}, { value: 70, unit: 'in', type: 'height' }],
+    ['6 ft 1-2 eleven point five in', {}, { value: 83.5, unit: 'in', type: 'height' }],
+    ['kg seventy point five 1-2', {}, { value: 70.5, unit: 'kg', type: 'weight' }],
     [
       'm: one point eight and kg: seventy point five',
       { type: 'height' },

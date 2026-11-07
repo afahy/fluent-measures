@@ -13,6 +13,8 @@ be either one, or `null`.
 - Measurements that disagree: `210 lbs to 180 lbs`.
 - Ranges: `150-180 lbs`, `kg 50-70`. A separate measurement keeps its own unit, as in
   `150-180 lbs 70 kg` (70 kg).
+- Spoken decimals next to discarded ranges: `6 ft 1-2 eleven point five in` gives 83.5 in;
+  `kg seventy point five 1-2` keeps 70.5 kg.
 - A height and a weight, with `type` to choose one: `5'11", 180 lbs`.
 - `import` and `require`.
 

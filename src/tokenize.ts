@@ -376,7 +376,7 @@ export function tokenizeNormalized(
     else if (text === UNIT_WORD) label = 'unit';
     else {
       if (text === RANGE_WORD) {
-        tokens.push({ text: '-', range: true });
+        tokens.push({ text, range: true });
       } else tokens.push(label ? { text, label, startsField } : { text });
       startsField = false;
       label = undefined;
