@@ -118,8 +118,9 @@ Later passes cannot recover characters discarded by earlier ones.
 | Fraction normalized | Pipeline complete                                                                   | Pass text to tokenization/range detection                                                  | M2/M3                              |
 
 For F3, a comma or semicolon directly after digits, a Unicode fraction or a number word
-resets earlier-number context, including spaces before the separator. A separator after a unit
-keeps joining context, so `5 ft, −11 in` remains 71 in. Digits after a decimal/thousands comma
+resets earlier-number context, including spaces before the separator. A value with a unit before
+it or across its separator retains joining context, as does a separator after a unit. Thus
+`ft 5, −11 in`, `5;ft −11 in` and `5 ft, −11 in` remain 71 in. Digits after a decimal/thousands comma
 still count as an earlier number. M8 receives the preserved ASCII sign and rejects its field;
 a separate semicolon-delimited positive field remains eligible.
 
@@ -512,11 +513,19 @@ opened. Before: current main `bfac12a943720390c60afd26a522cb67dfa20fa3`. The ori
 
 M1 keeps its existing sign-before-number guard and earlier-number policy. Only commas and
 semicolons directly after numbers, optionally separated by spaces, end the preceding label's
-context. Commas after units retain joining behavior. This avoids a broad sign conversion or
+context. Values with their units before them or across the separator, and commas after units,
+retain joining behavior. This avoids a broad sign conversion or
 tokenizer rewrite. The semicolon cases use the same guard and fix location as the ticket's
 comma cases and are included under decision rule 2, with a ticket comment. A signed field
 followed by `; actual 6 cm` now leaves that independent positive field intact, for digit/word
 labels and both signs. These changed results are disclosed in the ticket and PR.
+
+An unavoidable signed-zero change is recorded under decision rule 3:
+`phase 20, −0 kg, 80 lb`, weight type, changes 80 lb to `null`, as does the small-minus form.
+Preserving the sign invokes AFA-80's existing signed-part field rejection, matching the ASCII
+form and leading `−0 kg, 80 lb`. No special exception discards only signed zero after labels.
+The independent review's 80 lb expectation assumed unsigned-zero behavior; that expectation
+was rejected for this signed syntax, with the decision disclosed on the ticket.
 
 Permanent regressions: `tests/parseMeasurement.unicodeMinusLabels.test.ts`, reused through ESM
 and CommonJS. They cover exact ticket inputs, both signs, digit/word/full-width labels, spaces,
@@ -524,8 +533,17 @@ fractions, decimal/thousands commas, article-led words, unit labels, marks, fuzz
 explicit type, normalized unit and unqualified options. Preservation cases include the ticket's
 ranges/multipart values, commas after units, positive comma boundaries, F1 quoted digits and
 the approved F4 proper fractions. A minor changeset records the changed non-null results.
-Thirty new ticket-sourced corpus rows agree; the existing F3 row also becomes an agreement.
+Forty-two new ticket-sourced correction/control rows agree; the existing F3 row also becomes an
+agreement. Two additional rows sourced to AFA-244 record its existing signed-prefix failures.
 No prior row or expected result is edited, and the generated result inventory is unchanged.
+
+Independent review specified 126 probes before testing `eb5da21` and main `bfac12a9`.
+Ten introduced multipart failures (five inputs with both signs) were reproduced through
+source/ESM/CommonJS: `ft 5, −11 in`, height-typed `ft: 5, −11 in`, height-typed
+`m: 1, −80 cm`, `5;ft −11 in` and `5, ft −11 in`. The corrected guard retains their units
+and original 71-inch/180-centimeter values. Four additional word-form assertions failed on the
+initial correction too. Parent replay now gives 124 of 126 agreements in each format after the
+signed-zero judgment; both remaining failures are the separate AFA-244 cases below.
 
 Self-review reproduced a distinct pre-existing M3/M7 ownership limitation:
 `phase 20, kg−70.5` returns **20 kg** on main `bfac12a9`, expected **`null`**.
@@ -995,7 +1013,7 @@ Each fix session must:
 | <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1e5640d2dbe8ef251e2bb479d46cc5f4fc59c1597ecd270e7941a88df6893b76>                                                       | Fresh AFA-203 implementation, review and PR stewardship             | Complete: [PR #234](https://github.com/afahy/fluent-measures/pull/234), reviewed head `0a33c40`, merge `77bd5ce`; 19 PR checks, pre/post-merge audits and all 12 exact-merge main CI jobs passed (run 42314274182, ci-ok 2026-11-06T23:54:24Z). Earlier validation at `9030111` and `5c9eab1` retained                                                                                                                                                                                                                                                                                |
 | <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:2d4a60308bdfb6191174b5f92be891f2f90bd42e44ea1218e394ed52840c6148>                                                       | Fresh AFA-116 signed other-type ownership and named test groups     | Source `1eb0a1b`; focused checks passed against `77bd5ce`. Independent review complete (125/126 agree; existing finding filed as AFA-241); full check and fresh changed-line mutation validation passed at `f80b4be`; [PR #235](https://github.com/afahy/fluent-measures/pull/235) merged as `b90ea36` from reviewed `28c3d21`; all 19 PR checks, exact-head Codex review, final audits and all 12 exact-merge main CI jobs passed (run 42319687195, ci-ok 2026-11-07T00:47:02Z). Ticket Done; merged worktree/local branch removed; audit `513b4c3` preserved. No successor assigned |
 
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:462bb758094ab0a59a27217f4fb643589704bceca25e2bf1c7aba94be4f52c28> | Fresh AFA-202 Unicode-minus label correction; then fresh AFA-62 only | Started from main `bfac12a9` after the predecessor merged and all 12 exact-main CI jobs passed; ticket claimed In Progress. Focused failing-first source/ESM/CommonJS checks pass with the correction; full validation and independent review pending. Exclusive heavy-check/mutation/push slot explicitly granted by audit coordinator. |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:462bb758094ab0a59a27217f4fb643589704bceca25e2bf1c7aba94be4f52c28> | Fresh AFA-202 Unicode-minus label correction; then fresh AFA-62 only | Started from main `bfac12a9` after the predecessor merged and all 12 exact-main CI jobs passed; ticket claimed In Progress. Focused failing-first source/ESM/CommonJS checks pass with the correction; independent review and parent replay completed with the scoped judgments above; corrected-source full validation pending. Exclusive heavy-check/mutation/push slot explicitly granted by audit coordinator. |
 
 Sessions use isolated prepared worktrees. Full checks, mutation runs and mandatory push hooks
 have one shared execution slot. AFA-74 released its integration window after `70419bd`.
@@ -1014,13 +1032,16 @@ mutation, PR-lifecycle and document-update requirements. Launch status is not fi
 
 ## Validation record
 
-F3 focused validation against exact main `bfac12a9`: `pnpm install` passed. The final 112-case
-regression/control suite fails 54 source assertions and 108 assertions across ESM/CommonJS on
-main, with 58 controls passing per format. All cases pass with the targeted correction.
-The 681-row corpus preserves every previous row, with 662 agreements, 4 wrong, 15 missed and
-no throws; only the existing F3 failure improves, and all 30 additions agree. The generated
-result inventory is unchanged. Full check, mutation and independent-review results follow
-when complete.
+F3 focused validation against exact main `bfac12a9`: `pnpm install` passed. The final 138-case
+regression/control suite fails 56 source assertions and 112 assertions across ESM/CommonJS on
+main, with 82 controls passing per format. All cases pass with the targeted correction.
+The 695-row corpus preserves every previous row, with 674 agreements, 6 wrong, 15 missed and
+no throws. The existing F3 failure improves, all 42 correction/control additions agree, and
+two AFA-244 additions record unchanged pre-existing wrong results. The generated
+result inventory is unchanged. The independent review and parent replay are recorded in F3 above. The initial full run passed
+lint, 3,924 unit tests with 100% coverage and TypeScript; its mutation phase was interrupted
+when independent findings required a correction. Final full checks and fresh mutation validation
+are running on the corrected source; no success is claimed for the interrupted run.
 
 The parent audit passed `pnpm install`, `pnpm build`, and the unchanged invariant, semantic
 property, corpus, README and parsing-example suites: 361 tests across five files.

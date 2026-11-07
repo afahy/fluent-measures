@@ -2,7 +2,7 @@
 
 exports[`measurement corpus > matches the committed score 1`] = `
 "Category                 total   agree   wrong  missed  throws
-all                        681     662       4      15       0
+all                        695     674       6      15       0
 
 symbols                     84      84       0       0       0
 words                       31      31       0       0       0
@@ -11,16 +11,16 @@ decimals                    22      21       1       0       0
 commas                      32      32       0       0       0
 hyphens                     49      49       0       0       0
 compact                     24      12       0      12       0
-unicode                     59      59       0       0       0
+unicode                     63      61       2       0       0
 typos                       32      32       0       0       0
 surrounding-text            57      54       0       3       0
-multiple-measurements       93      93       0       0       0
+multiple-measurements      103     103       0       0       0
 unqualified                 25      25       0       0       0
 conversion                  41      41       0       0       0
 unsupported                 60      60       0       0       0
 prose                       32      29       3       0       0
 
-Entries with the outcome "wrong" (4):
+Entries with the outcome "wrong" (6):
 
 decimals-5-11-ft (decimals)
   input:    "5.11 ft"
@@ -45,6 +45,18 @@ prose-kilns-fuzzy (prose)
   options:  {"fuzziness":1}
   expected: null
   actual:   2 kg (weight)
+
+afa-202-review-minus-unit-first-negative (unicode)
+  input:    "phase 20, kg\\u221270.5"
+  options:  {"type":"weight"}
+  expected: null
+  actual:   20 kg (weight)
+
+afa-202-review-small-unit-first-negative (unicode)
+  input:    "phase 20, kg\\ufe6370.5"
+  options:  {"type":"weight"}
+  expected: null
+  actual:   20 kg (weight)
 
 Entries with the outcome "missed" (15):
 

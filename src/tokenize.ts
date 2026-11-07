@@ -195,6 +195,13 @@ const WORD_COMMA = new RegExp(
 // keep joining context: "phase twenty, −5 cm" is signed but "5 ft, −11 in" joins both parts.
 const NUMBER_END = String.raw`(?:[\d${FRACTIONS}]|\b(?:${NUMBER_WORD})\b)`;
 
+// A value can have its unit before it ("ft: 5, −11 in") or across the separator
+// ("5;ft −11 in"). Neither is an unrelated numeric label. Keep their existing joining
+// context, including number words. A label after the separator, as in "phase 20, kg: −70",
+// instead owns the signed value and must retain its sign.
+const NUMBER_TEXT = String.raw`(?:[\d./⁄${FRACTIONS}-]|\b(?:${NUMBER_WORD}|and|an?|half)\b)`;
+const MINUS_JOIN = String.raw`(?:(?<![a-z])(?:${LABELS}|['"′″’”])[:=()\[\]\s]*${NUMBER_TEXT}(?:\s*${NUMBER_TEXT})*\s*[,;][^,;]*?|${NUMBER_END}\s*[,;]\s*(?:${LABELS})\s*)`;
+
 // A minus sign before a number, with no earlier number since that label boundary.
 // The boundary includes spaces before its separator, but not digits within a comma group.
 // The number can be a word too, as in "−five'", also after "a" or "an", as in "−a hundred"
@@ -202,7 +209,7 @@ const NUMBER_END = String.raw`(?:[\d${FRACTIONS}]|\b(?:${NUMBER_WORD})\b)`;
 // "½ lb−180 lbs". The parser would read a hyphen-minus there as a sign. The lookbehind runs only
 // after a minus sign, and its lazy part stops at the nearest earlier number.
 const MINUS_SIGN = new RegExp(
-  String.raw`[−﹣](?=[.,]?\d|[${FRACTIONS}]|(?:an?[\s-]+)?(?:${NUMBER_WORD})\b)(?<!${NUMBER_END}(?:[^,;]|(?<!${NUMBER_END}\s*)[,;])*?.)`,
+  String.raw`[−﹣](?=[.,]?\d|[${FRACTIONS}]|(?:an?[\s-]+)?(?:${NUMBER_WORD})\b)(?<!${NUMBER_END}(?:[^,;]|(?<!${NUMBER_END}\s*)[,;])*?.)(?<!${MINUS_JOIN}.)`,
   'gi'
 );
 

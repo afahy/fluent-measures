@@ -17,6 +17,8 @@ describe('Unicode minus signs after numeric labels', () => {
       ['phase twenty  , SIGN5 cm', {}],
       ['phase twenty; SIGN5 cm', {}],
       ['phase 20; SIGN5 cm', {}],
+      // AFA-80's signed-part rule rejects the field, including a signed zero.
+      ['phase 20, SIGN0 kg, 80 lb', { type: 'weight' }],
       ['phase20,SIGN5 cm', {}],
       ['phase ２０， SIGN５ ㎝', {}],
       ['PHASE TWENTY, SIGNFIVE CENTIMETERS', {}],
@@ -51,6 +53,17 @@ describe('Unicode minus signs after numeric labels', () => {
 
     it.each([
       ['5 ft SIGN11 in', {}, 71, 'in'],
+      ['ft 5, SIGN11 in', {}, 71, 'in'],
+      ['ft: 5, SIGN11 in', { type: 'height' }, 71, 'in'],
+      ['m: 1, SIGN80 cm', { type: 'height' }, 180, 'cm'],
+      ['5;ft SIGN11 in', {}, 71, 'in'],
+      ['5, ft SIGN11 in', {}, 71, 'in'],
+      ['ft five, SIGNeleven in', {}, 71, 'in'],
+      ['(ft) 5, SIGN11 in', {}, 71, 'in'],
+      ['feet one hundred, SIGN1200 in', {}, 100, 'ft'],
+      ['ft: five and a half, SIGN66 in', {}, 5.5, 'ft'],
+      ['5;feet SIGNeleven in', {}, 71, 'in'],
+      ['m: one, SIGNeighty cm', {}, 180, 'cm'],
       ['5 ft, SIGN11 in', {}, 71, 'in'],
       ['1 m,SIGN80 cm', {}, 180, 'cm'],
       ['180 cm,SIGN70 kg', { type: 'weight' }, 70, 'kg'],
@@ -82,12 +95,16 @@ describe('Unicode minus signs after numeric labels', () => {
     });
   });
 
-  it.each(['phase twenty, -5 cm', 'phase twenty, －5 cm', '−5 ft', 'kg−70.5'])(
-    'preserves the existing sign rejection for %s',
-    raw => {
-      expect(parseMeasurement(raw)).toBeNull();
-    }
-  );
+  it.each([
+    'phase twenty, -5 cm',
+    'phase twenty, －5 cm',
+    '−5 ft',
+    'kg−70.5',
+    'phase 20, -0 kg, 80 lb',
+    '−0 kg, 80 lb',
+  ])('preserves the existing sign rejection for %s', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
 
   it.each([
     ['phase twenty, 5 cm', {}, 5, 'cm'],
