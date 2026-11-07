@@ -79,17 +79,33 @@ function readNumberPhrase(
   }
   let end = start;
   let value: number | null = null;
+  let stopped: number | undefined;
   const phrase: string[] = [];
+  const read = (): number | null =>
+    // Stryker disable next-line EqualityOperator: step is 1 or -1, so "step >= 0" is the same.
+    wordsToNumber((step > 0 ? phrase : [...phrase].reverse()).join(' '));
   for (let word = words(end); word !== undefined; word = words((end += step))) {
     // Stryker disable next-line EqualityOperator: step is 1 or -1, so "step <= 0" is the same.
-    if (word === 'and' || (step < 0 && word === ';')) continue;
-    // Stryker disable next-line EqualityOperator: step is 1 or -1, so "step >= 0" is the same.
-    if (step > 0) phrase.push(word);
-    else phrase.unshift(word);
-    const candidate = wordsToNumber(phrase.join(' '));
-    if (candidate === null) break;
-    value = candidate;
+    if (step < 0 && word === ';') continue;
+    if (
+      !NUMBER_WORDS.has(word) &&
+      !MULTIPLIERS.has(word) &&
+      !/^[\d.]+$/.test(word) &&
+      word !== 'point' &&
+      word !== 'and'
+    )
+      break;
+    phrase.push(word);
+    // Keep the integer reader's first stopping point, but collect the adjacent number tokens.
+    // A later "point" makes them one decimal: "zero five" is valid after it, not an integer.
+    if (stopped === undefined && word !== 'and') {
+      const candidate = read();
+      if (candidate === null) stopped = end;
+      else value = candidate;
+    }
   }
+  if (phrase.includes('point')) return [read(), end];
+  end = stopped ?? end;
   // Reading forward, the loop skips "and" and stops at "a". A read backward never stops just
   // before "a half", because "half" isn't a number.
   return Number.isInteger(value) && half(end - 1) ? [value! + 0.5, end + 2] : [value, end];
@@ -131,7 +147,7 @@ function readSignedPhrase(
     if (NUMBER_WORDS.has(next) || MULTIPLIERS.has(next)) {
       return forward ? [...readNumberPhrase(words, at + 1), true] : [value, at - 1, true];
     }
-  } else if (wordsToNumber(word) !== null) {
+  } else if (word === 'point' || wordsToNumber(word) !== null) {
     // Read again with the word in place of the token.
     const [signedValue, signedEnd] = readNumberPhrase(
       index => (index === at ? word : words(index)),
@@ -203,8 +219,7 @@ function readValueAfter(
     (nextUnit || UNSUPPORTED_WEIGHT_UNITS.test(next)) &&
     !(
       (nextUnit === NEXT_PART[unit] || nextToken.label === 'unit') &&
-      // Stryker disable next-line StringLiteral: "Stryker was here!" isn't a number, as "" isn't.
-      wordsToNumber(words(skipSemicolons(words, unitAt + 1)) ?? '') !== null
+      readNumberPhrase(words, skipSemicolons(words, unitAt + 1))[0] !== null
     );
   return [ownUnit ? null : value, end];
 }

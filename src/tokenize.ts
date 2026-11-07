@@ -187,7 +187,7 @@ const CURLY_DOUBLE = curlyMark('“', '”');
 // before spaced digits, as in "phase twenty, 5 cm". Numeric commas keep their existing rules.
 // Look past an opening curly quote too: punctuation removal mustn't join "twenty, “5” cm".
 const WORD_COMMA = new RegExp(
-  String.raw`(\b(?:${NUMBER_WORD}))\s*,(?=\s+(?:[“‘]\s*)?\.?\d|\s*(?:[“‘]\s*)?(?:${NUMBER_WORD})\b)`,
+  String.raw`(\b(?:${NUMBER_WORD}|point))\s*,(?=\s+(?:[“‘]\s*)?\.?\d|\s*(?:[“‘]\s*)?(?:${NUMBER_WORD}|point)\b)`,
   'g'
 );
 
@@ -197,7 +197,7 @@ const WORD_COMMA = new RegExp(
 // "½ lb−180 lbs". The parser would read a hyphen-minus there as a sign. The lookbehind runs only
 // after a minus sign, and its lazy part stops at the nearest earlier number.
 const MINUS_SIGN = new RegExp(
-  String.raw`[−﹣](?=[.,]?\d|[${FRACTIONS}]|(?:an?[\s-]+)?(?:${NUMBER_WORD})\b)(?<!(?:[\d${FRACTIONS}]|\b(?:${NUMBER_WORD})\b)[\s\S]*?.)`,
+  String.raw`[−﹣](?=[.,]?\d|[${FRACTIONS}]|(?:an?[\s-]+)?(?:${NUMBER_WORD}|point)\b)(?<!(?:[\d${FRACTIONS}]|\b(?:${NUMBER_WORD})\b)[\s\S]*?.)`,
   'gi'
 );
 

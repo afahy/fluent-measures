@@ -14,10 +14,22 @@ export const MULTIPLIERS = new Map<string, number>([
 
 /** Parse a complete number phrase, including zero, hundreds, and thousands. */
 export function wordsToNumber(input: string): number | null {
-  const words = input
-    .toLowerCase()
-    .split(/\s+/)
-    .filter(word => word !== 'and');
+  const tokens = input.toLowerCase().split(/\s+/);
+  const point = tokens.indexOf('point');
+  if (point !== -1) {
+    const whole = point ? wordsToNumber(tokens.slice(0, point).join(' ')) : 0;
+    // After "point", each word names a digit. Keep other words so validation rejects the
+    // complete phrase, including a second "point", rather than accepting a shorter suffix.
+    const digits = tokens
+      .slice(point + 1)
+      .map(word => {
+        const number = NUMBER_WORDS.get(word);
+        return number !== undefined && number < 10 ? number : word;
+      })
+      .join('');
+    return Number.isInteger(whole) && /^\d+$/.test(digits) ? whole! + Number(`0.${digits}`) : null;
+  }
+  const words = tokens.filter(word => word !== 'and');
 
   let hasHundred = false;
   let hasThousand = false;
