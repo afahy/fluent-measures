@@ -202,7 +202,10 @@ const NUMBER_END = String.raw`(?:[\d${FRACTIONS}]|\b(?:${NUMBER_WORD})\b)`;
 // A label after the separator, as in "phase 20, kg: −70",
 // instead owns the signed value and must retain its sign.
 const NUMBER_TEXT = String.raw`(?:[\d./⁄${FRACTIONS}-]|,(?=\d)|\b(?:${NUMBER_WORD}|and|an?|half)\b)`;
-const MINUS_JOIN = String.raw`(?:(?<![a-z])(?:${LABELS}|['"′″’”])[^\w'"−﹣-]*${NUMBER_TEXT}(?:\s*${NUMBER_TEXT})*\s*[,;][^,;]*?|${NUMBER_END}\s*[,;]\s*(?:${LABELS})\s*)`;
+// Lookbehind runs right to left: capture the value first, then consume that exact text.
+// The backreference cannot give periods or slashes back to the punctuation prefix one at a time.
+const MINUS_VALUE = String.raw`\k<minusValue>(?<=(?<minusValue>${NUMBER_TEXT}(?:\s*${NUMBER_TEXT})*))`;
+const MINUS_JOIN = String.raw`(?:(?<![a-z])(?:${LABELS}|['"′″’”])[^\w'"−﹣-]*${MINUS_VALUE}\s*[,;][^,;]*?|${NUMBER_END}\s*[,;]\s*(?:${LABELS})\s*)`;
 
 // A minus sign before a number, with no earlier number since that label boundary.
 // The boundary includes spaces before its separator, but not digits within a comma group.

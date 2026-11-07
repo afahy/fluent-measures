@@ -496,7 +496,9 @@ public example or exported type changes. Paired-apostrophe quotations retain the
 ### F3 correction — Unicode signs after numeric labels
 
 Status: corrected in [PR #236](https://github.com/afahy/fluent-measures/pull/236) at
-`d6e2ce7`, with full validation and fresh changed-line mutation passed. Earlier source
+`d6e2ce7`, with full validation and fresh changed-line mutation passed. A later automatic review
+found the quadratic prefix-guard issue below; its narrow correction is awaiting full validation.
+Earlier source
 `93c7c72` passed validation at `b80d68a` before the round-one preservation correction. Before: current main `bfac12a943720390c60afd26a522cb67dfa20fa3`. The original
 `b79eae0` audit row and embedded 22-test harness remain historical evidence.
 
@@ -606,6 +608,52 @@ is `/tmp/parseMeasurement.afa202FuzzyReview.test.ts`. The ticket specifies the m
 composition checks. This audit-only addition changes no production code, regression expectations,
 corpus row, original probe count or numbered group. Earlier F3 correction/validation remains
 at source `d6e2ce7`; the limitation is disclosed in the PR and ticket.
+
+Automatic review of audit-only head `50ba961` added six accepted Unicode-mark prefix cases to
+the same [AFA-249](https://linear.app/afahy/issue/AFA-249) follow-up. With no options:
+
+| Input         | Main `bfac12a9` / expected | Reviewed `50ba961` |
+| ------------- | -------------------------- | ------------------ |
+| `´5, −11 in`  | 71 in                      | `null`             |
+| `´5, ﹣11 in` | 71 in                      | `null`             |
+| `ʹ5, −11 in`  | 71 in                      | `null`             |
+| `ʹ5, ﹣11 in` | 71 in                      | `null`             |
+| `ʺ72, −6 ft`  | 72 in                      | `null`             |
+| `ʺ72, ﹣6 ft` | 72 in                      | `null`             |
+
+All six fail in source and both package formats, while main passes. The expected values follow
+unit marks and unit-first multipart/equal-measurement rules: 5 × 12 + 11 = 71 in and 6 × 12 = 72 in.
+The guard omits marks accepted later by M1, just as it omits fuzzy names accepted by M7. These
+non-showstopper preservation findings are deferred under the review cap. AFA-249 now holds two
+findings/ten rows; its original four-row `bf6e4b8` comparison stays intact. It remains Medium,
+unassigned and in Backlog outside active queues; no production mark fix, numbered group or new
+successor is added. Logs: `/tmp/afa202-late-{source,package,main-source,main-package}.log`.
+
+The same automatic review confirmed a separate **merge-blocking performance regression** in
+the new guard. With `{ maxLength: Infinity }`, `'.'.repeat(n) + '5, −11 in'` costs 29/85 ms
+of source CPU time at 2,000/4,000 periods, versus 6/1 ms on main `bfac12a9`; ESM/CommonJS cost
+29–34/86–88 ms versus 6/1 ms. The punctuation prefix and numeric text can both consume periods
+and slashes, so a missing unit prefix makes the old lookbehind reconsider their splits.
+This synchronous backtracking is a security/showstopper finding and is corrected in this PR
+despite the review cap. The correction captures the maximal numeric text once inside the
+existing backward guard and then consumes that exact capture, preventing those splits. It
+does not add unit forms or change the parser's result policy.
+
+`tests/parseMeasurement.unicodeMinusCost.test.ts` uses `parseWithin` for 16,000 periods/slashes
+and both signs, with `{ maxLength: Infinity }`. All four timing cases fail on reviewed source
+`50ba961` at 1,306–1,366 ms and all eight ESM/CommonJS cases fail at 1,358–1,373 ms, above the
+500 ms CPU budget. Focused corrected source takes 3–9 ms. The budget must be checked against
+both hosted coverage jobs before merge. Four short counterparts still exercise the guard under
+Stryker; only the new large cases use the timing helper's prescribed Stryker exclusion.
+Their expected `null` follows the comma boundary and negative-measurement rule; the short
+period/slash forms change main's 11 in to `null` as already done by the earlier F3 source.
+Four ticket-sourced short corpus rows make 719 rows, 698 agreements, 6 wrong, 15 missed and no
+throws; all original rows remain intact. The combined 186-case suites fail 64 source and 128
+ESM/CommonJS assertions on main, with 122 controls passing per format. Independent focused
+review found no new actionable issue; its 461 tests across eight files passed, including the
+178 preservation cases and new timing cases. Final validation is pending; earlier full results
+stay attributed to `d6e2ce7`, and the audit-only `50ba961` hooks remain separate. The new guard's
+backtracking defect is separate from the original audit's library concurrency/isolation evidence.
 
 Self-review reproduced a distinct pre-existing M3/M7 ownership limitation:
 `phase 20, kg−70.5` returns **20 kg** on main `bfac12a9`, expected **`null`**.
