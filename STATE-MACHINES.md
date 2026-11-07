@@ -174,6 +174,38 @@ revision, range tokens cannot simultaneously be labels. `startsField` is emitted
 label. `used` is assigned later by the parser. Compact unit-to-digit boundaries are not generally
 split, explaining F6. Empty tokens remain harmless non-number boundaries.
 
+AFA-248 extends the existing range-marker transition to numeric endpoints joined by `to`,
+`from ... to`, or `between ... and`. Number-word endpoints stay outside that grammar: neither
+end may be removed from a mixed phrase such as `1 to 2 hundred lbs`. The range replacement
+also retains slash-separated inches owned by preceding feet, as in `5'10/180 to 200 lbs`
+(70 in with the height selector). Terminal periods are consumed with a range so an empty
+punctuation token cannot detach its unit; decimal tails and attached number words keep the
+complete endpoint intact. A following explicit inch component instead owns the height
+in `6 ft 1/2 to 3/4 11 in` (83 in). These transitions reuse fraction ownership and feed the
+existing M3 range rules; the historical findings below remain unchanged. Regression evidence:
+`tests/parseMeasurement.wordedRangeBoundaries.test.ts` and the AFA-248 corpus entries.
+
+Third-round review of `4428859593593e2963c77c50606da4737f11d49f` found three additional
+preservation gaps. Focused public-input reproduction compared that exact head with main
+`24add56d3beda40627314b91fed3ab361fbe8995`:
+
+| Input / options                    | Main `24add56` | Head `4428859` | Approved complete-entry result |
+| ---------------------------------- | -------------- | -------------- | ------------------------------ |
+| `5'10/180 to 190 11 in`, height    | `null`         | 71 in          | `null`                         |
+| `1 to 2; hundred lbs`              | 200 lb         | 100 lb         | `null`                         |
+| `1 to 2; and a half lbs`           | 2.5 lb         | `null`         | `null`                         |
+| `150 to 180-200 lbs,70kg`          | 70 kg          | `null`         | `null`                         |
+| `between 150 and 180–200 lbs,70kg` | 70 kg          | `null`         | `null`                         |
+
+These new literals are absent from the existing example/test/ticket failure inputs; no throw,
+security issue or required-check failure was found. Under the three-round rule they are
+recorded on the existing [complete-entry ticket](https://linear.app/afahy/issue/AFA-250),
+comment `d3c1509e-3bdb-4a0c-bd0b-222d6c7fc797`. The approved policy retires ranges and
+fragment recovery, so its later range slice owns the null results. This is a deferred
+limitation of the narrow AFA-248 change, not a fixed finding or a revision of historical
+baselines. Reproduction: `/tmp/afa248-third-review-results.json` and
+`/tmp/afa248-third-review.log`. Source, tests and corpus remain unchanged from `4428859`.
+
 ### M3 — range ownership and shorthand
 
 Source: `parseMeasurement.ts:361–453`.

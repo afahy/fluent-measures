@@ -13,6 +13,8 @@ be either one, or `null`.
 - Measurements that disagree: `210 lbs to 180 lbs`.
 - Ranges: `150-180 lbs`, `kg 50-70`. A separate measurement keeps its own unit, as in
   `150-180 lbs 70 kg` (70 kg).
+- Shared-unit numeric ranges: `150 to 180 lbs`, `from 150 to 180 lbs`,
+  `between 150 and 180 lbs`. Their endpoints are omitted with the same boundaries as dash ranges.
 - A height and a weight, with `type` to choose one: `5'11", 180 lbs`.
 - `import` and `require`.
 
@@ -25,7 +27,8 @@ be either one, or `null`.
 ## How to verify it
 
 - Source: `src/parseMeasurement.ts`, `src/tokenize.ts`
-- Tests: `tests/parseMeasurement.calculator.test.ts`, `tests/parseMeasurement.unicodeMinusLabels.test.ts`, `tests/parseMeasurement.signedOtherTypeOwnership.test.ts`, `tests/parseMeasurement.signedWeightOwnership.test.ts`, `tests/parseMeasurement.quoteContext.test.ts`, `tests/parseMeasurement.fractionBoundaries.test.ts`, `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.separateMeasurements.test.ts`,
+- Tests: `tests/parseMeasurement.calculator.test.ts`,
+  `tests/parseMeasurement.wordedRangeBoundaries.test.ts`, `tests/parseMeasurement.wordedRanges.test.ts`, `tests/parseMeasurement.unicodeMinusLabels.test.ts`, `tests/parseMeasurement.signedOtherTypeOwnership.test.ts`, `tests/parseMeasurement.signedWeightOwnership.test.ts`, `tests/parseMeasurement.quoteContext.test.ts`, `tests/parseMeasurement.fractionBoundaries.test.ts`, `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.separateMeasurements.test.ts`,
   `tests/parseMeasurement.numberWordCommas.test.ts`, `tests/parseMeasurement.commaBetweenWords.test.ts`,
   `tests/parseMeasurement.commaWeightOwnership.test.ts`
 - Properties: "generated pairs of measurements" in `tests/properties.test.ts`
