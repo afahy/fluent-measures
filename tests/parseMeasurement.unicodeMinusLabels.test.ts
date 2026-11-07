@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
 
 // AFA-202: a comma separates the numeric label from the negative measurement.
+// The same normalization guard must respect a semicolon after a numeric label too.
 // Expected rejections follow the ticket and the negative-number rule; preservation values
 // follow PARSING.md's numbers, ranges and multipart rules, with 5 * 12 + 11 = 71 inches.
 describe('Unicode minus signs after numeric labels', () => {
@@ -13,6 +14,9 @@ describe('Unicode minus signs after numeric labels', () => {
       ['phase 20, SIGN5 cm', { normalizedUnit: 'in' }],
       ['phase twenty, SIGN5 cm', { type: 'height', allowUnqualified: true }],
       ['phase twenty,SIGN5 cm', {}],
+      ['phase twenty  , SIGN5 cm', {}],
+      ['phase twenty; SIGN5 cm', {}],
+      ['phase 20; SIGN5 cm', {}],
       ['phase20,SIGN5 cm', {}],
       ['phase ２０， SIGN５ ㎝', {}],
       ['PHASE TWENTY, SIGNFIVE CENTIMETERS', {}],
@@ -47,6 +51,10 @@ describe('Unicode minus signs after numeric labels', () => {
 
     it.each([
       ['5 ft SIGN11 in', {}, 71, 'in'],
+      ['5 ft, SIGN11 in', {}, 71, 'in'],
+      ['1 m,SIGN80 cm', {}, 180, 'cm'],
+      ['180 cm,SIGN70 kg', { type: 'weight' }, 70, 'kg'],
+      ['phase 20, 5 ft, SIGN11 in', {}, 71, 'in'],
       ['phase 20, 5 ft SIGN11 in', {}, 71, 'in'],
       ['phase twenty, five ft SIGNeleven in', { type: 'height' }, 71, 'in'],
       ['phase 20, 1 mSIGN80 cm', {}, 180, 'cm'],

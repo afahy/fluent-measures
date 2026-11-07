@@ -675,3 +675,7 @@
 {"id":"afa-202-minus-label-2-11","input":"phase 20, ﹣a hundred pounds","expected":null,"category":"unicode","source":"AFA-202","options":{"type":"weight"}}
 {"id":"afa-202-minus-label-2-12","input":"phase 20, kg: ﹣70","expected":null,"category":"unicode","source":"AFA-202","options":{"type":"weight"}}
 {"id":"afa-202-later-field-2","input":"phase twenty, ﹣5 cm; actual 6 cm","expected":{"value":6,"unit":"cm","type":"height"},"category":"unicode","source":"AFA-202"}
+{"id":"afa-202-semicolon-1-1","input":"phase 20; −5 cm","expected":null,"category":"unicode","source":"AFA-202"}
+{"id":"afa-202-semicolon-1-2","input":"phase twenty; −5 cm","expected":null,"category":"unicode","source":"AFA-202"}
+{"id":"afa-202-semicolon-2-1","input":"phase 20; ﹣5 cm","expected":null,"category":"unicode","source":"AFA-202"}
+{"id":"afa-202-semicolon-2-2","input":"phase twenty; ﹣5 cm","expected":null,"category":"unicode","source":"AFA-202"}
