@@ -1,6 +1,6 @@
 # Library state machines
 
-<!-- cspell:ignore NFKC apfahy -->
+<!-- cspell:ignore NFKC apfahy meterrs -->
 
 Audit baseline: `b79eae0` (`main`), 2026-11-06. Tracking: [AFA-235][audit].
 Scope: every runtime module in `src/`, reached through `parseMeasurement`. The docs website,
@@ -584,6 +584,29 @@ Focused source CPU probes with `maxLength: Infinity` include 1,000/10,000 prefix
 and period characters; the largest new-prefix cost was 7 ms, with the earlier repeated-context
 probes also passing (largest 95 ms at 10,000 repeats). No production scope is added.
 
+Round-three Codex review of `bf6e4b8` found one remaining fuzzy-prefix joining regression,
+filed as [AFA-249](https://linear.app/afahy/issue/AFA-249). With `{ fuzziness: 2 }`:
+
+| Input                | Main `bfac12a9` / expected | Reviewed `bf6e4b8` |
+| -------------------- | -------------------------- | ------------------ |
+| `foots 5, −11 in`    | 71 in                      | `null`             |
+| `foots 5, ﹣11 in`   | 71 in                      | `null`             |
+| `meterrs 1, −80 cm`  | 180 cm                     | `null`             |
+| `meterrs 1, ﹣80 cm` | 180 cm                     | `null`             |
+
+Source/ESM/CommonJS reproduce all four rows: main passes six source/twelve package assertions;
+the reviewed branch fails four/eight, with two/four exact public-example controls still passing.
+The expected values follow fuzzy matching and unit-first multipart rules: 5 × 12 + 11 = 71 in
+and 100 + 80 = 180 cm. M1's exact-alias joining guard misses fuzzy units accepted later by M7.
+This is a valid result-preservation defect, deferred under the three-round rule: no existing
+public-example, test or original-ticket input fails, no probe throws, and existing build/package
+checks pass. The single finding/four rows remain **unfixed, Medium, unassigned and in Backlog**,
+outside the active queues. Reproduction logs are `/tmp/afa202-r3-fuzzy-*.log`; the retained probe
+is `/tmp/parseMeasurement.afa202FuzzyReview.test.ts`. The ticket specifies the missing fuzzy-prefix
+composition checks. This audit-only addition changes no production code, regression expectations,
+corpus row, original probe count or numbered group. Earlier F3 correction/validation remains
+at source `d6e2ce7`; the limitation is disclosed in the PR and ticket.
+
 Self-review reproduced a distinct pre-existing M3/M7 ownership limitation:
 `phase 20, kg−70.5` returns **20 kg** on main `bfac12a9`, expected **`null`**.
 The prefix takes the unrelated label number rather than its signed value. This survives the
@@ -1053,6 +1076,13 @@ Each fix session must:
 | <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1e5640d2dbe8ef251e2bb479d46cc5f4fc59c1597ecd270e7941a88df6893b76>                                                       | Fresh AFA-203 implementation, review and PR stewardship              | Complete: [PR #234](https://github.com/afahy/fluent-measures/pull/234), reviewed head `0a33c40`, merge `77bd5ce`; 19 PR checks, pre/post-merge audits and all 12 exact-merge main CI jobs passed (run 42314274182, ci-ok 2026-11-06T23:54:24Z). Earlier validation at `9030111` and `5c9eab1` retained                                                                                                                                                                                                                                                                                                                     |
 | <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:2d4a60308bdfb6191174b5f92be891f2f90bd42e44ea1218e394ed52840c6148>                                                       | Fresh AFA-116 signed other-type ownership and named test groups      | Source `1eb0a1b`; focused checks passed against `77bd5ce`. Independent review complete (125/126 agree; existing finding filed as AFA-241); full check and fresh changed-line mutation validation passed at `f80b4be`; [PR #235](https://github.com/afahy/fluent-measures/pull/235) merged as `b90ea36` from reviewed `28c3d21`; all 19 PR checks, exact-head Codex review, final audits and all 12 exact-merge main CI jobs passed (run 42319687195, ci-ok 2026-11-07T00:47:02Z). Ticket Done; merged worktree/local branch removed; audit `513b4c3` preserved. No successor assigned                                      |
 | <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:462bb758094ab0a59a27217f4fb643589704bceca25e2bf1c7aba94be4f52c28>                                                       | Fresh AFA-202 Unicode-minus label correction; then fresh AFA-62 only | [PR #236](https://github.com/afahy/fluent-measures/pull/236). Started from main `bfac12a9` after the predecessor merged and all 12 exact-main CI jobs passed; ticket claimed In Progress. Focused failing-first source/ESM/CommonJS checks pass with the correction; independent review and parent replay completed with the scoped judgments above; initial source `93c7c72` passed full validation at `b80d68a`; round-one correction `ac4970d` and round-two correction `d6e2ce7` passed fresh full checks and changed-line mutation. Exclusive heavy-check/mutation/push slot explicitly granted by audit coordinator. |
+
+AFA-202's third review round at `bf6e4b8` completed with the single AFA-249 follow-up above;
+production remains at validated source `d6e2ce7`. The audit coordinator confirmed that a separate,
+maintainer-authorized [AFA-62 session](t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/thread:delegated-task:command%3Amcp%3A18aad716-812d-4b59-b64d-35f626938eb1%3Adelegate-task%3Ae40d7c32-82cc-465c-b9b7-71af5f3f983d)
+already exists. Its preserved work is held until AFA-202 merges and exact-merge main CI passes;
+handoff goes to that existing owner through the coordinator, with no duplicate launch. AFA-249
+has no successor or queue assignment. The original session assignments above remain historical.
 
 Sessions use isolated prepared worktrees. Full checks, mutation runs and mandatory push hooks
 have one shared execution slot. AFA-74 released its integration window after `70419bd`.
