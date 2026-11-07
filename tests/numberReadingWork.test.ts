@@ -69,3 +69,29 @@ describe('complete prefix-pair reader work', () => {
     }
   });
 });
+
+// A complete valid prefix needs one shared numeric decision. The bounded retry is for an
+// invalid phrase with a possible compound/pair boundary, not the same successful phrase.
+describe('complete prefix scalar reader work', () => {
+  it.each([
+    ['kg seventy two', 72, 'kg', 'weight'],
+    ['m: one point eight', 1.8, 'm', 'height'],
+    ['ft five', 5, 'ft', 'height'],
+  ] as const)('does not reread the successful complete phrase in %s', (raw, value, unit, type) => {
+    const reader = vi.spyOn(numbers, 'readNumberTokens');
+    try {
+      expect(parseMeasurement(raw)).toEqual({
+        value,
+        unit,
+        type,
+        raw,
+        matches: [{ value, unit }],
+      });
+      expect(reader.mock.calls.length).toBeGreaterThan(0);
+      // Empty end-boundary attempts are allowed; every nonempty phrase is actual numeric work.
+      expect(reader.mock.calls.filter(([tokens]) => tokens.length > 0)).toHaveLength(1);
+    } finally {
+      reader.mockRestore();
+    }
+  });
+});

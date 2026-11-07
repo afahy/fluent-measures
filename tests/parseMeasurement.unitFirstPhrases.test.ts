@@ -8,6 +8,7 @@ describe('a number in words after its unit', () => {
   it.each([
     ['kg one hundred eighty', 180, 'kg', 'weight'],
     ['kg seventy two', 72, 'kg', 'weight'],
+    ['ft five', 5, 'ft', 'height'],
     ['kg one hundred and eighty', 180, 'kg', 'weight'],
     ['lbs one hundred fifty', 150, 'lb', 'weight'],
     ['cm one hundred eighty', 180, 'cm', 'height'],
