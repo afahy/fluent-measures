@@ -26,6 +26,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
+          # Only production sources. Local palette assets and .docs-preview/ stay outside docs/.
           path: docs
 
   deploy:

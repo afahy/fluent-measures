@@ -174,6 +174,38 @@ revision, range tokens cannot simultaneously be labels. `startsField` is emitted
 label. `used` is assigned later by the parser. Compact unit-to-digit boundaries are not generally
 split, explaining F6. Empty tokens remain harmless non-number boundaries.
 
+AFA-248 extends the existing range-marker transition to numeric endpoints joined by `to`,
+`from ... to`, or `between ... and`. Number-word endpoints stay outside that grammar: neither
+end may be removed from a mixed phrase such as `1 to 2 hundred lbs`. The range replacement
+also retains slash-separated inches owned by preceding feet, as in `5'10/180 to 200 lbs`
+(70 in with the height selector). Terminal periods are consumed with a range so an empty
+punctuation token cannot detach its unit; decimal tails and attached number words keep the
+complete endpoint intact. A following explicit inch component instead owns the height
+in `6 ft 1/2 to 3/4 11 in` (83 in). These transitions reuse fraction ownership and feed the
+existing M3 range rules; the historical findings below remain unchanged. Regression evidence:
+`tests/parseMeasurement.wordedRangeBoundaries.test.ts` and the AFA-248 corpus entries.
+
+Third-round review of `4428859593593e2963c77c50606da4737f11d49f` found three additional
+preservation gaps. Focused public-input reproduction compared that exact head with main
+`24add56d3beda40627314b91fed3ab361fbe8995`:
+
+| Input / options                    | Main `24add56` | Head `4428859` | Approved complete-entry result |
+| ---------------------------------- | -------------- | -------------- | ------------------------------ |
+| `5'10/180 to 190 11 in`, height    | `null`         | 71 in          | `null`                         |
+| `1 to 2; hundred lbs`              | 200 lb         | 100 lb         | `null`                         |
+| `1 to 2; and a half lbs`           | 2.5 lb         | `null`         | `null`                         |
+| `150 to 180-200 lbs,70kg`          | 70 kg          | `null`         | `null`                         |
+| `between 150 and 180–200 lbs,70kg` | 70 kg          | `null`         | `null`                         |
+
+These new literals are absent from the existing example/test/ticket failure inputs; no throw,
+security issue or required-check failure was found. Under the three-round rule they are
+recorded on the existing [complete-entry ticket](https://linear.app/afahy/issue/AFA-250),
+comment `d3c1509e-3bdb-4a0c-bd0b-222d6c7fc797`. The approved policy retires ranges and
+fragment recovery, so its later range slice owns the null results. This is a deferred
+limitation of the narrow AFA-248 change, not a fixed finding or a revision of historical
+baselines. Reproduction: `/tmp/afa248-third-review-results.json` and
+`/tmp/afa248-third-review.log`. Source, tests and corpus remain unchanged from `4428859`.
+
 ### M3 — range ownership and shorthand
 
 Source: `parseMeasurement.ts:361–453`.
@@ -278,6 +310,16 @@ CommonJS bytes. The repository's standing 0.5 kB allowance raises the ESM limit 
 CommonJS remains at its previously approved 6.0 kB. The matching footprint documentation is
 updated. Fresh final-source validation is still required; the `14efcd3` report is preserved at
 `/tmp/afa247-mutation-14efcd3.json` and is not final evidence for this simplification.
+
+The fresh `873530f` check passed unit coverage and TypeScript but was interrupted during
+mutation after AFA-248 merged as `042624855225c2ab55d2d7639058069e4cd90c17` and GitHub
+reported a base conflict. It is partial evidence only. Normal main integration preserves
+AFA-248's range scan, M2 audit and deferred AFA-250 findings, both feature lists, all 800
+main corpus rows and the 59 decimal additions. The combined 859-row score is specified by
+adding the independently reviewed branch additions, not by copying a new parser result.
+All 489 focused decimal, range, F3, calculator, feature-map and corpus tests pass together.
+Fresh committed combined-source validation follows this merge; the uppercase `RANGE`
+distinction below remains intact.
 
 M2 now retains `RANGE` as the token's text instead of writing `-`. This keeps M3's discarded
 ranges distinct from literal minus signs in M5. The existing recovery contract still applies:
