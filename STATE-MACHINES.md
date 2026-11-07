@@ -508,8 +508,9 @@ No existing semicolon-field, cross-type or Unicode-sign assertion changes.
 
 ### F7 correction — signed values with their own other-type unit
 
-Status: implemented at `1eb0a1b`; focused checks passed. Independent input review, full
-validation and PR review/merge are pending. Before: current main
+Status: implemented at `1eb0a1b`; focused checks and independent input review are complete.
+Full validation and final test-strengthening mutation validation pass at source `1eb0a1b`;
+PR review/merge are pending. Before: current main
 `77bd5ce63549ca25c4bdb6a425add7f0c5687787`. The original `b79eae0` finding and the
 22-test baseline remain historical evidence; this fix is not yet merged.
 
@@ -531,9 +532,29 @@ The generated inventory also reaches the same defect through a repeated prime:
 `1000,' ′-11pound` changes `null` → 1000 ft for default, height, fuzziness 2 and height with
 unqualified metric inference; normalized cm changes `null` → 30480 cm (1000 × 30.48).
 Weight-only remains `null`. Five explicit assertions and two corpus rows independently
-cover these changes, disclosed on the ticket under decision rule 3. All observed changes
-are from `null`, so the changeset is patch. The 18 new ticket-sourced corpus rows agree;
-no prior input, expectation, option or source is changed.
+cover these changes, disclosed on the ticket under decision rule 3.
+
+Retaining a later field also preserves disagreements with earlier independent fields:
+`70 kg; kg -6 ft, 80 kg` changes 70 kg → `null` (default and weight-only), and
+`180 cm; centimeters -180 lbs, 190 cm` changes 180 cm → `null` (default and height-only).
+Both pairs differ by more than 1%, so rejection follows the public agreement rule. Four
+failing-first assertions and four corpus rows cover these unavoidable changes, disclosed on
+the ticket under decision rule 3. The changeset is therefore minor, superseding the initial
+patch choice. All 22 new ticket-sourced correction rows agree; no prior input, expectation,
+option or source is changed.
+
+The independent review specified 126 probes before running them on branch `2f26777` and
+main `77bd5ce`: 125 agree on the branch, with no newly introduced failure. The sole remaining
+case, `kg -6 (ft), 70 kg`, returns `null` on both revisions. Parent probes reproduce the same
+failure with a marked `kg:` prefix and with the final `kg` in brackets, in default and explicit
+weight modes. This is filed separately as [AFA-241][following-label]: the existing M7 helper
+assumes `(ft)` owns the following 70 without checking that 70 has its own kg unit. Fixing that
+helper would change existing marked-label behavior, outside this bounded F7 correction.
+The ticket records the missed label/property composition and preservation requirements;
+no implementation successor is assigned. Three new corpus rows preserve the intended 70 kg
+result and record the existing missed outcomes; no prior agreement is lost. Parent replay
+confirms 125 agreements and the same one disagreement in each of source, ESM and CommonJS.
+M7/M8 still have this distinct known limitation.
 
 ### F8 correction — inferred conversion underflow
 
@@ -664,7 +685,7 @@ Each fix session must:
 | <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:437846f95d8fc1b59e8b6aed92f360110a4df975347393dec096581adc8de82f>                                                       | AFA-236 finite conversion overflow                                  | F9 validated; [PR #230](https://github.com/afahy/fluent-measures/pull/230) tracks review/merge; no successor assigned                                                                                                                                                                                  |
 | <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1e5640d2dbe8ef251e2bb479d46cc5f4fc59c1597ecd270e7941a88df6893b76>                                                       | Fresh AFA-203 implementation, review and PR stewardship             | Complete: [PR #234](https://github.com/afahy/fluent-measures/pull/234), reviewed head `0a33c40`, merge `77bd5ce`; 19 PR checks, pre/post-merge audits and all 12 exact-merge main CI jobs passed (run 42314274182, ci-ok 2026-11-06T23:54:24Z). Earlier validation at `9030111` and `5c9eab1` retained |
 | <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:461b3a6bdd48f18b59aa264dedf46356fae143e0f5f4b90936f49716e134a37a>                                                       | AFA-107 inferred conversion underflow; no successor                 | Implementation `7426e3e`; [PR #233](https://github.com/afahy/fluent-measures/pull/233) merged at `b76070d`; exact-merge main CI pending under this owner                                                                                                                                               |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:2d4a60308bdfb6191174b5f92be891f2f90bd42e44ea1218e394ed52840c6148>                                                       | Fresh AFA-116 signed other-type ownership and named test groups     | Source `1eb0a1b`; focused checks passed against `77bd5ce`. Independent review/full validation/PR lifecycle pending; heavy slot reserved after AFA-74, not granted. No successor assigned                                                                                                               |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:2d4a60308bdfb6191174b5f92be891f2f90bd42e44ea1218e394ed52840c6148>                                                       | Fresh AFA-116 signed other-type ownership and named test groups     | Source `1eb0a1b`; focused checks passed against `77bd5ce`. Independent review complete (125/126 agree; existing finding filed as AFA-241); full check and fresh changed-line mutation validation passed; PR lifecycle pending. No successor assigned                                                   |
 
 Sessions use isolated prepared worktrees. Full checks and mutation runs have one shared execution
 slot, initially publication → AFA-75 → AFA-78 → AFA-236; sessions pass it by message. Focused tests
@@ -823,13 +844,34 @@ F7 focused validation at `1eb0a1b`: `pnpm install` passed. The initial 61-test s
 39 assertions on current main `77bd5ce` in source and in each package format (78 package
 failures), with 22 controls passing per format. Both exact ticket inputs fail for default,
 weight and normalized-kg options. A further fuzzy signed-value control catches an eager
-missing-unit lookup found during local self-review; the final suite has 62 tests. With the
+missing-unit lookup found during local self-review; that suite has 62 tests. With the
 fix, all 942 focused source and 1,884 ESM/CommonJS feature checks pass, including every
 existing signedParts row, public examples, Unicode signs, ownership and unsupported parts.
-The corpus has 581 entries, 564 agreements, 5 wrong, 12 missed and no throws; all 563 prior
-entries and their outcomes remain intact. The generated snapshot changes only the five
-other-type prime results recorded above. Independent review, full checks, fresh changed-line
-mutation validation and hosted lifecycle results will be recorded after they complete.
+The targeted corpus initially had 581 entries, 564 agreements, 5 wrong, 12 missed and no throws.
+Adding the three existing AFA-241 failures and four disagreement cases makes 588 entries,
+568 agreements, 5 wrong, 15 missed and no throws; all 563 prior entries and their outcomes
+remain intact. The generated snapshot changes only the five
+other-type prime results recorded above. Independent review and parent replay found 125/126
+agreements per format; the single disagreement is filed as AFA-241.
+
+F7 full `pnpm check` at `2f26777` (source `1eb0a1b`) passed 3,712 unit tests with 100%
+statement/branch/function/line coverage, TypeScript, 99.64% fresh mutation score (1,375 killed,
+13 timeouts, five unchanged-line survivors), build, size, API and 4,110 ESM/CommonJS tests.
+Fresh changed-line validation passes: every mutant on the changed ownership lines is killed.
+The five survivors are the existing zero-part skip, inferred-zero gate variants, numeric-comma
+rejection marker and out-of-contract fuzzy prose exclusion; no new suppression is added.
+Sizes are 4.93 kB ESM / 4.99 kB CommonJS, below unchanged 5 kB limits, versus main's
+4.92 / 4.97 kB. Lint has only the two existing warnings in unchanged tests.
+
+After this full check, final self-review added the four disagreement assertions without any
+production change. The final 66-test suite fails 43 cases on main `77bd5ce` in source, and
+86 across ESM/CommonJS, with 23 controls passing per format. All 66 pass with source
+`1eb0a1b` in each format; the package regression/corpus/generated-result run passes 198 checks.
+A fresh `pnpm test:mutation --mutate src/parseMeasurement.ts` run with these additional
+assertions passes at 99.76% (809 killed, 11 timeouts, two survivors). The fresh changed-line
+check passes again; all changed ownership mutants are killed. The two survivors only relax
+the earlier inferred-zero gate; M9 still rejects a zero total, so neither changes behavior.
+No source or mutation suppression changed. Hosted lifecycle results will be added when available.
 
 ## Reproducing the audit
 
@@ -854,6 +896,7 @@ single audit file contains its evidence; it is not a second, automatically run t
 [prefix-ownership]: https://linear.app/afahy/issue/AFA-237
 [compact]: https://linear.app/afahy/issue/AFA-62
 [ownership]: https://linear.app/afahy/issue/AFA-116
+[following-label]: https://linear.app/afahy/issue/AFA-241
 [underflow]: https://linear.app/afahy/issue/AFA-107
 [overflow]: https://linear.app/afahy/issue/AFA-236
 [refactor]: https://linear.app/afahy/issue/AFA-88

@@ -37,6 +37,18 @@ describe.each(weightOptions)('signed other-type ownership with %o', options => {
 });
 
 describe('signed other-type ownership controls', () => {
+  // Retaining the independently owned field must also retain disagreements with earlier
+  // measurements (PARSING.md, More Than One Measurement): 70 vs 80 kg and 180 vs 190 cm
+  // differ by more than 1%. The old ownership bug incorrectly discarded the later value.
+  it.each([
+    ['70 kg; kg -6 ft, 80 kg', {}],
+    ['70 kg; kg -6 ft, 80 kg', { type: 'weight' }],
+    ['180 cm; centimeters -180 lbs, 190 cm', {}],
+    ['180 cm; centimeters -180 lbs, 190 cm', { type: 'height' }],
+  ] as const)('retains the disagreement in %s with %o', (raw, options) => {
+    expect(parseMeasurement(raw, options)).toBeNull();
+  });
+
   // Ticket preservation cases, including unsigned behavior explicitly excluded from this fix.
   it.each([
     ['kg 6 ft, 70 kg', 6, 'ft'],
