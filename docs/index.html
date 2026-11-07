@@ -6,7 +6,7 @@
     <title>fluent-measures: parse height and weight text in TypeScript</title>
     <meta
       name="description"
-      content="A TypeScript library that reads a height or a weight from everyday text, such as five feet eleven inches or 150 lbs, and returns its value and unit. It has no dependencies."
+      content="A JavaScript and TypeScript library that parses height and weight text, converts metric and imperial units, and reads numbers in words. No dependencies."
     />
     <link rel="canonical" href="https://afahy.github.io/fluent-measures/" />
     <meta name="theme-color" content="#fafbfc" media="(prefers-color-scheme: light)" />
@@ -26,12 +26,16 @@
     />
     <meta
       property="og:description"
-      content="Reads a height or a weight from everyday text, such as five feet eleven inches or 150 lbs, and returns its value and unit."
+      content="A JavaScript and TypeScript library that parses height and weight text, converts metric and imperial units, and reads numbers in words. No dependencies."
     />
     <meta property="og:url" content="https://afahy.github.io/fluent-measures/" />
     <meta property="og:image" content="https://afahy.github.io/fluent-measures/og.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="fluent-measures parses height and weight text into structured data: 5 feet 11 inches converted to 180.34 cm, five foot ten read as 70 in, eighty kilograms read as 80 kg, a unit typo read with fuzziness 2, and text with no measurement returning null."
+    />
     <meta name="twitter:card" content="summary_large_image" />
 
     <link rel="preload" href="fonts/geist-latin.woff2" as="font" type="font/woff2" crossorigin />
@@ -440,11 +444,11 @@
               </h1>
               <p class="hero-intro">
                 <span class="intro-long"
-                  >A TypeScript library for health apps, fitness trackers and web forms. It reads
-                  metric and imperial units, and numbers in digits or in words, as in
-                  <strong>5' 11"</strong> or <strong>five feet eleven inches</strong>.</span
+                  >A JavaScript and TypeScript library for health apps, fitness trackers and web
+                  forms. It reads metric and imperial units, and numbers in digits or in words, as
+                  in <strong>5' 11"</strong> or <strong>five feet eleven inches</strong>.</span
                 ><span class="intro-short"
-                  >A TypeScript library for input like <strong>5' 11"</strong> or
+                  >A JavaScript and TypeScript library for input like <strong>5' 11"</strong> or
                   <strong>five feet eleven inches</strong>.</span
                 >
               </p>
