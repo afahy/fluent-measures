@@ -42,6 +42,7 @@ describe('spoken decimal field identity and feet prefixes', () => {
     ['kg 70 five point five', {}],
     ['ft -five eleven point five', {}],
     ['ft -a five eleven point five', {}],
+    ['-one two point five kg', {}],
   ] as const)('rejects %s with %o', (input, options) => {
     expect(parseMeasurement(input, options)).toBeNull();
   });

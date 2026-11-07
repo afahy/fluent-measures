@@ -405,6 +405,44 @@ reasons remain in `/tmp/afa247-field-prefix-exploratory-dispositions.json` and t
 logs; no committed assertion was deleted or loosened. The historical `e69d594` full-check
 and report evidence above does not validate this later source correction.
 
+Committed correction `2367ef86468fde32f62c7c373bd16faae9015f56` passed one full
+`pnpm check`: 4,352 unit tests, 100% coverage, TypeScript, fresh mutation 99.67%
+(1,496 killed, 24 timeouts, five survivors, 32 unchanged ignores), build/API/size and
+5,318 package tests. All eight selected sources and six report bodies match that commit;
+the report is retained at `/tmp/afa247-mutation-2367ef8.json`, SHA256
+`04faa74cb42fbf0ef22aaf5279f02705046c3ccb23d4fa30a65ac4dcb6cced75`.
+The separate changed-line gate found a real surviving default-argument mutant: setting
+M5's compound-stop default to true changes `-one two point five kg` from null to 2.5 kg.
+The signed/malformed rule requires null; exact main gives 5 kg. One strict regression and
+corpus row now cover that path, without source edits, ignores, or threshold changes.
+The 33-case file passes on the correction; exact main fails 15 / preserves 18, published
+`51e084c` fails 14 / preserves 19, and the isolated mutant fails precisely the new case.
+The focused four-file run passes 126 tests. Final fresh mutation with this added assertion
+and package/push validation remain separate from the preceding full-check evidence.
+
+The same exploratory probe reproduced these fragment-recovery observations; the approved
+AFA-250 complete-entry contract requires null for each. They are historical observations,
+not newly adopted success assertions or further production changes in this review round.
+They are recorded in AFA-250 comment `edaeebbb-dc1c-461e-8030-a71e50391124` and the PR inventory.
+
+| Input                             | Main `0e0284d` | Source `2367ef8` |
+| --------------------------------- | -------------- | ---------------- |
+| `m: one cm: one two point five`   | 101 cm         | 1 cm             |
+| `m: one cm: zero five point five` | 1 m            | 1 cm             |
+| `5 kg: one two point five`        | 1 kg           | 5 kg             |
+| `5 kg: zero five point five`      | null           | 5 kg             |
+| `kg 5 lbs: one two point five`    | null           | 5 kg             |
+| `1 m cm: one two point five`      | 101 cm         | 1 m              |
+| `5 ft in: one two point five`     | 61 in          | 5 ft             |
+| `stone 12 lb: one two point five` | null           | 12 lb            |
+| `6 1-2 ft one two point five in`  | 5 in           | null             |
+
+The first eight retain/reassign an earlier explicit fragment; their removal belongs to
+AFA-250's already-approved shared grammar, including unsupported-part ownership. The last
+row already rejects the malformed phrase. Exact observations and independent null expectations
+remain in `/tmp/afa247-default-mutant-dispositions.json` and the triage logs. No existing
+committed assertion is changed to pin these incidental outputs.
+
 M2 now retains `RANGE` as the token's text instead of writing `-`. This keeps M3's discarded
 ranges distinct from literal minus signs in M5. The existing recovery contract still applies:
 `6 ft 1-2 eleven point five in` is 83.5 in (6 × 12 + 11.5), and `kg seventy point five 1-2`
