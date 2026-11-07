@@ -2727,3 +2727,49 @@ unchanged. The corpus report counts are derived from independent labels, not obs
 Evidence is under `final-validation/actual-survivor-followup/` in the external archive.
 Fresh committed-source validation is still required; these focused results make no mutation
 score, performance or final-readiness claim. Historical F6/F9 publication remains pending.
+
+### AFA-250 qualifying local validation — publication pending
+
+The wrapper correction committed as `14ba82d12d429cf255df76cc7ce33e8ae5ea01f5` with
+normal hooks and no formatting delta. Its clean `pnpm check` passed lint, 5,319 tests in
+126 files, 100% coverage (444 statements, 477 branches, 55 functions and 364 lines),
+TypeScript, the build, size limits, unchanged exported API and 7,106 ESM/CJS package tests
+in 136 files. Mutation scored 99.86%, but the separate changed-line check correctly rejected
+one parser survivor: bypassing a successful prefix return reread the same numeric phrase.
+That report remains archived as a passed full command with a failed changed-line gate,
+not as the qualifying final mutation report.
+
+A test-only follow-up, `54b1e1deffb45df1760babf107591b59aadfc9fc`, adds three source-only
+actual-reader assertions: `kg seventy two`, `m: one point eight` and `ft five` each require
+one nonempty numeric read. Empty end-boundary attempts remain allowed. Their values and
+written matches are independently 72 kg, 1.8 m and 5 ft; public counterparts remain package
+selected. Applying only actual mutant 507 made all three work assertions fail (two reads
+instead of one); original source was restored exactly. This changes no production result,
+corpus label, snapshot, API, ignore directive or threshold. The focused source checks pass
+106 tests, and the ESM/CJS counterpart checks pass 182 tests. It is a work-count regression
+check, not a wall-clock performance claim.
+
+The necessary fresh default non-incremental mutation run on that clean test commit scored
+99.93%: 1,392 killed, 43 timed out, one survivor, none uncovered and four ignored. Mutant
+507 is killed by the new `kg seventy two` reader-work assertion. The only survivor is in
+`matchUnit.ts`, whose source is byte-identical to pinned main; matching policy remains
+separate work. All changed-line mutants pass the existing gate. The four ignores are exactly
+the three individually reviewed parser alternatives and the existing invalid-comma replacement.
+The report hash is
+`5776027e0cbea85b9dab1f74feb0d36482b8ca047836c2d297fcde99734d57cc`.
+Every byte of all six report bodies and all eight selected sources matches the commit.
+
+Both validation commits have source tree `61386e4089549953d55dcac9a7dc54e04f7a79bb`;
+the final tested tree for tests is `1f0ae4c3704a94eb093b438ff4432b206c92c1b4`.
+The successful full check, build/API/full-package evidence on identical production source
+and the new committed-test mutation evidence are deliberately recorded with their own SHAs.
+No redundant unchanged-source full check was substituted for that distinction.
+
+A fresh build of exact main `70f31690c4835ab97d60bf4af9c7a48d2f57d878`, using the same
+frozen toolchain, measures 5,736 bytes ESM and 5,795 bytes CJS after minification and Brotli.
+The final build measures 4,581 and 4,630 bytes respectively. Both stay below the unchanged
+6,000-byte limits; this is bundle-size evidence only. Build inputs, outputs, logs and exact
+source hashes are preserved under `final-validation/` in the external evidence archive.
+All earlier failed/partial reports, independent oracles, original audit findings, historical
+F6/F9 closeout and deferred findings remain preserved. Local validation does not publish the
+audit to main or establish hosted PR readiness; publication remains pending.
