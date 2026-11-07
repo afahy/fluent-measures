@@ -578,8 +578,8 @@ lines. Bundles are 5.29 kB ESM / 5.32 kB CommonJS, within the unchanged 5.5 kB l
 Git-isolation passed in 98,446 ms. The five survivors are the unchanged zero-part skip,
 two zero-inference gates, numeric-comma rejection marker and fuzzy-unit regex. Zero-part
 skipping is redundant for valid units, later validation rejects inferred zero, and malformed
-commas discard the rejection marker. The fuzzy-unit anchor variant affects only unsupported
-fuzziness above the documented 1–2 range; it is outside this correction. No suppression is added.
+commas discard the rejection marker. The fuzzy-unit anchor variant affects only
+fuzziness above the documented 1–2 examples; it is outside this correction. No suppression is added.
 Focused source CPU probes with `maxLength: Infinity` include 1,000/10,000 prefix punctuation
 and period characters; the largest new-prefix cost was 7 ms, with the earlier repeated-context
 probes also passing (largest 95 ms at 10,000 repeats). No production scope is added.
