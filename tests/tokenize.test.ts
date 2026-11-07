@@ -9,6 +9,11 @@ describe('tokenize', () => {
     expect(tokenTexts('six feet')).toEqual(['six', 'feet']);
   });
 
+  it('keeps worded ranges when range boundaries are not requested', () => {
+    expect(tokenTexts('from 150 to 180 lbs')).toEqual(['from', '150', 'to', '180', 'lbs']);
+    expect(tokenTexts('between 70 and 80 kg')).toEqual(['between', '70', 'and', '80', 'kg']);
+  });
+
   it('converts input to lowercase', () => {
     expect(tokenTexts('HELLO WORLD')).toEqual(['hello', 'world']);
     expect(tokenTexts('FiVe FeEt')).toEqual(['five', 'feet']);

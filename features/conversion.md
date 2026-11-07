@@ -22,7 +22,7 @@ measurement type.
 
 - Source: `src/units.ts`, `src/parseMeasurement.ts`
 - Tests: `tests/parseMeasurement.calculator.test.ts`,
-  `tests/parseMeasurement.signedOtherTypeOwnership.test.ts`, `tests/parseMeasurement.signedWeightOwnership.test.ts`, `tests/parseMeasurement.fractionBoundaries.test.ts`, `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.unitConversions.test.ts`,
+  `tests/parseMeasurement.wordedRanges.test.ts`, `tests/parseMeasurement.signedOtherTypeOwnership.test.ts`, `tests/parseMeasurement.signedWeightOwnership.test.ts`, `tests/parseMeasurement.fractionBoundaries.test.ts`, `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.unitConversions.test.ts`,
   `tests/parseMeasurement.conversionOverflow.test.ts`,
   `tests/parseMeasurement.conversionUnderflow.test.ts`,
   `tests/parseMeasurement.numberWordCommas.test.ts`

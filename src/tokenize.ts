@@ -145,6 +145,20 @@ const RANGE_INCHES = new RegExp(
   'i'
 );
 
+// Numeric ranges must not consume only the digit prefix of "2 hundred" or "2 and a half".
+// Trailing periods are punctuation; a decimal tail or number word continues the endpoint.
+// Blocking a following digit/fraction mark also prevents backtracking to a shorter endpoint.
+// Consume the punctuation so it cannot become an empty token between a range and its unit.
+const RANGE_END = String.raw`(?![\d/⁄]|\.+\d|\.*[\s-]*(?:and[\s-]+)?(?:${NUMBER_WORD}|a[\s-]+half|point)\b)\.*`;
+// Keep an optional feet owner so a slash before the range retains the same measurement
+// boundary as fraction normalization, without consuming another slash in a date or code.
+// A preceding number word keeps the complete text intact;
+// consuming that prefix in this scan prevents retrying at its final digit token.
+const NUMERIC_RANGE = new RegExp(
+  String.raw`(?<![\d.])[\d.]+(?:\s*\p{Dash}\s*[\d.]+)+|(?:\bfrom\s+|(${FRACTION_OWNER})(?:(${RANGE_DIGITS})[/⁄](?=${RANGE_DIGITS}\s+to\b))?|(\b(?:${NUMBER_WORD})[\s-]+(?:and[\s-]+)?))?(?<![\d.])${RANGE_NUMBER}\s+to\s+${RANGE_NUMBER}${RANGE_END}|\bbetween\s+${RANGE_NUMBER}\s+and\s+${RANGE_NUMBER}${RANGE_END}`,
+  'gu'
+);
+
 // A number as it can stand in quotes: digits, separators, spaces, slashes and fractions.
 const QUOTED_NUMBER = String.raw`[\d.,\s/⁄${FRACTIONS}]*[\d${FRACTIONS}]`;
 // Number words have the same boundary and "and a half" rules as the later token split.
@@ -327,8 +341,23 @@ export function tokenizeNormalized(
       .toLowerCase()
       // Replace ranges after lowercasing so no input can supply the internal marker. Keep the
       // whole text together: the quote rules below need opening quotes from before a range.
-      .replace(/(?<![\d.])[\d.]+(?:\s*\p{Dash}\s*[\d.]+)+/gu, range =>
-        rangeBoundaries ? ` ${RANGE_WORD} ` : range
+      .replace(
+        NUMERIC_RANGE,
+        (
+          range,
+          owner: string | undefined,
+          inches: string | undefined,
+          wordPrefix: string | undefined,
+          offset: number,
+          input: string
+        ) => {
+          if (!rangeBoundaries || wordPrefix) return range;
+          // As in normalizeFractions, a later inch component owns the height instead.
+          if (inches && !RANGE_INCHES.test(input.slice(offset + range.length))) {
+            return `${owner}${inches} / ${RANGE_WORD} `;
+          }
+          return `${owner || ''} ${RANGE_WORD} `;
+        }
       )
       // Mark labels before the punctuation that marks them is removed, so the parser knows what
       // kind of label each one is, and spell out the short aliases. A bracket label keeps its
