@@ -2,9 +2,9 @@
 
 exports[`measurement corpus > matches the committed score 1`] = `
 "Category                 total   agree   wrong  missed  throws
-all                        626     609       5      12       0
+all                        651     631       5      15       0
 
-symbols                     83      83       0       0       0
+symbols                     84      84       0       0       0
 words                       31      31       0       0       0
 mixed-numbers               40      40       0       0       0
 decimals                    22      21       1       0       0
@@ -13,10 +13,10 @@ hyphens                     49      49       0       0       0
 compact                     24      12       0      12       0
 unicode                     29      29       0       0       0
 typos                       32      32       0       0       0
-surrounding-text            54      54       0       0       0
-multiple-measurements       73      73       0       0       0
+surrounding-text            57      54       0       3       0
+multiple-measurements       93      93       0       0       0
 unqualified                 25      25       0       0       0
-conversion                  40      40       0       0       0
+conversion                  41      41       0       0       0
 unsupported                 60      60       0       0       0
 prose                       32      29       3       0       0
 
@@ -52,7 +52,7 @@ unicode-minus-after-number-word-label (commas)
   expected: null
   actual:   25 cm (height)
 
-Entries with the outcome "missed" (12):
+Entries with the outcome "missed" (15):
 
 compact-5ft11 (compact)
   input:    "5ft11"
@@ -124,6 +124,24 @@ compact-ft-in-dots (compact)
   input:    "5ft.11in."
   options:  {}
   expected: 71 in (height)
+  actual:   null
+
+signed-following-label-1 (surrounding-text)
+  input:    "kg -6 (ft), 70 kg"
+  options:  {}
+  expected: 70 kg (weight)
+  actual:   null
+
+signed-following-label-2 (surrounding-text)
+  input:    "kg: -6 (ft), 70 kg"
+  options:  {}
+  expected: 70 kg (weight)
+  actual:   null
+
+signed-following-label-3 (surrounding-text)
+  input:    "kg -6 (ft), 70 (kg)"
+  options:  {}
+  expected: 70 kg (weight)
   actual:   null
 
 Entries with the outcome "throws" (0):
