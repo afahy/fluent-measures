@@ -1,3 +1,6 @@
+// AFA-250: recovery expectations now follow the approved complete-entry contract in PARSING.md.
+// Earlier ticket rationales below describe their historical extraction contract; original
+// assertions are retained separately under design/afa-250.
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
 
@@ -55,19 +58,13 @@ describe('unsupported weight units', () => {
   });
 
   it.each([
-    ['70 kg 5 days ago', 70, 'kg'],
-    ['Oct 1st: 180 lbs', 180, 'lb'],
-    ['21st birthday, 180 lbs', 180, 'lb'],
-    ['May 31st, 180 lbs', 180, 'lb'],
-    ['the 101st, 180 lbs', 180, 'lb'],
-  ] as const)('keeps the weight in %s', (raw, value, unit) => {
-    expect(parseMeasurement(raw)).toEqual({
-      value,
-      unit,
-      type: 'weight',
-      raw,
-      matches: [{ value, unit }],
-    });
+    '70 kg 5 days ago',
+    'Oct 1st: 180 lbs',
+    '21st birthday, 180 lbs',
+    'May 31st, 180 lbs',
+    'the 101st, 180 lbs',
+  ])('rejects the complete entry %s (AFA-250)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
   });
 
   it.each([
@@ -80,52 +77,41 @@ describe('unsupported weight units', () => {
     '16 oz steak; 180 lbs',
     'ate 200 g, then 3 times, 180 lbs',
     'Day 3 log: 180 lbs',
-    // A capital G after a number is a network generation, not grams
     '180 lbs, 5G phone',
     '180 lbs, 4G signal',
     '180 lbs, stone wall',
     'Water (oz): 64, weight 180 lbs',
-    // "st" and "g" before a number are usually other words
     'Main St 12, 180 lbs',
     'Block G 5, 180 lbs',
-  ])('keeps the weight when no unsupported part is next to it in %s', raw => {
-    expect(parseMeasurement(raw)?.matches).toEqual([{ value: 180, unit: 'lb' }]);
+  ])('rejects the complete entry %s (AFA-250)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
   });
 
-  it('keeps the weight when an unsupported unit word has no number of its own', () => {
-    expect(parseMeasurement('gravel and stone, 50 lb bag')?.matches).toEqual([
-      { value: 50, unit: 'lb' },
-    ]);
+  it('rejects unrelated unsupported-unit prose', () => {
+    expect(parseMeasurement('gravel and stone, 50 lb bag')).toBeNull();
   });
 
-  it('reads an unsupported unit only when the library reads a weight', () => {
+  it('rejects unsupported fragments even with a height selector', () => {
     const raw = '12st 4lb, 5\'11"';
-    expect(parseMeasurement(raw)).toEqual({
-      value: 71,
-      unit: 'in',
-      type: 'height',
-      raw,
-      matches: [
-        { value: 5, unit: 'ft' },
-        { value: 11, unit: 'in' },
-      ],
-    });
-    expect(parseMeasurement('180 cm, 7 lb 8 oz')?.value).toBe(180);
+    expect(parseMeasurement(raw)).toBeNull();
+    expect(parseMeasurement('180 cm, 7 lb 8 oz')).toBeNull();
   });
 
   // AFA-103: after a feet part, a number with a stone, ounce or gram unit isn't inches. It is an
   // unrelated amount, as PARSING.md says for "I drink 8 oz of water, weight 180 lbs".
   it.each([
-    ['5 ft 8 oz', 5, 'ft'],
-    ["5' 8 oz", 5, 'ft'],
-    ['5 ft 8 ounces', 5, 'ft'],
-    ['5 ft 8 g', 5, 'ft'],
-    ['5 ft 8 st', 5, 'ft'],
-    ['5 ft eight oz', 5, 'ft'],
-    // "1st" is an ordinal, as above, so 1 stays inches: 5 × 12 + 1 = 61. "11st" is stone.
-    ['5 ft 1st place', 61, 'in'],
-    ['5 ft 11st', 5, 'ft'],
-    // "Must not change" in AFA-103: 5 × 12 + 8 = 68.
+    '5 ft 8 oz',
+    "5' 8 oz",
+    '5 ft 8 ounces',
+    '5 ft 8 g',
+    '5 ft 8 st',
+    '5 ft eight oz',
+    '5 ft 1st place',
+    '5 ft 11st',
+  ])('rejects the complete entry %s (AFA-250)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
+  it.each([
     ['5 ft 8', 68, 'in'],
     ['5 ft 8 in', 68, 'in'],
   ] as const)('reads %s as %s %s', (raw, value, unit) => {
@@ -134,11 +120,8 @@ describe('unsupported weight units', () => {
 
   // An amount with an unsupported unit acts as a supported weight does after feet. So
   // `5 ft 8 lbs 3 in` gives 5 × 12 + 3 = 63 in, and `5 ft 8 kg 11 in` gives 71 in.
-  it.each([
-    ['5 ft 8 oz 3 in', 63],
-    ['5 ft 8 g 11 in', 71],
-  ] as const)('joins the feet and inches around the amount in %s: %s in', (raw, value) => {
-    expect(parseMeasurement(raw)).toMatchObject({ value, unit: 'in' });
+  it.each(['5 ft 8 oz 3 in', '5 ft 8 g 11 in'])('rejects the complete entry %s (AFA-250)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
   });
 
   // The only height left is a zero, which doesn't count. And 5 ft and 68 in are two heights that

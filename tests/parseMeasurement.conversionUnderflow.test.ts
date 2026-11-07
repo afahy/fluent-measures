@@ -1,3 +1,6 @@
+// AFA-250: recovery expectations now follow the approved complete-entry contract in PARSING.md.
+// Earlier ticket rationales below describe their historical extraction contract; original
+// assertions are retained separately under design/afa-250.
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
 
@@ -95,11 +98,7 @@ describe('conversion underflow', () => {
     expect(parseMeasurement(`${smallest} lb`, { normalizedUnit: 'kg' })).toBeNull();
   });
 
-  it('keeps zero-height fallback to a weight', () => {
-    expect(parseMeasurement('0 feet 0 inches; weight 70 kg')).toMatchObject({
-      value: 70,
-      unit: 'kg',
-      type: 'weight',
-    });
+  it('rejects standalone zero height before a valid weight', () => {
+    expect(parseMeasurement('0 feet 0 inches; weight 70 kg')).toBeNull();
   });
 });

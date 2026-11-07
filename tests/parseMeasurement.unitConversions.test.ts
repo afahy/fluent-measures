@@ -82,7 +82,7 @@ describe('unit conversions', () => {
   });
 
   // JavaScript callers can pass values that TypeScript rejects.
-  it('treats an empty type as no type', () => {
+  it('rejects an unselected pair when type is empty', () => {
     const options = { type: '', normalizedUnit: 'kg' } as unknown as ParseOptions;
     expect(parseMeasurement('6 ft', options)).toBeNull();
   });

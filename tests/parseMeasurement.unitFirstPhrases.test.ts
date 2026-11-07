@@ -1,3 +1,6 @@
+// AFA-250: recovery expectations now follow the approved complete-entry contract in PARSING.md.
+// Earlier ticket rationales below describe their historical extraction contract; original
+// assertions are retained separately under design/afa-250.
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
 
@@ -25,12 +28,15 @@ describe('a number in words after its unit', () => {
     });
   });
 
+  it.each(['record 0; kg seventy', 'kg 70 5 days'])(
+    'rejects the complete entry %s (AFA-250 policy revision)',
+    raw => {
+      expect(parseMeasurement(raw)).toBeNull();
+    }
+  );
   it.each([
     ['kg 70', 70, 'kg'],
     ['weight: kg 70', 70, 'kg'],
-    ['record 0; kg seventy', 70, 'kg'],
-    // Two numbers in a row aren't one phrase
-    ['kg 70 5 days', 70, 'kg'],
     ['ft six', 6, 'ft'],
   ] as const)('keeps reading %s as before', (raw, value, unit) => {
     expect(parseMeasurement(raw)?.matches).toEqual([{ value, unit }]);

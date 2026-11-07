@@ -1,0 +1,100 @@
+/* Loaded only by the generated local preview. */
+.palette-preview {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.palette-preview-inner {
+  max-width: 1120px;
+  margin: auto;
+  padding: 14px 32px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 24px;
+  font-size: 0.8125rem;
+}
+.palette-preview-choice,
+.palette-preview-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.palette-preview label {
+  font-weight: 650;
+  color: var(--heading);
+}
+.palette-preview select,
+.palette-preview button {
+  min-height: 36px;
+  border: 1px solid var(--border-control);
+  border-radius: 6px;
+  padding: 5px 10px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+.palette-preview select {
+  min-width: 140px;
+}
+.palette-preview button {
+  cursor: pointer;
+}
+.palette-preview button:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.palette-preview select:focus-visible,
+.palette-preview button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.palette-preview-actions {
+  margin-left: auto;
+}
+.palette-preview p {
+  margin: 0;
+  color: var(--text-muted);
+}
+#palette-help {
+  flex-basis: 100%;
+}
+.palette-preview-status {
+  flex-basis: 100%;
+  min-height: 1.7em;
+}
+.palette-swatches {
+  display: inline-flex;
+  gap: 4px;
+}
+.palette-swatches i {
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--border-control);
+  border-radius: 50%;
+  background: var(--accent);
+}
+.palette-swatches i:nth-child(2) {
+  background: var(--bg-tint);
+}
+.palette-swatches i:nth-child(3) {
+  background: var(--tok-string);
+}
+/* These component-local colors otherwise override the page's shared palette tokens. */
+:root[data-palette='original'] .callout:not(.is-caution) {
+  --callout-line: var(--original-callout-line);
+}
+@media (max-width: 639px) {
+  .palette-preview-inner {
+    padding: 12px 20px;
+    gap: 8px;
+  }
+  .palette-preview-actions {
+    margin-left: 0;
+  }
+}
+@media (max-width: 419px) {
+  .palette-preview-inner {
+    padding-inline: 16px;
+  }
+}

@@ -1,3 +1,6 @@
+// AFA-250: recovery expectations now follow the approved complete-entry contract in PARSING.md.
+// Earlier ticket rationales below describe their historical extraction contract; original
+// assertions are retained separately under design/afa-250.
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
 
@@ -11,10 +14,13 @@ describe('two apostrophes as an inch mark', () => {
     ['72’’', 72, 'in'],
     [`5'' tall`, 5, 'in'],
     [`height 72''`, 72, 'in'],
-    // A hyphen after an inch mark joins two values that agree: 5 × 12 + 11 = 71.
-    ['5´11´´-5 ft 11 in', 71, 'in'],
   ] as const)('reads %s as %s %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
+  });
+
+  it('rejects a second equal compound after two apostrophes', () => {
+    // AFA-250: each compound is 5 × 12 + 11 = 71, but there are two independent heights.
+    expect(parseMeasurement('5´11´´-5 ft 11 in')).toBeNull();
   });
 
   // Two heights that disagree give null, as `180 cm, 72"` does.
@@ -23,13 +29,14 @@ describe('two apostrophes as an inch mark', () => {
   });
 
   // "Must not change" in AFA-106.
+  it.each(["it''s 5 ft"])('rejects the complete entry %s (AFA-250)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
   it.each([
     [`5'11''`, 71, 'in'],
     ['5’11’’', 71, 'in'],
     ['5´11´´', 71, 'in'],
     [`5 ft 11''`, 71, 'in'],
-    // Two apostrophes that don't follow a number aren't a mark.
-    [`it''s 5 ft`, 5, 'ft'],
   ] as const)('keeps reading %s as %s %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });

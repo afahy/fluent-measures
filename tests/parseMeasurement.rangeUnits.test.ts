@@ -1,39 +1,35 @@
+// AFA-250: recovery expectations now follow the approved complete-entry contract in PARSING.md.
+// Earlier ticket rationales below describe their historical extraction contract; original
+// assertions are retained separately under design/afa-250.
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
 
 describe('units next to an omitted numeric range', () => {
   // AFA-170 option 1: the later number keeps its own unit.
   it.each([
-    ['150-180 lbs 70 kg', 70, 'kg', 'weight'],
-    ['1-2 ft 6 in', 6, 'in', 'height'],
-    ['50-70 kg, 180 lbs', 180, 'lb', 'weight'],
-    ['lbs 150-180 70 kg', 70, 'kg', 'weight'],
-    ['ft 1-2 6 in', 6, 'in', 'height'],
-    ['kg 50-70, 180 lbs', 180, 'lb', 'weight'],
-    ['150–180 pounds 70 kilograms', 70, 'kg', 'weight'],
-    ['150-180lbs 70kg', 70, 'kg', 'weight'],
-    ['72,5-80,5 kg, 180 lbs', 180, 'lb', 'weight'],
-    ['1,250-1,500 lbs, 70 kg', 70, 'kg', 'weight'],
-    ['1-2\' 6"', 6, 'in', 'height'],
-    ['1-2 metres 180 centimetres', 180, 'cm', 'height'],
-    ['150-180 (lbs) 70 kg', 70, 'kg', 'weight'],
-    ['150-180 lbs 50-70 kg 80 lb', 80, 'lb', 'weight'],
-    ['150-180 lbs 400 g; actual 80 lb', 80, 'lb', 'weight'],
-    ['6 1-2 ft 3 cm', 3, 'cm', 'height'],
-    ['6 1-2 cm 3 in', 3, 'in', 'height'],
-    ['6.5 1-2 ft 3 in', 3, 'in', 'height'],
-    ['6 1-2 ft 12 in', 12, 'in', 'height'],
-    ['(kg): 50-70, 180 lbs', 180, 'lb', 'weight'],
-    ['record 1-2; lbs 70 kg', 70, 'kg', 'weight'],
-  ] as const)('keeps the separate measurement in %s', (raw, value, unit, type) => {
-    expect(parseMeasurement(raw)).toEqual({ value, unit, type, raw, matches: [{ value, unit }] });
-    expect(parseMeasurement(raw, { type })).toEqual({
-      value,
-      unit,
-      type,
-      raw,
-      matches: [{ value, unit }],
-    });
+    '150-180 lbs 70 kg',
+    '1-2 ft 6 in',
+    '50-70 kg, 180 lbs',
+    'lbs 150-180 70 kg',
+    'ft 1-2 6 in',
+    'kg 50-70, 180 lbs',
+    '150–180 pounds 70 kilograms',
+    '150-180lbs 70kg',
+    '72,5-80,5 kg, 180 lbs',
+    '1,250-1,500 lbs, 70 kg',
+    '1-2\' 6"',
+    '1-2 metres 180 centimetres',
+    '150-180 (lbs) 70 kg',
+    '150-180 lbs 50-70 kg 80 lb',
+    '150-180 lbs 400 g; actual 80 lb',
+    '6 1-2 ft 3 cm',
+    '6 1-2 cm 3 in',
+    '6.5 1-2 ft 3 in',
+    '6 1-2 ft 12 in',
+    '(kg): 50-70, 180 lbs',
+    'record 1-2; lbs 70 kg',
+  ])('rejects the complete entry %s (AFA-250)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
   });
 
   it.each([
@@ -62,44 +58,35 @@ describe('units next to an omitted numeric range', () => {
     'six 1–2 feet three inches',
     'six and 1-2 feet three inches',
     '6 1-2\'3"',
-  ])('keeps both parts of the surrounding feet and inches in %s', raw => {
-    expect(parseMeasurement(raw)).toEqual({
-      value: 75,
-      unit: 'in',
-      type: 'height',
-      raw,
-      matches: [
-        { value: 6, unit: 'ft' },
-        { value: 3, unit: 'in' },
-      ],
-    });
+  ])('rejects the complete entry %s (AFA-250)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
   });
 
   it.each([
-    ['6ft1-2in', 6, 'ft'],
-    ['6 ft 1-2 11 in', 83, 'in'],
-    ['6 ft 1-2 11', 6, 'ft'],
-    ['6 ft 1-2 in 11', 6, 'ft'],
-    ['record 1-2; kg 70', 70, 'kg'],
-    ['weight - kg 70', 70, 'kg'],
-  ] as const)('preserves a measurement that owns its unit in %s', (raw, value, unit) => {
-    expect(parseMeasurement(raw)).toMatchObject({ value, unit });
+    '6ft1-2in',
+    '6 ft 1-2 11 in',
+    '6 ft 1-2 11',
+    '6 ft 1-2 in 11',
+    'record 1-2; kg 70',
+    'weight - kg 70',
+  ])('rejects the complete entry %s (AFA-250)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
   });
 
   // Review regressions: a labeled field after a range still owns its following value.
   it.each([
-    ['age=20-30, kg=70', 70, 'kg', 'weight'],
-    ['age=20-30 kg=70', 70, 'kg', 'weight'],
-    ['age=20-30, (kg) 70', 70, 'kg', 'weight'],
-    ['age=20-30; kg=70', 70, 'kg', 'weight'],
-    ['age=20-30 & lbs:180', 180, 'lb', 'weight'],
-    ['age=20-30, in=72', 72, 'in', 'height'],
-    ['age=20-30, m=1.8', 1.8, 'm', 'height'],
-  ] as const)('preserves the separate labeled field in %s', (raw, value, unit, type) => {
-    expect(parseMeasurement(raw)).toEqual({ value, unit, type, raw, matches: [{ value, unit }] });
+    'age=20-30, kg=70',
+    'age=20-30 kg=70',
+    'age=20-30, (kg) 70',
+    'age=20-30; kg=70',
+    'age=20-30 & lbs:180',
+    'age=20-30, in=72',
+    'age=20-30, m=1.8',
+  ])('rejects the complete entry %s (AFA-250)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
   });
 
-  it('retains a labeled unsupported weight part after a range', () => {
+  it('rejects a range followed by unsupported parts', () => {
     expect(parseMeasurement('age=20-30, kg=400 g, 80 lb')).toBeNull();
   });
 
@@ -113,12 +100,8 @@ describe('units next to an omitted numeric range', () => {
     expect(parseMeasurement(raw)).toBeNull();
   });
 
-  it('keeps a measurement after quoted text containing a range', () => {
-    expect(parseMeasurement('"1-2 twenty five"; 70 kg')).toMatchObject({
-      value: 70,
-      unit: 'kg',
-      matches: [{ value: 70, unit: 'kg' }],
-    });
+  it('rejects quoted range text before a measurement', () => {
+    expect(parseMeasurement('"1-2 twenty five"; 70 kg')).toBeNull();
   });
 
   // PARSING.md Semicolons permits punctuation between a number and its unit: 6 × 12 + 3 = 75.
@@ -130,42 +113,30 @@ describe('units next to an omitted numeric range', () => {
     '6 1-2 ft; 3;in',
     'six 1-2 feet three;inches',
     '6 1-2 ft 3;"',
-  ])('keeps the compound height with semicolons in %s', raw => {
-    expect(parseMeasurement(raw)).toEqual({
-      value: 75,
-      unit: 'in',
-      type: 'height',
-      raw,
-      matches: [
-        { value: 6, unit: 'ft' },
-        { value: 3, unit: 'in' },
-      ],
-    });
+  ])('rejects the complete entry %s (AFA-250)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
   });
 
-  it.each([
-    ['6 1-2 ft 3;cm', 3, 'cm'],
-    ['6 1-2 ft 12;in', 12, 'in'],
-  ] as const)('keeps the separate measurement outside a compound in %s', (raw, value, unit) => {
-    expect(parseMeasurement(raw)).toMatchObject({ value, unit, matches: [{ value, unit }] });
+  it.each(['6 1-2 ft 3;cm', '6 1-2 ft 12;in'])('rejects the complete entry %s (AFA-250)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
   });
 
   // Confirmed failing-input probes. Explicit expected values follow option 1 and 6 × 12 + 3.
   it.each([
-    ['6 1-2 ft; 3 in', {}, 75, 'in', 'height'],
-    ['6 1-2 ft 3; in', {}, 75, 'in', 'height'],
-    ['6 1-2; ft 3 in', {}, 75, 'in', 'height'],
-    ['150-180; lbs 70 kg', {}, 70, 'kg', 'weight'],
-    ['1-2; ft 6 in', {}, 6, 'in', 'height'],
-    ['1-2; ft; 6 in', {}, 6, 'in', 'height'],
-    ['50-70; kg, 180 lbs', {}, 180, 'lb', 'weight'],
-    ['150-180;;; lbs 70 kg', {}, 70, 'kg', 'weight'],
-    ['1-2; ft 6 in', { normalizedUnit: 'cm' }, 15.24, 'cm', 'height'],
-    ['150-180; poundz 70 kg', { fuzziness: 1 }, 70, 'kg', 'weight'],
-    ['150-180; pounds seventy kilograms', {}, 70, 'kg', 'weight'],
-    ['150–180; lbs 70 kg', {}, 70, 'kg', 'weight'],
-  ] as const)('handles semicolons next to the range in %s', (raw, options, value, unit, type) => {
-    expect(parseMeasurement(raw, options)).toMatchObject({ value, unit, type });
+    ['6 1-2 ft; 3 in', {}],
+    ['6 1-2 ft 3; in', {}],
+    ['6 1-2; ft 3 in', {}],
+    ['150-180; lbs 70 kg', {}],
+    ['1-2; ft 6 in', {}],
+    ['1-2; ft; 6 in', {}],
+    ['50-70; kg, 180 lbs', {}],
+    ['150-180;;; lbs 70 kg', {}],
+    ['1-2; ft 6 in', { normalizedUnit: 'cm' }],
+    ['150-180; poundz 70 kg', { fuzziness: 1 }],
+    ['150-180; pounds seventy kilograms', {}],
+    ['150–180; lbs 70 kg', {}],
+  ] as const)('rejects the complete entry %s (AFA-250)', (raw, options) => {
+    expect(parseMeasurement(raw, options)).toBeNull();
   });
 
   it('does not attach a semicolon-separated range unit to a bare number', () => {
@@ -189,38 +160,26 @@ describe('units next to an omitted numeric range', () => {
 
   // Re-review: a supported prefix already owns the number before the range.
   it.each([
-    ['kg 70 1-2 ft 6 in', {}, 6, 'in'],
-    ['kilograms seventy 1-2 ft 6 in', {}, 6, 'in'],
-    ['lbs 150 1-2 ft 6 in', {}, 6, 'in'],
-    ['inches 6 1-2 ft 6 in', {}, 6, 'in'],
-    ['kg; 70 1-2 ft 6 in', {}, 6, 'in'],
-    ['kg: 70 1-2 ft 6 in', {}, 6, 'in'],
-    ['(kg) 70 1-2 ft 6 in', {}, 6, 'in'],
-    ['age=28, kg=70 1-2 ft 6 in', {}, 6, 'in'],
-    ['record 0; kg 70 1-2 ft 6 in', {}, 6, 'in'],
-    ['0 kg 6 1-2 ft 3 in', {}, 3, 'in'],
-    ['kg 70 1-2; ft 6; in', {}, 6, 'in'],
-    ['poundz 70 1-2 ft 6 in', { fuzziness: 1 }, 6, 'in'],
-  ] as const)('does not reuse the prefix value in %s', (raw, options, value, unit) => {
-    expect(parseMeasurement(raw, options)).toEqual({
-      value,
-      unit,
-      type: 'height',
-      raw,
-      matches: [{ value, unit }],
-    });
+    ['kg 70 1-2 ft 6 in', {}],
+    ['kilograms seventy 1-2 ft 6 in', {}],
+    ['lbs 150 1-2 ft 6 in', {}],
+    ['kg; 70 1-2 ft 6 in', {}],
+    ['kg: 70 1-2 ft 6 in', {}],
+    ['(kg) 70 1-2 ft 6 in', {}],
+    ['age=28, kg=70 1-2 ft 6 in', {}],
+    ['record 0; kg 70 1-2 ft 6 in', {}],
+    ['0 kg 6 1-2 ft 3 in', {}],
+    ['kg 70 1-2; ft 6; in', {}],
+    ['poundz 70 1-2 ft 6 in', { fuzziness: 1 }],
+  ] as const)('rejects the complete entry %s (AFA-250)', (raw, options) => {
+    expect(parseMeasurement(raw, options)).toBeNull();
   });
 
-  // A bare inch part after feet also owns its number: 5 ft + 5 in = 65 in.
-  it('does not reuse a bare inch value as feet across the range', () => {
-    expect(parseMeasurement('5 ft 5 1-2 ft 0 in')).toMatchObject({
-      value: 65,
-      unit: 'in',
-      matches: [
-        { value: 5, unit: 'ft' },
-        { value: 5, unit: 'in' },
-      ],
-    });
+  // AFA-250: these AFA-170 cases also relied on reconciliation. The complete-entry policy
+  // retires them; other range recovery remains for the later AFA-250 slice.
+  it('rejects independent recovered readings', () => {
+    expect(parseMeasurement('5 ft 5 1-2 ft 0 in')).toBeNull();
+    expect(parseMeasurement('inches 6 1-2 ft 6 in')).toBeNull();
     expect(parseMeasurement('0 ft 6 1-2 ft 3 in')).toBeNull();
   });
 
@@ -232,50 +191,15 @@ describe('units next to an omitted numeric range', () => {
     'in 6 1-2 ft 3 in',
     '-0 kg 6 1-2 ft 3 in',
     'kg and; 6 1-2 ft 3 in',
-  ])('keeps the free feet value in %s', raw => {
-    expect(parseMeasurement(raw, { type: 'height' })).toMatchObject({
-      value: 75,
-      unit: 'in',
-      matches: [
-        { value: 6, unit: 'ft' },
-        { value: 3, unit: 'in' },
-      ],
-    });
+  ])('rejects the complete entry %s (AFA-250)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
   });
 
-  it('preserves the zero-foot and semicolon ownership rules', () => {
-    expect(parseMeasurement('ft six 1-2 ft 3 in')).toMatchObject({
-      value: 75,
-      unit: 'in',
-      matches: [
-        { value: 6, unit: 'ft' },
-        { value: 3, unit: 'in' },
-      ],
-    });
-    expect(parseMeasurement('record 0; ft 12 1-2 ft 3 in')).toMatchObject({
-      value: 147,
-      unit: 'in',
-      matches: [
-        { value: 12, unit: 'ft' },
-        { value: 3, unit: 'in' },
-      ],
-    });
-    expect(parseMeasurement('0 ft 70 1-2 ft 3 in')).toMatchObject({
-      value: 843,
-      unit: 'in',
-      matches: [
-        { value: 70, unit: 'ft' },
-        { value: 3, unit: 'in' },
-      ],
-    });
-    expect(parseMeasurement('0 ft 12 1-2 ft 3 in')).toMatchObject({
-      value: 147,
-      unit: 'in',
-      matches: [
-        { value: 12, unit: 'ft' },
-        { value: 3, unit: 'in' },
-      ],
-    });
+  it('rejects zero/range fragments across semicolons', () => {
+    expect(parseMeasurement('ft six 1-2 ft 3 in')).toBeNull();
+    expect(parseMeasurement('record 0; ft 12 1-2 ft 3 in')).toBeNull();
+    expect(parseMeasurement('0 ft 70 1-2 ft 3 in')).toBeNull();
+    expect(parseMeasurement('0 ft 12 1-2 ft 3 in')).toBeNull();
     expect(parseMeasurement('5 ft; 6 1-2 ft 0 in')).toBeNull();
     expect(parseMeasurement('5 ft 0 1-2 ft 3 in')).toBeNull();
   });
@@ -288,68 +212,105 @@ describe('units next to an omitted numeric range', () => {
     '6 1-2 ft 3, inches=72',
     '6 1-2 ft 3 (in) 72',
     '6 1-2 ft 3 in. 72',
-  ])('does not take an independent inch label in %s', raw => {
-    expect(parseMeasurement(raw)).toEqual({
-      value: 72,
-      unit: 'in',
-      type: 'height',
-      raw,
-      matches: [{ value: 72, unit: 'in' }],
-    });
+  ])('rejects the complete entry %s (AFA-250)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
   });
 
   it('does not claim an independent inch field with no value', () => {
     expect(parseMeasurement('6 1-2 ft 3, in: height')).toBeNull();
   });
 
-  it('keeps the short field-name rule when its value has its own unit', () => {
-    expect(parseMeasurement('6 1-2 ft 3 in=72 cm')).toMatchObject({
-      value: 72,
-      unit: 'cm',
-      matches: [{ value: 72, unit: 'cm' }],
-    });
+  it('rejects leftover labels after a range', () => {
+    expect(parseMeasurement('6 1-2 ft 3 in=72 cm')).toBeNull();
   });
 
   it.each(['6 1-2 ft 3 (in)', '6 1-2 ft 3 in.', '6 1-2 ft 3 in: height'])(
-    'keeps a label that owns the inch value before it in %s',
+    'rejects the complete entry %s (AFA-250)',
     raw => {
-      expect(parseMeasurement(raw)).toMatchObject({
-        value: 75,
-        unit: 'in',
-        matches: [
-          { value: 6, unit: 'ft' },
-          { value: 3, unit: 'in' },
-        ],
-      });
+      expect(parseMeasurement(raw)).toBeNull();
     }
   );
 
-  it('removes fuzzy range units when fuzziness is enabled', () => {
-    expect(parseMeasurement('150-180 poundz 70 kg', { fuzziness: 1 })).toMatchObject({
-      value: 70,
-      unit: 'kg',
-      matches: [{ value: 70, unit: 'kg' }],
-    });
-    expect(parseMeasurement('poundz 150-180 70 kg', { fuzziness: 1 })).toMatchObject({
-      value: 70,
-      unit: 'kg',
-      matches: [{ value: 70, unit: 'kg' }],
-    });
+  it('rejects ranges even when their units match fuzzily', () => {
+    expect(parseMeasurement('150-180 poundz 70 kg', { fuzziness: 1 })).toBeNull();
+    expect(parseMeasurement('poundz 150-180 70 kg', { fuzziness: 1 })).toBeNull();
   });
 
-  it('normalizes only the surviving measurement', () => {
-    expect(parseMeasurement('150-180 lbs 70 kg', { normalizedUnit: 'lb' })).toMatchObject({
-      value: 70 / 0.45359237,
-      unit: 'lb',
-      matches: [{ value: 70, unit: 'kg' }],
-    });
-    expect(parseMeasurement('6 1-2 ft 3 in', { normalizedUnit: 'cm' })).toMatchObject({
-      value: 190.5,
-      unit: 'cm',
-      matches: [
-        { value: 6, unit: 'ft' },
-        { value: 3, unit: 'in' },
-      ],
-    });
+  it('rejects range recovery even when normalization is requested', () => {
+    expect(parseMeasurement('150-180 lbs 70 kg', { normalizedUnit: 'lb' })).toBeNull();
+    expect(parseMeasurement('6 1-2 ft 3 in', { normalizedUnit: 'cm' })).toBeNull();
   });
+});
+
+// AFA-250: retain every original explicit selector/inference path when recovery becomes null.
+it.each([
+  ['150-180 lbs 70 kg', { type: 'height' }],
+  ['150-180 lbs 70 kg', { type: 'weight' }],
+  ['1-2 ft 6 in', { type: 'height' }],
+  ['1-2 ft 6 in', { type: 'weight' }],
+  ['50-70 kg, 180 lbs', { type: 'height' }],
+  ['50-70 kg, 180 lbs', { type: 'weight' }],
+  ['lbs 150-180 70 kg', { type: 'height' }],
+  ['lbs 150-180 70 kg', { type: 'weight' }],
+  ['ft 1-2 6 in', { type: 'height' }],
+  ['ft 1-2 6 in', { type: 'weight' }],
+  ['kg 50-70, 180 lbs', { type: 'height' }],
+  ['kg 50-70, 180 lbs', { type: 'weight' }],
+  ['150–180 pounds 70 kilograms', { type: 'height' }],
+  ['150–180 pounds 70 kilograms', { type: 'weight' }],
+  ['150-180lbs 70kg', { type: 'height' }],
+  ['150-180lbs 70kg', { type: 'weight' }],
+  ['72,5-80,5 kg, 180 lbs', { type: 'height' }],
+  ['72,5-80,5 kg, 180 lbs', { type: 'weight' }],
+  ['1,250-1,500 lbs, 70 kg', { type: 'height' }],
+  ['1,250-1,500 lbs, 70 kg', { type: 'weight' }],
+  ['1-2\' 6"', { type: 'height' }],
+  ['1-2\' 6"', { type: 'weight' }],
+  ['1-2 metres 180 centimetres', { type: 'height' }],
+  ['1-2 metres 180 centimetres', { type: 'weight' }],
+  ['150-180 (lbs) 70 kg', { type: 'height' }],
+  ['150-180 (lbs) 70 kg', { type: 'weight' }],
+  ['150-180 lbs 50-70 kg 80 lb', { type: 'height' }],
+  ['150-180 lbs 50-70 kg 80 lb', { type: 'weight' }],
+  ['150-180 lbs 400 g; actual 80 lb', { type: 'height' }],
+  ['150-180 lbs 400 g; actual 80 lb', { type: 'weight' }],
+  ['6 1-2 ft 3 cm', { type: 'height' }],
+  ['6 1-2 ft 3 cm', { type: 'weight' }],
+  ['6 1-2 cm 3 in', { type: 'height' }],
+  ['6 1-2 cm 3 in', { type: 'weight' }],
+  ['6.5 1-2 ft 3 in', { type: 'height' }],
+  ['6.5 1-2 ft 3 in', { type: 'weight' }],
+  ['6 1-2 ft 12 in', { type: 'height' }],
+  ['6 1-2 ft 12 in', { type: 'weight' }],
+  ['(kg): 50-70, 180 lbs', { type: 'height' }],
+  ['(kg): 50-70, 180 lbs', { type: 'weight' }],
+  ['record 1-2; lbs 70 kg', { type: 'height' }],
+  ['record 1-2; lbs 70 kg', { type: 'weight' }],
+  ['1-2 ft 6', { type: 'height', allowUnqualified: true }],
+  ['1-2 ft 6', { type: 'weight', allowUnqualified: true }],
+  ['ft 1-2 6', { type: 'height', allowUnqualified: true }],
+  ['ft 1-2 6', { type: 'weight', allowUnqualified: true }],
+  ['6 1-2 ft', { type: 'height', allowUnqualified: true }],
+  ['6 1-2 ft', { type: 'weight', allowUnqualified: true }],
+  ['two and a half 1-2; ft 3', { type: 'height', allowUnqualified: true }],
+  ['two and a half 1-2; ft 3', { type: 'weight', allowUnqualified: true }],
+  ['1-2 inches 6', { type: 'height', allowUnqualified: true }],
+  ['1-2 inches 6', { type: 'weight', allowUnqualified: true }],
+  ['kg 50-70 180', { type: 'height', allowUnqualified: true }],
+  ['kg 50-70 180', { type: 'weight', allowUnqualified: true }],
+  ['6 1-2 ft text in', { type: 'height', allowUnqualified: true }],
+  ['6 1-2 ft text in', { type: 'weight', allowUnqualified: true }],
+  ['6 1-2 ft in', { type: 'height', allowUnqualified: true }],
+  ['6 1-2 ft in', { type: 'weight', allowUnqualified: true }],
+  ['height 1-2 ft 6', { type: 'height', allowUnqualified: true }],
+  ['height 1-2 ft 6', { type: 'weight', allowUnqualified: true }],
+  ['6 1-2; ft 3', { type: 'height', allowUnqualified: true }],
+  ['6 1-2; ft 3', { type: 'weight', allowUnqualified: true }],
+  ['5 kg 6 1-2 ft 3 in', { type: 'height' }],
+  ['five and a half kg 6 1-2 ft 3 in', { type: 'height' }],
+  ['in 6 1-2 ft 3 in', { type: 'height' }],
+  ['-0 kg 6 1-2 ft 3 in', { type: 'height' }],
+  ['kg and; 6 1-2 ft 3 in', { type: 'height' }],
+] as const)('rejects incomplete entry %s with original options %j', (raw, options) => {
+  expect(parseMeasurement(raw, options)).toBeNull();
 });

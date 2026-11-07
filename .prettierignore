@@ -1,6 +1,7 @@
 # Build output
 dist/
 build/
+.docs-preview/
 *.tsbuildinfo
 
 # Dependencies

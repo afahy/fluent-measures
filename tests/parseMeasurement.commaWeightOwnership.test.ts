@@ -1,3 +1,6 @@
+// AFA-250: recovery expectations now follow the approved complete-entry contract in PARSING.md.
+// Earlier ticket rationales below describe their historical extraction contract; original
+// assertions are retained separately under design/afa-250.
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement, type ParseOptions } from '../src';
 
@@ -6,15 +9,9 @@ const weightOptions: ParseOptions[] = [{}, { type: 'weight' }];
 describe.each(weightOptions)('weight number ownership across comma boundaries with %o', options => {
   // Independent review of AFA-179: a signed supported part owns its number even after an
   // unsupported unit word. Only its field is discarded; the later field still supplies 70 kg.
-  it('keeps an independent field after a signed part', () => {
+  it('rejects a signed part before another field', () => {
     const raw = 'stone -5 lb; actual 70 kg';
-    expect(parseMeasurement(raw, options)).toEqual({
-      value: 70,
-      unit: 'kg',
-      type: 'weight',
-      raw,
-      matches: [{ value: 70, unit: 'kg' }],
-    });
+    expect(parseMeasurement(raw, options)).toBeNull();
   });
 
   // PARSING.md's "stone 12, 4 lb" rule also applies to words. The comma ends the first

@@ -2,168 +2,36 @@
 
 exports[`measurement corpus > matches the committed score 1`] = `
 "Category                 total   agree   wrong  missed  throws
-all                        651     631       5      15       0
+all                       2007    2007       0       0       0
 
-symbols                     84      84       0       0       0
-words                       31      31       0       0       0
-mixed-numbers               40      40       0       0       0
-decimals                    22      21       1       0       0
-commas                      32      31       1       0       0
+symbols                     89      89       0       0       0
+words                      109     109       0       0       0
+mixed-numbers               66      66       0       0       0
+decimals                   251     251       0       0       0
+commas                      36      36       0       0       0
 hyphens                     49      49       0       0       0
-compact                     24      12       0      12       0
-unicode                     29      29       0       0       0
+compact                     72      72       0       0       0
+unicode                     87      87       0       0       0
 typos                       32      32       0       0       0
-surrounding-text            57      54       0       3       0
-multiple-measurements       93      93       0       0       0
-unqualified                 25      25       0       0       0
+surrounding-text            65      65       0       0       0
+multiple-measurements      349     349       0       0       0
+unqualified                 29      29       0       0       0
 conversion                  41      41       0       0       0
-unsupported                 60      60       0       0       0
-prose                       32      29       3       0       0
+unsupported                700     700       0       0       0
+prose                       32      32       0       0       0
 
-Entries with the outcome "wrong" (5):
+Entries with the outcome "wrong" (0):
 
-decimals-5-11-ft (decimals)
-  input:    "5.11 ft"
-  options:  {}
-  expected: 71 in (height) | null
-  actual:   5.11 ft (height)
-
-prose-fees-fuzzy (prose)
-  input:    "I paid 5 fees"
-  options:  {"fuzziness":1}
-  expected: null
-  actual:   5 ft (height)
-
-prose-ponds-fuzzy (prose)
-  input:    "we visited 2 ponds"
-  options:  {"fuzziness":1}
-  expected: null
-  actual:   2 lb (weight)
-
-prose-kilns-fuzzy (prose)
-  input:    "the studio has 2 kilns"
-  options:  {"fuzziness":1}
-  expected: null
-  actual:   2 kg (weight)
-
-unicode-minus-after-number-word-label (commas)
-  input:    "phase twenty, \\u22125 cm"
-  options:  {}
-  expected: null
-  actual:   25 cm (height)
-
-Entries with the outcome "missed" (15):
-
-compact-5ft11 (compact)
-  input:    "5ft11"
-  options:  {}
-  expected: 71 in (height)
-  actual:   null
-
-compact-1m80 (compact)
-  input:    "1m80"
-  options:  {}
-  expected: 180 cm (height)
-  actual:   null
-
-compact-70kgs (compact)
-  input:    "70kgs"
-  options:  {}
-  expected: 70 kg (weight)
-  actual:   null
-
-compact-5ft11in (compact)
-  input:    "5ft11in"
-  options:  {}
-  expected: 71 in (height)
-  actual:   null
-
-compact-6ft2 (compact)
-  input:    "6ft2"
-  options:  {}
-  expected: 74 in (height)
-  actual:   null
-
-compact-5ft11-quote (compact)
-  input:    "5ft11\\""
-  options:  {}
-  expected: 71 in (height)
-  actual:   null
-
-compact-1m75-cm (compact)
-  input:    "1m75"
-  options:  {"normalizedUnit":"cm"}
-  expected: 175 cm (height)
-  actual:   null
-
-compact-1m80-cm (compact)
-  input:    "1m80"
-  options:  {"normalizedUnit":"cm"}
-  expected: 180 cm (height)
-  actual:   null
-
-compact-6foot2 (compact)
-  input:    "6foot2"
-  options:  {}
-  expected: 74 in (height)
-  actual:   null
-
-compact-175cms (compact)
-  input:    "175cms"
-  options:  {}
-  expected: 175 cm (height)
-  actual:   null
-
-compact-6ft1in (compact)
-  input:    "6ft1in"
-  options:  {}
-  expected: 73 in (height)
-  actual:   null
-
-compact-ft-in-dots (compact)
-  input:    "5ft.11in."
-  options:  {}
-  expected: 71 in (height)
-  actual:   null
-
-signed-following-label-1 (surrounding-text)
-  input:    "kg -6 (ft), 70 kg"
-  options:  {}
-  expected: 70 kg (weight)
-  actual:   null
-
-signed-following-label-2 (surrounding-text)
-  input:    "kg: -6 (ft), 70 kg"
-  options:  {}
-  expected: 70 kg (weight)
-  actual:   null
-
-signed-following-label-3 (surrounding-text)
-  input:    "kg -6 (ft), 70 (kg)"
-  options:  {}
-  expected: 70 kg (weight)
-  actual:   null
+Entries with the outcome "missed" (0):
 
 Entries with the outcome "throws" (0):
 
-Entries that agree with one of several outputs (19):
+Entries that agree with one of several outputs (7):
 
 unicode-en-dash-shorthand: null
 unicode-hyphen-shorthand: null
-multiple-kg-with-lbs: 70 kg (weight)
-multiple-height-weight-no-type: 71 in (height)
-multiple-6-1-190-no-type: 73 in (height)
 unqualified-1-75-metric-height: 1.75 m (height)
 unqualified-1-8-metric-height: 1.8 m (height)
-probe-semicolon-suffix-weight: 70 kg (weight)
-probe-semicolon-suffix-inches: 6 in (height)
-probe-semicolon-both-sides: 6 in (height)
-probe-semicolon-suffix-metric: 180 lb (weight)
-probe-semicolon-multiple: 70 kg (weight)
-probe-semicolon-normalized: 15.24 cm (height)
-probe-semicolon-fuzzy: 70 kg (weight)
-probe-semicolon-other-weight: 70 kg (weight)
-probe-semicolon-unicode-range: 70 kg (weight)
 quote-context-opening-height-word-after: 71 in (height)
 quote-context-opening-height-word-first: 71 in (height)
 quote-context-opening-height-all-words: 71 in (height)"

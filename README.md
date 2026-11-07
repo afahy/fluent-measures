@@ -9,8 +9,8 @@ A TypeScript library that reads a height or a weight from everyday text, such as
 `eighty kilograms`, and returns its value, unit and measurement type.
 
 Use it to read measurements that people type, for example in health apps, fitness trackers and
-web forms. The result is `null` when the text has no measurement that the library can read, or has
-two that disagree. Your app can then ask the person again.
+web forms. The result is `null` when the complete entry is unsupported, incomplete or ambiguous.
+Your app can then ask the person again.
 
 ## Features
 
@@ -21,7 +21,8 @@ two that disagree. Your app can then ask the person again.
 - Reads unit names with spelling errors when you set `fuzziness`, as in `5 foot 11 inc`
 - Converts the result to the unit that you set in `normalizedUnit`
 - Has no dependencies
-- Is at most 5.5 kB, minified and compressed with Brotli, because CI fails a build that goes over
+- Is at most 6.0 kB for ESM and 6.0 kB for CommonJS, minified and compressed with Brotli; CI
+  enforces these limits
 - Supports ESM and CommonJS
 
 ## Installation
@@ -61,8 +62,9 @@ parseMeasurement('five foot ten', { type: 'height' });
 // { value: 70, unit: 'in', type: 'height', matches: [{ value: 5, unit: 'ft' }, { value: 10, unit: 'in' }], raw: 'five foot ten' }
 ```
 
-Set `type` when a field expects one kind of measurement, such as a weight. The parser then reads
-only that kind, so a height typed into a weight field returns `null`:
+Set `type` when a field expects one kind of measurement, such as a weight. A single measurement
+must have that kind, so a height typed into a weight field returns `null`. A complete height/weight pair
+requires `type` or `normalizedUnit` to select one; an invalid part rejects the whole entry:
 
 ```typescript
 parseMeasurement('eighty kilograms', { type: 'weight' });
@@ -123,7 +125,7 @@ interface ParseOptions {
   // Must be a number >= 1, or Infinity for no limit. Other values throw.
   maxLength?: number;
 
-  // The measurement type to read
+  // The measurement type to return from a valid complete entry
   type?: 'height' | 'weight';
 
   // The largest number of spelling errors in a unit name, from 0 to 2. Without it, a unit
@@ -139,8 +141,8 @@ interface ParseOptions {
   // in meters, and any other height in centimeters.
   inferUnit?: 'metric' | 'imperial';
 
-  // The unit of the result. It also selects the measurement type, so a weight unit reads only a
-  // weight. A type that contradicts it throws an error. Shorthand such as 5-11 still needs type,
+  // The unit of the result. It also selects the measurement type from a valid complete entry.
+  // A type that contradicts it throws an error. Shorthand such as 5-11 still needs type,
   // and so does allowUnqualified.
   normalizedUnit?: 'ft' | 'in' | 'cm' | 'm' | 'lb' | 'kg';
 }
@@ -177,13 +179,13 @@ interface ParsedValue {
 ### Height
 
 - **Imperial**: `ft` (feet, foot, `'`) and `in` (inch, inches, `"`)
-- **Metric**: `cm` (centimeter, centimeters, centimetre, centimetres) and `m` (meter, meters,
+- **Metric**: `cm` (cms, centimeter, centimeters, centimetre, centimetres) and `m` (meter, meters,
   metre, metres)
 
 ### Weight
 
 - **Imperial**: `lb` (lbs, pound, pounds, and `#` directly after a number, as in `185#`)
-- **Metric**: `kg` (kilo, kilos, kilogram, kilograms)
+- **Metric**: `kg` (kgs, kilo, kilos, kilogram, kilograms)
 
 Most units can also come before their number, as in `kg 70`. The short forms `in` and `m` can
 come first only as a label, because before a number they are usually ordinary words.
@@ -193,22 +195,34 @@ says what counts as a label.
 ## Limits
 
 ```typescript
-parseMeasurement('12st 4lb'); // null: stone, ounces and grams aren't supported
-parseMeasurement('150-180 lbs'); // null: a range isn't one measurement
-parseMeasurement('70 kg (154 lbs)'); // { value: 70, unit: 'kg', ... }: the second weight agrees
-parseMeasurement('210 lbs to 180 lbs'); // null: the two weights disagree
+parseMeasurement('12st 4lb'); // null: stone is not a supported unit
+parseMeasurement('150-180 lbs'); // null: a range is not one measurement
+parseMeasurement('70 kg (154 lbs)'); // null: two weights, even when they agree
+parseMeasurement('210 lbs to 180 lbs'); // null: two weights
 ```
 
-When the text has more than one height, or more than one weight, the result is the first one. The
-others must agree with it within 1%. If not, the result is `null`. If the text has both a height
-and a weight, set `type` to choose which one you get. Without `type`, the result can be either
-one, or `null`.
+The parser reads a complete entry, including optional ordinary wrappers such as
+`I'm five foot eleven tall` and `about 180 cm`. It does not search arbitrary prose for a
+usable fragment. Extra values, malformed fragments, unsupported units and ranges reject the
+whole entry. `Top 10 in the class` returns `null`.
 
-Fuzzy matching can read an ordinary word as a unit. Even without it, `in` after a number means
-inches, so `Top 10 in the class` returns 10 inches.
+Feet and inches, or meters and centimeters, can form one compound height. Two independent
+heights or two independent weights return `null`, even if they are equal or are conversions
+of one another. There is no first-result or 1% agreement rule.
 
-[PARSING.md](https://github.com/afahy/fluent-measures/blob/main/PARSING.md) gives all the rules,
-with examples.
+A complete pair with exactly one height and one weight is accepted only when `type` or
+`normalizedUnit` selects one. For example, `5'11", 180 lbs` returns 71 inches with
+`type: 'height'` and 180 pounds with `type: 'weight'`; without a selector it returns `null`.
+Both measurements must be valid. The parser does not discard a negative, zero, ranged or
+unsupported measurement to return the other one.
+
+Send the current field value to the parser. Keep ages, dates, earlier readings and other
+application metadata outside that value. To display an alternate unit, convert the selected
+measurement instead of submitting both representations.
+
+[PARSING.md](https://github.com/afahy/fluent-measures/blob/main/PARSING.md) gives the complete
+entry grammar, supported wrappers and examples. Fuzzy matching can still read an ordinary
+word as a unit; it applies only within that grammar.
 
 ## Troubleshooting
 
@@ -218,7 +232,8 @@ If `parseMeasurement` returns `null`, look for these causes:
 2. The text doesn't say whether it is a height or a weight. Set `type`.
 3. A number has no unit. Set `type`, `allowUnqualified` and `inferUnit`.
 4. A unit name has a spelling error. Set `fuzziness` to 1 or 2.
-5. The text has a range, or measurements that disagree. See [Limits](#limits).
+5. The entry has a range, duplicate measurement, unsupported fragment or extra text. See
+   [Limits](#limits).
 6. The input isn't a string. Non-string input returns `null` at runtime; the TypeScript parameter
    remains `string`.
 7. The raw `input.length`, before trimming, exceeds `maxLength` (default 1,000). Set a larger

@@ -1,3 +1,7 @@
+// AFA-250: recovery expectations now follow the approved complete-entry contract in PARSING.md.
+// Earlier ticket rationales below describe their historical extraction contract; original
+// assertions are retained separately under design/afa-250.
+// AFA-250: generated arbitrary labels remain in these tests and now reject the whole entry.
 import { describe, it, expect } from 'vitest';
 import { parseMeasurement } from '../src';
 import { tokenize } from '../src/tokenize';
@@ -20,26 +24,14 @@ describe('commas separating labels from measurements', () => {
     expect.assertions(3);
     for (const value of [5, 72, 180]) {
       const raw = `${label},${value} kg`;
-      expect(parseMeasurement(raw)).toEqual({
-        value,
-        unit: 'kg',
-        type: 'weight',
-        raw,
-        matches: [{ value, unit: 'kg' }],
-      });
+      expect(parseMeasurement(raw)).toBeNull();
     }
   });
 
   it('preserves the height measurement after a digit-suffixed label', () => {
     const raw = 'phase2,180 cm';
-    expect(parseMeasurement(raw)).toEqual({
-      value: 180,
-      unit: 'cm',
-      type: 'height',
-      raw,
-      matches: [{ value: 180, unit: 'cm' }],
-    });
-    expect(tokenize(raw).map(({ text }) => text)).toEqual(['phase2', '180', 'cm']);
+    expect(parseMeasurement(raw)).toBeNull();
+    expect(tokenize(raw).map(({ text }) => text)).toEqual(['phase2', ',', '180', 'cm']);
   });
 
   it.each([
@@ -47,8 +39,8 @@ describe('commas separating labels from measurements', () => {
     ['poidsé,72,5 kg', 72.5],
     ['phase2,1,000 kg', 1000],
     ['重量,1,000 kg', 1000],
-  ])('normalizes the measurement after the label in %s', (raw, value) => {
-    expect(parseMeasurement(raw)?.value).toBe(value);
+  ])('rejects an unrelated label before normalized numeric text in %s', (raw, _value) => {
+    expect(parseMeasurement(raw)).toBeNull();
   });
 
   it.each(['phase2,72,5-80,5 kg', '重量,1,000-2,000 kg'])(
@@ -58,17 +50,16 @@ describe('commas separating labels from measurements', () => {
     }
   );
 
-  it('handles a long digit-suffixed label without merging its measurement', () => {
+  it('rejects a long unrelated digit-suffixed label', () => {
     const raw = `phase${'2'.repeat(10000)},180 cm`;
-    expect(parseMeasurement(raw, { maxLength: Infinity })?.value).toBe(180);
+    expect(parseMeasurement(raw, { maxLength: Infinity })).toBeNull();
   });
 });
 
-// AFA-165: a tens word takes only one to nine after it, so "twenty ten" isn't one number. The
-// label then ends at "twenty", and the result is 10 cm, as PARSING.md's `phase-2, 180 cm` is
-// 180 cm. AFA-179 also covers one to nine after the comma.
+// Historical AFA-165/179 cases remain here. AFA-250 now rejects the entire unrelated label;
+// original recovery expectations are preserved in the migration artifacts.
 describe('a label that ends in a number word', () => {
-  it('reads the measurement after the comma', () => {
-    expect(parseMeasurement('phase twenty, 10 cm')).toMatchObject({ value: 10, unit: 'cm' });
+  it('rejects an unrelated label before the comma', () => {
+    expect(parseMeasurement('phase twenty, 10 cm')).toBeNull();
   });
 });

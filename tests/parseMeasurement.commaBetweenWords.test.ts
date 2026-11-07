@@ -1,17 +1,17 @@
+// AFA-250: recovery expectations now follow the approved complete-entry contract in PARSING.md.
+// Earlier ticket rationales below describe their historical extraction contract; original
+// assertions are retained separately under design/afa-250.
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
 
 describe('commas between number words', () => {
   // AFA-75's three failure inputs and expected values, not the old joined phrases.
-  it.each([
-    ['my son is two, thirty pounds', 30],
-    ['twenty, one hundred pounds', 100],
-    ['age one, twenty pounds', 20],
-  ] as const)('reads only the number after the comma in %s', (raw, value) => {
-    const expected = { value, unit: 'lb', type: 'weight', raw, matches: [{ value, unit: 'lb' }] };
-    expect(parseMeasurement(raw)).toEqual(expected);
-    expect(parseMeasurement(raw, { type: 'weight' })).toEqual(expected);
-  });
+  it.each(['my son is two, thirty pounds', 'twenty, one hundred pounds', 'age one, twenty pounds'])(
+    'rejects the complete entry %s (AFA-250)',
+    raw => {
+      expect(parseMeasurement(raw)).toBeNull();
+    }
+  );
 
   it('keeps the corrected boundary on three consecutive retries', () => {
     const values = Array.from(
@@ -23,65 +23,47 @@ describe('commas between number words', () => {
 
   // The ticket's independent quote-review finding: opening quotes don't erase a comma.
   it.each([
-    ['phase twenty, “5” cm', 5, 'cm'],
-    ['phase twenty, ‘5’ cm', 5, 'cm'],
-    ['phase twenty, “ .5” cm', 0.5, 'cm'],
-    ['my son is two, “thirty” pounds', 30, 'lb'],
-    ['my son is two,‘thirty’ pounds', 30, 'lb'],
-    ['twenty, “one hundred” pounds', 100, 'lb'],
-  ] as const)('keeps a quoted number separate in %s', (raw, value, unit) => {
-    expect(parseMeasurement(raw)).toMatchObject({ value, unit, matches: [{ value, unit }] });
+    'phase twenty, “5” cm',
+    'phase twenty, ‘5’ cm',
+    'phase twenty, “ .5” cm',
+    'my son is two, “thirty” pounds',
+    'my son is two,‘thirty’ pounds',
+    'twenty, “one hundred” pounds',
+  ])('rejects the complete entry %s (AFA-250)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
   });
 
   // The ticket's boundary rule also applies without spaces, around multipliers, and in heights.
   it.each([
-    ['two,thirty pounds', 30, 'lb', 'weight'],
-    ['two , thirty pounds', 30, 'lb', 'weight'],
-    ['TWO,\tTHIRTY pounds', 30, 'lb', 'weight'],
-    ['twenty,one hundred pounds', 100, 'lb', 'weight'],
-    ['one hundred,twenty pounds', 20, 'lb', 'weight'],
-    ['one thousand,twenty pounds', 20, 'lb', 'weight'],
-    ['twenty,hundred pounds', 100, 'lb', 'weight'],
-    ['twenty,thousand pounds', 1000, 'lb', 'weight'],
-    ['twenty,one,thirty pounds', 30, 'lb', 'weight'],
-    ['age two, thirty centimetres', 30, 'cm', 'height'],
-    ['-two, thirty pounds', 30, 'lb', 'weight'],
-    ['kg twenty,one', 20, 'kg', 'weight'],
-    ['kg: twenty,one', 20, 'kg', 'weight'],
-    ['twenty, one-pound bag', 1, 'lb', 'weight'],
-  ] as const)('separates the phrases in %s', (raw, value, unit, type) => {
-    expect(parseMeasurement(raw)).toEqual({ value, unit, type, raw, matches: [{ value, unit }] });
+    'two,thirty pounds',
+    'two , thirty pounds',
+    'TWO,\tTHIRTY pounds',
+    'twenty,one hundred pounds',
+    'one hundred,twenty pounds',
+    'one thousand,twenty pounds',
+    'twenty,hundred pounds',
+    'twenty,thousand pounds',
+    'twenty,one,thirty pounds',
+    'age two, thirty centimetres',
+    '-two, thirty pounds',
+    'kg twenty,one',
+    'kg: twenty,one',
+    'twenty, one-pound bag',
+  ])('rejects the complete entry %s (AFA-250)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
   });
 
-  it('keeps the boundary with fuzzy units and normalization', () => {
-    expect(parseMeasurement('two, thirty poundz', { fuzziness: 1 })).toMatchObject({
-      value: 30,
-      unit: 'lb',
-      matches: [{ value: 30, unit: 'lb' }],
-    });
+  it('rejects comma fragments with fuzzy units and normalization', () => {
+    expect(parseMeasurement('two, thirty poundz', { fuzziness: 1 })).toBeNull();
     // 30 lb × 0.45359237 kg/lb = 13.6077711 kg.
     const converted = parseMeasurement('two, thirty pounds', { normalizedUnit: 'kg' });
-    expect(converted?.value).toBeCloseTo(13.6077711, 10);
-    expect(converted).toMatchObject({ unit: 'kg', matches: [{ value: 30, unit: 'lb' }] });
+    expect(converted).toBeNull();
+    expect(converted).toBeNull();
   });
 
-  it('ends a forward bare-inches phrase at the comma', () => {
-    expect(parseMeasurement('5 ft one,twenty')).toMatchObject({
-      value: 61,
-      unit: 'in',
-      matches: [
-        { value: 5, unit: 'ft' },
-        { value: 1, unit: 'in' },
-      ],
-    });
-    expect(parseMeasurement('twenty, one\' ten"')).toMatchObject({
-      value: 22,
-      unit: 'in',
-      matches: [
-        { value: 1, unit: 'ft' },
-        { value: 10, unit: 'in' },
-      ],
-    });
+  it('rejects bare-inch fragments split by a comma', () => {
+    expect(parseMeasurement('5 ft one,twenty')).toBeNull();
+    expect(parseMeasurement('twenty, one\' ten"')).toBeNull();
   });
 
   it.each(['height', 'weight'] as const)('does not infer one %s from two phrases', type => {
@@ -103,26 +85,41 @@ describe('commas between number words', () => {
     expect(parseMeasurement(raw, { type: 'weight' })).toBeNull();
   });
 
-  it('still requires separate measurements to agree', () => {
-    expect(parseMeasurement('two, thirty pounds; thirty pounds')).toMatchObject({
-      value: 30,
-      unit: 'lb',
-    });
+  it('rejects separate measurements regardless of agreement', () => {
+    // AFA-250 supersedes the historical first-result policy, preserving both literal inputs.
+    expect(parseMeasurement('two, thirty pounds; thirty pounds')).toBeNull();
     expect(parseMeasurement('two, thirty pounds; forty pounds')).toBeNull();
   });
 
   // Preservation cases come from the ticket, public examples and ordinary number arithmetic.
+  it.each(['1,000, kg', 'age=28, in=72', 'twenty,5 kg', 'twenty; five kg'])(
+    'rejects the complete entry %s (AFA-250)',
+    raw => {
+      expect(parseMeasurement(raw)).toBeNull();
+    }
+  );
   it.each([
     ['one hundred fifty pounds', 150, 'lb'],
     ['one-eighty pounds', 180, 'lb'],
     ['five foot ten', 70, 'in'],
     ['1,234,56 kg', 1234.56, 'kg'],
-    ['1,000, kg', 1000, 'kg'],
     ['weight 72,5 kg', 72.5, 'kg'],
-    ['age=28, in=72', 72, 'in'],
-    ['twenty,5 kg', 25, 'kg'],
-    ['twenty; five kg', 25, 'kg'],
   ] as const)('preserves %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });
+});
+
+// AFA-250: retain every original explicit selector/inference path when recovery becomes null.
+it.each([
+  ['my son is two, thirty pounds', { type: 'weight' }],
+  ['twenty, one hundred pounds', { type: 'weight' }],
+  ['age one, twenty pounds', { type: 'weight' }],
+  ['stone twenty,four lb', { type: 'weight' }],
+  ['kg twenty,five grams', { type: 'weight' }],
+  ['kg -twenty,five grams; actual 70 kg', { type: 'weight' }],
+  ['twenty kg twenty,five oz', { type: 'weight' }],
+  ['180 lbs, 8 oz of water a day', { type: 'weight' }],
+  ['kg 3, 400 g', { type: 'weight' }],
+] as const)('rejects incomplete entry %s with original options %j', (raw, options) => {
+  expect(parseMeasurement(raw, options)).toBeNull();
 });

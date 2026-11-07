@@ -147,8 +147,22 @@ const cases: ReadmeCase[] = [
   { section: 'Usage', input: 'not a measurement', expected: null },
   { section: 'Limits', input: '12st 4lb', expected: null },
   { section: 'Limits', input: '150-180 lbs', expected: null },
-  { section: 'Limits', input: '70 kg (154 lbs)', expected: { value: 70, unit: 'kg' } },
+  { section: 'Limits', input: '70 kg (154 lbs)', expected: null },
   { section: 'Limits', input: '210 lbs to 180 lbs', expected: null },
+  {
+    section: 'Surrounding Words',
+    input: "I'm five foot eleven tall",
+    expected: { value: 71, unit: 'in' },
+  },
+  { section: 'Surrounding Words', input: 'about 180 cm', expected: { value: 180, unit: 'cm' } },
+  {
+    section: 'Surrounding Words',
+    input: 'I weigh one hundred fifty pounds',
+    expected: { value: 150, unit: 'lb' },
+  },
+  { section: 'Surrounding Words', input: 'weighed 70 kg in 2020', expected: null },
+  { section: 'Surrounding Words', input: 'I was 210 lbs, now 180 lbs', expected: null },
+  { section: 'Surrounding Words', input: 'Top 10 in the class', expected: null },
   {
     section: 'Units Before a Number',
     input: 'Height (in): 72',
@@ -161,7 +175,7 @@ const cases: ReadmeCase[] = [
   {
     section: 'Units Before a Number',
     input: 'weighed 70 kg in 2020',
-    expected: { value: 70, unit: 'kg' },
+    expected: null,
   },
   { section: 'Units Before a Number', input: 'M 28', expected: null },
   {
@@ -169,13 +183,15 @@ const cases: ReadmeCase[] = [
     input: 'Weigh in: 180 lbs',
     expected: { value: 180, unit: 'lb' },
   },
-  { section: 'Labels', input: 'age=28, kg=72', expected: { value: 72, unit: 'kg' } },
-  { section: 'Labels', input: 'age: 28, ft: 6', expected: { value: 6, unit: 'ft' } },
-  { section: 'Labels', input: '180 lbs = 82 kg', expected: { value: 180, unit: 'lb' } },
-  { section: 'Labels', input: 'age=28, kg=72 lbs', expected: { value: 72, unit: 'lb' } },
-  { section: 'Labels', input: '72 (in), 180 lbs', expected: { value: 72, unit: 'in' } },
-  { section: 'Labels', input: '72 in: 180 lbs', expected: { value: 180, unit: 'lb' } },
-  { section: 'Labels', input: '72 in: height', expected: { value: 72, unit: 'in' } },
+  { section: 'Labels', input: 'age=28, kg=72', expected: null },
+  { section: 'Labels', input: 'age: 28, ft: 6', expected: null },
+  { section: 'Labels', input: '180 lbs = 82 kg', expected: null },
+  { section: 'Labels', input: 'age=28, kg=72 lbs', expected: null },
+  { section: 'Labels', input: '72 (in), 180 lbs', expected: null },
+  { section: 'Labels', input: '72 in: 180 lbs', expected: null },
+  { section: 'Labels', input: '72 in: height', expected: null },
+  { section: 'Labels', input: 'kg=72', expected: { value: 72, unit: 'kg' } },
+  { section: 'Labels', input: 'm: 1 cm: 80', expected: { value: 180, unit: 'cm' } },
   {
     section: 'Feet and Inches',
     input: '5\'11"',
@@ -231,33 +247,35 @@ const cases: ReadmeCase[] = [
   {
     section: 'Semicolons',
     input: '0 feet; actual 1.8 meters',
-    expected: { value: 1.8, unit: 'm' },
+    expected: null,
   },
-  { section: 'Semicolons', input: '180;lbs', expected: { value: 180, unit: 'lb' } },
-  { section: 'Semicolons', input: 'record 0; kg 70', expected: { value: 70, unit: 'kg' } },
+  { section: 'Semicolons', input: '180;lbs', expected: null },
+  { section: 'Semicolons', input: 'record 0; kg 70', expected: null },
   { section: 'Ranges', input: '150-180 lbs', expected: null },
   { section: 'Ranges', input: '150 – 180 lbs', expected: null },
   { section: 'Ranges', input: 'kg 50-70', expected: null },
   { section: 'Ranges', input: '72,5-80,5 kg', expected: null },
   { section: 'Ranges', input: '1,250-1,500 lbs', expected: null },
   { section: 'Ranges', input: 'kg-70.5', expected: null },
+  { section: 'Ranges', input: '150 to 180 lbs', expected: null },
+  { section: 'Ranges', input: 'between 70 and 80 kg', expected: null },
   { section: 'Ranges', input: '6 1-2 ft', expected: null },
   { section: 'Ranges', input: 'ft 1-2 6', expected: null },
-  { section: 'Ranges', input: '6ft1-2in', expected: { value: 6, unit: 'ft' } },
+  { section: 'Ranges', input: '6ft1-2in', expected: null },
   {
     section: 'More Than One Measurement',
     input: '70 kg (154 lbs)',
-    expected: { value: 70, unit: 'kg' },
+    expected: null,
   },
   {
     section: 'More Than One Measurement',
     input: '180 cm (5\'11")',
-    expected: { value: 180, unit: 'cm' },
+    expected: null,
   },
   {
     section: 'More Than One Measurement',
     input: '6 ft (72 in)',
-    expected: { value: 6, unit: 'ft' },
+    expected: null,
   },
   { section: 'More Than One Measurement', input: '210 lbs to 180 lbs', expected: null },
   {
@@ -358,95 +376,100 @@ const proseCases: ProseCase[] = [
   {
     section: 'Ranges',
     input: '50-70 kg, 180 lbs',
-    expected: { value: 180, unit: 'lb' },
-    statement: 'A later number keeps its own unit, so `50-70 kg, 180 lbs` returns 180 lb',
+    expected: null,
+    statement:
+      '`50-70 kg, 180 lbs`, `1-2 ft 6`, `6 1-2 ft 3 in` and `6 ft 1-2 11 in` all return `null`',
   },
   {
     section: 'Ranges',
     input: '1-2 ft 6',
     expected: null,
-    statement: '`1-2 ft 6` returns `null`',
+    statement: '`1-2 ft 6`, `6 1-2 ft 3 in`',
   },
   {
     section: 'Ranges',
     input: '6 1-2 ft 3 in',
-    expected: { value: 75, unit: 'in' },
-    statement: '`6 1-2 ft 3 in` is read as `6 ft 3 in` (75 in)',
+    expected: null,
+    statement: '`1-2 ft 6`, `6 1-2 ft 3 in`',
   },
 
   {
     section: 'Limits',
     input: 'Top 10 in the class',
-    expected: { value: 10, unit: 'in', type: 'height' },
-    statement: '`Top 10 in the class` returns 10 inches',
+    expected: null,
+    statement: '`Top 10 in the class`',
   },
   {
     section: 'Unsupported Units',
     input: '12st 4lb',
     expected: null,
-    statement: '`12st 4lb` and `7 lb 8 oz` return `null`',
+    statement:
+      '`12st 4lb`, `7 lb 8 oz`, `7 lb, 8 oz`, `stone 12, 4 lb` and `kg 3, 400 g` return `null`',
   },
   {
     section: 'Unsupported Units',
     input: '7 lb 8 oz',
     expected: null,
-    statement: '`12st 4lb` and `7 lb 8 oz` return `null`',
+    statement:
+      '`12st 4lb`, `7 lb 8 oz`, `7 lb, 8 oz`, `stone 12, 4 lb` and `kg 3, 400 g` return `null`',
   },
   {
     section: 'Unsupported Units',
     input: 'I drink 8 oz of water, weight 180 lbs',
-    expected: { value: 180, unit: 'lb' },
-    statement: '`I drink 8 oz of water, weight 180 lbs` returns 180 lb',
+    expected: null,
+    statement:
+      '`I drink 8 oz of water, weight 180 lbs` and `180 lbs, 8 oz of water a day` return `null`',
   },
   {
     section: 'Unsupported Units',
     input: '180 lbs, 8 oz of water a day',
     expected: null,
-    statement: 'returns `null`, as in `180 lbs, 8 oz of water a day`',
+    statement:
+      '`I drink 8 oz of water, weight 180 lbs` and `180 lbs, 8 oz of water a day` return `null`',
   },
   {
     section: 'Unsupported Units',
     input: 'stone 12, 4 lb',
     expected: null,
-    statement: '`stone 12, 4 lb` and `kg 3, 400 g` return `null`',
+    statement:
+      '`12st 4lb`, `7 lb 8 oz`, `7 lb, 8 oz`, `stone 12, 4 lb` and `kg 3, 400 g` return `null`',
   },
   {
     section: 'Unsupported Units',
     input: 'kg 3, 400 g',
     expected: null,
-    statement: '`stone 12, 4 lb` and `kg 3, 400 g` return `null`',
+    statement:
+      '`12st 4lb`, `7 lb 8 oz`, `7 lb, 8 oz`, `stone 12, 4 lb` and `kg 3, 400 g` return `null`',
   },
   {
     section: 'Unsupported Units',
     input: 'Main St 12, 180 lbs',
-    expected: { value: 180, unit: 'lb' },
-    statement: '`Main St 12, 180 lbs` returns 180 lb',
+    expected: null,
+    statement: '`Main St 12, 180 lbs` also returns `null`',
   },
   {
-    section: 'Units Before a Number',
+    section: 'Limits',
     input: 'Top 10 in the class',
-    expected: { value: 10, unit: 'in', type: 'height' },
-    statement: '`Top 10 in the class` returns 10 inches',
+    expected: null,
+    statement: '`Top 10 in the class`',
   },
   {
     section: 'Ranges',
     input: '150 lbs - 180 lbs',
     expected: null,
-    statement: 'such as `150 lbs - 180 lbs`, also returns `null`',
+    statement: '`150 lbs - 180 lbs` is also `null`',
   },
   {
     section: 'More Than One Measurement',
     input: '6 ft (72 in)',
-    expected: { value: 6, unit: 'ft', type: 'height' },
-    statement:
-      '`6 ft (72 in)` and `0.5 m (50 cm)` are a height and its conversion. When the text has more than one height, or more than one weight, the result is the first one',
+    expected: null,
+    statement: '`6 ft (72 in)` and `0.5 m (50 cm)` are duplicate representations, not compounds',
   },
   {
     section: 'More Than One Measurement',
     input: '0.5 m (50 cm)',
-    expected: { value: 0.5, unit: 'm', type: 'height' },
-    statement:
-      '`6 ft (72 in)` and `0.5 m (50 cm)` are a height and its conversion. When the text has more than one height, or more than one weight, the result is the first one',
+    expected: null,
+    statement: '`6 ft (72 in)` and `0.5 m (50 cm)` are duplicate representations, not compounds',
   },
   {
     section: 'Commas',
@@ -469,8 +492,8 @@ const proseCases: ProseCase[] = [
   {
     section: 'Commas',
     input: '1,000, kg',
-    expected: { value: 1000, unit: 'kg' },
-    statement: '`1,000, kg` still means 1000 kg',
+    expected: null,
+    statement: '`1,000, kg` returns `null`',
   },
   {
     section: 'Commas',
@@ -481,20 +504,22 @@ const proseCases: ProseCase[] = [
   {
     section: 'Commas',
     input: 'height-1,800 cm',
-    expected: { value: 1800, unit: 'cm' },
-    statement: '`height-1,800 cm` is 1800 cm',
+    expected: null,
+    statement: '`height-1,800 cm` returns `null`',
   },
   {
     section: 'Commas',
     input: 'phase-2, 180 cm',
-    expected: { value: 180, unit: 'cm' },
-    statement: '`phase-2, 180 cm` is 180 cm',
+    expected: null,
+    statement:
+      '`phase 2,180 cm`, `phase-2,180 cm`, `phase-2, 180 cm` and `phase2,180 cm` all return `null`',
   },
   {
     section: 'Commas',
     input: 'phase2,180 cm',
-    expected: { value: 180, unit: 'cm' },
-    statement: '`phase2,180 cm` is 180 cm',
+    expected: null,
+    statement:
+      '`phase 2,180 cm`, `phase-2,180 cm`, `phase-2, 180 cm` and `phase2,180 cm` all return `null`',
   },
 ];
 

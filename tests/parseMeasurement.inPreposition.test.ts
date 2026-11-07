@@ -1,19 +1,22 @@
+// AFA-250: recovery expectations now follow the approved complete-entry contract in PARSING.md.
+// Earlier ticket rationales below describe their historical extraction contract; original
+// assertions are retained separately under design/afa-250.
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
 import { parseWithin, underStryker } from './timing';
 
 describe('the word "in" before a number', () => {
   it.each([
-    ['lost 5 lbs in 3 weeks', 5, 'lb', 'weight'],
-    ['weighed 70 kg in 2020', 70, 'kg', 'weight'],
-    ['I was 180 lbs in 2019', 180, 'lb', 'weight'],
-    ['gained 10 kg in six months', 10, 'kg', 'weight'],
-    ['in 2024 I weighed 80 kg', 80, 'kg', 'weight'],
-    ['IN 2020 I weighed 80 kg', 80, 'kg', 'weight'],
-    ['born in 1990, 180 cm', 180, 'cm', 'height'],
-    ['weighed 70 kg (in 2020)', 70, 'kg', 'weight'],
-  ] as const)('reads "in" as a preposition in %s', (raw, value, unit, type) => {
-    expect(parseMeasurement(raw)).toEqual({ value, unit, type, raw, matches: [{ value, unit }] });
+    'lost 5 lbs in 3 weeks',
+    'weighed 70 kg in 2020',
+    'I was 180 lbs in 2019',
+    'gained 10 kg in six months',
+    'in 2024 I weighed 80 kg',
+    'IN 2020 I weighed 80 kg',
+    'born in 1990, 180 cm',
+    'weighed 70 kg (in 2020)',
+  ])('rejects the complete entry %s (AFA-250)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
   });
 
   it.each(['in 5', 'height in 72'])('returns null without a label in %s', raw => {
@@ -24,15 +27,9 @@ describe('the word "in" before a number', () => {
     expect(parseMeasurement('weighed 70 kg in 2020', { type: 'height' })).toBeNull();
   });
 
-  it('reads ft 5 in 11 as feet only, because "in" no longer takes the number after it', () => {
+  it('rejects an unmarked short-unit prefix instead of keeping the feet', () => {
     const raw = 'ft 5 in 11';
-    expect(parseMeasurement(raw)).toEqual({
-      value: 5,
-      unit: 'ft',
-      type: 'height',
-      raw,
-      matches: [{ value: 5, unit: 'ft' }],
-    });
+    expect(parseMeasurement(raw)).toBeNull();
   });
 
   it.each([
@@ -77,29 +74,14 @@ describe('the letter "m" before a number', () => {
     expect(parseMeasurement(raw)).toBeNull();
   });
 
-  it('finds the weight after a sex marker and an age', () => {
+  it('rejects unrelated sex and age metadata before a weight', () => {
     const raw = 'm 28, 180 lbs';
-    expect(parseMeasurement(raw)).toEqual({
-      value: 180,
-      unit: 'lb',
-      type: 'weight',
-      raw,
-      matches: [{ value: 180, unit: 'lb' }],
-    });
+    expect(parseMeasurement(raw)).toBeNull();
   });
 
-  it('reads only the height in M/28/5\'11"', () => {
+  it('rejects unrelated metadata before a height', () => {
     const raw = 'M/28/5\'11"';
-    expect(parseMeasurement(raw)).toEqual({
-      value: 71,
-      unit: 'in',
-      type: 'height',
-      raw,
-      matches: [
-        { value: 5, unit: 'ft' },
-        { value: 11, unit: 'in' },
-      ],
-    });
+    expect(parseMeasurement(raw)).toBeNull();
   });
 });
 
@@ -128,26 +110,26 @@ describe('unit labels before a number', () => {
     });
   });
 
-  it('reads every label in an input, not only the first', () => {
-    expect(parseMeasurement('Unit (in), height (in): 72')?.value).toBe(72);
+  it('rejects unrelated and redundant labels', () => {
+    expect(parseMeasurement('Unit (in), height (in): 72')).toBeNull();
   });
 
   it('reads a label when the height type is given', () => {
     expect(parseMeasurement('Height (in): 72', { type: 'height' })?.value).toBe(72);
   });
 
-  it.each(['Weigh in: 180 lbs', 'Weigh in: 180; lbs'])(
-    'leaves a number with its own unit to that unit in %s',
-    raw => {
-      expect(parseMeasurement(raw)).toEqual({
-        value: 180,
-        unit: 'lb',
-        type: 'weight',
-        raw,
-        matches: [{ value: 180, unit: 'lb' }],
-      });
-    }
-  );
+  it.each(['Weigh in: 180; lbs'])('rejects the complete entry %s (AFA-250)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
+  it.each(['Weigh in: 180 lbs'])('leaves a number with its own unit to that unit in %s', raw => {
+    expect(parseMeasurement(raw)).toEqual({
+      value: 180,
+      unit: 'lb',
+      type: 'weight',
+      raw,
+      matches: [{ value: 180, unit: 'lb' }],
+    });
+  });
 
   // A quadratic pattern takes seconds here on Node 22, and this takes milliseconds. Keep the
   // existing 1000 ms limit as CPU time; parseWithin reports it in CI. Skip large-input timing
@@ -157,20 +139,14 @@ describe('unit labels before a number', () => {
     expect(parseWithin(raw, 1000, { maxLength: Infinity })?.value).toBe(72);
   });
 
-  it.each(['M: 5\'11"', 'M: 5 ft 11 in'])('reads a sex marker label as a letter in %s', raw => {
-    expect(parseMeasurement(raw)).toEqual({
-      value: 71,
-      unit: 'in',
-      type: 'height',
-      raw,
-      matches: [
-        { value: 5, unit: 'ft' },
-        { value: 11, unit: 'in' },
-      ],
-    });
+  it.each(['M: 5\'11"', 'M: 5 ft 11 in'])('rejects the complete entry %s (AFA-250)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
   });
 
-  it.each(['m: 1 cm: 80', 'Height m: 1, cm: 80', 'm: 1 cm; 80'])(
+  it.each(['m: 1 cm; 80'])('rejects the complete entry %s (AFA-250)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
+  it.each(['m: 1 cm: 80', 'Height m: 1, cm: 80'])(
     'reads consecutive label fields as one height in %s',
     raw => {
       const result = parseMeasurement(raw);
@@ -183,15 +159,9 @@ describe('unit labels before a number', () => {
     }
   );
 
-  it('leaves a number with centimeters to centimeters in Height (m): 180 cm', () => {
+  it('rejects conflicting height unit declarations', () => {
     const raw = 'Height (m): 180 cm';
-    expect(parseMeasurement(raw)).toEqual({
-      value: 180,
-      unit: 'cm',
-      type: 'height',
-      raw,
-      matches: [{ value: 180, unit: 'cm' }],
-    });
+    expect(parseMeasurement(raw)).toBeNull();
   });
 
   it('reads consecutive feet and inch fields in ft: 5 in: 11', () => {
