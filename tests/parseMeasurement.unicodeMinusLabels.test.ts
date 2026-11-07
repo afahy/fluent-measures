@@ -17,7 +17,7 @@ describe('Unicode minus signs after numeric labels', () => {
       ['phase twenty  , SIGN5 cm', {}],
       ['phase twenty; SIGN5 cm', {}],
       ['phase 20; SIGN5 cm', {}],
-      // AFA-80's signed-part rule rejects the field, including a signed zero.
+      // AFA-80's merged decision explicitly keeps '-0 kg, 70 kg' null: -0 counts as signed.
       ['phase 20, SIGN0 kg, 80 lb', { type: 'weight' }],
       ['phase20,SIGN5 cm', {}],
       ['phase ２０， SIGN５ ㎝', {}],
@@ -56,6 +56,14 @@ describe('Unicode minus signs after numeric labels', () => {
       ['ft 5, SIGN11 in', {}, 71, 'in'],
       ['ft: 5, SIGN11 in', { type: 'height' }, 71, 'in'],
       ['m: 1, SIGN80 cm', { type: 'height' }, 180, 'cm'],
+      // PARSING.md numeric commas and equal-measurement rules: 1.8 m = 180 cm.
+      ['m: 1,8, SIGN180 cm', {}, 1.8, 'm'],
+      ['m: 1,8; SIGN180 cm', { type: 'height' }, 1.8, 'm'],
+      ['m: 1.8, SIGN180 cm', {}, 1.8, 'm'],
+      ['m: ,5, SIGN50 cm', {}, 0.5, 'm'],
+      ['kg: 1,000, SIGN1000 kg', { type: 'weight' }, 1000, 'kg'],
+      ['kg: 1,000,5, SIGN1000.5 kg', {}, 1000.5, 'kg'],
+      ['ft: 5,5, SIGN66 in', {}, 5.5, 'ft'],
       ['5;ft SIGN11 in', {}, 71, 'in'],
       ['5, ft SIGN11 in', {}, 71, 'in'],
       ['ft five, SIGNeleven in', {}, 71, 'in'],
@@ -102,6 +110,13 @@ describe('Unicode minus signs after numeric labels', () => {
     'kg−70.5',
     'phase 20, -0 kg, 80 lb',
     '−0 kg, 80 lb',
+    // Exact AFA-80 merged decisions and their Unicode forms, independent of label handling.
+    '-0 kg, 70 kg',
+    '−0 kg, 70 kg',
+    '﹣0 kg, 70 kg',
+    '-0 feet, actual 1.8 meters',
+    '−0 feet, actual 1.8 meters',
+    '﹣0 feet, actual 1.8 meters',
   ])('preserves the existing sign rejection for %s', raw => {
     expect(parseMeasurement(raw)).toBeNull();
   });

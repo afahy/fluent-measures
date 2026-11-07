@@ -524,7 +524,12 @@ An unavoidable signed-zero change is recorded under decision rule 3:
 Preserving the sign invokes AFA-80's existing signed-part field rejection, matching the ASCII
 form and leading `−0 kg, 80 lb`. No special exception discards only signed zero after labels.
 The independent review's 80 lb expectation assumed unsigned-zero behavior; that expectation
-was rejected for this signed syntax, with the decision disclosed on the ticket.
+was rejected for this signed syntax, with the decision disclosed on the ticket. The source is
+AFA-80's merged decision: [comment 4f633231](https://linear.app/afahy/issue/AFA-80#comment-4f633231-1d2c-4892-a709-06d201a8aa7d)
+explicitly keeps `-0 kg, 70 kg` null; [comment cd62c97b](https://linear.app/afahy/issue/AFA-80#comment-cd62c97b-0789-48a4-bb22-faa187473aa9)
+also keeps `-0 feet, actual 1.8 meters` null because `-0` counts as signed. Six independent
+controls exercise those exact inputs and both Unicode forms. The coordinator confirmed retaining
+the disclosed rule-3 results after the first Claude review; no signed-zero exception is added.
 
 Permanent regressions: `tests/parseMeasurement.unicodeMinusLabels.test.ts`, reused through ESM
 and CommonJS. They cover exact ticket inputs, both signs, digit/word/full-width labels, spaces,
@@ -532,7 +537,7 @@ fractions, decimal/thousands commas, article-led words, unit labels, marks, fuzz
 explicit type, normalized unit and unqualified options. Preservation cases include the ticket's
 ranges/multipart values, commas after units, positive comma boundaries, F1 quoted digits and
 the approved F4 proper fractions. A minor changeset records the changed non-null results.
-Forty-two new ticket-sourced correction/control rows agree; the existing F3 row also becomes an
+Fifty-two new ticket-sourced correction/control rows agree; the existing F3 row also becomes an
 agreement. Two additional rows sourced to AFA-244 record its existing signed-prefix failures.
 No prior row or expected result is edited, and the generated result inventory is unchanged.
 
@@ -543,6 +548,16 @@ source/ESM/CommonJS: `ft 5, −11 in`, height-typed `ft: 5, −11 in`, height-ty
 and original 71-inch/180-centimeter values. Four additional word-form assertions failed on the
 initial correction too. Parent replay now gives 124 of 126 agreements in each format after the
 signed-zero judgment; both remaining failures are the separate AFA-244 cases below.
+
+Round-one Codex review found numeric commas missing from the unit-prefix joining guard.
+`m: 1,8, −180 cm` and its small-minus form returned `null` at reviewed head `ed5c111`,
+versus the required 1.8 m on main `bfac12a9`. The same cause affected leading decimal commas,
+thousands groups, mixed thousands/decimal commas and feet-to-inch equivalents. Ten assertions
+failed on the reviewed source and twenty through ESM/CommonJS; all pass after allowing a comma
+before a digit inside that existing guard. Numeric-comma grammar remains validated by the next
+normalization pass. Decimal-point and semicolon controls retain their results. The expanded
+158-case suite still fails 56 source/112 package assertions on main, with 102 controls per format.
+Ten additional ticket-sourced corpus rows agree; no original corpus row changes.
 
 Self-review reproduced a distinct pre-existing M3/M7 ownership limitation:
 `phase 20, kg−70.5` returns **20 kg** on main `bfac12a9`, expected **`null`**.
@@ -1031,7 +1046,7 @@ mutation, PR-lifecycle and document-update requirements. Launch status is not fi
 
 ## Validation record
 
-F3 focused validation against exact main `bfac12a9`: `pnpm install` passed. The final 138-case
+F3 focused validation against exact main `bfac12a9`: `pnpm install` passed. The first reviewed 138-case
 regression/control suite fails 56 source assertions and 112 assertions across ESM/CommonJS on
 main, with 82 controls passing per format. All cases pass with the targeted correction.
 The 695-row corpus preserves every previous row, with 674 agreements, 6 wrong, 15 missed and
@@ -1045,7 +1060,7 @@ retained for the existing AFA-224 tooling issue; no assertion or timeout is rela
 coordinator confirmed the competing processes had ended and explicitly cleared an unchanged
 rerun. No success is claimed for either incomplete run.
 
-Final F3 `pnpm check` passed on corrected source `93c7c72` (head `b80d68a`) on 2026-11-07:
+The first reviewed F3 `pnpm check` passed on corrected source `93c7c72` (head `b80d68a`) on 2026-11-07:
 3,950 unit tests with 100% statement/branch/function/line coverage, TypeScript, 99.65% fresh
 mutation score (1,416 killed, 12 timed out, five unchanged-line survivors), build, size,
 exported-API checks and 4,586 ESM/CommonJS tests. Fresh changed-line validation with
@@ -1060,6 +1075,15 @@ is recorded on AFA-224. Whole-diff self-review preserves all predecessor source/
 and the complete historical audit harness. The initial mandatory push hook passed all 3,950
 unit tests, TypeScript, build and size checks at `7a28e88`; Git-isolation passed in 100,025 ms.
 Hosted review and exact-head lifecycle checks continue on PR #236.
+
+Round-one correction validation: the 158-case source/ESM/CommonJS suite passes. Corpus now
+has 705 rows: 684 agreements, 6 wrong, 15 missed and no throws; all 651 original rows are byte
+identical. Fresh full checks and changed-line mutation validation follow the numeric-comma fix.
+Temporary CPU-cost probes used `parseMeasurement` with `maxLength: Infinity` through all three
+formats: 1,000 and 10,000 repeats of numeric/word labels, units, signed label fields and numeric
+comma prefixes. The largest observed 10,000-repeat cost was 111 ms CPU, versus 23 ms for
+1,000 repeats across the formats. These are observations, not a new timing threshold; the
+existing timing tests remain unchanged. The temporary probe is retained outside the repository.
 
 The parent audit passed `pnpm install`, `pnpm build`, and the unchanged invariant, semantic
 property, corpus, README and parsing-example suites: 361 tests across five files.
