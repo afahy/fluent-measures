@@ -31,7 +31,7 @@ const remainingWords =
 
 /**
  * Read the longest adjacent number phrase and return its first unconsumed token index. With
- * `readHalf` false, a phrase that ends in "and a half" isn't read.
+ * `readHalf` false on a backward read, a phrase that ends in "and a half" isn't read.
  */
 function readNumberPhrase(
   words: Words,
@@ -104,11 +104,10 @@ function readNumberPhrase(
       else value = candidate;
     }
   }
-  if (phrase.includes('point')) {
-    const decimal = half(end - 1) ? null : read();
+  if (phrase.includes('point') && (!barePart || words(stopped!) === 'point')) {
     // Bare inches keep their integer stopping point before a separate number, as in
     // "11 two hundred point five pounds". An invalid decimal starting at "point" stays invalid.
-    if (decimal !== null || !barePart || words(stopped!) === 'point') return [decimal, end];
+    return [half(end - 1) ? null : read(), end];
   }
   end = stopped ?? end;
   // Reading forward, the loop skips "and" and stops at "a". A read backward never stops just
@@ -590,7 +589,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       use(matchStart, matchEnd);
 
       if (unit === 'ft') {
-        const [inches, inchesEnd] = readNumberPhrase(remaining, matchEnd, 1, true, true);
+        const [inches, inchesEnd] = readNumberPhrase(remaining, matchEnd, 1, undefined, true);
         // A label's value comes after it, so a label isn't the unit of the inches before it.
         // Stryker disable next-line StringLiteral: "Stryker was here!" is no unit, as "" is.
         const nextWord = (!tokens[inchesEnd]?.label && remaining(inchesEnd)) || '';

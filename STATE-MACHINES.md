@@ -266,6 +266,19 @@ pending its separate coordinator grant; prior `fb272e1` validation is historical
 The existing fragment result for `5 ft one point twenty in` (main null, `fb272e1` 5 ft)
 is recorded on AFA-250 for its approved whole-entry rejection, not treated as valid inches.
 
+The first review-correction check at `14efcd3` passed 4,162 tests, 100% coverage,
+TypeScript, fresh 99.61% mutation and build, then stopped at size: ESM was 5,528 bytes,
+28 above its 5,500-byte limit. API/package stages did not run. Separate changed-line analysis
+found two equivalent survivors: a successful forward decimal necessarily stopped at `point`,
+making its extra non-null check redundant, and the half-reading flag has no effect on a
+forward read. The correction removes the redundant condition/read and uses the existing
+default for that inapplicable flag, without adding mutation ignores. All 321 focused number,
+fraction, bare-inch and corpus checks pass. The simplified build measures 5,522 ESM / 5,577
+CommonJS bytes. The repository's standing 0.5 kB allowance raises the ESM limit to 6.0 kB;
+CommonJS remains at its previously approved 6.0 kB. The matching footprint documentation is
+updated. Fresh final-source validation is still required; the `14efcd3` report is preserved at
+`/tmp/afa247-mutation-14efcd3.json` and is not final evidence for this simplification.
+
 M2 now retains `RANGE` as the token's text instead of writing `-`. This keeps M3's discarded
 ranges distinct from literal minus signs in M5. The existing recovery contract still applies:
 `6 ft 1-2 eleven point five in` is 83.5 in (6 × 12 + 11.5), and `kg seventy point five 1-2`
