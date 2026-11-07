@@ -32,6 +32,7 @@ describe('spoken decimal measurements', () => {
     ['zero point zero five kilograms', {}, 0.05, 'kg', 0.05, 'kg'],
     ['point five meters', {}, 0.5, 'm', 0.5, 'm'],
     ['kg point five', {}, 0.5, 'kg', 0.5, 'kg'],
+    ['kg point five 2_notes', {}, 0.5, 'kg', 0.5, 'kg'],
     ['one hundred and fifty point two five pounds', {}, 150.25, 'lb', 150.25, 'lb'],
     ['seventy point 5 kg', {}, 70.5, 'kg', 70.5, 'kg'],
     ['70 point zero five kg', {}, 70.05, 'kg', 70.05, 'kg'],
@@ -58,6 +59,7 @@ describe('spoken decimal measurements', () => {
   it.each([
     'seventy point',
     'seventy point twenty five',
+    'one point ten',
     'seventy point five point two',
     'seventy point five hundred',
     'seventy point and five',

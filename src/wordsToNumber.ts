@@ -25,8 +25,8 @@ export function wordsToNumber(input: string): number | null {
     const digits = tokens
       .slice(point + 1)
       .map(word => {
-        const number = NUMBER_WORDS.get(word);
-        return number !== undefined && number < 10 ? number : word;
+        const number = NUMBER_WORDS.get(word) ?? 10;
+        return number < 10 ? number : word;
       })
       .join('');
     return Number.isInteger(whole) && /^\d+$/.test(digits) ? whole! + Number(`0.${digits}`) : null;

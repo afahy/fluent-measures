@@ -44,6 +44,7 @@ describe('spoken decimal boundaries', () => {
     ['seventy point five oh six kilograms', {}],
     ['kilograms seventy point five oh six', {}],
     ['seventy point - five kilograms', {}],
+    ['kg one hundred point zero (100 kg); kg one hundred point zero (102 kg)', {}],
   ] as const)('rejects the complete invalid measurement %s', (raw, options) => {
     expect(parseMeasurement(raw, options)).toBeNull();
   });
