@@ -9,7 +9,10 @@ describe('boundaries between compound height parts', () => {
     'height 5 ft; note 11 in',
     '5 ft; 11 in',
     '5 ft actual 11 in',
+    '5 ft note 11 in',
     '5 ft and actual 11 in',
+    '5 ft and; 11 in',
+    '5 ft; and 11 in',
     'five feet tall, eleven inches',
     '5′ tall, 11″',
     '1 m tall, 80 cm',
@@ -17,6 +20,8 @@ describe('boundaries between compound height parts', () => {
     'm: 1 actual cm: 80',
     '5 ft tall, 2 in shorter than last year',
     '5 ft tall, with 2 in heels',
+    '6 ft and ranked 3 in the state',
+    '6 ft, top 10 in the class',
   ])('rejects independent heights in %s', raw => {
     expect(parseMeasurement(raw)).toBeNull();
     expect(parseMeasurement(raw, { type: 'height', normalizedUnit: 'cm' })).toBeNull();
@@ -25,6 +30,37 @@ describe('boundaries between compound height parts', () => {
 
   it('applies the same boundary to fuzzy unit names', () => {
     expect(parseMeasurement('5 foots tall, 2 inc', { fuzziness: 2 })).toBeNull();
+  });
+
+  it.each(['5 ft τώρα 11 in', '5 ft сейчас 11 in', '5 ft 实际 11 in', '5 ft à 11 in'])(
+    'keeps independent heights apart across the word in %s',
+    raw => {
+      expect(parseMeasurement(raw)).toBeNull();
+    }
+  );
+
+  // Unicode letters are not punctuation. None of these tokens spells a supported unit
+  // with its number: in particular, micrometers must not be read as meters.
+  it.each(['5µm', '5éft', 'é5 ft', '5 fté', 'µ5 kg', '70kgé', '5 µft', 'é5ft', 'fiveé ft'])(
+    'does not extract a measurement by deleting letters from %s',
+    raw => {
+      expect(parseMeasurement(raw)).toBeNull();
+    }
+  );
+
+  // Only the explicitly supported unit still supplies a measurement; its number is unchanged.
+  it.each([
+    ['5 fté 11 in', 11, 'in'],
+    ['5éft 11 in', 11, 'in'],
+    ['5 ft 11éin', 5, 'ft'],
+  ] as const)('keeps the valid measurement beside an attached word in %s', (raw, value, unit) => {
+    expect(parseMeasurement(raw)).toEqual({
+      value,
+      unit,
+      type: 'height',
+      raw,
+      matches: [{ value, unit }],
+    });
   });
 
   it.each(['0 m; actual 80 cm', '0 m actual 80 cm', '0 m; 80 cm'])(
@@ -61,6 +97,9 @@ describe('boundaries between compound height parts', () => {
     ['6 1-2 ft 3 in', 75, 'in', 6, 'ft', 3],
     ['6 ft 1-2 11 in', 83, 'in', 6, 'ft', 11],
     ['6 1-2 ft; 3 in', 75, 'in', 6, 'ft', 3],
+    ['5 ft 8 lbs 3 in', 63, 'in', 5, 'ft', 3],
+    ['5 ft eight pounds 3 in', 63, 'in', 5, 'ft', 3],
+    ['5 ft one hundred grams 3 in', 63, 'in', 5, 'ft', 3],
   ] as const)('preserves the compound %s', (raw, value, unit, larger, largerUnit, smaller) => {
     expect(parseMeasurement(raw, { type: 'height' })).toEqual({
       value,
@@ -96,5 +135,13 @@ describe('boundaries between compound height parts', () => {
     expect(
       parseMeasurement('5 ft tall, with 2 in heels, 150 lbs', { type: 'weight' })
     ).toMatchObject({ value: 150, unit: 'lb', matches: [{ value: 150, unit: 'lb' }] });
+  });
+
+  it('does not retain a separate zero-inch part in the first height', () => {
+    expect(parseMeasurement('5 ft; 0 in')).toMatchObject({
+      value: 5,
+      unit: 'ft',
+      matches: [{ value: 5, unit: 'ft' }],
+    });
   });
 });

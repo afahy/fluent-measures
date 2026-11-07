@@ -479,8 +479,16 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       if (rangeParts.get(tokens[previousEnd - 1]) === tokens[last]) return true;
       return !tokens.slice(previousEnd, start).some(
         ({ text }) =>
-          // Words are lowercase. The internal COMMA boundary and omitted ranges aren't words.
-          text !== 'and' && (text === ';' || /[a-z]/.test(text))
+          // A number or weight unit between height parts isn't ordinary prose. Keep the
+          // existing joins around those amounts; COMMA and ranges are internal boundaries.
+          text !== 'and' &&
+          text !== 'COMMA' &&
+          (text === ';' ||
+            (/\p{L}/u.test(text) &&
+              !NUMBER_WORDS.has(text) &&
+              !MULTIPLIERS.has(text) &&
+              !matchUnit(text, 'weight', fuzziness) &&
+              !UNSUPPORTED_WEIGHT_UNITS.test(text)))
       );
     };
 
