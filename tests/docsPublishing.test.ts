@@ -182,7 +182,7 @@ describe('published documentation', () => {
       expect(html).toContain('rel="describedby" type="text/plain" href="llms.txt"');
       const index = await (await fetch(new URL('llms.txt', base))).text();
       expect(index).toContain('@afahy/fluent-measures');
-      const urls = [...index.matchAll(/\]\((https:\/\/afahy.github.io\/[^)]+)\)/g)].map(
+      const urls = [...index.matchAll(/\]\((https:\/\/afahy\.github\.io\/[^)]+)\)/g)].map(
         ([, url]) => url
       );
       expect(urls).toEqual([`${site}README.md`, `${site}PARSING.md`]);
