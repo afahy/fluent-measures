@@ -178,13 +178,13 @@ interface ParsedValue {
 ### Height
 
 - **Imperial**: `ft` (feet, foot, `'`) and `in` (inch, inches, `"`)
-- **Metric**: `cm` (centimeter, centimeters, centimetre, centimetres) and `m` (meter, meters,
+- **Metric**: `cm` (cms, centimeter, centimeters, centimetre, centimetres) and `m` (meter, meters,
   metre, metres)
 
 ### Weight
 
 - **Imperial**: `lb` (lbs, pound, pounds, and `#` directly after a number, as in `185#`)
-- **Metric**: `kg` (kilo, kilos, kilogram, kilograms)
+- **Metric**: `kg` (kgs, kilo, kilos, kilogram, kilograms)
 
 Most units can also come before their number, as in `kg 70`. The short forms `in` and `m` can
 come first only as a label, because before a number they are usually ordinary words.

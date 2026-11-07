@@ -11,6 +11,10 @@ The user gets the total height in inches from feet and inches, with each part in
 - Hyphens: `5-foot-11`, `5 ft-11`, `5'-11"`.
 - Shorthand with `type: 'height'`: `5-11`.
 - Inches with no unit after the feet, from 1 to 11: `5 ft 11`.
+- Compact units: `5ft11`, `5ft11in`, `6foot2` and `1m80`.
+- Decimal commas in compact parts: `5ft11,5in` gives 71.5 inches and `1m80,5` gives 180.5 cm.
+- Compact spoken parts and slash/range boundaries: `1m80 point five`, `ft5 eleven point five`, and `5ft10/180 to 200 lbs`.
+- Bare centimeters after meters: `1 m 80` and `one meter eighty` give 180 cm.
 - Meters and centimeters as two parts of one height: `1 m 80 cm` gives 180 cm.
 - A first part that isn't a whole number makes two measurements: `5.5 ft 6 in` gives `null`.
 - `import` and `require`.
@@ -22,11 +26,12 @@ The user gets the total height in inches from feet and inches, with each part in
 - PARSING.md, "Feet and Inches"
 - PARSING.md, "Hyphens"
 - PARSING.md, "Shorthand"
+- PARSING.md, "Compact Heights"
 
 ## How to verify it
 
 - Source: `src/parseMeasurement.ts`, `src/tokenize.ts`
-- Tests: `tests/parseMeasurement.spokenDecimalFields.test.ts`, `tests/parseMeasurement.spokenDecimalSemicolons.test.ts`, `tests/parseMeasurement.spokenDecimalReview.test.ts`, `tests/parseMeasurement.calculator.test.ts`, `tests/parseMeasurement.spokenDecimals.test.ts`, `tests/parseMeasurement.unicodeMinusLabels.test.ts`, `tests/parseMeasurement.quoteContext.test.ts`, `tests/parseMeasurement.fractionBoundaries.test.ts`, `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.bareInches.test.ts`, `tests/parseMeasurement.hyphens.test.ts`, `tests/parseMeasurement.wordedRangeBoundaries.test.ts`, `tests/parseMeasurement.wordedRanges.test.ts`,
+- Tests: `tests/parseMeasurement.compactUnits.test.ts`, `tests/parseMeasurement.spokenDecimalFields.test.ts`, `tests/parseMeasurement.spokenDecimalSemicolons.test.ts`, `tests/parseMeasurement.spokenDecimalReview.test.ts`, `tests/parseMeasurement.calculator.test.ts`, `tests/parseMeasurement.spokenDecimals.test.ts`, `tests/parseMeasurement.unicodeMinusLabels.test.ts`, `tests/parseMeasurement.quoteContext.test.ts`, `tests/parseMeasurement.fractionBoundaries.test.ts`, `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.bareInches.test.ts`, `tests/parseMeasurement.hyphens.test.ts`, `tests/parseMeasurement.wordedRangeBoundaries.test.ts`, `tests/parseMeasurement.wordedRanges.test.ts`,
   `tests/parseMeasurement.numberWordCommas.test.ts`, `tests/parseMeasurement.commaBetweenWords.test.ts`,
   `tests/parseMeasurement.hyphenReview.test.ts`, `tests/parseMeasurement.markHyphens.test.ts`,
   `tests/parseMeasurement.marksAfterWords.test.ts`, `tests/parseMeasurement.twoApostrophes.test.ts`,

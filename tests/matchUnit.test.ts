@@ -70,11 +70,13 @@ describe('matchUnit', () => {
 
     it('does not fuzzy-match one- or two-letter aliases', () => {
       expect(matchUnit('fts', 'height', 2)).toBeNull();
-      expect(matchUnit('kgs', 'weight', 2)).toBeNull();
+      expect(matchUnit('kgg', 'weight', 2)).toBeNull();
     });
 
     it('keeps short abbreviations exact even with fuzziness enabled', () => {
       expect(matchUnit('lbs', 'weight', 2)).toBe('lb');
+      expect(matchUnit('kgs', 'weight', 2)).toBe('kg');
+      expect(matchUnit('cms', 'height', 2)).toBe('cm');
       expect(matchUnit('lxs', 'weight', 2)).toBeNull();
       expect(matchUnit('ls', 'weight', 2)).toBeNull();
     });

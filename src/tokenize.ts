@@ -78,6 +78,12 @@ function trimTrailing(text: string, mark: string): string {
 
 // The Unicode fractions ¼ to ¾, ⅐ to ⅞ and ↉, as the inside of a character class.
 const FRACTIONS = '¼-¾⅐-⅞↉';
+// Complete unit/token boundaries preserve identifiers; fractions also need the space before
+// normalization turns them into digits, as in "5ft½".
+const COMPACT_HEIGHT = new RegExp(
+  String.raw`(?<=(?<![\p{L}\p{M}\p{N}_.])\d*(?:\.\d+)?[${FRACTIONS}]?(?:ft|foot|feet|m|meters?|metres?)\.?)(?=[\d${FRACTIONS}])`,
+  'giu'
+);
 const UNICODE_FRACTION = new RegExp(
   String.raw`(?<![\d/.])(?:${FRACTION_NUMBER}\s*)?([${FRACTIONS}])(\d+)?`,
   'gu'
@@ -314,7 +320,14 @@ export function normalizeNumericCommas(input: string): string {
  * comma numbers, then fractions. So "1,000 1/2" is 1000.5.
  */
 export function normalize(input: string): string {
-  return normalizeFractions(normalizeNumericCommas(normalizeForms(input)));
+  return normalizeFractions(
+    normalizeNumericCommas(
+      normalizeForms(input)
+        // Split compact height parts before numeric commas, so "5ft11,5in" keeps 11.5.
+        // Complete units or digit-led tokens keep identifiers such as "abc5ft11" intact.
+        .replace(COMPACT_HEIGHT, ' ')
+    )
+  );
 }
 
 /**

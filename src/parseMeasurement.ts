@@ -197,6 +197,7 @@ function skipSemicolons(words: Words, start: number): number {
  * Read the number phrase after a unit, as before one, so "kg one hundred eighty" is 180 kg.
  * Return a null value when there's no number, or when the unit is a label and can't take it.
  * `label` is also true for a unit right after a zero, which can't take a number either.
+ * A bare smaller part starts immediately and cannot have a sign or leading semicolon.
  */
 function readValueAfter(
   tokens: Token[],
@@ -204,17 +205,14 @@ function readValueAfter(
   start: number,
   unit: Unit,
   label: boolean,
-  fuzziness?: number
+  fuzziness?: number,
+  bare = false
 ): [value: number | null, end: number] {
-  // Feet can start a compound, so an unsigned prefix keeps the first part's integer stop.
-  // Signed phrases still read whole for the label ownership check, as in "kg: -5".
-  const [value, end] = readSignedPhrase(
-    words,
-    skipSemicolons(words, start),
-    1,
-    undefined,
-    unit === 'ft'
-  );
+  // Bare centimeters start immediately and keep the compound part's integer stop.
+  // Feet prefixes keep that stop too; signed phrases still read whole for suffix ownership.
+  const [value, end] = bare
+    ? readNumberPhrase(words, start, 1, undefined, true)
+    : readSignedPhrase(words, skipSemicolons(words, start), 1, undefined, unit === 'ft');
   // A label doesn't take a number that has its own unit, as in "weigh in: 180 lbs" and
   // "180 lbs = 82 kg", even an unsupported one, as in "kg=400 g", so the check for stone, ounces
   // and grams still sees that part. A semicolon or a unit label can be that unit, as in
@@ -541,7 +539,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       // are words before a number ("in 2020"), so only their spelled-out labels are prefixes.
       if (
         !num &&
-        (num === null || unit !== 'ft' || (!label && remaining(i - 1) === ';')) &&
+        (num === null || !NEXT_PART[unit] || (!label && remaining(i - 1) === ';')) &&
         !LABEL_ALIASES.has(remaining(i))
       ) {
         // A signed value with its own unit isn't the prefix's value, marked or not, as in
@@ -597,30 +595,49 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
 
       use(matchStart, matchEnd);
 
-      if (unit === 'ft') {
-        const [inches, inchesEnd] = readNumberPhrase(remaining, matchEnd, 1, undefined, true);
-        // A label's value comes after it, so a label isn't the unit of the inches before it.
+      const smallerUnit = NEXT_PART[unit];
+      if (smallerUnit) {
+        // Bare centimeters respect suffix ownership across semicolons and unit labels too,
+        // as in "1 m 80;kg" and "1 m 80 (m)". Keep the established feet reader unchanged.
+        const [part, partEnd] =
+          unit === 'm'
+            ? readValueAfter(
+                tokens,
+                remaining,
+                matchEnd,
+                unit,
+                // Stryker disable next-line BooleanLiteral: meters are a short label alias, so readValueAfter checks suffix ownership regardless of this flag.
+                true,
+                fuzziness,
+                true
+              )
+            : readNumberPhrase(remaining, matchEnd, 1, undefined, true);
+        // A label's value comes after it, so it isn't the unit of the smaller part before it.
         // Stryker disable next-line StringLiteral: "Stryker was here!" is no unit, as "" is.
-        const nextWord = (!tokens[inchesEnd]?.label && remaining(inchesEnd)) || '';
+        const nextWord = (!tokens[partEnd]?.label && remaining(partEnd)) || '';
         const nextUnit = matchUnit(nextWord, 'height', fuzziness);
         // A following unit owns the number, even when it belongs to another measurement type or
-        // isn't supported, as in "5 ft 8 oz".
+        // isn't supported, as in "5 ft 8 oz". Explicit centimeters keep the ordinary unit
+        // scan's zero rules, as in "1 m 0 cm 80 kg"; only bare centimeters are inferred here.
+        // A word-comma boundary keeps its existing metric label rule: "1 m seventy, 5 cm"
+        // uses 5 cm. The established bare-inch rule can end at that boundary.
         if (
-          inches !== null &&
-          (nextUnit === 'in' ||
-            (inches > 0 &&
-              inches < 12 &&
+          part !== null &&
+          ((unit === 'ft' && nextUnit === smallerUnit) ||
+            (part > 0 &&
+              part < unitConversions[unit][smallerUnit]!(1) &&
+              (unit === 'ft' || nextWord !== 'COMMA') &&
               !nextUnit &&
               !matchUnit(nextWord, 'weight', fuzziness) &&
-              !isUnsupportedUnit(nextWord, remaining(inchesEnd - 1))))
+              !isUnsupportedUnit(nextWord, remaining(partEnd - 1))))
         ) {
-          const inchesMatch: QualifiedMatch = { value: inches, unit: 'in' };
-          // The inches' number starts at matchEnd, and reading forward stops at a semicolon.
-          matchFields.set(inchesMatch, [fieldOf[matchEnd]]);
+          const partMatch: QualifiedMatch = { value: part, unit: smallerUnit };
+          // The smaller part's number starts at matchEnd, and reading forward stops at a semicolon.
+          matchFields.set(partMatch, [fieldOf[matchEnd]]);
           // Stryker disable next-line ConditionalExpression: "true" keeps zero parts, which add up to zero and don't count. The tests kill "false".
-          if (num || inches) matches.push(inchesMatch);
+          if (num || part) matches.push(partMatch);
           else matches.pop();
-          use(matchEnd, inchesEnd + (nextUnit === 'in' ? 1 : 0));
+          use(matchEnd, partEnd + (nextUnit === smallerUnit ? 1 : 0));
         } else if (!num) {
           // An isolated zero must not change the unit of an independent measurement.
           matches.pop();
