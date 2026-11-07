@@ -2833,3 +2833,16 @@ oracles, both ledgers, captures, exact hashes and verification limitations are a
 No fresh full check, coverage, mutation, build, package or size result is claimed for these
 corrections. Prior successful evidence retains its original SHA. F6/F9 publication remains
 pending; the parent owns hosted replies, final validation allocation and qualifying merge.
+
+The first review-correction full check on clean `3f608c6d26ee1b8bc2afdfdea7beedad78781fbe`
+passed 5,474 tests in 127 files but stopped at branch coverage (496/497). No later
+TypeScript, mutation, build, package or size stage ran. Its exact coverage/source evidence
+is retained under `final-validation/review-round-1-validation/` in the external archive.
+The uncovered arm rejects a quoted whole number when its internal conjunction cannot
+become a compound separator: `m: "one and eighty" cm` is not `[1 m, 80 cm]`. Eight new
+policy-derived assertions distinguish that invalid duplicate-unit form from
+`m: "one" and eighty cm`, the existing `m: one and "eighty" cm`, and a quote around the
+entire qualified entry. Raw strings and full written matches are checked. The new corpus
+has 2,362 rows, preserving all earlier 2,354 bytes before eight appended controls.
+These additions change tests and audit evidence only; production source is unchanged.
+Actual mutation outcomes remain pending; reaching the arm does not establish a mutant kill.

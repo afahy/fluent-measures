@@ -493,6 +493,63 @@ const cases: Array<[string, ParseOptions, Expected | null]> = [
   ['“72 kg”.', {}, [72, 'kg', 'weight', [[72, 'kg']]]],
   ['‘72 kg’.', {}, [72, 'kg', 'weight', [[72, 'kg']]]],
   ['I weigh [72 kg].', {}, [72, 'kg', 'weight', [[72, 'kg']]]],
+  // A quoted whole number cannot lend its internal conjunction to a compound.
+  ['m: "one and eighty" cm', {}, null],
+  ["m: 'one and eighty' cm", {}, null],
+  ['ft "twenty and one" in', {}, null],
+  ["ft 'twenty and one' in", {}, null],
+  [
+    'm: "one" and eighty cm',
+    {},
+    [
+      180,
+      'cm',
+      'height',
+      [
+        [1, 'm'],
+        [80, 'cm'],
+      ],
+    ],
+  ],
+  [
+    'ft "twenty" and one in',
+    {},
+    [
+      241,
+      'in',
+      'height',
+      [
+        [20, 'ft'],
+        [1, 'in'],
+      ],
+    ],
+  ],
+  [
+    '"m: one and eighty cm"',
+    {},
+    [
+      180,
+      'cm',
+      'height',
+      [
+        [1, 'm'],
+        [80, 'cm'],
+      ],
+    ],
+  ],
+  [
+    '"ft twenty and one in"',
+    {},
+    [
+      241,
+      'in',
+      'height',
+      [
+        [20, 'ft'],
+        [1, 'in'],
+      ],
+    ],
+  ],
 ];
 
 describe('complete-entry wrapper and prefix review regressions', () => {
