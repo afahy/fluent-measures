@@ -2773,3 +2773,16 @@ source hashes are preserved under `final-validation/` in the external evidence a
 All earlier failed/partial reports, independent oracles, original audit findings, historical
 F6/F9 closeout and deferred findings remain preserved. Local validation does not publish the
 audit to main or establish hosted PR readiness; publication remains pending.
+
+### AFA-250 PR handoff — publication pending
+
+The complete-entry implementation is proposed in
+[PR #247](https://github.com/afahy/fluent-measures/pull/247), opened from feature commit
+`5cbd7ed91b28d8fedc9d97096ea47342e58c9db1` after normal push hooks passed 5,323 unit tests,
+TypeScript, build and size checks. The URL handoff changes audit text only; source tree
+`61386e4089549953d55dcac9a7dc54e04f7a79bb` and test tree
+`1f0ae4c3704a94eb093b438ff4432b206c92c1b4` retain the validation above.
+The sole unchanged matching survivor can affect higher fuzzy settings; it is not globally
+equivalent or fixed by this PR. Hosted checks, review, qualifying merge and exact-main CI
+remain with the parent. At this local handoff, F6/F9 audit publication is pending: a feature
+push or an open PR does not publish the historical closeout to main.
