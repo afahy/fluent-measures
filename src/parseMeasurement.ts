@@ -163,6 +163,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     let end = start;
     while (end < limit) {
       const word = text(end);
+      if (word === '.') break;
       if (numeric(word)) {
         // A conjunction before a unit prefix belongs to the part/pair join, not this number.
         if (
@@ -226,20 +227,22 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       const number = readNumber(prefix.end, limit);
       if (number.value !== null)
         return { value: number.value, unit: prefix.unit, end: number.end, suffix: false };
-      // A known larger prefix can delimit exactly two complete component numbers, as in
-      // "ft 5 11". This is a compound alternative, never recovery from a leftover phrase.
+      // A conjunction at the shared reader's boundary can end a complete prefix part.
+      // The expression cursor must still validate the entire compound or selected pair.
+      // Without a conjunction, only one bounded larger-prefix split such as "ft 5 11" applies.
       const split = number.invalidAt;
       if (
-        (prefix.unit === 'ft' || prefix.unit === 'm') &&
         split !== undefined &&
         split > prefix.end &&
-        split < number.end
+        split < number.end &&
+        (text(split) === 'and' || prefix.unit === 'ft' || prefix.unit === 'm')
       ) {
         const left = readNumber(prefix.end, split);
-        const right = readNumber(text(split) === 'and' ? split + 1 : split, number.end);
+        if (left.value === null || left.end !== split) return null;
+        if (text(split) === 'and')
+          return { value: left.value, unit: prefix.unit, end: split, suffix: false };
+        const right = readNumber(split, number.end);
         if (
-          left.value !== null &&
-          left.end === split &&
           right.value !== null &&
           right.end === number.end &&
           Number.isInteger(left.value) &&

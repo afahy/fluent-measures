@@ -168,7 +168,22 @@ export function tokenizeNormalized(input: string): Token[] {
     // Two apostrophes after a digit are the established inch mark, except inside paired quotes.
     .replace(/(?<=\d)(?='')(?<!(?:^|[^\w'"’])['’]{2}[^'’]*)''(?!['’])/g, '"')
     .toLowerCase();
-  return [...text.matchAll(/i['’]m\b|[\p{L}\p{M}_][\p{L}\p{M}\p{N}_]*\.?|[\d.]+|[^\s]/gu)].map(
-    match => ({ text: match[0], start: match.index, end: match.index + match[0].length })
+  return [...text.matchAll(/i['’]m\b|[\p{L}\p{M}_][\p{L}\p{M}\p{N}_]*\.?|[\d.]+|[^\s]/gu)].flatMap(
+    match => {
+      const token = { text: match[0], start: match.index, end: match.index + match[0].length };
+      const word = token.text.slice(0, -1);
+      // A number word's period belongs to the expression, not the numeric phrase. Retain it
+      // as punctuation; only the cursor can accept a final period or reject an internal one.
+      if (
+        token.text.endsWith('.') &&
+        (NUMBER_WORDS.has(word) || MULTIPLIERS.has(word) || word === 'half')
+      ) {
+        return [
+          { text: word, start: token.start, end: token.end - 1 },
+          { text: '.', start: token.end - 1, end: token.end },
+        ];
+      }
+      return [token];
+    }
   );
 }

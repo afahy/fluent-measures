@@ -84,4 +84,26 @@ describe('complete-entry tokens', () => {
       { text: '11', start: 6, end: 8 },
     ]);
   });
+
+  it('retains a number word period as punctuation without changing unit labels', () => {
+    expect(tokenizeNormalized('in: seventy three.')).toEqual([
+      { text: 'in', start: 0, end: 2 },
+      { text: ':', start: 2, end: 3 },
+      { text: 'seventy', start: 4, end: 11 },
+      { text: 'three', start: 12, end: 17 },
+      { text: '.', start: 17, end: 18 },
+    ]);
+    expect(tokenTexts('kg one hundred.')).toEqual(['kg', 'one', 'hundred', '.']);
+    expect(tokenTexts('pounds six and a half.')).toEqual([
+      'pounds',
+      'six',
+      'and',
+      'a',
+      'half',
+      '.',
+    ]);
+    expect(tokenTexts('in. 73')).toEqual(['in.', '73']);
+    expect(tokenTexts('kg mystery.')).toEqual(['kg', 'mystery.']);
+    expect(tokenTexts('kg seventy two..')).toEqual(['kg', 'seventy', 'two', '.', '.']);
+  });
 });

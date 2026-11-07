@@ -2525,3 +2525,56 @@ long-input timing file and timing helper are exact-main bytes. Current spec/docs
 maps follow the approved complete-entry rules while preserving the Atlas/#243/#244 layout.
 API 251/252/253 and stone 254 remain separate composition steps. Independent probing and full
 coverage/mutation/build/package/size/hook validation remain pending coordinator allocation.
+
+### AFA-250 checkpoint and independent prefix correction — publication pending
+
+The preparation above was subsequently committed with normal hooks as
+`fd3ce2361737438ddc3df268df640793f0ef4a30`, with parents `bfac12a` and `70f3169`.
+The reviewed result snapshot was adopted from independent policy and arithmetic evidence;
+its SHA256 is `ebae8b38c96ac61050493a71b98c08244a84cfb12114005499f5b2684d97a269`.
+The `5.11 ft` label was corrected to 5.11 ft by independent arithmetic, retaining the old
+label and note in the evidence archive. This was an oracle correction, not a runtime fix.
+All 481 design files were preserved outside the checkout at
+`/Users/afahy/.t3/design-evidence/afa-250/t3-1a8416c0/design/`; earlier relative evidence paths
+refer to that retained tree. The original F6 patch, F9 layer and stash remain intact.
+
+A new isolated probe froze 302 expectations before comparing that checkpoint with exact
+main `70f3169`. Ten approved inputs returned null only on the checkpoint: the six selected
+weight pairs `cm: 181 and 72 kg`, `kg: 72 and 181 cm`, `in: 73 and 160 lbs`,
+`feet 6 and 72 kg`, `m: 1.81 and 72 kg`, `pounds 160 and 73 in`; and the four scalar entries
+`kg seventy two.`, `pounds six and a half.`, `m: one point eight.`, `in: seventy three.`.
+Their expected values follow the approved prefix-unit, complete-pair and final-period rules.
+The frozen main results retain 220 agreements and 82 disagreements with the new contract;
+those disagreements are not all null transitions. The immutable probe is separate from the
+same-owner correction replay.
+
+The correction refines the current M2/M4/M5/M9 replacement transitions as follows:
+
+| State or boundary                                                         | Required transition and invariant                                                                                                                                                                                         |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Prefix unit followed by a complete number                                 | A successful whole phrase keeps priority. If the shared reader instead identifies an invalid numeric group at `and`, validate the complete left number once and leave the conjunction for the existing expression cursor. |
+| Conjunction left at a prefix-part boundary                                | The cursor must consume an eligible compound or a complete selected height/weight pair. The left prefix alone cannot make an invalid remaining expression succeed; no later split search is allowed.                      |
+| Number word, multiplier or `half` followed by a period                    | Retain the numeric token and period with their original normalized offsets. The number reader stops at standalone punctuation; the expression owns its permitted final period. Unit-label periods remain unchanged.       |
+| Internal or repeated periods, missing selector, invalid second expression | Reject the complete entry. Do not erase punctuation, discard a field or return a numeric fragment.                                                                                                                        |
+
+The dedicated prefix suite failed 29 assertions and passed 45 controls before correction,
+including all ten reported failures. Final named source suites pass 662 tests; snapshot and
+corpus suites pass 33. The frozen replay changes 292 agreements and ten misses to 302
+agreements. A separate 243-path full-result comparison changes exactly 42 paths over 24
+literals from null to independently justified values; raw input, written matches and symmetric
+selectors are asserted. All 2,007 prior corpus rows are byte-identical; 57 authored cases give
+2,064 agreements. The approved generated result snapshot remains byte-identical.
+
+The shared number reader, supplied-token indices, normalization and single compact split are
+unchanged. Existing reader-work tests and new prefix-pair cases at sizes 8, 16 and 32 assert
+positive actual-reader calls and the existing parsed-character bound. These are focused
+semantic and work-count results, not full validation, bundle measurements or performance claims.
+The missed default assertion for `1.8 (m), 80 kg` now follows the already-approved selector rule,
+with four positive selector controls; its runtime result did not change in this correction.
+
+Exact patches, hashes, immutable-probe checks and changed-result ledgers are retained in
+`/Users/afahy/.t3/design-evidence/afa-250/t3-1a8416c0/prefix-correction/` and ticket comment
+`93599fde-bad9-4937-ab27-9606ae99e88a`. This correction is uncommitted at this review point;
+final committed-source validation and publication remain pending. AFA-250 remains its own
+ticket/PR, without API or stone composition. Historical F6/F9 completion and deferred findings
+above are preserved; publication of their closeout layer remains pending the same AFA-250 PR.

@@ -26,7 +26,7 @@ describe('a label reads the number after it', () => {
     ['72 (in)', 72],
     ['Height (in): 72', 72],
     ['in: 72', 72],
-  ])('falls back to the number before it only when none follows, in %s', (raw, value) => {
+  ])('reads a complete unit suffix or forward label in %s', (raw, value) => {
     expect(parseMeasurement(raw)?.matches).toEqual([{ value, unit: 'in' }]);
   });
 
@@ -51,14 +51,18 @@ describe('a label reads the number after it', () => {
     ['72 (in), 180 lbs', {}],
     ['72 (in) 180 lbs', {}],
     ['72 in. 180 lbs', {}],
+    ['1.8 (m), 80 kg', {}],
   ] as const)('rejects the complete entry %s (AFA-250)', (raw, options) => {
     expect(parseMeasurement(raw, options)).toBeNull();
   });
   it.each([
     ['72 (in), 180 lbs', { type: 'height' }, 72, 'in'],
-    ['1.8 (m), 80 kg', {}, 1.8, 'm'],
+    ['1.8 (m), 80 kg', { type: 'height' }, 1.8, 'm'],
+    ['1.8 (m), 80 kg', { type: 'weight' }, 80, 'kg'],
+    ['1.8 (m), 80 kg', { normalizedUnit: 'cm' }, 1.8, 'm'],
+    ['1.8 (m), 80 kg', { normalizedUnit: 'kg' }, 80, 'kg'],
   ] as const)(
-    'reads the number before a bracket label when the next number has its own unit, in %s',
+    'selects the source match from two complete expressions in %s',
     (raw, options, value, unit) => {
       expect(parseMeasurement(raw, options)?.matches).toEqual([{ value, unit }]);
     }
