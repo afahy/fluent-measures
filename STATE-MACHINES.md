@@ -568,6 +568,40 @@ Seven additional current-main corrections follow the same causes: five variants 
 `null` to 0.5 lb. These are disclosed with regression/corpus coverage. Generated snapshot
 changes remain limited to the two inputs already listed above.
 
+### F4 follow-up — repeated normalization and exposed slash tails
+
+[AFA-242][fraction-follow-up] (Medium) records two new findings from the third Codex review
+of [PR #232](https://github.com/afahy/fluent-measures/pull/232), head `0729f0e`. Both are
+**unfixed, unassigned and in Backlog**, deferred under AGENTS.md’s three-round rule. The four
+exact inputs are absent from the existing public examples, tests and ticket; no throw,
+build/check failure or security issue was reproduced. This follow-up is outside both active
+successor queues and does not expand the production fix.
+
+| Input, default options | Main `77bd5ce` / expected | Reviewed `0729f0e` |
+| ---------------------- | ------------------------- | ------------------ |
+| `1/2-3/4 1/2 lb`       | 0.5 lb                    | `null`             |
+| `1/2-3/4 ½ lb`         | 0.5 lb                    | `null`             |
+| `5½2/3 lb`             | `null`                    | 3 lb               |
+| `5½2⁄3 lb`             | `null`                    | 3 lb               |
+
+The first pair follows PARSING.md’s range omission rule and 1 / 2 = 0.5. M1 normalizes the
+range substring, then processes the completed decimal endpoint again as the apparent whole
+part of the following fraction. The second pair must retain main’s rejection of an invalid
+Unicode fragment with attached digits/slash: replacing only its prefix leaves `x./3 lb`,
+and M2/M7 accepts the exposed denominator. Neither case is the unit-prefix defect in F11.
+
+A temporary public-API test reproduced four source failures and eight ESM/CommonJS failures
+on the reviewed head, with two/four passing standalone fraction controls. All six source and
+twelve package assertions pass on main `77bd5ce`. Source and logs are retained locally as
+`/tmp/parseMeasurement.fractionRoundThreeAudit.test.ts` and `/tmp/afa74-round3-*.log`;
+the temporary failing test was removed from the checkout. The fraction-boundary suite,
+generated result snapshot and semantic properties missed these adjacent-fragment combinations.
+AFA-242 requires failing-first source/ESM/CommonJS regressions, corpus entries and stronger
+coverage for both forms. The PR and ticket disclose all four changed results and link both
+review replies. This table describes the reviewed head before merge; it does not claim a
+main regression yet. It is a follow-up within F4: the eleven finding groups, historical
+`b79eae0` baseline and original 22-test embedded harness/counts remain unchanged.
+
 ### F2 follow-up — quote pairs, low quotations and compound marks
 
 [AFA-239][quote-follow-up] (Medium) is **unfixed, unassigned and in Backlog**. It groups three
@@ -1067,6 +1101,7 @@ single audit file contains its evidence; it is not a second, automatically run t
 [quotes]: https://linear.app/afahy/issue/AFA-78
 [signs]: https://linear.app/afahy/issue/AFA-202
 [fractions]: https://linear.app/afahy/issue/AFA-74
+[fraction-follow-up]: https://linear.app/afahy/issue/AFA-242
 [unsupported]: https://linear.app/afahy/issue/AFA-203
 [prefix-ownership]: https://linear.app/afahy/issue/AFA-237
 [prefix-fraction]: https://linear.app/afahy/issue/AFA-238
