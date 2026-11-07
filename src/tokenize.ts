@@ -347,6 +347,12 @@ export function tokenizeNormalized(
       // Keep this boundary as a non-number token in both reading directions. The uppercase word
       // can't come from input, which is lowercase, and can't match a unit even with fuzziness.
       .replace(WORD_COMMA, '$1 COMMA ')
+      // Split compact height parts before the ordinary digit-to-unit split. Requiring a
+      // complete unit or a digit-led token keeps identifiers such as "abc5ft11" intact.
+      .replace(
+        /(?<=(?<![\p{L}\p{N}_.])\d*(?:\.\d+)?(?:ft|foot|feet|m|meters?|metres?)\.?)(?=\d)/gu,
+        ' '
+      )
       // Split punctuation, hyphens that join two values after a feet or inch mark, as in `5'-11`,
       // `5"-5 in`, `5'-eleven` and `five'-10"`, and underscores before minus signs.
       .replace(PUNCTUATION, ' ')

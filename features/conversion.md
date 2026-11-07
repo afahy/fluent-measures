@@ -21,7 +21,7 @@ measurement type.
 ## How to verify it
 
 - Source: `src/units.ts`, `src/parseMeasurement.ts`
-- Tests: `tests/parseMeasurement.calculator.test.ts`,
+- Tests: `tests/parseMeasurement.compactUnits.test.ts`, `tests/parseMeasurement.calculator.test.ts`,
   `tests/parseMeasurement.signedOtherTypeOwnership.test.ts`, `tests/parseMeasurement.signedWeightOwnership.test.ts`, `tests/parseMeasurement.fractionBoundaries.test.ts`, `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.unitConversions.test.ts`,
   `tests/parseMeasurement.conversionOverflow.test.ts`,
   `tests/parseMeasurement.conversionUnderflow.test.ts`,

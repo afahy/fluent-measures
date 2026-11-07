@@ -2,7 +2,7 @@
 
 exports[`measurement corpus > matches the committed score 1`] = `
 "Category                 total   agree   wrong  missed  throws
-all                        719     698       6      15       0
+all                        740     731       6       3       0
 
 symbols                     84      84       0       0       0
 words                       31      31       0       0       0
@@ -10,7 +10,7 @@ mixed-numbers               40      40       0       0       0
 decimals                    22      21       1       0       0
 commas                      32      32       0       0       0
 hyphens                     49      49       0       0       0
-compact                     24      12       0      12       0
+compact                     45      45       0       0       0
 unicode                     67      65       2       0       0
 typos                       32      32       0       0       0
 surrounding-text            57      54       0       3       0
@@ -58,79 +58,7 @@ afa-202-review-small-unit-first-negative (unicode)
   expected: null
   actual:   20 kg (weight)
 
-Entries with the outcome "missed" (15):
-
-compact-5ft11 (compact)
-  input:    "5ft11"
-  options:  {}
-  expected: 71 in (height)
-  actual:   null
-
-compact-1m80 (compact)
-  input:    "1m80"
-  options:  {}
-  expected: 180 cm (height)
-  actual:   null
-
-compact-70kgs (compact)
-  input:    "70kgs"
-  options:  {}
-  expected: 70 kg (weight)
-  actual:   null
-
-compact-5ft11in (compact)
-  input:    "5ft11in"
-  options:  {}
-  expected: 71 in (height)
-  actual:   null
-
-compact-6ft2 (compact)
-  input:    "6ft2"
-  options:  {}
-  expected: 74 in (height)
-  actual:   null
-
-compact-5ft11-quote (compact)
-  input:    "5ft11\\""
-  options:  {}
-  expected: 71 in (height)
-  actual:   null
-
-compact-1m75-cm (compact)
-  input:    "1m75"
-  options:  {"normalizedUnit":"cm"}
-  expected: 175 cm (height)
-  actual:   null
-
-compact-1m80-cm (compact)
-  input:    "1m80"
-  options:  {"normalizedUnit":"cm"}
-  expected: 180 cm (height)
-  actual:   null
-
-compact-6foot2 (compact)
-  input:    "6foot2"
-  options:  {}
-  expected: 74 in (height)
-  actual:   null
-
-compact-175cms (compact)
-  input:    "175cms"
-  options:  {}
-  expected: 175 cm (height)
-  actual:   null
-
-compact-6ft1in (compact)
-  input:    "6ft1in"
-  options:  {}
-  expected: 73 in (height)
-  actual:   null
-
-compact-ft-in-dots (compact)
-  input:    "5ft.11in."
-  options:  {}
-  expected: 71 in (height)
-  actual:   null
+Entries with the outcome "missed" (3):
 
 signed-following-label-1 (surrounding-text)
   input:    "kg -6 (ft), 70 kg"

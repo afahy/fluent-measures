@@ -15,6 +15,7 @@ in `I drink 8 oz of water, weight 180 lbs`, which gives 180 lb.
 - A unit before its number: `kg 70`.
 - An unsupported unit before its own number, also in words before a comma: `stone twenty, 4 lb`
   gives `null`.
+- Short plurals: `70kgs` and `175cms`.
 - British spellings: `1.8 metres`, `180 centimetres`.
 - `type: 'height'` or `type: 'weight'`, to read only one type.
 - `import` and `require`.
@@ -29,7 +30,7 @@ in `I drink 8 oz of water, weight 180 lbs`, which gives 180 lb.
 ## How to verify it
 
 - Source: `src/units.ts`, `src/matchUnit.ts`, `src/tokenize.ts`, `src/parseMeasurement.ts`
-- Tests: `tests/parseMeasurement.calculator.test.ts`, `tests/parseMeasurement.unicodeMinusCost.test.ts`, `tests/parseMeasurement.unicodeMinusLabels.test.ts`, `tests/parseMeasurement.signedOtherTypeOwnership.test.ts`, `tests/parseMeasurement.signedWeightOwnership.test.ts`, `tests/parseMeasurement.quoteContext.test.ts`, `tests/parseMeasurement.fractionBoundaries.test.ts`, `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.test.ts`, `tests/parseMeasurement.britishUnits.test.ts`,
+- Tests: `tests/parseMeasurement.compactUnits.test.ts`, `tests/parseMeasurement.calculator.test.ts`, `tests/parseMeasurement.unicodeMinusCost.test.ts`, `tests/parseMeasurement.unicodeMinusLabels.test.ts`, `tests/parseMeasurement.signedOtherTypeOwnership.test.ts`, `tests/parseMeasurement.signedWeightOwnership.test.ts`, `tests/parseMeasurement.quoteContext.test.ts`, `tests/parseMeasurement.fractionBoundaries.test.ts`, `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.test.ts`, `tests/parseMeasurement.britishUnits.test.ts`,
   `tests/parseMeasurement.conversionOverflow.test.ts`,
   `tests/parseMeasurement.numberWordCommas.test.ts`, `tests/parseMeasurement.commaBetweenWords.test.ts`,
   `tests/parseMeasurement.commaWeightOwnership.test.ts`,

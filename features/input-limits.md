@@ -26,7 +26,7 @@ input length limit. The public TypeScript input parameter stays `string`.
 ## How to verify it
 
 - Source: `src/parseMeasurement.ts`, `src/types.ts`
-- Tests: `tests/parseMeasurement.calculator.test.ts`,
+- Tests: `tests/parseMeasurement.compactUnits.test.ts`, `tests/parseMeasurement.calculator.test.ts`,
   `tests/parseMeasurement.inputLimits.test.ts`, `tests/timing.test.ts`
 - The existing long-input tests use `maxLength: Infinity` to continue exercising parsing and
   performance with their original inputs, expected results and time limits.
