@@ -81,7 +81,7 @@ const FRACTIONS = '¼-¾⅐-⅞↉';
 // Complete unit/token boundaries preserve identifiers; fractions also need the space before
 // normalization turns them into digits, as in "5ft½".
 const COMPACT_HEIGHT = new RegExp(
-  String.raw`(?<=(?<![\p{L}\p{N}_.])\d*(?:\.\d+)?[${FRACTIONS}]?(?:ft|foot|feet|m|meters?|metres?)\.?)(?=[\d${FRACTIONS}])`,
+  String.raw`(?<=(?<![\p{L}\p{M}\p{N}_.])\d*(?:\.\d+)?[${FRACTIONS}]?(?:ft|foot|feet|m|meters?|metres?)\.?)(?=[\d${FRACTIONS}])`,
   'giu'
 );
 const UNICODE_FRACTION = new RegExp(

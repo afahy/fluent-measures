@@ -911,9 +911,11 @@ No existing semicolon-field, cross-type or Unicode-sign assertion changes.
 
 ### F6 correction — compact heights and bare centimeters
 
-Status: initial implementation committed at `8660ec630e723645e67db20467aec760189fea9e` on
-`t3/metric-height-shorthand`, after normal integration of test-only main
-`b632655431b674e921cb5170b16bdf8840d7245a`. Independent-probe corrections are uncommitted.
+Status: implementation and independent-probe corrections are committed through
+`a6cb36a64b5f5c00c4dc16be1ef21f0ef5753e31` on `t3/metric-height-shorthand`, after normal
+integration of test-only main `b632655431b674e921cb5170b16bdf8840d7245a`. The subsequent
+combining-mark identifier correction is prepared; final source validation and PR are pending.
+Initial implementation `8660ec630e723645e67db20467aec760189fea9e` and its evidence remain below.
 The base runtime source matches `e1d3a457c1aa5f8dd613f06b7205d5f25fc68f61`. Initial failing-first evidence remains at
 `bfac12a943720390c60afd26a522cb67dfa20fa3`: the 15 ticket cases fail there and the 15 original
 preservation controls pass. The expanded 84-case focused suite fails 46 assertions and passes 38 preservation controls on
@@ -992,8 +994,8 @@ Seven fraction controls preserve the initial branch while moving the boundary, i
 regressions before handoff. Complexity added is one bare-read mode in the existing ownership
 reader and fraction characters in the relocated compact boundary, with no new parser pass.
 The obscure `1 m seventy, 5 cm` recovery remains a separate simplification candidate; no
-AFA-250–254 policy/API change is included. Bundle measurements and performance claims remain
-pending; focused test elapsed time is not a benchmark.
+AFA-250–254 policy/API change is included. Later bundle measurements are recorded below;
+focused test elapsed time is not a benchmark and no performance improvement is claimed.
 
 Final-validation follow-up at source commit `03609786b2bb26c3ab825d50b594625c00e2846d`:
 the first complete coverage attempt stopped with 4,138 passing tests and seven failures
@@ -1124,10 +1126,33 @@ bare-read argument remains under mutation testing. The original report is preser
 `/tmp/afa-62-mutation-fccf4a7.json`. Fresh final-source mutation verification follows that
 annotation; the previous full-check result is preserved separately.
 
+The subsequent narrow mutation annotation at `a6cb36a64b5f5c00c4dc16be1ef21f0ef5753e31`
+passed a fresh non-incremental run: 99.72%, 1,431 killed, 18 timed out, four survivors outside
+changed lines and 35 ignored (one more than the preserved `fccf4a7` report). Changed-line and
+exact source-byte verification passed. Report SHA-256:
+`cc02ef7551d7986811cf9719b19c044e3cb6c15e4f8ddd2573d787cc79a93b63`.
+Its normal first push hook passed; the branch was pushed without opening a PR yet.
+
+Final guard review then reproduced two identifier regressions: `e\u03011m80` and
+`e\u03015ft11` (literal `e`, U+0301 combining acute accent, then the digits/unit) returned
+180 cm and 71 in at `a6cb36a`. Both return `null` in the exact-main `b632655` build.
+The single-character accented `é1m80` control already returns `null`. The parent confirmed that preserving
+these decomposed identifiers is required by the ticket. The correction adds `\p{M}` to the
+existing compact-prefix exclusion, with no new normalization pass. Both exact escaped spellings
+are regression/corpus cases; ordinary compact and Unicode-fraction positives remain.
+The corpus now has 764 rows, 755 agree, 6 wrong, 3 missed, no throws. Prior source evidence is
+historical; this material guard change requires its own committed full check and fresh mutation,
+changed-line/source-byte/package/size evidence. Reproduction logs:
+`/tmp/afa-62-identifier-review.log` and `/tmp/afa-62-identifier-review-main.log`.
+The corrected source passes 453 focused tests, including 108 compact cases, and replays all
+136 independently specified inputs. Logs: `/tmp/afa-62-combining-focused.log` and
+`/tmp/afa-62-combining-probe-replay.log`. The temporary replay harness was removed; its
+results remain in `/tmp/afa-62-combining-probe-replay.json`.
+
 The earlier full-coverage attempt was interrupted with exit 130 during the coordinator hold;
-it supplies no completed coverage evidence. Fresh source/package/mutation checks, bundle
-measurements, corrected implementation revision and PR link remain pending the
-coordinated windows. The completed predecessor's validations above do not validate this fix.
+it supplies no completed coverage evidence. The combining-mark correction needs fresh
+committed-source validation before its PR opens; earlier successful checks remain pinned to
+their source revisions. The completed predecessor's validations do not validate this fix.
 
 ### F7 correction — signed values with their own other-type unit
 

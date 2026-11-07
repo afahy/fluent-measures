@@ -227,6 +227,9 @@ describe('compact units and metric height shorthand', () => {
     'a1m80',
     '_1m80',
     'é1m80',
+    // Combining marks are part of the identifier, just as the precomposed accent above is.
+    'e\u03011m80',
+    'e\u03015ft11',
     '١1m80',
     'xft11',
     'abc1.5ft11',
