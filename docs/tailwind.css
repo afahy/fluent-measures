@@ -3186,6 +3186,22 @@ tbody th {
   margin-left: -4px;
 }
 
+.docs-resources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 24px;
+  margin-top: 16px;
+  font-size: 0.875rem;
+}
+
+.docs-resources a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 /* Footer */
 
 .site-footer {

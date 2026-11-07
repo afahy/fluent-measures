@@ -11,6 +11,7 @@ import desktop from 'lighthouse/core/config/desktop-config.js';
 import { CATEGORIES, lighthouseFailures } from './docs-audit-check.mjs';
 import { launchChrome, requireChrome } from './docs-chrome.mjs';
 import { checkReadability } from './docs-readability.mjs';
+import { buildDocs } from './docs-build.mjs';
 
 const { values } = parseArgs({
   options: {
@@ -30,22 +31,26 @@ const problems = [];
 const save = (name, data) => writeFile(`${out}/${name}.json`, JSON.stringify(data, null, 2));
 
 // GitHub Pages compresses text. Match that locally rather than measuring an uncompressed
-// development server. Keep the real HTML/CSS unchanged and serve only files inside docs/.
-const root = resolve('docs');
+// development server. Audit the same artifact and project subpath as the Pages deployment.
+const basePath = '/fluent-measures/';
 const mime = {
   '.html': 'text/html',
   '.css': 'text/css',
   '.woff2': 'font/woff2',
   '.png': 'image/png',
+  '.md': 'text/plain; charset=utf-8',
+  '.txt': 'text/plain; charset=utf-8',
 };
 let server;
 let url = values.url;
 if (url && !/^https?:\/\//.test(url)) throw new Error('--url must use http or https');
 if (!url) {
+  const root = buildDocs();
   server = createServer(async (req, res) => {
     try {
       const pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
-      const file = resolve(root, '.' + (pathname === '/' ? '/index.html' : pathname));
+      if (!pathname.startsWith(basePath)) throw new Error('Outside project');
+      const file = resolve(root, pathname.slice(basePath.length) || 'index.html');
       if (!file.startsWith(root + sep)) throw new Error('Outside docs');
       let data = await readFile(file);
       res.setHeader('Content-Type', mime[extname(file)] ?? 'application/octet-stream');
@@ -64,7 +69,7 @@ if (!url) {
     server.once('error', fail);
     server.listen(0, '127.0.0.1', done);
   });
-  url = `http://127.0.0.1:${server.address().port}/`;
+  url = `http://127.0.0.1:${server.address().port}${basePath}`;
 }
 
 async function accessibility() {

@@ -1,4 +1,4 @@
-// AFA-246: opt-in local output. GitHub Pages uploads docs/ only.
+// AFA-246: opt-in local output. GitHub Pages excludes this preview from its generated artifact.
 import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';

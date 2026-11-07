@@ -20,14 +20,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Build documentation artifact
+        run: node .github/scripts/docs-build.mjs
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Only production sources. Local palette assets and .docs-preview/ stay outside docs/.
-          path: docs
+          # Generated from production docs and root Markdown; excludes local preview assets.
+          path: build/docs
 
   deploy:
     needs: build
