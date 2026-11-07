@@ -252,6 +252,20 @@ the next field; unsupported `oh`/`o` words and a separated minus stay in the mal
 M2 preserves a bracket boundary after a spoken decimal, so a parenthesized conversion cannot
 become extra decimal digits. Label ownership uses the same complete M5 reader.
 
+The second review correction extends that same M2 pass to comma-and-space boundaries and
+bracketed leading decimals (`.5` and `point five`). It does not add a normalization scan.
+In M5, only the bare-inch read can retain the saved integer stopping point before a separate
+spoken-decimal weight, as in `5 ft 11 two hundred point five pounds` (71 in). A malformed
+phrase whose first invalid token is `point` cannot become a partial inch value; other phrase
+reads still consume and validate the whole decimal. `tests/parseMeasurement.spokenDecimalReview.test.ts`
+covers the three review findings and their comma, bracket, sign and number-phrase routes.
+The published `fb272e1` returned 20.58 kg for `age twenty point 5, 80 kg`, null for
+`kg zero point five (.5 kg)`, and 5 ft for the bare-inch/weight case. The focused correction
+returns 80 kg, 0.5 kg and 71 in. Final-source full/mutation/package/size validation remains
+pending its separate coordinator grant; prior `fb272e1` validation is historical.
+The existing fragment result for `5 ft one point twenty in` (main null, `fb272e1` 5 ft)
+is recorded on AFA-250 for its approved whole-entry rejection, not treated as valid inches.
+
 M2 now retains `RANGE` as the token's text instead of writing `-`. This keeps M3's discarded
 ranges distinct from literal minus signs in M5. The existing recovery contract still applies:
 `6 ft 1-2 eleven point five in` is 83.5 in (6 × 12 + 11.5), and `kg seventy point five 1-2`

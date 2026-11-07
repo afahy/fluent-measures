@@ -37,7 +37,8 @@ function readNumberPhrase(
   words: Words,
   start: number,
   step = 1,
-  readHalf = true
+  readHalf = true,
+  barePart = false
 ): [value: number | null, end: number] {
   // "and a half" after a whole number adds 0.5, as in "six and a half feet" and
   // "5 foot 10 and a half". Number.isInteger is false for null.
@@ -103,7 +104,12 @@ function readNumberPhrase(
       else value = candidate;
     }
   }
-  if (phrase.includes('point')) return [half(end - 1) ? null : read(), end];
+  if (phrase.includes('point')) {
+    const decimal = half(end - 1) ? null : read();
+    // Bare inches keep their integer stopping point before a separate number, as in
+    // "11 two hundred point five pounds". An invalid decimal starting at "point" stays invalid.
+    if (decimal !== null || !barePart || words(stopped!) === 'point') return [decimal, end];
+  }
   end = stopped ?? end;
   // Reading forward, the loop skips "and" and stops at "a". A read backward never stops just
   // before "a half", because "half" isn't a number.
@@ -584,7 +590,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       use(matchStart, matchEnd);
 
       if (unit === 'ft') {
-        const [inches, inchesEnd] = readNumberPhrase(remaining, matchEnd);
+        const [inches, inchesEnd] = readNumberPhrase(remaining, matchEnd, 1, true, true);
         // A label's value comes after it, so a label isn't the unit of the inches before it.
         // Stryker disable next-line StringLiteral: "Stryker was here!" is no unit, as "" is.
         const nextWord = (!tokens[inchesEnd]?.label && remaining(inchesEnd)) || '';

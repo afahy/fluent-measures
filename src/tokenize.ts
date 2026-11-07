@@ -191,10 +191,10 @@ const WORD_COMMA = new RegExp(
   'g'
 );
 
-// A bracketed conversion after a spoken decimal starts another number, not more decimal
-// digits. Preserve that boundary before punctuation removal joins "point zero (101 kg)".
-const DECIMAL_BRACKET = new RegExp(
-  String.raw`(\bpoint(?:[\s-]+(?:${NUMBER_WORD}|[\d.]+|and))*)\s*[(\[](?=\s*(?:${NUMBER_WORD}|\d))`,
+// A comma and space or a bracketed conversion ends a spoken decimal. Keep that boundary
+// before punctuation removal joins its digits to another number, including leading decimals.
+const DECIMAL_BOUNDARY = new RegExp(
+  String.raw`(\bpoint(?:[\s-]+(?:${NUMBER_WORD}|[\d.]+|and))*)\s*(?:,\s+|[(\[](?=\s*(?:${NUMBER_WORD}|point|\.?\d)))`,
   'g'
 );
 
@@ -354,7 +354,7 @@ export function tokenizeNormalized(
       // Keep this boundary as a non-number token in both reading directions. The uppercase word
       // can't come from input, which is lowercase, and can't match a unit even with fuzziness.
       .replace(WORD_COMMA, '$1 COMMA ')
-      .replace(DECIMAL_BRACKET, '$1 COMMA ')
+      .replace(DECIMAL_BOUNDARY, '$1 COMMA ')
       // Split punctuation, hyphens that join two values after a feet or inch mark, as in `5'-11`,
       // `5"-5 in`, `5'-eleven` and `five'-10"`, and underscores before minus signs.
       .replace(PUNCTUATION, ' ')
