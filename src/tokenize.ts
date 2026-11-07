@@ -94,6 +94,15 @@ const FRACTION_RANGE = new RegExp(
 );
 const FRACTION_MARK = new RegExp(`[/⁄${FRACTIONS}]`);
 
+// Conventional shared-unit ranges use digit endpoints after comma/fraction normalization.
+// Require whole connector words and keep "and" meaningful only after "between", so compound
+// heights and integer number words retain their existing reads. Consume "from" too, so the
+// resulting boundary has the same neighbors as a dash range in either reading direction.
+const WORD_RANGE = new RegExp(
+  String.raw`(?:\bfrom\s+)?(?<![\d.])${RANGE_DIGITS}\s+to\s+${RANGE_DIGITS}|\bbetween\s+${RANGE_DIGITS}\s+and\s+${RANGE_DIGITS}`,
+  'g'
+);
+
 /** Normalize individual fractions after their surrounding range has been preserved. */
 function normalizeFractionParts(input: string): string {
   return input
@@ -312,6 +321,7 @@ export function tokenizeNormalized(
       .replace(/(?<![\d.])[\d.]+(?:\s*\p{Dash}\s*[\d.]+)+/gu, range =>
         rangeBoundaries ? ` ${RANGE_WORD} ` : range
       )
+      .replace(WORD_RANGE, range => (rangeBoundaries ? ` ${RANGE_WORD} ` : range))
       // Mark labels before the punctuation that marks them is removed, so the parser knows what
       // kind of label each one is, and spell out the short aliases. A bracket label keeps its
       // opening bracket, and a label after a field separator gets a field word first.
