@@ -163,7 +163,12 @@ describe('Atlas production and preview boundary', () => {
       const meta = { content: '' };
       const query = { matches: systemDark, addEventListener: vi.fn() };
       const window: { fluentMeasuresTheme?: () => void } = {};
-      runInNewContext(page.match(/<script>([\s\S]*?)<\/script>/)?.[1] ?? '', {
+      // Extract the known bootstrap from our tracked fixture, not arbitrary HTML.
+      const scriptStart = page.indexOf('<script>');
+      const scriptEnd = page.indexOf('</script>', scriptStart);
+      expect(scriptStart).toBeGreaterThan(-1);
+      expect(scriptEnd).toBeGreaterThan(scriptStart);
+      runInNewContext(page.slice(scriptStart + '<script>'.length, scriptEnd), {
         window,
         document: {
           documentElement: { dataset },
