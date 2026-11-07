@@ -106,6 +106,7 @@ Later passes cannot recover characters discarded by earlier ones.
 | Raw/forms           | Curly closer before a named unit                                                    | Remove closing quote; retain unquoted feet before `in` and paired apostrophes for M2       | Named-unit text                    |
 | Raw/forms           | Prime, modifier-letter prime or acute accent                                        | Convert to ASCII feet/inch mark                                                            | Mark text                          |
 | Raw/forms           | Curly closer after digits, fraction or number words; spaces allowed                 | Preserve quotation context except compact digits or a following inch component after feet  | Quote or mark; F2 corrected        |
+| Forms normalized    | Complete compact feet/meter token followed by digits or a Unicode fraction          | Separate the smaller part before comma/fraction normalization (F6)                         | Compact boundary retained          |
 | Forms normalized    | Supported numeric comma group                                                       | Convert last 1–2 digits to decimal part and remove thousands commas                        | Numeric text                       |
 | Forms normalized    | Numeric group matches comma-size detection but fails grammar                        | Set `valid = false`; entire normalized input becomes empty                                 | Rejected text                      |
 | Forms normalized    | Comma is not such a numeric group, or belongs to attached label                     | Leave it for tokenization                                                                  | Punctuation text                   |
@@ -146,7 +147,7 @@ separate explicit inch component follows a fractional range, that component owns
 Source: `tokenize.ts`, `tokenizeNormalized` and token splitting. The F1 boundary is updated
 in `cbf94c1`, and the F2 paired-apostrophe rule in `95a5a54`. The order is:
 two-apostrophe handling; capital `G` protection;
-lowercase; numeric-range markers; label markers; pound signs; word-comma boundaries; compact height boundaries; punctuation;
+lowercase; numeric-range markers; label markers; pound signs; word-comma boundaries; punctuation;
 unit-prefix sign handling; splitting; trailing-period trimming; marker decoding.
 
 | From                    | Token/event                                           | Action                                                                                   | To                              |
@@ -171,10 +172,9 @@ are still normalized in M1. This is a targeted boundary change, not the tokenize
 Input is lowercased before uppercase markers are inserted; users cannot inject marker words by
 typing their names. The decoder resets pending flags after every ordinary/range token. At this
 revision, range tokens cannot simultaneously be labels. `startsField` is emitted only with a
-label. `used` is assigned later by the parser. F6 now splits compact feet/meter units before
-the next digit, including dotted abbreviations, before punctuation removal and the ordinary
-digit-to-unit split. Attached identifier prefixes block this split. Empty tokens remain harmless
-non-number boundaries.
+label. `used` is assigned later by the parser. F6 now separates compact feet/meter parts in
+M1, before numeric commas and fractions; M2 retains its ordinary digit-to-unit split. Attached
+identifier prefixes block the compact split. Empty tokens remain harmless non-number boundaries.
 
 ### M3 — range ownership and shorthand
 
@@ -290,7 +290,10 @@ Source: `remainingWords`, `readValueAfter`, `labelHasValue`, and the type loop i
 | Feet/meters accepted     | Isolated zero without a smaller part                                                               | Remove isolated zero match                                               | Next token         |
 | End of pass              | All candidates visited                                                                             | Apply signed-field filter                                                | M8 then M9/M10     |
 
-`readValueAfter` checks the next unit across semicolons but not across a new field label. Short
+`readValueAfter` checks the next unit across semicolons but not across a new field label. F6
+reuses that ownership check for bare centimeters, with an immediate unsigned number read so
+`1 m -80` and `1 m; 80` do not acquire a smaller part. An explicit suffix still owns the number
+in `1 m 80;kg` and `1 m 80 (m)`. Short
 aliases expanded to label words retain their label metadata. A zero is a recognized candidate,
 not simply a missing value, although several branches use falsy checks with special zero rules.
 The `used` flag moves false → true monotonically within a pass; it is reset at the next type
@@ -908,16 +911,19 @@ No existing semicolon-field, cross-type or Unicode-sign assertion changes.
 
 ### F6 correction — compact heights and bare centimeters
 
-Status: focused implementation on `t3/metric-height-shorthand`, prepared for the first branch
-commit after normal integration of test-only main `b632655431b674e921cb5170b16bdf8840d7245a`.
-Its runtime source matches `e1d3a457c1aa5f8dd613f06b7205d5f25fc68f61`. Initial failing-first evidence remains at
+Status: initial implementation committed at `8660ec630e723645e67db20467aec760189fea9e` on
+`t3/metric-height-shorthand`, after normal integration of test-only main
+`b632655431b674e921cb5170b16bdf8840d7245a`. Independent-probe corrections are uncommitted.
+The base runtime source matches `e1d3a457c1aa5f8dd613f06b7205d5f25fc68f61`. Initial failing-first evidence remains at
 `bfac12a943720390c60afd26a522cb67dfa20fa3`: the 15 ticket cases fail there and the 15 original
 preservation controls pass. The expanded 84-case focused suite fails 46 assertions and passes 38 preservation controls on
 exact main `e1d3a457`, then passes all 84 with the correction. This is not a completed PR or
 full-validation claim.
 
-M2 splits compact feet/meter units before the next digit, before punctuation removal and the
-ordinary digit-to-unit split. Complete numeric-token boundaries keep decimal identifiers such
+M1 now splits compact feet/meter units before numeric commas and fractions, after form
+normalization. The same boundary recognizes existing Unicode fractions on either side of the
+unit, preserving `5ft½` and `½ft0` when fraction normalization turns them into digits. No
+second compact scan was added; the old M2 location was removed. Complete token boundaries keep decimal identifiers such
 as `abc1.5ft11` intact. M6 recognizes the exact short aliases `kgs` and `cms`; their length keeps
 them outside fuzzy acceptance. M7 reuses `NEXT_PART` and the existing conversion factor for
 bare centimeters instead of adding a second number reader. Explicit centimeters retain the
@@ -947,9 +953,10 @@ larger part removes its unit-prefix recovery for an oversized bare smaller part.
 that recovery would need another distinction/number read; the correction instead applies the
 existing feet rule through `NEXT_PART`. This decision is disclosed to the parent and ticket.
 
-Regression path: `tests/parseMeasurement.compactUnits.test.ts`. The 21 ticket-sourced corpus
-additions cover the failures and zero-part boundaries. All 719 main rows remain byte identical;
-the new score is 740 rows, 731 agreements, 6 wrong, 3 missed and no throws. Only the 12 old
+Regression path: `tests/parseMeasurement.compactUnits.test.ts`. The initial 21 ticket-sourced
+corpus additions cover the failures and zero-part boundaries; nine probe/invalid-comma rows
+bring the additions to 30. All 719 main rows remain byte identical;
+the new score is 749 rows, 740 agreements, 6 wrong, 3 missed and no throws. Only the 12 old
 compact misses change category, all to agreement. The minor changeset records the non-null metric shorthand changes.
 Bare `1 m`, public examples, exported types, signs, range ownership and the prior F1–F9
 corrections are preserved. No existing corpus row or expectation is edited. The F3 normalization
@@ -957,9 +964,40 @@ and backtracking correction merges unchanged; the uppercase internal `RANGE` mar
 unchanged for later integration with the separate spoken-decimal work. AFA-242, AFA-244 and
 AFA-249 remain separate, with their historical comparisons and ownership intact.
 
+The independent probe compared `8660ec6` with exact main `24add56`: 129/136 agreed on the
+branch and 68/136 on main. Its seven findings were reproduced before correction; expectations
+were authored before execution. The corrected source replays all 136 successfully, changing
+exactly those seven branch results in this corpus. M7 now calls the existing suffix-ownership
+reader for bare centimeters instead of duplicating its semicolon/label rules. Its bare mode
+retains the existing immediate, unsigned read; the feet path is unchanged.
+
+| Input and options                                       | Main `24add56` | Branch `8660ec6` | Corrected source |
+| ------------------------------------------------------- | -------------- | ---------------- | ---------------- |
+| `5ft11,5in`                                             | 5 in           | `null`           | 71.5 in          |
+| `1m80,5`, normalized cm                                 | `null`         | 180 cm           | 180.5 cm         |
+| `1 m 80;kg`, `1 m 80;kgs`, `1 m 80 (kg)`, normalized cm | 100 cm         | 180 cm           | 100 cm           |
+| `1 m 80 (m)`, `1 m 80;in`, height type                  | `null`         | 180 cm           | `null`           |
+
+The same comma correction also changes `5FT11,05in` from 5 in on main to 71.05 in,
+`5ft.11,5in.` from 5 in to 71.5 in, `1m80,05` from `null` to 180.05 cm, and
+`1m80,5cms` from `null` to 180.5 cm. Invalid `5ft11,12,345in` changes from 12345 in
+on main to `null`; `1m80,12,345` stays `null` on main but corrects the initial branch's
+180 cm. These follow the documented decimal-comma and malformed-group rules in compact
+parts. Unit-prefix `ft11,5` changes from `null` on main (137 in on the initial branch) to
+11.5 ft through that same boundary. The earlier zero-meter decision-rule-3 changes remain
+listed above. No previous corpus agreement is lost.
+
+Seven fraction controls preserve the initial branch while moving the boundary, including
+`5ft½` = 60.5 in and `½ft0` = 0.5 ft. Self-review caught and corrected those ordering
+regressions before handoff. Complexity added is one bare-read mode in the existing ownership
+reader and fraction characters in the relocated compact boundary, with no new parser pass.
+The obscure `1 m seventy, 5 cm` recovery remains a separate simplification candidate; no
+AFA-250–254 policy/API change is included. Bundle measurements and performance claims remain
+pending; focused test elapsed time is not a benchmark.
+
 The earlier full-coverage attempt was interrupted with exit 130 during the coordinator hold;
 it supplies no completed coverage evidence. Fresh source/package/mutation checks, bundle
-measurements, exact implementation revision, independent probe and PR link remain pending the
+measurements, corrected implementation revision and PR link remain pending the
 coordinated windows. The completed predecessor's validations above do not validate this fix.
 
 ### F7 correction — signed values with their own other-type unit
@@ -1183,25 +1221,26 @@ Each fix session must:
 
 <!-- cspell:ignore Amcp Adelegate -->
 
-| Session                                                                                                                                                                                 | Assigned work                                                       | Launch state                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:ab3e225544f4690efa2764d0a191792e86a687eff06d7b4e3bb8c5380b1b736d>                                                       | AFA-235 publication and review of this document                     | [PR #228](https://github.com/afahy/fluent-measures/pull/228) merged at `527f7b5`; main CI passed                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:9df9034c3ce42adbebf696dd9b9d990bec04b84a9494a53e3c9bf77d6c1fc1d4>                                                       | AFA-75, then fresh successor sessions for AFA-74, AFA-202, AFA-62   | [PR #229](https://github.com/afahy/fluent-measures/pull/229) merged at `fa73fd5`; all 12 main CI jobs passed; AFA-74 successor launched                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1a5f5b908ee23500b3eab3c85521ed6236b310c0f375af966f353457aef7d25e>                                                       | Original AFA-78 implementation and recorded successor queue         | Stopped for the maintainer-requested takeover; clean history preserved through `02d463a`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/thread:delegated-task:command%3Amcp%3A07e37d08-94dc-4f21-9274-996c2a7a8c00%3Adelegate-task%3A632fca4a-3251-4d46-b64c-68aa393e85be> | AFA-78 implementation takeover, final validation and PR preparation | Validated at `133aac5`; [PR #231](https://github.com/afahy/fluent-measures/pull/231) prepared for parent stewardship; no successor work                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/b61ed010-1655-4d08-b5ee-8c6e4d3e7ad4>                                                                                              | AFA-78 PR steward                                                   | [PR #231](https://github.com/afahy/fluent-measures/pull/231) merged at `ef39a7b`; all 12 main CI jobs passed; separate AFA-203 session launched                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:437846f95d8fc1b59e8b6aed92f360110a4df975347393dec096581adc8de82f>                                                       | AFA-236 finite conversion overflow                                  | F9 validated; [PR #230](https://github.com/afahy/fluent-measures/pull/230) merged at `b74d185`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:e814642ff8608ad682438ef18ee4080fc919744b9ea078fd9ad8e24e7597c9b4>                                                       | AFA-74; fresh AFA-202 then AFA-62 sessions after each merge/main CI | Complete: [PR #232](https://github.com/afahy/fluent-measures/pull/232), reviewed `70419bd`, merge `bfac12a9`; 19 PR checks, exact-head Codex review, final audits and all 12 exact-merge main CI jobs passed (run 42322049791, ci-ok 2026-11-07T01:11:17Z). Merged worktree/local branch removed; fresh AFA-202 successor launched. Earlier validation and AFA-242 comparisons retained                                                                                                                                                                                               |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:461b3a6bdd48f18b59aa264dedf46356fae143e0f5f4b90936f49716e134a37a>                                                       | AFA-107 inferred conversion underflow; no successor                 | [PR #233](https://github.com/afahy/fluent-measures/pull/233) at `7426e3e` implementation; full checks and independent probes pass; merged at `b76070d`; exact-merge main ci-ok passed                                                                                                                                                                                                                                                                                                                                                                                                 |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1e5640d2dbe8ef251e2bb479d46cc5f4fc59c1597ecd270e7941a88df6893b76>                                                       | Fresh AFA-203 implementation, review and PR stewardship             | Complete: [PR #234](https://github.com/afahy/fluent-measures/pull/234), reviewed head `0a33c40`, merge `77bd5ce`; 19 PR checks, pre/post-merge audits and all 12 exact-merge main CI jobs passed (run 42314274182, ci-ok 2026-11-06T23:54:24Z). Earlier validation at `9030111` and `5c9eab1` retained                                                                                                                                                                                                                                                                                |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:2d4a60308bdfb6191174b5f92be891f2f90bd42e44ea1218e394ed52840c6148>                                                       | Fresh AFA-116 signed other-type ownership and named test groups     | Source `1eb0a1b`; focused checks passed against `77bd5ce`. Independent review complete (125/126 agree; existing finding filed as AFA-241); full check and fresh changed-line mutation validation passed at `f80b4be`; [PR #235](https://github.com/afahy/fluent-measures/pull/235) merged as `b90ea36` from reviewed `28c3d21`; all 19 PR checks, exact-head Codex review, final audits and all 12 exact-merge main CI jobs passed (run 42319687195, ci-ok 2026-11-07T00:47:02Z). Ticket Done; merged worktree/local branch removed; audit `513b4c3` preserved. No successor assigned |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:462bb758094ab0a59a27217f4fb643589704bceca25e2bf1c7aba94be4f52c28>                                                       | AFA-202 Unicode-minus correction; handoff to existing AFA-62 owner  | Complete: [PR #236](https://github.com/afahy/fluent-measures/pull/236), reviewed `c819c48`, merge `e1d3a457`; 19 PR checks, exact-head review/late audit and all 12 exact-main CI jobs passed (run 42340992416, ci-ok 2026-11-07T05:08:57Z). Earlier source `93c7c72`/validation `b80d68a`, round-one `ac4970d`, round-two `d6e2ce7`, final backtracking correction `f50c9c5` and their full-check/mutation records remain above. Handoff goes to the existing AFA-62 owner; no duplicate session.                                                                                    |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/thread:delegated-task:command%3Amcp%3A18aad716-812d-4b59-b64d-35f626938eb1%3Adelegate-task%3Ae40d7c32-82cc-465c-b9b7-71af5f3f983d> | Existing AFA-62 compact heights and metric shorthand owner          | Work preserved during the AFA-202 hold. Normal fast-forward to exact main `e1d3a457` completed with the unchanged post-merge hook and no install; local changes reapplied from retained stash `6a09864090c14d25baba2141a4f0222d4ceb8c5f`. Then integrated test-only main `b632655` normally, retaining all nine calculator feature links; 342 focused tests pass. First commit hook granted; independent probe, full checks, push and PR remain pending.                                                                                                                              |
+| Session                                                                                                                                                                                 | Assigned work                                                       | Launch state                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:ab3e225544f4690efa2764d0a191792e86a687eff06d7b4e3bb8c5380b1b736d>                                                       | AFA-235 publication and review of this document                     | [PR #228](https://github.com/afahy/fluent-measures/pull/228) merged at `527f7b5`; main CI passed                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:9df9034c3ce42adbebf696dd9b9d990bec04b84a9494a53e3c9bf77d6c1fc1d4>                                                       | AFA-75, then fresh successor sessions for AFA-74, AFA-202, AFA-62   | [PR #229](https://github.com/afahy/fluent-measures/pull/229) merged at `fa73fd5`; all 12 main CI jobs passed; AFA-74 successor launched                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1a5f5b908ee23500b3eab3c85521ed6236b310c0f375af966f353457aef7d25e>                                                       | Original AFA-78 implementation and recorded successor queue         | Stopped for the maintainer-requested takeover; clean history preserved through `02d463a`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/thread:delegated-task:command%3Amcp%3A07e37d08-94dc-4f21-9274-996c2a7a8c00%3Adelegate-task%3A632fca4a-3251-4d46-b64c-68aa393e85be> | AFA-78 implementation takeover, final validation and PR preparation | Validated at `133aac5`; [PR #231](https://github.com/afahy/fluent-measures/pull/231) prepared for parent stewardship; no successor work                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/b61ed010-1655-4d08-b5ee-8c6e4d3e7ad4>                                                                                              | AFA-78 PR steward                                                   | [PR #231](https://github.com/afahy/fluent-measures/pull/231) merged at `ef39a7b`; all 12 main CI jobs passed; separate AFA-203 session launched                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:437846f95d8fc1b59e8b6aed92f360110a4df975347393dec096581adc8de82f>                                                       | AFA-236 finite conversion overflow                                  | F9 validated; [PR #230](https://github.com/afahy/fluent-measures/pull/230) merged at `b74d185`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:e814642ff8608ad682438ef18ee4080fc919744b9ea078fd9ad8e24e7597c9b4>                                                       | AFA-74; fresh AFA-202 then AFA-62 sessions after each merge/main CI | Complete: [PR #232](https://github.com/afahy/fluent-measures/pull/232), reviewed `70419bd`, merge `bfac12a9`; 19 PR checks, exact-head Codex review, final audits and all 12 exact-merge main CI jobs passed (run 42322049791, ci-ok 2026-11-07T01:11:17Z). Merged worktree/local branch removed; fresh AFA-202 successor launched. Earlier validation and AFA-242 comparisons retained                                                                                                                                                                                                    |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:461b3a6bdd48f18b59aa264dedf46356fae143e0f5f4b90936f49716e134a37a>                                                       | AFA-107 inferred conversion underflow; no successor                 | [PR #233](https://github.com/afahy/fluent-measures/pull/233) at `7426e3e` implementation; full checks and independent probes pass; merged at `b76070d`; exact-merge main ci-ok passed                                                                                                                                                                                                                                                                                                                                                                                                      |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1e5640d2dbe8ef251e2bb479d46cc5f4fc59c1597ecd270e7941a88df6893b76>                                                       | Fresh AFA-203 implementation, review and PR stewardship             | Complete: [PR #234](https://github.com/afahy/fluent-measures/pull/234), reviewed head `0a33c40`, merge `77bd5ce`; 19 PR checks, pre/post-merge audits and all 12 exact-merge main CI jobs passed (run 42314274182, ci-ok 2026-11-06T23:54:24Z). Earlier validation at `9030111` and `5c9eab1` retained                                                                                                                                                                                                                                                                                     |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:2d4a60308bdfb6191174b5f92be891f2f90bd42e44ea1218e394ed52840c6148>                                                       | Fresh AFA-116 signed other-type ownership and named test groups     | Source `1eb0a1b`; focused checks passed against `77bd5ce`. Independent review complete (125/126 agree; existing finding filed as AFA-241); full check and fresh changed-line mutation validation passed at `f80b4be`; [PR #235](https://github.com/afahy/fluent-measures/pull/235) merged as `b90ea36` from reviewed `28c3d21`; all 19 PR checks, exact-head Codex review, final audits and all 12 exact-merge main CI jobs passed (run 42319687195, ci-ok 2026-11-07T00:47:02Z). Ticket Done; merged worktree/local branch removed; audit `513b4c3` preserved. No successor assigned      |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:462bb758094ab0a59a27217f4fb643589704bceca25e2bf1c7aba94be4f52c28>                                                       | AFA-202 Unicode-minus correction; handoff to existing AFA-62 owner  | Complete: [PR #236](https://github.com/afahy/fluent-measures/pull/236), reviewed `c819c48`, merge `e1d3a457`; 19 PR checks, exact-head review/late audit and all 12 exact-main CI jobs passed (run 42340992416, ci-ok 2026-11-07T05:08:57Z). Earlier source `93c7c72`/validation `b80d68a`, round-one `ac4970d`, round-two `d6e2ce7`, final backtracking correction `f50c9c5` and their full-check/mutation records remain above. Handoff goes to the existing AFA-62 owner; no duplicate session.                                                                                         |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/thread:delegated-task:command%3Amcp%3A18aad716-812d-4b59-b64d-35f626938eb1%3Adelegate-task%3Ae40d7c32-82cc-465c-b9b7-71af5f3f983d> | Existing AFA-62 compact heights and metric shorthand owner          | Work preserved during the AFA-202 hold. Normal fast-forward to exact main `e1d3a457` completed with the unchanged post-merge hook and no install; local changes reapplied from retained stash `6a09864090c14d25baba2141a4f0222d4ceb8c5f`. Then integrated test-only main `b632655` normally, retaining all nine calculator feature links; 342 focused tests pass. Initial commit `8660ec6` passed normal hooks and released the slot. Parent-arranged independent probe completed (129/136); focused corrections replay 136/136. Full checks, correction commit, push and PR await grants. |
 
 AFA-202's third-round and late findings remain recorded above, including the separate deferred
 AFA-249 fuzzy-name and Unicode-mark cases. The fixed backtracking defect is included in
 `e1d3a457`; it is not part of AFA-249. The existing AFA-62 owner above continues the preserved
-work after the completed merge/main-CI gate. No new owner or descendant has been launched.
+work after the completed merge/main-CI gate. No replacement implementation owner was launched;
+the required independent probe was arranged by the parent.
 AFA-249 remains Medium, unassigned and in Backlog, without a successor or queue assignment.
 All original session assignments remain historical.
 
@@ -1244,6 +1283,22 @@ unchanged from the preceding 970-test focused run. Both preservation stashes are
 `6a09864090c14d25baba2141a4f0222d4ceb8c5f` and `1cc769e26022b41e2b2ecef711360a2f12e79d67`.
 The initial branch commit exposes this fix for the parent's new independent probe; the grant
 does not authorize full checks, mutation, build/size/package runs or push hooks.
+
+F6 independent-probe continuation: original evidence is preserved under
+`/tmp/afa-62-probe.0VOz6y/`. All seven reported cases fail on the initial branch; the
+corresponding main check confirms both decimal-comma failures and all five height-ownership
+controls (an additional weight assertion for the ticket's `kgs` alias also fails on main).
+The expanded 106-case suite fails 61 cases and passes 45 on exact main `24add56`, and all
+106 pass with the correction. Logs include `/tmp/afa-62-probe-before-fix.log`,
+`/tmp/afa-62-probe-expanded-main.log` and `/tmp/afa-62-probe-replay.log`. The old branch/main
+comparison of the 136 independent inputs is retained in `/tmp/afa-62-probe-committed-changes.json`
+and `/tmp/afa-62-probe-main-changes.json`; additional comma results are in
+`/tmp/afa-62-extra-inventory.json`. No install, commit/push hook, full suite, coverage, mutation,
+build or package run was started during this focused-only correction. Both stashes remain.
+Final focused replay passes 1,350 checks across 27 selected files, including the 136 independent
+inputs, all 186 F3 sign/backtracking cases, the 40 calculator checks and the corpus snapshot.
+Log: `/tmp/afa-62-probe-focused-final.log`. The temporary replay test was removed after saving
+the final results in `/tmp/afa-62-probe-corrected-final.json`.
 
 F3 focused validation against exact main `bfac12a9`: `pnpm install` passed. The first reviewed 138-case
 regression/control suite fails 56 source assertions and 112 assertions across ESM/CommonJS on

@@ -78,6 +78,12 @@ function trimTrailing(text: string, mark: string): string {
 
 // The Unicode fractions ¼ to ¾, ⅐ to ⅞ and ↉, as the inside of a character class.
 const FRACTIONS = '¼-¾⅐-⅞↉';
+// Complete unit/token boundaries preserve identifiers; fractions also need the space before
+// normalization turns them into digits, as in "5ft½".
+const COMPACT_HEIGHT = new RegExp(
+  String.raw`(?<=(?<![\p{L}\p{N}_.])\d*(?:\.\d+)?[${FRACTIONS}]?(?:ft|foot|feet|m|meters?|metres?)\.?)(?=[\d${FRACTIONS}])`,
+  'giu'
+);
 const UNICODE_FRACTION = new RegExp(
   String.raw`(?<![\d/.])(?:${FRACTION_NUMBER}\s*)?([${FRACTIONS}])(\d+)?`,
   'gu'
@@ -293,7 +299,14 @@ export function normalizeNumericCommas(input: string): string {
  * comma numbers, then fractions. So "1,000 1/2" is 1000.5.
  */
 export function normalize(input: string): string {
-  return normalizeFractions(normalizeNumericCommas(normalizeForms(input)));
+  return normalizeFractions(
+    normalizeNumericCommas(
+      normalizeForms(input)
+        // Split compact height parts before numeric commas, so "5ft11,5in" keeps 11.5.
+        // Complete units or digit-led tokens keep identifiers such as "abc5ft11" intact.
+        .replace(COMPACT_HEIGHT, ' ')
+    )
+  );
 }
 
 /**
@@ -347,12 +360,6 @@ export function tokenizeNormalized(
       // Keep this boundary as a non-number token in both reading directions. The uppercase word
       // can't come from input, which is lowercase, and can't match a unit even with fuzziness.
       .replace(WORD_COMMA, '$1 COMMA ')
-      // Split compact height parts before the ordinary digit-to-unit split. Requiring a
-      // complete unit or a digit-led token keeps identifiers such as "abc5ft11" intact.
-      .replace(
-        /(?<=(?<![\p{L}\p{N}_.])\d*(?:\.\d+)?(?:ft|foot|feet|m|meters?|metres?)\.?)(?=\d)/gu,
-        ' '
-      )
       // Split punctuation, hyphens that join two values after a feet or inch mark, as in `5'-11`,
       // `5"-5 in`, `5'-eleven` and `five'-10"`, and underscores before minus signs.
       .replace(PUNCTUATION, ' ')

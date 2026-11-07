@@ -11,6 +11,7 @@ don't become units.
 - Labels: `Height (in): 72`, `kg=72`, `in. 5`, `m: 1.8`, also after non-ASCII letters.
 - A unit before a number in words: `kg seventy`.
 - Commas, semicolons and long runs of periods between fields: `age=28, kg=72`, `180;lbs`.
+- Explicit suffix ownership before inferring bare centimeters: `1 m 80;kg`, `1 m 80 (m)`.
 - A label ending in a number word before a comma and words: `age one, twenty pounds` gives 20 lb.
 - A label ending in a number word before a comma and digits: `phase twenty, 5 cm` gives 5 cm.
 - `import` and `require`.

@@ -175,6 +175,7 @@ function skipSemicolons(words: Words, start: number): number {
  * Read the number phrase after a unit, as before one, so "kg one hundred eighty" is 180 kg.
  * Return a null value when there's no number, or when the unit is a label and can't take it.
  * `label` is also true for a unit right after a zero, which can't take a number either.
+ * A bare smaller part starts immediately and cannot have a sign or leading semicolon.
  */
 function readValueAfter(
   tokens: Token[],
@@ -182,10 +183,13 @@ function readValueAfter(
   start: number,
   unit: Unit,
   label: boolean,
-  fuzziness?: number
+  fuzziness?: number,
+  bare = false
 ): [value: number | null, end: number] {
   // This read takes a signed value too, so the check for a label's value finds it, as in "kg: -5".
-  const [value, end] = readSignedPhrase(words, skipSemicolons(words, start));
+  const [value, end] = bare
+    ? readNumberPhrase(words, start)
+    : readSignedPhrase(words, skipSemicolons(words, start));
   // A label doesn't take a number that has its own unit, as in "weigh in: 180 lbs" and
   // "180 lbs = 82 kg", even an unsupported one, as in "kg=400 g", so the check for stone, ounces
   // and grams still sees that part. A semicolon or a unit label can be that unit, as in
@@ -571,7 +575,12 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
 
       const smallerUnit = NEXT_PART[unit];
       if (smallerUnit) {
-        const [part, partEnd] = readNumberPhrase(remaining, matchEnd);
+        // Bare centimeters respect suffix ownership across semicolons and unit labels too,
+        // as in "1 m 80;kg" and "1 m 80 (m)". Keep the established feet reader unchanged.
+        const [part, partEnd] =
+          unit === 'm'
+            ? readValueAfter(tokens, remaining, matchEnd, unit, true, fuzziness, true)
+            : readNumberPhrase(remaining, matchEnd);
         // A label's value comes after it, so it isn't the unit of the smaller part before it.
         // Stryker disable next-line StringLiteral: "Stryker was here!" is no unit, as "" is.
         const nextWord = (!tokens[partEnd]?.label && remaining(partEnd)) || '';

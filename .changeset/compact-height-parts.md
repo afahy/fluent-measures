@@ -3,6 +3,7 @@
 ---
 
 Read compact heights such as `5ft11` and `1m80`, and accept `kgs` and `cms`.
+Compact parts also preserve decimal commas and reject malformed comma groups.
 Include bare centimeters after meters: `1 m 80` and `one meter eighty` now return
 180 cm instead of dropping the smaller part and returning 1 m.
 

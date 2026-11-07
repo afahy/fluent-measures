@@ -64,6 +64,81 @@ describe('compact units and metric height shorthand', () => {
     expect(parseMeasurement(raw, { type, normalizedUnit: unit })?.value).toBe(value);
   });
 
+  // The independent probe combined ticket shorthand with PARSING.md's comma/ownership rules.
+  it.each([
+    ['5ft11,5in', 71.5, 'in', 5, 'ft', 11.5],
+    ['5FT11,05in', 71.05, 'in', 5, 'ft', 11.05],
+    ['5ft.11,5in.', 71.5, 'in', 5, 'ft', 11.5],
+    ['1m80,5', 180.5, 'cm', 1, 'm', 80.5],
+    ['1m80,05', 180.05, 'cm', 1, 'm', 80.05],
+    ['1m80,5cms', 180.5, 'cm', 1, 'm', 80.5],
+  ] as const)(
+    'independent probe: keeps the decimal comma in %s',
+    (raw, value, unit, first, large, part) => {
+      // 5 × 12 + 11.5 = 71.5 inches; 1 × 100 + 80.5 = 180.5 centimeters.
+      expect(parseMeasurement(raw, { normalizedUnit: unit })).toEqual({
+        value,
+        unit,
+        type: 'height',
+        raw,
+        matches: [
+          { value: first, unit: large },
+          { value: part, unit },
+        ],
+      });
+    }
+  );
+
+  it.each(['1 m 80;kg', '1 m 80;kgs', '1 m 80 (kg)'])(
+    'independent probe: preserves the weight suffix in %s',
+    raw => {
+      // The explicit weight owns 80, leaving only 1 × 100 centimeters of height.
+      expect(parseMeasurement(raw, { normalizedUnit: 'cm' })).toMatchObject({
+        value: 100,
+        unit: 'cm',
+        matches: [{ value: 1, unit: 'm' }],
+      });
+      expect(parseMeasurement(raw, { type: 'weight' })).toMatchObject({ value: 80, unit: 'kg' });
+    }
+  );
+
+  it.each(['1 m 80 (m)', '1 m 80;in'])(
+    'independent probe: preserves conflicting explicit heights in %s',
+    raw => {
+      // Neither 80 meters nor 80 inches agrees with 1 meter within the documented 1%.
+      expect(parseMeasurement(raw, { type: 'height' })).toBeNull();
+    }
+  );
+
+  it.each(['abc5ft11,5in', 'phase2,5in'])(
+    'keeps the numeric comma as a label separator in %s',
+    raw => {
+      // A comma directly after a digit-suffixed label separates its following measurement.
+      expect(parseMeasurement(raw)).toMatchObject({ value: 5, unit: 'in' });
+    }
+  );
+
+  it.each(['5ft11,12,345in', '1m80,12,345'])(
+    'rejects malformed comma groups in compact parts: %s',
+    raw => {
+      // A two-digit group can only be the final decimal part, not an interior thousands group.
+      expect(parseMeasurement(raw)).toBeNull();
+    }
+  );
+
+  it.each([
+    ['5ft½', 60.5, 'in'],
+    ['1m½', 100.5, 'cm'],
+    ['5ft1½', 61.5, 'in'],
+    ['1m80½', 180.5, 'cm'],
+    ['½ft0', 0.5, 'ft'],
+    ['1½ft0', 1.5, 'ft'],
+    ['1½m0', 1.5, 'm'],
+  ] as const)('keeps compact fractions after moving the comma boundary: %s', (raw, value, unit) => {
+    // The same shorthand arithmetic, with the documented Unicode fraction ½ = 0.5.
+    expect(parseMeasurement(raw)).toMatchObject({ value, unit });
+  });
+
   it.each([
     ['150lbs', 150, 'lb'],
     ['1.83m', 1.83, 'm'],

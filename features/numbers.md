@@ -11,6 +11,7 @@ fractions, decimal commas and thousands groups.
 - Words: `eighty kilograms`, `one hundred and 50 pounds`, `six and a half feet`.
 - Fractions: `5 1/2 ft`, `5½ ft`.
 - Commas: `1,000 lbs`, `72,5 kg`, `1,234,56 kg`.
+- Decimal commas in compact heights: `5ft11,5in`, `1m80,5`; malformed groups still reject.
 - A comma between number words: `my son is two, thirty pounds` gives 30 lb.
 - A comma and space after a label's number word: `phase twenty, 5 cm` gives 5 cm.
 - Signs, which give `null` for a negative value: `-70 kg`, Unicode minus signs.
