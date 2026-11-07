@@ -1111,6 +1111,19 @@ claim is needed. Logs: `/tmp/afa-62-size-base.json`, `/tmp/afa-62-size-head.json
 `/tmp/afa-62-mark-spaced-main.log`. The final committed-test validation will follow the normal
 correction hooks; the failed check remains separately recorded.
 
+Committed validation at `fccf4a765e28183e9902afc6c1993c98b9f4c43b`: `pnpm check` passed
+4,153 tests with 100% statement/branch/function/line coverage, TypeScript, a fresh non-incremental
+mutation score of 99.66% (1,436 killed, 13 timed out, 5 surviving, 34 ignored), build, size,
+API and all 4,990 ESM/CommonJS package tests. All eight selected source files match the
+committed source bytes; report SHA-256
+`0b03e84996d081b656b3b36c62c929bed6fff8d1b338b92a87c534d21b8a87cf`.
+The separate changed-line check found one equivalent BooleanLiteral mutant on the meters-only
+`readValueAfter` call: its label flag cannot affect ownership because `m` is already in
+`LABEL_ALIASES`. A one-line explanation disables only that argument's mutant; the separate
+bare-read argument remains under mutation testing. The original report is preserved at
+`/tmp/afa-62-mutation-fccf4a7.json`. Fresh final-source mutation verification follows that
+annotation; the previous full-check result is preserved separately.
+
 The earlier full-coverage attempt was interrupted with exit 130 during the coordinator hold;
 it supplies no completed coverage evidence. Fresh source/package/mutation checks, bundle
 measurements, corrected implementation revision and PR link remain pending the

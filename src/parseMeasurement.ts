@@ -579,7 +579,16 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         // as in "1 m 80;kg" and "1 m 80 (m)". Keep the established feet reader unchanged.
         const [part, partEnd] =
           unit === 'm'
-            ? readValueAfter(tokens, remaining, matchEnd, unit, true, fuzziness, true)
+            ? readValueAfter(
+                tokens,
+                remaining,
+                matchEnd,
+                unit,
+                // Stryker disable next-line BooleanLiteral: meters are a short label alias, so readValueAfter checks suffix ownership regardless of this flag.
+                true,
+                fuzziness,
+                true
+              )
             : readNumberPhrase(remaining, matchEnd);
         // A label's value comes after it, so it isn't the unit of the smaller part before it.
         // Stryker disable next-line StringLiteral: "Stryker was here!" is no unit, as "" is.
