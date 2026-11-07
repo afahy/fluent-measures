@@ -146,8 +146,10 @@ const RANGE_INCHES = new RegExp(
 );
 
 // Numeric ranges must not consume only the digit prefix of "2 hundred" or "2 and a half".
+// Trailing periods are punctuation; a decimal tail or number word continues the endpoint.
 // Blocking a following digit/fraction mark also prevents backtracking to a shorter endpoint.
-const RANGE_END = String.raw`(?![\d./⁄]|[\s-]+(?:and[\s-]+)?(?:${NUMBER_WORD}|a[\s-]+half|point)\b)`;
+// Consume the punctuation so it cannot become an empty token between a range and its unit.
+const RANGE_END = String.raw`(?![\d/⁄]|\.+\d|\.*[\s-]*(?:and[\s-]+)?(?:${NUMBER_WORD}|a[\s-]+half|point)\b)\.*`;
 // Keep an optional feet owner so a slash before the range retains the same measurement
 // boundary as fraction normalization, without consuming another slash in a date or code.
 // A preceding number word keeps the complete text intact;

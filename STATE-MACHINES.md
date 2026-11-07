@@ -178,7 +178,9 @@ AFA-248 extends the existing range-marker transition to numeric endpoints joined
 `from ... to`, or `between ... and`. Number-word endpoints stay outside that grammar: neither
 end may be removed from a mixed phrase such as `1 to 2 hundred lbs`. The range replacement
 also retains slash-separated inches owned by preceding feet, as in `5'10/180 to 200 lbs`
-(70 in with the height selector). A following explicit inch component instead owns the height
+(70 in with the height selector). Terminal periods are consumed with a range so an empty
+punctuation token cannot detach its unit; decimal tails and attached number words keep the
+complete endpoint intact. A following explicit inch component instead owns the height
 in `6 ft 1/2 to 3/4 11 in` (83 in). These transitions reuse fraction ownership and feed the
 existing M3 range rules; the historical findings below remain unchanged. Regression evidence:
 `tests/parseMeasurement.wordedRangeBoundaries.test.ts` and the AFA-248 corpus entries.

@@ -11,6 +11,11 @@ describe('worded range boundaries', () => {
     ['1 to 2 hundred and fifty lbs', 250],
     ['1 to 2 and a half lbs', 2.5],
     ['1 to 2-hundred lbs', 200],
+    ['1 to 2. hundred lbs', 200],
+    ['1 to 2... hundred lbs', 200],
+    ['1 to 2hundred lbs', 200],
+    ['between 1 and 2hundred lbs', 200],
+    ['1 to 2.5hundred lbs', 250],
     ['one hundred and 50 to 200 lbs', 200],
     ['one hundred and 50 to 2 hundred lbs', 200],
   ] as const)('does not remove part of a number-word endpoint: %s', (raw, value) => {
@@ -83,6 +88,45 @@ describe('worded range boundaries', () => {
     'does not consume another slash-separated field in %s',
     raw => {
       expect(parseMeasurement(raw, { type: 'height' })).toBeNull();
+    }
+  );
+
+  it.each([
+    'lbs 150 to 180.',
+    'lbs from 150 to 180.',
+    'lbs between 150 and 180.',
+    '150 to 180. lbs',
+    'between 150 and 180. pounds',
+    'from 72.5 to 80.5. kg',
+    '150 to 180... lbs',
+  ])('omits a complete range before a punctuation period: %s', raw => {
+    expect(parseMeasurement(raw, { type: 'weight' })).toBeNull();
+  });
+
+  it.each([
+    'I weigh between 150 and 180.',
+    'Weight is 150 to 180.',
+    'Weight is between 150 and 180.',
+    '150 to 180.',
+  ])('does not infer an unqualified range endpoint: %s', raw => {
+    expect(parseMeasurement(raw, { type: 'weight', allowUnqualified: true })).toBeNull();
+  });
+
+  it.each(['lbs 150 to 180. 70 kg', '150 to 180. lbs; 70 kg', '150 to 180... lbs; 70 kg'])(
+    'keeps an independent weight after a punctuated range: %s',
+    raw => {
+      expect(parseMeasurement(raw, { type: 'weight' })).toMatchObject({
+        value: 70,
+        unit: 'kg',
+        matches: [{ value: 70, unit: 'kg' }],
+      });
+    }
+  );
+
+  it.each(['1 to 2..5 kg', '1 to 2...5 kg', '1 to 2.hundred lbs'])(
+    'does not remove the prefix of a malformed decimal token: %s',
+    raw => {
+      expect(parseMeasurement(raw, { type: 'weight' })).toBeNull();
     }
   );
 });
