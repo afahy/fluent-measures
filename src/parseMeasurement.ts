@@ -212,12 +212,15 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     if (prefix) {
       const number = readNumber(prefix.end, limit);
       if (number.value !== null) {
-        // An explicit smaller suffix can make "m: one and eighty cm" a compound,
-        // although its unsplit number is also valid spoken hundreds. Try one conjunction
-        // boundary only; ordinary complete scalars keep their single numeric read.
-        const smaller = number.end < limit ? readUnit(number.end, false) : null;
-        if (smaller && smaller.end <= limit && smaller.unit === NEXT_PART[prefix.unit]) {
-          for (let split = prefix.end; split < number.end; split++) {
+        // A following explicit unit can anchor "m: one and eighty cm" as a compound or
+        // "m: one and eighty kg" as a selected pair. The expression/root validate both parts.
+        // Unit lookahead has fixed size and consumes nothing. Its successful end > start,
+        // so end <= limit also ensures that no excluded close can become an owned unit.
+        const following = readUnit(number.end, false);
+        if (following && following.end <= limit) {
+          // A successful number has prefix.end <= number.end. This fixed span advances
+          // only by one and returns at the first conjunction; it never retries another split.
+          for (let split = prefix.end; split !== number.end; split++) {
             if (text(split) !== 'and') continue;
             const left = readNumber(prefix.end, split);
             return left.value === null

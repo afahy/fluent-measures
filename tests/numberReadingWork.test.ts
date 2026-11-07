@@ -103,6 +103,26 @@ describe('complete prefix scalar reader work', () => {
 
 describe('explicit prefix-compound reader work', () => {
   it.each([
+    'm: "one and eighty" cm',
+    "m: 'one and eighty' cm",
+    'ft "twenty and one" in',
+    "ft 'twenty and one' in",
+  ])('stops numeric work after the quoted left phrase fails in %s', raw => {
+    const reader = vi.spyOn(numbers, 'readNumberTokens');
+    try {
+      expect(parseMeasurement(raw)).toBeNull();
+      expect(reader.mock.calls.length).toBeGreaterThan(0);
+      // One whole-phrase decision and one failed quoted-left decision suffice. After the
+      // split fails, rereading the complete quoted number cannot make a valid compound.
+      expect(reader.mock.calls.filter(([tokens]) => tokens.length > 0)).toHaveLength(2);
+      const chars = reader.mock.calls.reduce((sum, [tokens]) => sum + tokens.join(' ').length, 0);
+      expect(chars).toBeLessThan(raw.length * 4);
+    } finally {
+      reader.mockRestore();
+    }
+  });
+
+  it.each([
     ['m: one and eighty and five cm', 185, 1, 85],
     ['m: one hundred and one and eighty cm', 10180, 101, 80],
     ['m: one hundred and eighty cm', 10080, 100, 80],

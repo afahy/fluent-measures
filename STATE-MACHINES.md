@@ -2846,3 +2846,46 @@ entire qualified entry. Raw strings and full written matches are checked. The ne
 has 2,362 rows, preserving all earlier 2,354 bytes before eight appended controls.
 These additions change tests and audit evidence only; production source is unchanged.
 Actual mutation outcomes remain pending; reaching the arm does not establish a mutant kill.
+
+### AFA-250 actual first-review mutation follow-up — not yet qualified
+
+The necessary fresh full check on `6a024c9a07b40b085c9c4901b9649ae3250fcbcf` passed
+5,482 source tests, 100% coverage, TypeScript, build, API, size and 7,404 ESM/CJS tests.
+Its actual non-incremental mutation report has 1,441 killed, 47 timed out, seven survivors
+and four existing reviewed ignores (99.53%). Report SHA256
+`c6083d5385e1b834c278f3b098b56a8dcc70624e0e0b8fbe40a2203d826003cb` has eight selected
+sources and six byte-verified source bodies. The separate changed-line gate failed six
+new prefix alternatives; overall command success was not treated as qualification.
+
+Actual 523 exposed the same prefix/conjunction cause for selected pairs: `m: one and eighty kg`
+requires 1 m or 80 kg according to the selector, and null without one. A following explicit
+unit now anchors a compound or pair; the existing expression/root still enforce smaller-unit
+bounds, valid positive expressions, different pair dimensions, full consumption and a selector.
+Eighty-eight independent rows cover both orders, both selector paths, normalization, duplicates,
+unsupported units, signs and defaults. Sixteen null-to-valid paths change from `6a024c9a`,
+with 72 preserved full objects; exact main has 51 changes and 37 full-object controls.
+All earlier 2,362 corpus objects and all 302 frozen/243 authored objects are unchanged by
+this follow-up. The seven earlier permissive-probe transitions remain separately disclosed.
+The corpus now contains 2,450 rows and keeps the prior bytes as a prefix.
+
+Actual 510/512 were redundant with the retained unit-end guard: successful `readUnit`
+results have end greater than start, so end within the expression also places the start
+inside it. Non-consuming fixed-size lookahead may inspect a bracketed unit and following
+assignment punctuation; an excluded closing mark is never accepted as part of the unit.
+The ordinary suffix `at < limit` guard remains unchanged. The first-conjunction loop now
+uses an exclusive endpoint: a successful number guarantees start no greater than end,
+the cursor advances only by one, the endpoint never changes, and the first conjunction
+returns immediately. This removes actual 527's redundant extra endpoint iteration.
+
+Actual 520 is behavior-changing and its guard remains. For `"ft zero and a half ["]`,
+default, height and centimeter options reject; current unsupported JavaScript option
+`normalizedUnit: 'st'` retains `Cannot convert ft to st`. Exact main instead extracts
+0.5 in (1.27 cm when normalized) and throws `Cannot convert in to st` for the unsupported
+option. That message difference is explicit historical evidence. This preserves current
+conversion-error order, not a valid malformed measurement or permanent stone policy;
+AFA-251/254 retain their separate validation/unit decisions. Actual 536 adds two redundant
+numeric rereads after the quoted-left failure: four nonempty reader calls versus two.
+Positive-call work assertions distinguish its exact replacement while public results remain null.
+No new ignore or threshold change was added. The 909-test focused run and captured exact
+replacements establish bounded evidence, not fresh mutation qualification. All earlier
+failed/partial reports and F6/F9 publication-pending history remain unchanged.
