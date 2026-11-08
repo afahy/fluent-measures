@@ -43,6 +43,22 @@ const fail = message => {
 if (!values.key) fail('give --key <answer-key.json>.');
 const key = JSON.parse(readFileSync(values.key, 'utf8'));
 
+const t5Prediction = key.tasks?.T5?.predict1_8;
+const missingT5 = [];
+for (const source of ['cm', 'm']) {
+  if (!t5Prediction?.withDefaultUnit?.[source])
+    missingT5.push(`predict1_8.withDefaultUnit.${source}`);
+  for (const target of ['cm', 'm']) {
+    if (!t5Prediction?.byNormalizedUnit?.[source]?.[target])
+      missingT5.push(`predict1_8.byNormalizedUnit.${source}.${target}`);
+  }
+}
+if (missingT5.length)
+  fail(
+    `answer key needs the AFA-251 T5 migration; missing ${missingT5.join(', ')}. ` +
+      'See T5-key-migration.json in the validation-artifacts packet; its path and SHA are in the AFA-251 PR description.'
+  );
+
 const near = (a, b, tolerance) => typeof a === 'number' && Math.abs(a - b) <= tolerance;
 const sameParts = (a, b) =>
   Array.isArray(a) &&
@@ -116,11 +132,18 @@ if (mode === 'selfcheck') {
     const got = call(lib, input).result;
     check(`T4 prediction ${input}`, got, sameValue(got, want));
   }
-  const p18 = call(lib, '1.8', t.T5.reference.options).result;
-  check('T5 1.8', p18, sameValue(p18, t.T5.predict1_8.withDefaultUnit));
-  for (const [unit, want] of Object.entries(t.T5.predict1_8.byNormalizedUnit ?? {})) {
-    const got = call(lib, '1.8', { ...t.T5.reference.options, normalizedUnit: unit }).result;
-    check(`T5 1.8 in ${unit}`, got, near(got?.value, want.value, 1e-9) && got?.unit === want.unit);
+  for (const [source, want] of Object.entries(t.T5.predict1_8.withDefaultUnit)) {
+    const options = { ...t.T5.reference.options, defaultUnit: source };
+    const got = call(lib, '1.8', options).result;
+    check(`T5 1.8 default ${source}`, got, sameValue(got, want));
+    for (const [unit, normalized] of Object.entries(t.T5.predict1_8.byNormalizedUnit[source])) {
+      const converted = call(lib, '1.8', { ...options, normalizedUnit: unit }).result;
+      check(
+        `T5 1.8 default ${source} in ${unit}`,
+        converted,
+        near(converted?.value, normalized.value, 1e-9) && converted?.unit === normalized.unit
+      );
+    }
   }
   console.log(
     problems.length
@@ -258,11 +281,11 @@ if (mode === 'reviewer') {
         correct &&= checks.partsField && checks.parts;
       }
       if (id === 'T5') {
-        const defaulted = a.options?.defaultUnit !== undefined;
-        // With normalizedUnit, convert the field's cm source (1.8 cm is 0.018 m).
-        const converted = spec.predict1_8.byNormalizedUnit?.[a.options?.normalizedUnit];
+        const source = a.options?.defaultUnit;
+        const defaulted = source != null && Object.hasOwn(spec.predict1_8.withDefaultUnit, source);
+        const converted = spec.predict1_8.byNormalizedUnit?.[source]?.[a.options?.normalizedUnit];
         const want18 = defaulted
-          ? (converted ?? spec.predict1_8.withDefaultUnit)
+          ? (converted ?? spec.predict1_8.withDefaultUnit[source])
           : spec.predict1_8.withCmAppended;
         comprehension.predict1_8Right = sameValue(a.predict1_8, want18);
         comprehension.predict1_8Confidence = a.predict1_8Confidence ?? null;

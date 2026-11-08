@@ -1405,8 +1405,8 @@ const strict = parseMeasurement(
                 <code>type</code>, <code>normalizedUnit</code>, <code>defaultUnit</code>, retired
                 options, then dimension conflicts. Invalid options throw even for empty or overlong
                 strings. Non-string runtime input returns <code>null</code> before reading options.
-                Empty runtime <code>type</code> and <code>normalizedUnit</code> strings remain
-                absent.
+                Empty strings and null values for <code>type</code> or
+                <code>normalizedUnit</code> count as absent.
               </p>
               <p class="measure">
                 To migrate, remove <code>allowUnqualified</code> and <code>inferUnit</code>; either

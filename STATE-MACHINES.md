@@ -3422,15 +3422,14 @@ controls in `tests/defaultUnitWork.test.ts` require exactly one call for each ba
 This composition is uncommitted; focused evidence and pending full-validation gates are
 recorded separately from the historical audit.
 
-### AFA-251 composition correction after normal-hook commit
+### AFA-251 composition and compatibility policy
 
-The bfac12a and ae985e1 paragraphs above record earlier preparation stages. The current
-AFA-251 implementation was reconciled onto `d874ded31ecedf9a7c0a874685e034999ab6989e`,
-including the landed AFA-265 curly-unit changes, and committed as
-`dd60a98ff8628ec0b4929f2f99cdafe007863d2a`. The earlier sentence “This composition is
-uncommitted” describes the earlier stage; it is no longer the current implementation status.
-The committed source tree is `8e1d8f637bcb498c1b9b2f463b23a0e54d5d6f21`, and the tests tree
-is `dc6cdac1d7b3b123fb610a4df547c08c9b25093b`. The forced 2.99 m / 3 cm property controls
-are restored. Focused tests and normal hooks passed; the single full validation remains pending
-review of the subsequent options-compatibility and tooling corrections. Historical findings
-and their original revision references above remain unchanged.
+The bfac12a and ae985e1 paragraphs above describe earlier preparation stages. The AFA-251 PR
+composes explicit defaults onto `d874ded31ecedf9a7c0a874685e034999ab6989e`, preserving the
+complete-entry cursor and the landed AFA-265 curly-unit rules. Bare numbers use the caller's
+source unit at every magnitude; written units override that default. Empty strings and null
+values for type and normalizedUnit count as absent, while null defaultUnit and defined retired
+options are configuration errors. Options-container errors precede string length/content checks.
+The forced 2.99 m / 3 cm property controls retain all targets, written-value counterparts and
+no-default controls. The AFA-251 PR description records composition evidence and validation;
+historical findings and their original revision references above remain unchanged.
