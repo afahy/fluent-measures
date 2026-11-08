@@ -112,12 +112,18 @@ Preview assets stay outside `docs/`; see `.github/docs-preview/README.md`.
 
 ### Verified release documentation
 
+Maintainers: follow [the canonical release guide](RELEASING.md) to prepare a Changesets
+version PR, verify exact main CI, validate a clean release checkout, obtain npm publication
+approval, publish, push only the release tag, and verify deployment. It also covers recovery
+without republishing or rewriting releases. `pnpm release` now validates only; publication is
+a separate guarded command with explicit version/SHA inputs and an approval acknowledgement.
+
 Public HTML, Markdown and `llms.txt` identify one exact npm version and its source commit. They
 link to `versions/<version>/` references. The root aliases identify the currently documented
 version, which can lag npm while verification or deployment is in progress. The npm badge labels
 the latest registry release separately. No main push publishes npm or deploys documentation.
 
-The existing `release:publish` command pushes a version tag after npm publication. That tag
+The guarded `release:publish` command pushes only its version tag after npm publication. That tag
 dispatches the Pages workflow on `main`, because the existing Pages environment permits only
 that branch. The dispatch workflow has no Pages access and publishes no package. For migration
 or recovery, dispatch **Deploy to GitHub Pages** on
