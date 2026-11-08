@@ -3035,3 +3035,51 @@ push, hosted review and qualifying merge. F6/F9 publication remains pending unti
 The exact source, report, coverage, package/build/size records and process proofs are under
 `final-validation/review-round-2-validation/` in the external evidence archive. The final
 audit-only commit keeps the qualified source and test trees unchanged.
+
+### AFA-250 third PR review — earlier numeric failure cursor, focused only
+
+Published `4ac971aa3b4e44a03ad653274f4108386fa9b1df` returned null for both
+`ft five eleven and (70 kg)` and `ft five eleven and weight 70 kg` with either type selector
+or normalized cm/kg. Exact main `70f3169` and the approved complete-entry contract supply
+71 in or 180.34 cm with [5 ft, 11 in], or the independent 70 kg result. All eight reported
+full-object expectations fail on the published checkpoint and pass in the focused candidate.
+
+The parser-local number wrapper already receives the earlier failed numeric token position.
+It formerly replaced that position with a later trailing conjunction, so the single bounded
+prefix split retried an invalid larger phrase. Its existing null return now precedes the
+trailing/repeated-conjunction checks. Empty and leading-conjunction rejection stays first.
+A failed full phrase still returns null; each bounded candidate and the root must independently
+validate complete numeric structure, eligible compounds, both pair dimensions and consumption.
+No shared-reader, normalization, unit-table, public-API or stone change is included.
+
+Article offsets and the supplied numeric-token positions, including skipped conjunctions,
+remain unchanged. The half wrapper still reads its whole-number portion once and validates
+its complete suffix. There is no new scan, normalization pass or retry search. The existing
+single compound split and fixed-span anchored-prefix conjunction walk are reused unchanged.
+New actual-reader instrumentation records six nonempty calls for each of six successful
+compound/pair controls, with first supplied invalidAt 1 or 3 for the article case. Twelve
+scalar controls each make exactly one nonempty call. The six repeated-token controls at
+8/16/32 retain five or six calls and stay below the existing four-times-input character bound.
+These are work-count controls, not timing or mutation-kill claims.
+
+The independently authored 143-path corpus inventory has 56 null-to-valid changes and
+87 controls versus published `4ac971aa`; exact main has 57 changed full objects and 86 controls.
+Six additional malformed work controls retain public null assertions and package counterparts:
+the complete 149-path ledger has 56 changes/93 controls versus published and 63 changes/86
+controls versus main. No overlapping historical review inventories are added to these counts.
+The initial 57-failure trial included a rounded scalar oracle error: binary64 5.5 times 30.48
+is 167.64000000000001. Its original literal/assertion/log is preserved separately from the
+corrected 56-failure baseline; no numeric production change was made for that trial.
+
+The 11 named focused suites pass 1,224 tests. All 3,149 prior full objects remain unchanged:
+2,604 earlier corpus rows, all 302 immutable frozen probes and all 243 authored cases. The
+prior exact-main observations also reproduce exactly. The corpus is now 2,747 rows, preserving
+the old 2,604 rows as a byte-identical prefix and deriving counts from fixture labels. The generated
+result snapshot remains unchanged. All 3,298 candidate observer rows agree with their independent
+expectations; observer command report mismatches from extra temporary rows remain recorded.
+
+Source pins, failing-first runs, complete result/rule ledgers, article/half/work evidence and
+restoration/process proofs are under `final-validation/review-round-3-corrections/` in the
+external archive. The prior 8a2f17f6/fbb27625 full qualification remains historical for this
+changed parser. Fresh full/report/package qualification and normal hooks/push need a separate
+coordinated grant. PR #247 remains blocked on the reported finding; F6/F9 publication is pending.

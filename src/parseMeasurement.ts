@@ -39,11 +39,13 @@ function numberValue(words: string[]): NumberReading {
   const half = words.indexOf('half');
   const whole = readNumberTokens(half < 0 ? words : words.slice(0, Math.max(0, half - 2)));
   if (!words.length || words[0] === 'and') return fail(0);
+  // Keep the earlier numeric boundary for the single compound split; a later conjunction
+  // cannot replace it. Each bounded candidate must still pass the structural checks below.
+  if (whole.value === null) return fail(whole.invalidAt);
   if (words[words.length - 1] === 'and') return fail(words.length - 1);
   // Stryker disable next-line ArithmeticOperator: either adjacent-and member maps back to the same conjunction-run boundary in readNumber (329deb9 mutant 134).
   const repeatedAnd = words.findIndex((word, i) => word === 'and' && words[i - 1] === 'and');
   if (repeatedAnd >= 0) return fail(repeatedAnd);
-  if (whole.value === null) return fail(whole.invalidAt);
   if (half < 0) return { value: whole.value, invalidAt: length };
   // A non-null whole requires at least one token before "and a half", hence half >= 3.
   if (words[half - 1] !== 'a' || words[half - 2] !== 'and' || !Number.isInteger(whole.value))
