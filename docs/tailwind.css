@@ -471,11 +471,11 @@ html:not([data-js]) .site-header {
   background: var(--accent);
 }
 
-/* The negative margin aligns the GitHub icon, not its padding, with the container edge. */
+/* The negative margin lines up the theme button's icon, not its 44px box, with the container edge. */
 
 .header-actions {
   margin-left: auto;
-  margin-right: -10px;
+  margin-right: -12px;
   display: flex;
   align-items: center;
   gap: 4px;
