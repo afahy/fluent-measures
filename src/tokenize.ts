@@ -71,15 +71,15 @@ const WORD_END = String.raw`(?:\b(?:${NUMBER_WORD})|(?:\d|\b(?:${NUMBER_WORD}))[
 // An apostrophe inside a word does not close the surrounding single quotation.
 const SINGLE_QUOTATION = String.raw`(?:[^’]|(?<=[a-z])’(?=[a-z]))*`;
 
-// Only a following inch component extends a spaced quotation into a compound height. Keep
-// the existing adjacent-digit rule. Match the mark before any backward scan across spaces.
+// A following inch component or a separate matching close keeps the inner mark a unit.
+// Keep the existing adjacent-digit rule. Match the mark before any backward scan across spaces.
 function curlyMark(open: string, close: string): RegExp {
   const numberPart = String.raw`(?:[\d.,/⁄${FRACTIONS}]+|(?:${NUMBER_WORD}|and|a|half)\b)`;
   const inches = String.raw`${numberPart}(?:[\s-]+${numberPart})*\s*(?:["”″]|['’′]{2}|in(?:ch(?:es)?)?\b)`;
-  const nextNumber = String.raw`(?=${close}(?:\d${close === '’' ? String.raw`|\s*${inches}` : ''}))`;
+  const continuation = String.raw`(?=${close}(?:\d|\s*${close}${close === '’' ? String.raw`|\s*${inches}` : ''}))`;
   const quotation = close === '’' ? SINGLE_QUOTATION : '[^”]*';
   return new RegExp(
-    String.raw`(?=${close})(?:(?<=[\d${FRACTIONS}]['’′]?\s*)(?:(?<!${open}${quotation})|${nextNumber})|(?<=${WORD_END}\s*)(?!${close}[a-z])(?:(?<!${open}${quotation})|${nextNumber}))${close}`,
+    String.raw`(?=${close})(?:(?<=[\d${FRACTIONS}]['’′]?\s*)(?:(?<!${open}${quotation})|${continuation})|(?<=${WORD_END}\s*)(?!${close}[a-z])(?:(?<!${open}${quotation})|${continuation}))${close}`,
     'gi'
   );
 }
@@ -106,8 +106,8 @@ const MINUS_SIGN = new RegExp(
  * acute accents retain their unit identity as ′ and ″, distinct from ASCII entry closes.
  * A curly quote can follow digits, fractions or number
  * words, with optional spaces. A following unit word keeps the number in that unit; otherwise
- * a matching entry or numeric quotation stays a quotation unless an inch component follows a feet mark
- * or a digit immediately follows the mark, as in the existing compact-height syntax.
+ * a matching entry or numeric quotation stays a quotation unless a separate matching close,
+ * an inch component after a feet mark, or an adjacent digit follows it.
  * Full-width characters and the units "㎝" and "㎏" become their ASCII forms. Other characters
  * stay, so normalizeFractions still sees "½". The minus signs "−" and "﹣" become a hyphen-minus
  * "-" right before a number when no number comes earlier, so "−5 ft" is negative.
@@ -170,8 +170,9 @@ export function tokenize(input: string): Token[] {
 export function tokenizeNormalized(input: string): Token[] {
   const text = input
     // Eligible paired marks are explicit inch units, not entry closes. Mixed prime/apostrophe
-    // pairs stay separate until the bounded unit reader can own both marks.
-    .replace(/(?<=\d)(?:′′|(?='')(?<!(?:^|[^\w'"’])['’]{2}[^'’]*)''(?!['’]))/g, '″')
+    // pairs stay separate until the bounded unit reader can own both marks. A remaining curly
+    // quote can close the entry; the cursor rejects it when no matching wrapper owns it.
+    .replace(/(?<=\d)(?:′′|(?='')(?<!(?:^|[^\w'"’])['’]{2}[^'’]*)''(?!'))/g, '″')
     .toLowerCase();
   return [...text.matchAll(/i['’]m\b|[\p{L}\p{M}_][\p{L}\p{M}\p{N}_]*\.?|[\d.]+|[^\s]/gu)].flatMap(
     match => {
