@@ -28,8 +28,7 @@ describe('the ParseOptions reference', () => {
       'type',
       'normalized-unit',
       'fuzziness',
-      'allow-unqualified',
-      'infer-unit',
+      'default-unit',
       'max-length',
     ]);
   });
@@ -38,16 +37,11 @@ describe('the ParseOptions reference', () => {
     [
       'type',
       'When omitted',
-      'Selected by normalizedUnit when set; otherwise inferred from the input.',
+      'Selected by normalizedUnit when set; otherwise by written units or defaultUnit for a bare number.',
     ],
-    ['normalized-unit', 'When omitted', 'Uses the parsed or inferred unit.'],
+    ['normalized-unit', 'When omitted', 'Uses the written or default source unit.'],
     ['fuzziness', 'Default', '0 — unit names must be exact.'],
-    ['allow-unqualified', 'Default', 'false — bare-number inference is off.'],
-    [
-      'infer-unit',
-      'When omitted',
-      "Same as 'imperial': a height is in inches and a weight in pounds.",
-    ],
+    ['default-unit', 'When omitted', 'Bare numbers return null.'],
     ['max-length', 'Default', '1000.'],
   ])(
     'labels %s purpose, omitted behavior and constraints in visible markup',
@@ -62,21 +56,19 @@ describe('the ParseOptions reference', () => {
     }
   );
 
-  it('retains conditional inference, error caveats and practical example links', () => {
+  it('documents source defaults, error caveats and practical example links', () => {
     expect.hasAssertions();
     const optionText = (id: string): string =>
       text(options.find(([, key]) => key === id)?.[2] ?? '');
     expect(optionText('normalized-unit')).toContain('a weight unit reads only a weight');
     expect(optionText('normalized-unit')).toContain('A type that contradicts it throws an error');
+    expect(optionText('normalized-unit')).toContain('Shorthand such as 5-11 still needs type');
     expect(optionText('normalized-unit')).toContain(
-      'Shorthand such as 5-11 still needs type, and so does allowUnqualified'
+      'never supplies a source unit for a bare number'
     );
-    expect(optionText('allow-unqualified')).toContain('Requires an explicit type when enabled');
-    expect(optionText('allow-unqualified')).toContain('throws an error for almost any input');
-    expect(optionText('infer-unit')).toContain('when allowUnqualified and type are set');
-    expect(optionText('infer-unit')).toContain(
-      "With 'metric', a weight is in kilograms, a height below 3 in meters, and any other height in centimeters"
-    );
+    expect(optionText('default-unit')).toContain('Written units win');
+    expect(optionText('default-unit')).toContain('Must agree with the dimension selected');
+    expect(optionText('default-unit')).toContain('No magnitude guessing');
     expect(optionText('max-length')).toContain('raw input.length before trimming or parsing');
     expect(optionText('max-length')).toContain(
       'A number of at least 1, or Infinity for no limit. Other values throw'

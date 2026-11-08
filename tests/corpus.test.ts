@@ -47,8 +47,7 @@ const OPTION_CHECKS: Readonly<Record<keyof ParseOptions, (value: unknown) => boo
   // The AFA-189 entries need Infinity, written as 1e999. NaN and -Infinity still fail ">= 0", so
   // Infinity is the only value that the check accepts and Number.isFinite rejected.
   fuzziness: value => typeof value === 'number' && value >= 0,
-  allowUnqualified: value => typeof value === 'boolean',
-  inferUnit: value => value === 'metric' || value === 'imperial',
+  defaultUnit: value => UNITS.has(value),
   normalizedUnit: value => UNITS.has(value),
 };
 const OPTION_CHECK_BY_NAME = new Map(Object.entries(OPTION_CHECKS));

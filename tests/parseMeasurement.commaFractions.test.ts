@@ -42,9 +42,11 @@ describe('decimal commas without a leading zero', () => {
   });
 
   it('infers a unit for an unqualified comma fraction', () => {
-    expect(
-      parseMeasurement(',5', { type: 'weight', allowUnqualified: true, inferUnit: 'metric' })
-    ).toMatchObject({ value: 0.5, unit: 'kg', raw: ',5' });
+    expect(parseMeasurement(',5', { type: 'weight', defaultUnit: 'kg' })).toMatchObject({
+      value: 0.5,
+      unit: 'kg',
+      raw: ',5',
+    });
   });
 
   it('includes comma fractions in written number phrases', () => {

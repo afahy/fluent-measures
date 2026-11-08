@@ -25,11 +25,10 @@ describe('finite conversions with overflowing intermediates', () => {
     expect(Math.abs(result!.value / expected - 1)).toBeLessThan(1e-14);
   });
 
-  it.each([undefined, 'imperial'] as const)('converts inferred inches with %s units', inferUnit => {
+  it.each([false, true])('converts default inches with explicit type: %s', withType => {
     const result = parseMeasurement(bigger, {
-      type: 'height',
-      allowUnqualified: true,
-      inferUnit,
+      type: withType ? 'height' : undefined,
+      defaultUnit: 'in',
       normalizedUnit: 'm',
     });
     expect(result).toMatchObject({

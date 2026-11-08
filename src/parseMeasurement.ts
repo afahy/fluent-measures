@@ -65,15 +65,12 @@ function numberValue(words: string[]): NumberReading {
 function total(parts: QualifiedMatch[], targetUnit: Unit): number {
   let sum = 0;
   for (const { value, unit } of parts) {
-    // Conversion arithmetic stays unchanged; AFA-251 owns early option validation and the
-    // resulting removal of this late conversion guard.
     if (!value) continue;
     if (unit === targetUnit) {
       sum += value;
       continue;
     }
-    const converter = unitConversions[unit][targetUnit];
-    if (!converter) throw new Error(`Cannot convert ${unit} to ${targetUnit}`);
+    const converter = unitConversions[unit][targetUnit]!;
     sum += converter(value);
   }
   return sum;
@@ -88,25 +85,52 @@ function result(parts: QualifiedMatch[], input: string, normalizedUnit?: Unit): 
     : null;
 }
 
+/** Read a canonical option unit without coercing an invalid runtime value. */
+function unitOption(value: unknown, name: 'defaultUnit' | 'normalizedUnit'): Unit | undefined {
+  if (value === undefined || (name === 'normalizedUnit' && value === '')) return undefined;
+  if (typeof value !== 'string' || !UNIT_TYPES[value as Unit]) {
+    throw new TypeError(`${name} must be ft, in, cm, m, lb or kg`);
+  }
+  return value as Unit;
+}
+
 /** Parse one complete measurement, or select from one complete height/weight pair. */
 export function parseMeasurement(input: string, options: ParseOptions = {}): ParsedValue | null {
   if (typeof input !== 'string') return null;
-  const { maxLength = 1000 } = options ?? {};
+  if (!options || typeof options !== 'object' || Array.isArray(options)) {
+    throw new TypeError('options must be an object');
+  }
+  const { maxLength = 1000 } = options;
   if (typeof maxLength !== 'number' || !(maxLength >= 1)) {
     throw new Error('maxLength must be a number of at least 1');
   }
+  // Validate before string content or length, but never inspect options for non-string input.
+  // Empty runtime type/output values remain absent, as approved in AFA-178.
+  const rawType: unknown = options.type;
+  if (rawType !== undefined && rawType !== '' && rawType !== 'height' && rawType !== 'weight') {
+    throw new TypeError('type must be height or weight');
+  }
+  const requestedType = rawType === '' ? undefined : rawType;
+  const normalizedUnit = unitOption(options.normalizedUnit, 'normalizedUnit');
+  const defaultUnit = unitOption(options.defaultUnit, 'defaultUnit');
+  for (const name of ['allowUnqualified', 'inferUnit'] as const) {
+    if ((options as Record<string, unknown>)[name] !== undefined) {
+      throw new Error(`${name} was removed; use defaultUnit`);
+    }
+  }
+  const unitType = normalizedUnit && UNIT_TYPES[normalizedUnit];
+  if (requestedType && unitType && requestedType !== unitType) {
+    throw new Error(`normalizedUnit ${normalizedUnit} is not a ${requestedType} unit`);
+  }
+  const onlyType = requestedType || unitType;
+  if (defaultUnit && onlyType && UNIT_TYPES[defaultUnit] !== onlyType) {
+    throw new Error('defaultUnit must match the requested measurement type');
+  }
   if (input.length > maxLength) return null;
+
   const trimmed = normalize(input.trim());
   if (!trimmed) return null;
   const tokens = tokenizeNormalized(trimmed);
-  // Preserve today's option interface/order here. AFA-251 supplies the separately approved
-  // early canonical validation and defaultUnit alternative at integration.
-  if (options.allowUnqualified && !options.type) throw new Error('allowUnqualified requires type');
-  const unitType = options.normalizedUnit && UNIT_TYPES[options.normalizedUnit];
-  if (options.type && unitType && unitType !== options.type) {
-    throw new Error(`normalizedUnit ${options.normalizedUnit} is not a ${options.type} unit`);
-  }
-  const onlyType = options.type || unitType;
   const text = (at: number): string => tokens[at]?.text;
   // Only depth one can own a final curly unit before its separate matching entry close.
   // At deeper levels the first mark closes a numeric quotation. The bounded part reader
@@ -150,14 +174,14 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     /^(\d+)-((?:\d*\.)?\d+)$/
   );
   if (shorthand) {
-    if (options.type !== 'height' || +shorthand[2] >= 12) return null;
+    if (requestedType !== 'height' || +shorthand[2] >= 12) return null;
     return result(
       [
         { value: +shorthand[1], unit: 'ft' },
         { value: +shorthand[2], unit: 'in' },
       ],
       input,
-      options.normalizedUnit
+      normalizedUnit
     );
   }
 
@@ -264,6 +288,9 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     return { unit, end: at };
   }
 
+  // Retain the original whole bare read; a failed expression must not trigger a second parse.
+  let bareNumber: number | null = null;
+
   function readPart(start: number, limit: number, bareUnit?: Unit): Part | null {
     const quotedNumber = CLOSE[text(start)] ? readNumber(start, limit) : null;
     const prefix = quotedNumber?.value != null ? null : readUnit(start, true, limit);
@@ -297,6 +324,9 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       return left.value === null ? null : { value: left.value, unit: prefix.unit, end: left.end };
     }
     const number = readNumber(start, limit);
+    if (start === 0 && number.end === tokens.length && !CLOSE[text(start)]) {
+      bareNumber = number.value;
+    }
     if (number.value === null) return null;
     let at = number.end;
     // An attached word-unit hyphen belongs to the scalar: "5-foot". A sign before a
@@ -470,11 +500,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       end++;
     }
     if (text(end) === '.' && !text(end - 1).endsWith('.')) end++;
-    const parsed = result(
-      parts,
-      input,
-      unitType && unitType !== type ? undefined : options.normalizedUnit
-    );
+    const parsed = result(parts, input, unitType && unitType !== type ? undefined : normalizedUnit);
     return parsed ? { parsed, end } : null;
   }
 
@@ -523,24 +549,9 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     return chosen.parsed;
   }
 
-  // A bare default/inference candidate is the whole undecorated number, never leftovers of a
-  // failed expression. AFA-251 will replace only the source-unit policy here with defaultUnit.
-  if (options.allowUnqualified && options.type) {
-    const number = readNumber(0, tokens.length, false);
-    if (number.value && number.end === tokens.length) {
-      const metric = options.inferUnit === 'metric';
-      const unit =
-        options.type === 'height'
-          ? metric
-            ? number.value < 3
-              ? 'm'
-              : 'cm'
-            : 'in'
-          : metric
-            ? 'kg'
-            : 'lb';
-      return result([{ value: number.value, unit }], input, options.normalizedUnit);
-    }
+  // Only the original complete, undecorated, unwrapped number can use the source default.
+  if (defaultUnit && bareNumber !== null) {
+    return result([{ value: bareNumber, unit: defaultUnit }], input, normalizedUnit);
   }
   return null;
 }

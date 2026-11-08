@@ -98,7 +98,7 @@ describe('signed other-type ownership controls', () => {
     [{ type: 'height' }, 1000, 'ft'],
     [{ normalizedUnit: 'cm' }, 30480, 'cm'],
     [{ fuzziness: 2 }, 1000, 'ft'],
-    [{ type: 'height', allowUnqualified: true, inferUnit: 'metric' }, 1000, 'ft'],
+    [{ type: 'height', defaultUnit: 'cm' }, 1000, 'ft'],
   ] as const)('rejects the signed fragment with %o', (options, _value, _unit) => {
     expect(parseMeasurement("1000,' ′-11pound", options)).toBeNull();
   });

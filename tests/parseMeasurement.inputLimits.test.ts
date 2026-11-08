@@ -68,18 +68,19 @@ describe('measurement input limits', () => {
   });
 
   it('accepts the smallest valid limit', () => {
-    expect(
-      parseMeasurement('5', { maxLength: 1, type: 'height', allowUnqualified: true })
-    ).toMatchObject({ value: 5, unit: 'in' });
-    expect(
-      parseMeasurement('5 ', { maxLength: 1, type: 'height', allowUnqualified: true })
-    ).toBeNull();
+    expect(parseMeasurement('5', { maxLength: 1, defaultUnit: 'in' })).toMatchObject({
+      value: 5,
+      unit: 'in',
+    });
+    expect(parseMeasurement('5 ', { maxLength: 1, defaultUnit: 'in' })).toBeNull();
   });
 
-  it('checks raw length before normalization and other option processing', () => {
+  it('checks raw length before normalization but after option validation', () => {
     // Two UTF-16 code units, though normalization expands ½ to three characters (1/2).
     expect(parseMeasurement('½m', { maxLength: 2 })).toMatchObject({ value: 0.5, unit: 'm' });
-    expect(parseMeasurement('5 ft', { maxLength: 3, allowUnqualified: true })).toBeNull();
+    expect(() =>
+      parseMeasurement('5 ft', { maxLength: 3, allowUnqualified: true } as unknown as ParseOptions)
+    ).toThrow('allowUnqualified was removed; use defaultUnit');
   });
 
   it.each([0, -1, 0.5, NaN, -Infinity, '1000', null, true, {}, Symbol('private value')])(
@@ -101,8 +102,8 @@ describe('measurement input limits', () => {
     expect(() => parseMeasurement('5 ft', null as unknown as ParseOptions)).toThrow(TypeError);
   });
 
-  it('keeps returning null for empty strings with null options', () => {
-    expect(parseMeasurement('', null as unknown as ParseOptions)).toBeNull();
-    expect(parseMeasurement('   ', null as unknown as ParseOptions)).toBeNull();
+  it('rejects null options even for empty strings', () => {
+    expect(() => parseMeasurement('', null as unknown as ParseOptions)).toThrow(TypeError);
+    expect(() => parseMeasurement('   ', null as unknown as ParseOptions)).toThrow(TypeError);
   });
 });

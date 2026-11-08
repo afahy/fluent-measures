@@ -154,9 +154,9 @@ describe('fraction boundaries', () => {
   });
 
   it('rejects malformed Unicode fractions during unqualified inference', () => {
-    expect(parseMeasurement('5½2', { type: 'weight', allowUnqualified: true })).toBeNull();
-    expect(parseMeasurement('5.5 ½', { type: 'height', allowUnqualified: true })).toBeNull();
-    expect(parseMeasurement('5½', { type: 'weight', allowUnqualified: true })).toMatchObject({
+    expect(parseMeasurement('5½2', { type: 'weight', defaultUnit: 'lb' })).toBeNull();
+    expect(parseMeasurement('5.5 ½', { type: 'height', defaultUnit: 'in' })).toBeNull();
+    expect(parseMeasurement('5½', { type: 'weight', defaultUnit: 'lb' })).toMatchObject({
       value: 5.5,
       unit: 'lb',
     });

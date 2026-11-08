@@ -589,62 +589,52 @@ describe('generated pairs of measurements', () => {
 });
 
 describe('generated numbers with no unit', () => {
-  it('reads a weight in the unit of inferUnit', () => {
+  it('reads a weight in the explicit source default', () => {
     expect.hasAssertions();
-    // README: allowUnqualified reads a number that has no unit, and inferUnit selects the unit
-    // system. A weight has one unit in each system.
+    // README: defaultUnit supplies the source unit independently of the number.
     fc.assert(
-      fc.property(
-        amount,
-        fc.constantFrom('metric' as const, 'imperial' as const),
-        (value, system) => {
-          const result = parseMeasurement(String(value), {
-            type: 'weight',
-            allowUnqualified: true,
-            inferUnit: system,
-          });
-          expect(result?.unit).toBe(system === 'metric' ? 'kg' : 'lb');
-          expect(result?.value).toBe(value);
-        }
-      ),
+      fc.property(amount, fc.constantFrom('kg' as const, 'lb' as const), (value, defaultUnit) => {
+        const result = parseMeasurement(String(value), {
+          type: 'weight',
+          defaultUnit,
+        });
+        expect(result?.unit).toBe(defaultUnit);
+        expect(result?.value).toBe(value);
+      }),
       RUNS
     );
   });
 
-  // README, allowUnqualified; unqualifiedMeters.test.ts supplies the metric height boundary:
-  // below 3 means meters, from 3 means centimeters. Generate the source meaning in each domain,
-  // rather than asking the parser which unit it inferred. No subnormal/underflow cases (AFA-107).
+  // AFA-251: the source default determines the quantity, including either side of the retired
+  // three-meter threshold. No subnormal/underflow cases here (AFA-107).
   it.each([
-    ['height', 'metric', 'm', 1, 299, 100],
-    ['height', 'metric', 'cm', 300, 9999, 100],
-    ['height', 'imperial', 'in', 1, 9999, 10],
-    ['weight', 'metric', 'kg', 1, 9999, 10],
-    ['weight', 'imperial', 'lb', 1, 9999, 10],
-  ] as const)('normalizes inferred %s in %s %s', (type, inferUnit, unit, min, max, divisor) => {
+    ['height', 'm', 1, 9999, 100],
+    ['height', 'cm', 1, 9999, 100],
+    ['height', 'in', 1, 9999, 10],
+    ['height', 'ft', 1, 9999, 10],
+    ['weight', 'kg', 1, 9999, 10],
+    ['weight', 'lb', 1, 9999, 10],
+  ] as const)('normalizes default %s in %s', (type, unit, min, max, divisor) => {
     expect.hasAssertions();
     fc.assert(
       fc.property(fc.integer({ min, max }), numerator => {
         const value = numerator / divisor;
         for (const normalizedUnit of targets(unit)) {
           const options = { type, normalizedUnit };
-          expectQuantity(
-            String(value),
-            { value, unit },
-            { ...options, inferUnit, allowUnqualified: true }
-          );
+          expectQuantity(String(value), { value, unit }, { ...options, defaultUnit: unit });
           expectQuantity(`${value} ${unit}`, { value, unit }, options);
           expect(parseMeasurement(String(value), options)).toBeNull();
         }
       }),
-      // Ensure both ends, particularly 2.99 m and 3 cm, also run in mutation workers.
-      { ...SEMANTIC_RUNS, examples: [[min], [max]] }
+      // Force both ends and the former 2.99 m / 3 cm boundary controls in mutation workers.
+      { ...SEMANTIC_RUNS, examples: [[min], [max], [299], [300]] }
     );
   });
 });
 
 describe('generated normalized type selection', () => {
   // README ParseOptions and unitConversions.test.ts: normalizedUnit chooses the dimension even
-  // in mixed text, in either order. A conflicting explicit type throws, and inference needs type.
+  // in mixed text, in either order. A conflicting explicit type throws; a bare number needs a default.
   it.each(UNITS)('selects and converts only the dimension of %s', normalizedUnit => {
     expect.hasAssertions();
     const selectedUnits = targets(normalizedUnit);
@@ -668,9 +658,8 @@ describe('generated normalized type selection', () => {
           expect(() => parseMeasurement(raw, { normalizedUnit, type: TYPES[otherUnit] })).toThrow(
             `normalizedUnit ${normalizedUnit} is not a ${TYPES[otherUnit]} unit`
           );
-          expect(() =>
-            parseMeasurement(String(value), { normalizedUnit, allowUnqualified: true })
-          ).toThrow('allowUnqualified requires type');
+          expect(parseMeasurement(String(value), { normalizedUnit })).toBeNull();
+          expectQuantity(String(value), { value, unit }, { normalizedUnit, defaultUnit: unit });
         }
       ),
       SEMANTIC_RUNS

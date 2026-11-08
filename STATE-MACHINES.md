@@ -3398,3 +3398,26 @@ ledger and two supplementary corpus controls remain separately identified. This 
 records local qualification before normal feature push. Parent-owned hosted review findings
 4504713300 and 4504713301 remain pending verified publication and review. The distinct F6/F9
 historical closeout publication remains pending the eventual PR #247 merge and exact-main CI.
+
+## Approved policy revision: explicit source defaults (AFA-251)
+
+The historical findings and reproductions above describe their recorded revisions, including
+AFA-66 magnitude inference and token-dependent option errors. They remain historical evidence;
+this policy change does not reclassify them as mistakes or rewrite their expected outputs.
+
+The AFA-251 preparation against `bfac12a943720390c60afd26a522cb67dfa20fa3` implements the approved
+replacement of `allowUnqualified`/`inferUnit` with an exact `defaultUnit`. It removes implicit
+imperial selection and the below-three metric-height guess. Options now validate for every
+string before length or tokenization, in the approved AFA-178 order; the non-string guard still
+runs first. Defined retired options raise migration errors. Bare defaults read the complete
+unwrapped number, with no discarded punctuation or suffix recovery. AFA-250 owns the wider
+complete-expression grammar integration; AFA-253 owns fuzzy removal; AFA-252 owns detailed
+failure/provenance results. Those changes are separate from this preparation.
+
+Composition onto `ae985e1c7d257c7ceb215d9fa51243c4df85d8d8` retains the merged complete-entry
+cursor and original audit closeout. The original whole bare numeric read is retained before
+part reduction; the former fallback reread and magnitude/system switch are removed. The
+shared numeric reader, tokenizer and unit tables remain unchanged. The two real-reader
+controls in `tests/defaultUnitWork.test.ts` require exactly one call for each bare number.
+This composition is uncommitted; focused evidence and pending full-validation gates are
+recorded separately from the historical audit.

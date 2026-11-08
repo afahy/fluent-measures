@@ -66,9 +66,11 @@ describe('commas between number words', () => {
   });
 
   it.each(['height', 'weight'] as const)('does not infer one %s from two phrases', type => {
-    expect(parseMeasurement('two, thirty', { type, allowUnqualified: true })).toBeNull();
     expect(
-      parseMeasurement('two, thirty', { type, allowUnqualified: true, inferUnit: 'metric' })
+      parseMeasurement('two, thirty', { type, defaultUnit: type === 'height' ? 'in' : 'lb' })
+    ).toBeNull();
+    expect(
+      parseMeasurement('two, thirty', { type, defaultUnit: type === 'height' ? 'cm' : 'kg' })
     ).toBeNull();
   });
 

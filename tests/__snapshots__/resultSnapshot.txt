@@ -213,7 +213,7 @@ half −1000-lb	hu	null
 3/4	w	null
 3/4	cm	null
 3/4	f2	null
-3/4	hu	0.75 m height
+3/4	hu	0.75 cm height
 about a	-	null
 about a	h	null
 about a	w	null
@@ -321,7 +321,7 @@ eleven,pounds half-5.11 inchs	hu	null
 ¼	w	null
 ¼	cm	null
 ¼	f2	null
-¼	hu	0.25 m height
+¼	hu	0.25 cm height
 twelve m	-	12 m height
 twelve m	h	12 m height
 twelve m	w	null
@@ -1461,7 +1461,7 @@ about.5-kilogram	hu	null
 1	w	null
 1	cm	null
 1	f2	null
-1	hu	1 m height
+1	hu	1 cm height
 72	-	null
 72	h	null
 72	w	null
@@ -2265,7 +2265,7 @@ kilogram	hu	null
 1.8	w	null
 1.8	cm	null
 1.8	f2	null
-1.8	hu	1.8 m height
+1.8	hu	1.8 cm height
 1,234.5-, seventy-cm	-	null
 1,234.5-, seventy-cm	h	null
 1,234.5-, seventy-cm	w	null
@@ -2667,7 +2667,7 @@ kilograms5 cm	hu	null
 ½	w	null
 ½	cm	null
 ½	f2	null
-½	hu	0.5 m height
+½	hu	0.5 cm height
 " –-1,8	-	null
 " –-1,8	h	null
 " –-1,8	w	null
@@ -3393,7 +3393,7 @@ one	h	null
 one	w	null
 one	cm	null
 one	f2	null
-one	hu	1 m height
+one	hu	1 cm height
 1/2 pounds,12inches-72,5 pound	-	null
 1/2 pounds,12inches-72,5 pound	h	null
 1/2 pounds,12inches-72,5 pound	w	null
@@ -3429,7 +3429,7 @@ in,eighty meter1,8 #	hu	null
 1.75	w	null
 1.75	cm	null
 1.75	f2	null
-1.75	hu	1.75 m height
+1.75	hu	1.75 cm height
 5.11in 180kilogram,one-eighty,st	-	null
 5.11in 180kilogram,one-eighty,st	h	null
 5.11in 180kilogram,one-eighty,st	w	null
@@ -5871,7 +5871,7 @@ twelve kilos	hu	null
 1,8	w	null
 1,8	cm	null
 1,8	f2	null
-1,8	hu	1.8 m height
+1,8	hu	1.8 cm height
 m:,0grams-12	-	null
 m:,0grams-12	h	null
 m:,0grams-12	w	null
@@ -7371,7 +7371,7 @@ age-eleven,foot	hu	null
 ¾	w	null
 ¾	cm	null
 ¾	f2	null
-¾	hu	0.75 m height
+¾	hu	0.75 cm height
 72,one-eighty	-	null
 72,one-eighty	h	null
 72,one-eighty	w	null
@@ -9153,7 +9153,7 @@ zerom	hu	null
 0.75	w	null
 0.75	cm	null
 0.75	f2	null
-0.75	hu	0.75 m height
+0.75	hu	0.75 cm height
 - in,1foot	-	null
 - in,1foot	h	null
 - in,1foot	w	null
@@ -9747,7 +9747,7 @@ pounds ″	hu	null
 .5	w	null
 .5	cm	null
 .5	f2	null
-.5	hu	0.5 m height
+.5	hu	0.5 cm height
 150,m in-twelve centimeters	-	null
 150,m in-twelve centimeters	h	null
 150,m in-twelve centimeters	w	null
@@ -10053,7 +10053,7 @@ in. 5.5foot	hu	null
 1/2	w	null
 1/2	cm	null
 1/2	f2	null
-1/2	hu	0.5 m height
+1/2	hu	0.5 cm height
 , 1	-	null
 , 1	h	null
 , 1	w	null

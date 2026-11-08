@@ -36,7 +36,7 @@ describe('complete comma group validation', () => {
   });
 
   it.each(['1.2.3 kg', 'kg 1.2.3', '1.2.3'])('rejects a partial numeric token in %s', raw => {
-    expect(parseMeasurement(raw, { type: 'weight', allowUnqualified: true })).toBeNull();
+    expect(parseMeasurement(raw, { type: 'weight', defaultUnit: 'lb' })).toBeNull();
   });
 
   it('rejects a long invalid leading group without extracting a suffix', () => {

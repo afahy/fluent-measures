@@ -120,7 +120,7 @@ const cases: ReadmeCase[] = [
   {
     section: 'Usage',
     input: '72',
-    options: { type: 'height', allowUnqualified: true, inferUnit: 'imperial' },
+    options: { defaultUnit: 'in' },
     expected: {
       value: 72,
       unit: 'in',
@@ -304,40 +304,38 @@ const cases: ReadmeCase[] = [
   {
     section: 'Numbers With No Unit',
     input: '72',
-    options: { type: 'height', allowUnqualified: true },
+    options: { defaultUnit: 'in' },
     expected: { value: 72, unit: 'in' },
   },
   {
     section: 'Numbers With No Unit',
     input: '150',
-    options: { type: 'weight', allowUnqualified: true },
+    options: { defaultUnit: 'lb' },
     expected: { value: 150, unit: 'lb' },
   },
   {
     section: 'Numbers With No Unit',
     input: '1.8',
-    options: { type: 'height', allowUnqualified: true, inferUnit: 'metric' },
+    options: { defaultUnit: 'm' },
     expected: { value: 1.8, unit: 'm' },
   },
   {
     section: 'Numbers With No Unit',
     input: '180',
-    options: { type: 'height', allowUnqualified: true, inferUnit: 'metric' },
+    options: { defaultUnit: 'cm' },
     expected: { value: 180, unit: 'cm' },
   },
   {
     section: 'Numbers With No Unit',
     input: '70',
-    options: { type: 'weight', allowUnqualified: true, inferUnit: 'metric' },
+    options: { defaultUnit: 'kg' },
     expected: { value: 70, unit: 'kg' },
   },
   {
     section: 'Numbers With No Unit',
     input: '72',
     options: {
-      type: 'height',
-      allowUnqualified: true,
-      inferUnit: 'imperial',
+      defaultUnit: 'in',
       normalizedUnit: 'cm',
     },
     expected: {

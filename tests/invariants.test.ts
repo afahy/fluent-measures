@@ -79,26 +79,23 @@ const input = fc
 
 // normalizedUnit selects the type, and a normalizedUnit of the other type throws on purpose, as
 // tests/parseMeasurement.unitConversions.test.ts checks. So the options only pair a type with its
-// own units. allowUnqualified without a type throws on purpose too, so it comes only with a type.
+// own units. A defaultUnit must agree with a selected dimension too.
 const options: fc.Arbitrary<ParseOptions> = fc
   .record({
     type: fc.option(fc.constantFrom<MeasurementType>('height', 'weight'), { nil: undefined }),
     unitType: fc.constantFrom<MeasurementType>('height', 'weight'),
     unitAt: fc.nat(3),
     withUnit: fc.boolean(),
-    allowUnqualified: fc.boolean(),
-    inferUnit: fc.option(fc.constantFrom('metric' as const, 'imperial' as const), {
-      nil: undefined,
-    }),
+    withDefault: fc.boolean(),
+    defaultAt: fc.nat(3),
     fuzziness: fc.option(fc.integer({ min: 0, max: 2 }), { nil: undefined }),
   })
-  .map(({ type, unitType, unitAt, withUnit, allowUnqualified, inferUnit, fuzziness }) => {
+  .map(({ type, unitType, unitAt, withUnit, withDefault, defaultAt, fuzziness }) => {
     const units = UNITS[type ?? unitType];
     return {
       type,
       normalizedUnit: withUnit ? units[unitAt % units.length] : undefined,
-      allowUnqualified: allowUnqualified && type !== undefined,
-      inferUnit,
+      defaultUnit: withDefault ? units[defaultAt % units.length] : undefined,
       fuzziness,
     };
   });
@@ -132,18 +129,9 @@ describe('invariants', () => {
         seed: 26,
         // Always reach conversion underflow, including in the shorter mutation runs.
         examples: [
-          [
-            `0.${'0'.repeat(322)}1`,
-            { type: 'height', allowUnqualified: true, normalizedUnit: 'ft' },
-          ],
-          [
-            `0.${'0'.repeat(322)}1`,
-            { type: 'height', allowUnqualified: true, normalizedUnit: 'm' },
-          ],
-          [
-            `0.${'0'.repeat(323)}5`,
-            { type: 'weight', allowUnqualified: true, normalizedUnit: 'kg' },
-          ],
+          [`0.${'0'.repeat(322)}1`, { type: 'height', defaultUnit: 'in', normalizedUnit: 'ft' }],
+          [`0.${'0'.repeat(322)}1`, { type: 'height', defaultUnit: 'in', normalizedUnit: 'm' }],
+          [`0.${'0'.repeat(323)}5`, { type: 'weight', defaultUnit: 'lb', normalizedUnit: 'kg' }],
         ],
       }
     );

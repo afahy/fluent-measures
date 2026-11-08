@@ -47,12 +47,11 @@ describe('a comma after a number word before digits', () => {
   });
 
   it('does not infer a unit for two comma-separated numbers', () => {
-    expect(parseMeasurement('twenty, 5', { type: 'weight', allowUnqualified: true })).toBeNull();
+    expect(parseMeasurement('twenty, 5', { type: 'weight', defaultUnit: 'lb' })).toBeNull();
     expect(
       parseMeasurement('twenty, 5', {
         type: 'height',
-        allowUnqualified: true,
-        inferUnit: 'metric',
+        defaultUnit: 'cm',
       })
     ).toBeNull();
   });

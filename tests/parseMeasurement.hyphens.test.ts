@@ -16,7 +16,7 @@ describe('hyphenated heights', () => {
     expect(parseMeasurement('5-11')).toBeNull();
     expect(parseMeasurement('5-11', { normalizedUnit: 'in' })).toBeNull();
     expect(parseMeasurement('5-11', { type: 'weight' })).toBeNull();
-    expect(parseMeasurement('5-11', { type: 'weight', allowUnqualified: true })).toBeNull();
+    expect(parseMeasurement('5-11', { type: 'weight', defaultUnit: 'lb' })).toBeNull();
   });
 
   it('reads the feet unit and trailing inches in 5-foot-11', () => {
@@ -57,14 +57,14 @@ describe('hyphenated heights', () => {
     expect(parseMeasurement('5-11', { type: 'height', normalizedUnit: 'ft' })?.value).toBeCloseTo(
       71 / 12
     );
-    expect(parseMeasurement('5-11', { type: 'height', inferUnit: 'metric' })?.unit).toBe('in');
+    expect(parseMeasurement('5-11', { type: 'height', defaultUnit: 'cm' })?.unit).toBe('in');
   });
 
   it.each(['5-12', '5-13', '0-0'])(
     'rejects invalid shorthand even with unqualified input enabled: %s',
     raw => {
       expect(parseMeasurement(raw, { type: 'height' })).toBeNull();
-      expect(parseMeasurement(raw, { type: 'height', allowUnqualified: true })).toBeNull();
+      expect(parseMeasurement(raw, { type: 'height', defaultUnit: 'in' })).toBeNull();
     }
   );
 

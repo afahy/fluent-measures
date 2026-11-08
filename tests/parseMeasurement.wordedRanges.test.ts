@@ -34,7 +34,7 @@ describe('shared-unit ranges with word connectors', () => {
   ])('does not return an endpoint for %s', raw => {
     expect(parseMeasurement(raw)).toBeNull();
     expect(parseMeasurement(raw, { type: 'weight' })).toBeNull();
-    expect(parseMeasurement(raw, { type: 'weight', allowUnqualified: true })).toBeNull();
+    expect(parseMeasurement(raw, { type: 'weight', defaultUnit: 'lb' })).toBeNull();
   });
 
   it('rejects the ticket range with normalization', () => {

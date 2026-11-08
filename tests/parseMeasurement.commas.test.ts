@@ -34,9 +34,13 @@ describe('measurement numbers containing commas', () => {
     ['72,5', 72.5],
     ['1,000', 1000],
   ])('normalizes an unqualified number in %s', (raw, value) => {
-    expect(
-      parseMeasurement(raw, { type: 'weight', allowUnqualified: true, inferUnit: 'metric' })
-    ).toEqual({ value, unit: 'kg', type: 'weight', raw, matches: [{ value, unit: 'kg' }] });
+    expect(parseMeasurement(raw, { type: 'weight', defaultUnit: 'kg' })).toEqual({
+      value,
+      unit: 'kg',
+      type: 'weight',
+      raw,
+      matches: [{ value, unit: 'kg' }],
+    });
   });
 
   it('converts the complete comma-separated value', () => {

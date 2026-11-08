@@ -14,7 +14,7 @@ describe('comma numbers in range and height syntax', () => {
     '72.5-80,5 kg',
   ])('rejects the complete shared-unit range in %s', raw => {
     expect(parseMeasurement(raw)).toBeNull();
-    expect(parseMeasurement(raw, { type: 'weight', allowUnqualified: true })).toBeNull();
+    expect(parseMeasurement(raw, { type: 'weight', defaultUnit: 'lb' })).toBeNull();
   });
 
   it.each([

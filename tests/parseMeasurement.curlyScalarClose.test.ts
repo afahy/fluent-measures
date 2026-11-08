@@ -236,8 +236,7 @@ const cases: [string, ParseOptions, ParsedValue | null][] = [
     '‘6’’',
     {
       type: 'height',
-      allowUnqualified: true,
-      inferUnit: 'metric',
+      defaultUnit: 'cm',
     },
     {
       value: 6,
