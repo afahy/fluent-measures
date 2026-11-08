@@ -1,0 +1,21 @@
+# fluent-measures
+
+> Documentation for the verified npm package @afahy/fluent-measures@0.2.0.
+
+Documented package: **@afahy/fluent-measures@0.2.0**.
+Source revision: [c37308d0586332f593aec6df4704d11475e59a42](https://github.com/afahy/fluent-measures/tree/c37308d0586332f593aec6df4704d11475e59a42).
+
+## Documentation
+
+- [HTML](https://afahy.github.io/fluent-measures/versions/0.2.0/): Usage and API reference.
+- [README](https://afahy.github.io/fluent-measures/versions/0.2.0/README.md): Installation, API reference, supported units and troubleshooting.
+- [Parsing rules](https://afahy.github.io/fluent-measures/versions/0.2.0/PARSING.md): The release's parsing specification and examples.
+
+## Documentation for your version
+
+These documents describe **@afahy/fluent-measures@0.2.0**. The [stable site](https://afahy.github.io/fluent-measures/) identifies its documented release; npm can have a newer release while documentation is being verified.
+
+Find your installed version with `npm ls @afahy/fluent-measures` (or `pnpm list` / `yarn why`). Use the matching entry in the [verified versions](https://afahy.github.io/fluent-measures/versions.json). Only complete verified sets are listed. Each version's URLs retain their content across later deployments.
+
+Older tags v0.1.0 and v0.1.1 have no PARSING.md and have package metadata mismatches; use the README shipped with those packages. A missing verified version is not permission to use main's specification for that package.
+

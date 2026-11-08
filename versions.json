@@ -1,0 +1,24 @@
+{
+  "current": "0.2.0",
+  "releases": {
+    "0.2.0": {
+      "version": "0.2.0",
+      "revision": "c37308d0586332f593aec6df4704d11475e59a42",
+      "integrity": "sha512-H0QKUIiFKONjJpDk/NX/JCzvc2MDakzyOOi6Pw8jlCUWW2qg3UhYN8aefGUPx3NISdQhUR8D6qPlvvCS7WKXwg==",
+      "verification": "reproduced-package-and-release-examples",
+      "files": {
+        "PARSING.md": "5c3498931bc25c51e7345c25c3054f9711aafc989a0154c75d9057477f00f80f",
+        "README.md": "eb5c081724dfb6a7f7f45b50809e1e96bd8e5bd2a2f121335c3d0b17c4142240",
+        "fonts/OFL.txt": "1781d2806a07d91c4edf4740b88449fab7d0eadad53f7c351b94cd4d4eb8c00f",
+        "fonts/geist-latin.woff2": "9b6f5ff45b278c744b5f379a2c4ecbaf858a842b8eaf82ac8d21b699ca16c608",
+        "index.html": "2a01940c6a4ab10ab471e2402d40fb54e0039270f3180017d71a0679293f0518",
+        "llms.txt": "46a3f71ece2fcca443702c6e40d3438f9a3ff293a2a6d1c7c9786764740ddf35",
+        "og.png": "d2d58d6c5e2efacd9b7e85cd5b1bfd2d0fbe880d87ef8b89d971ef1e43918cdf",
+        "release.json": "39a0510548c1b02efdd566e451520da7091bec5fa7213f8b059a3f691540ebc0",
+        "site.css": "fbdee436ff4cd146f158dbda0c99e83be76e45da513a0f1f309898f345c48cb9",
+        "tailwind.config.cjs": "696e933205a491ab4f81d30fb8af32de51491381c5292f537023007b0cedad9c",
+        "tailwind.css": "b0140b4e2306b3c4b82a208fdff31f8f310ec1c6019fc5f76ebe2438359adb1b"
+      }
+    }
+  }
+}
