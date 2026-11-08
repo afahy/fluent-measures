@@ -68,8 +68,9 @@ const NUMBER_WORD = [...NUMBER_WORDS.keys(), ...MULTIPLIERS.keys()].join('|');
 
 // Number words have the same boundary and "and a half" rules as the later token split.
 const WORD_END = String.raw`(?:\b(?:${NUMBER_WORD})|(?:\d|\b(?:${NUMBER_WORD}))[\s-]+and[\s-]+a[\s-]+half)`;
-// An apostrophe inside a word does not close the surrounding single quotation.
-const SINGLE_QUOTATION = String.raw`(?:[^’]|(?<=[a-z])’(?=[a-z]))*`;
+// An apostrophe inside a word or before a separate matching close can belong inside the
+// quotation. Retain that context when inspecting the final close after a numeric feet mark.
+const SINGLE_QUOTATION = String.raw`(?:[^’]|(?<=[a-z])’(?=[a-z])|’(?=\s*’))*`;
 
 // A following inch component or a separate matching close keeps the inner mark a unit.
 // Keep the existing adjacent-digit rule. Match the mark before any backward scan across spaces.
