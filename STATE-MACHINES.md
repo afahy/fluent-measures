@@ -3240,3 +3240,52 @@ indices and bounds. Exact source/experiment/result evidence is under
 This uncommitted follow-up still needs fresh committed-source full/report qualification.
 No new ignore, threshold reduction or claimed mutant kill substitutes for that report.
 PR #247 and the distinct F6/F9 main-publication status remain pending.
+
+### AFA-250 fourth review — final source qualification
+
+The reviewed follow-up is committed as `f925cc5d1107b48251c95e57cf31ed68a3649f51`, with source
+tree `d8e64e29b784e5447f27cc5870e06100dcee0f1b` and test tree
+`5fc58e43f255848003be1b894a0e303a672fad52`. Both normal correction commits passed all hooks
+without a formatting delta. The retained frozen dependency setup, package, lockfile and
+toolchain remain unchanged; no additional install or borrowed dependencies were needed.
+
+The necessary fresh clean-source `pnpm check` passed 6,227 source tests in 131 files,
+TypeScript, build, public API comparison and 8,824 ESM/CJS package tests in 146 files.
+Coverage is 100%: 476 statements, 541 branches, 56 functions and 392 lines. All 323 tracked
+file hashes stayed identical to the committed input throughout the run. The earlier
+7d2c715c full-command pass with a failed changed-line gate remains historical, not qualifying.
+
+The actual report is
+`5b460bdbfab5c1a22560a9a52249a975882aa8464470ce950506bbf6821202b7`: 1,603 killed, 50 timeouts,
+one survivor and four ignored mutants. Mutation was non-incremental, with the unchanged
+98 threshold. All eight selected sources match live, committed and archived bytes; all six
+report source bodies match those same bytes. The four exact source, mutator, replacement
+and reason signatures match the previously reviewed ignores. No new ignore was added.
+The official changed-line gate against exact main 70f3169 passed from this actual report.
+
+The former outer-wrapper survivor 1071 is current mutant 1069, and the former bare-inference
+survivor 1167 is current mutant 1161. Both are actually killed; the report identifies the
+corpus assertion as the killing test. The earlier exact experiments remain separate evidence
+for the independent full-result controls. The redundant equality/quote alternatives and
+conditional inch replacement were removed by the reviewed changes, not suppressed.
+The sole survivor 40 remains in matcher source identical to exact main. Removing its anchor
+affects higher fuzzy settings; it is neither globally equivalent nor fixed by this ticket.
+
+The measured final build is 4,820 bytes ESM and 4,875 bytes CJS, against 5,736 and 5,795 bytes
+for the preserved exact-main build. The same toolchain, package/lock/build configuration,
+eight baseline sources and six baseline outputs were reverified. Both unchanged limits are
+6,000 bytes. All six final build output hashes are archived. This is a build-size comparison,
+not a parser speed or accuracy claim.
+
+The fourth-review union remains 318 distinct input/options paths, with 112 published and
+129 exact-main full-object changes. All earlier observations, the 3,617 current full objects,
+29 positive-call reader records, approved generated snapshot and both trial-oracle corrections
+remain preserved. The original 261-path and subsequent 58-path ledgers remain separate;
+their overlap is not counted twice. The historical full check and failed gate are immutable.
+Final report, coverage, build, size and source pins are under
+`final-validation/review-round-4-validation/` in the external evidence archive.
+
+This section records local source qualification, not hosted review or publication to main.
+The normal evidence-only audit commit and feature push follow under the active grant.
+The parent retains review finding 4504447325 and PR #247 stewardship. The distinct F6/F9
+historical closeout publication remains pending until the eventual PR lands on main.
