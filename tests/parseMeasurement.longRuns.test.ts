@@ -20,12 +20,9 @@ describe('long runs of periods and semicolons', () => {
     expect(parseWithin(`${run('.')}a`, 500, { maxLength: Infinity })).toBeNull();
   });
 
-  // A token without a number after a measurement doesn't change it.
-  it('reads 5 ft before a long run of periods', () => {
-    expect(parseWithin(`5 ft ${run('.')}a`, 500, { maxLength: Infinity })).toMatchObject({
-      value: 5,
-      unit: 'ft',
-    });
+  // AFA-250: an unknown tail invalidates the complete entry; retain the historical CPU limit.
+  it('rejects 5 ft before a long run of periods', () => {
+    expect(parseWithin(`5 ft ${run('.')}a`, 500, { maxLength: Infinity })).toBeNull();
   });
 
   // The hyphen joiner removes the semicolons at the end of the text before a unit. Here the run

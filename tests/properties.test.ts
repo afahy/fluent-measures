@@ -70,7 +70,7 @@ describe('generated feet and inches', () => {
   // README: "A height in feet and inches gives the total in inches". PARSING.md, "More Than One
   // Measurement": the feet are a whole number and the inches are less than 12. The second column
   // is the smallest inches value. Inches with no unit after them, after a feet word, start at 1,
-  // because tests/parseMeasurement.bareInches.test.ts reads "5 ft 0" as 5 ft. The shorthand has
+  // because tests/parseMeasurement.bareInches.test.ts rejects a trailing bare zero. The shorthand has
   // no unit at all and starts at 0, because tests/parseMeasurement.hyphens.test.ts reads "5-0" as
   // 60 in.
   const forms: readonly (readonly [string, number, (feet: number, inches: number) => string])[] = [
@@ -409,11 +409,10 @@ describe('generated number phrases', () => {
   });
 });
 
-describe('generated label ownership', () => {
-  // PARSING.md, "Labels", unitLabels.test.ts and labelValues.test.ts. A preceding field can
-  // change independently of the measurement, in digits or words and with each supported label.
+describe('generated rejection of unrelated fields', () => {
+  // AFA-250: arbitrary preceding fields invalidate the entry for every delimiter and value.
   it.each([', ', '; ', '&', ': ', '= ', ' '])(
-    'keeps the label value after delimiter %j',
+    'rejects an unrelated field before delimiter %j',
     delimiter => {
       expect.hasAssertions();
       fc.assert(
@@ -425,8 +424,9 @@ describe('generated label ownership', () => {
           fc.constantFrom('colon' as const, 'equals' as const, 'brackets' as const),
           (previous, value, { unit, name }, form, placement) => {
             const label = writeMeasurement(writeInteger(value, form), name, placement);
-            expectQuantity(`age=${previous}${delimiter}${label}`, { value, unit });
-            expectQuantity(`age=${previous + 1}${delimiter}${label}`, { value, unit });
+            expectQuantity(label, { value, unit });
+            expect(parseMeasurement(`age=${previous}${delimiter}${label}`)).toBeNull();
+            expect(parseMeasurement(`age=${previous + 1}${delimiter}${label}`)).toBeNull();
           }
         ),
         SEMANTIC_RUNS
@@ -434,9 +434,9 @@ describe('generated label ownership', () => {
     }
   );
 
-  // A delimiter blocks fallback to the previous field if the label's value has its own unit.
+  // AFA-250: an unrelated field and redundant units are invalid regardless of delimiter.
   it.each([', ', '; ', '&', ': ', '= '])(
-    'gives a value its own unit after delimiter %j',
+    'rejects conflicting unit fields after delimiter %j',
     delimiter => {
       expect.hasAssertions();
       fc.assert(
@@ -453,8 +453,8 @@ describe('generated label ownership', () => {
               label.name,
               placement
             );
-            expectQuantity(`id=${previous}${delimiter}${text}`, { value, unit: own.unit });
-            expectQuantity(`id=${previous + 1}${delimiter}${text}`, { value, unit: own.unit });
+            expect(parseMeasurement(`id=${previous}${delimiter}${text}`)).toBeNull();
+            expect(parseMeasurement(`id=${previous + 1}${delimiter}${text}`)).toBeNull();
           }
         ),
         SEMANTIC_RUNS
@@ -462,27 +462,26 @@ describe('generated label ownership', () => {
     }
   );
 
-  // With no delimiter, ordinary labels fall back to the preceding value. Explicit types keep
-  // both dimensions observable, rather than letting the parser's default selection hide one.
+  // AFA-250: neither dimension selector permits backward borrowing.
   it.each([
     ['kg:', 'kg', 'cm'],
     ['ft:', 'ft', 'kg'],
     ['(in)', 'in', 'lb'],
     ['in.', 'in', 'lb'],
     ['(m)', 'm', 'kg'],
-  ] as const)('keeps the preceding quantity for label %s', (label, unit, ownUnit) => {
+  ] as const)('rejects backward borrowing for label %s', (label, unit, ownUnit) => {
     expect.hasAssertions();
     fc.assert(
       fc.property(whole, whole, fc.constantFrom(...NUMBER_FORMS), (previous, value, form) => {
         const raw = `${previous} ${label} ${writeInteger(value, form)} ${ownUnit}`;
-        expectQuantity(raw, { value: previous, unit }, { type: TYPES[unit] });
-        expectQuantity(raw, { value, unit: ownUnit }, { type: TYPES[ownUnit] });
+        expect(parseMeasurement(raw, { type: TYPES[unit] })).toBeNull();
+        expect(parseMeasurement(raw, { type: TYPES[ownUnit] })).toBeNull();
       }),
       SEMANTIC_RUNS
     );
   });
 
-  // in/m before : or = are field names, which don't take the preceding value in this case.
+  // AFA-250: a forward label cannot discard an earlier number.
   it.each(['in:', 'in=', '(in):', 'm:', 'm=', '(m):'])(
     'keeps field name %s from taking the previous value',
     label => {
@@ -490,7 +489,7 @@ describe('generated label ownership', () => {
       fc.assert(
         fc.property(whole, whole, fc.constantFrom(...NUMBER_FORMS), (previous, value, form) => {
           const raw = `${previous} ${label} ${writeInteger(value, form)} lbs`;
-          expectQuantity(raw, { value, unit: 'lb' });
+          expect(parseMeasurement(raw)).toBeNull();
           expect(parseMeasurement(raw, { type: 'height' })).toBeNull();
         }),
         SEMANTIC_RUNS
@@ -500,8 +499,7 @@ describe('generated label ownership', () => {
 });
 
 describe('generated pairs of measurements', () => {
-  // PARSING.md, "More Than One Measurement": the result is the first measurement. The others must
-  // agree with it within 1%, or the result is null.
+  // AFA-250 / PARSING.md: independent readings of one dimension reject, even when they agree.
   const PAIRS: readonly (readonly [Unit, Unit])[] = [
     ['kg', 'lb'],
     ['lb', 'kg'],
@@ -511,7 +509,7 @@ describe('generated pairs of measurements', () => {
     ['m', 'cm'],
   ];
 
-  it('gives the first measurement when the second agrees', () => {
+  it('rejects duplicate representations even when they agree', () => {
     expect.hasAssertions();
     fc.assert(
       fc.property(
@@ -520,17 +518,10 @@ describe('generated pairs of measurements', () => {
         (value, [first, second]) => {
           // Two decimal places keep the second value within 0.15% of the first for values from 10.
           const other = Math.round(convert(value, first, second) * 100) / 100;
-          const result = parseMeasurement(`${value} ${first} (${other} ${second})`);
-          expect(result?.unit).toBe(first);
-          expect(result?.value).toBe(value);
-          expect(result?.type).toBe(TYPES[first]);
-          expect(result?.matches).toEqual([{ value, unit: first }]);
+          const raw = `${value} ${first} (${other} ${second})`;
+          expect(parseMeasurement(raw)).toBeNull();
           for (const normalizedUnit of targets(first)) {
-            expectQuantity(
-              `${value} ${first} (${other} ${second})`,
-              { value, unit: first },
-              { normalizedUnit }
-            );
+            expect(parseMeasurement(raw, { normalizedUnit })).toBeNull();
           }
         }
       ),
@@ -562,7 +553,7 @@ describe('generated pairs of measurements', () => {
   // The first quantity is 100*k and the difference is k. These integers make exactly 1%, with
   // no rounded conversion at the boundary. 1/1024 is exact in binary and much larger than float
   // error here (k <= 1000), so the inside/outside cases cannot cross the boundary by rounding.
-  it.each([0, 1 / 1024])('accepts agreement at or inside one percent by %s', inside => {
+  it.each([0, 1 / 1024])('rejects agreement at or inside one percent by %s', inside => {
     expect.hasAssertions();
     fc.assert(
       fc.property(
@@ -572,7 +563,7 @@ describe('generated pairs of measurements', () => {
         (k, unit, direction) => {
           const value = 100 * k;
           const other = value + direction * (k - inside);
-          expectQuantity(`${value} ${unit} (${other} ${unit})`, { value, unit });
+          expect(parseMeasurement(`${value} ${unit} (${other} ${unit})`)).toBeNull();
         }
       ),
       SEMANTIC_RUNS
@@ -598,62 +589,52 @@ describe('generated pairs of measurements', () => {
 });
 
 describe('generated numbers with no unit', () => {
-  it('reads a weight in the unit of inferUnit', () => {
+  it('reads a weight in the explicit source default', () => {
     expect.hasAssertions();
-    // README: allowUnqualified reads a number that has no unit, and inferUnit selects the unit
-    // system. A weight has one unit in each system.
+    // README: defaultUnit supplies the source unit independently of the number.
     fc.assert(
-      fc.property(
-        amount,
-        fc.constantFrom('metric' as const, 'imperial' as const),
-        (value, system) => {
-          const result = parseMeasurement(String(value), {
-            type: 'weight',
-            allowUnqualified: true,
-            inferUnit: system,
-          });
-          expect(result?.unit).toBe(system === 'metric' ? 'kg' : 'lb');
-          expect(result?.value).toBe(value);
-        }
-      ),
+      fc.property(amount, fc.constantFrom('kg' as const, 'lb' as const), (value, defaultUnit) => {
+        const result = parseMeasurement(String(value), {
+          type: 'weight',
+          defaultUnit,
+        });
+        expect(result?.unit).toBe(defaultUnit);
+        expect(result?.value).toBe(value);
+      }),
       RUNS
     );
   });
 
-  // README, allowUnqualified; unqualifiedMeters.test.ts supplies the metric height boundary:
-  // below 3 means meters, from 3 means centimeters. Generate the source meaning in each domain,
-  // rather than asking the parser which unit it inferred. No subnormal/underflow cases (AFA-107).
+  // AFA-251: the source default determines the quantity, including either side of the retired
+  // three-meter threshold. No subnormal/underflow cases here (AFA-107).
   it.each([
-    ['height', 'metric', 'm', 1, 299, 100],
-    ['height', 'metric', 'cm', 300, 9999, 100],
-    ['height', 'imperial', 'in', 1, 9999, 10],
-    ['weight', 'metric', 'kg', 1, 9999, 10],
-    ['weight', 'imperial', 'lb', 1, 9999, 10],
-  ] as const)('normalizes inferred %s in %s %s', (type, inferUnit, unit, min, max, divisor) => {
+    ['height', 'm', 1, 9999, 100],
+    ['height', 'cm', 1, 9999, 100],
+    ['height', 'in', 1, 9999, 10],
+    ['height', 'ft', 1, 9999, 10],
+    ['weight', 'kg', 1, 9999, 10],
+    ['weight', 'lb', 1, 9999, 10],
+  ] as const)('normalizes default %s in %s', (type, unit, min, max, divisor) => {
     expect.hasAssertions();
     fc.assert(
       fc.property(fc.integer({ min, max }), numerator => {
         const value = numerator / divisor;
         for (const normalizedUnit of targets(unit)) {
           const options = { type, normalizedUnit };
-          expectQuantity(
-            String(value),
-            { value, unit },
-            { ...options, inferUnit, allowUnqualified: true }
-          );
+          expectQuantity(String(value), { value, unit }, { ...options, defaultUnit: unit });
           expectQuantity(`${value} ${unit}`, { value, unit }, options);
           expect(parseMeasurement(String(value), options)).toBeNull();
         }
       }),
-      // Ensure both ends, particularly 2.99 m and 3 cm, also run in mutation workers.
-      { ...SEMANTIC_RUNS, examples: [[min], [max]] }
+      // Force both ends and the former 2.99 m / 3 cm boundary controls in mutation workers.
+      { ...SEMANTIC_RUNS, examples: [[min], [max], [299], [300]] }
     );
   });
 });
 
 describe('generated normalized type selection', () => {
   // README ParseOptions and unitConversions.test.ts: normalizedUnit chooses the dimension even
-  // in mixed text, in either order. A conflicting explicit type throws, and inference needs type.
+  // in mixed text, in either order. A conflicting explicit type throws; a bare number needs a default.
   it.each(UNITS)('selects and converts only the dimension of %s', normalizedUnit => {
     expect.hasAssertions();
     const selectedUnits = targets(normalizedUnit);
@@ -677,9 +658,8 @@ describe('generated normalized type selection', () => {
           expect(() => parseMeasurement(raw, { normalizedUnit, type: TYPES[otherUnit] })).toThrow(
             `normalizedUnit ${normalizedUnit} is not a ${TYPES[otherUnit]} unit`
           );
-          expect(() =>
-            parseMeasurement(String(value), { normalizedUnit, allowUnqualified: true })
-          ).toThrow('allowUnqualified requires type');
+          expect(parseMeasurement(String(value), { normalizedUnit })).toBeNull();
+          expectQuantity(String(value), { value, unit }, { normalizedUnit, defaultUnit: unit });
         }
       ),
       SEMANTIC_RUNS

@@ -3,7 +3,8 @@ import { parseMeasurement } from '../src';
 
 describe('boundaries between compound height parts', () => {
   // AFA-51: the maintainer chose ordinary words other than "and", and semicolons,
-  // as boundaries. Separate 5 ft and 11 in disagree, so they must not become 71 in.
+  // as boundaries. PARSING.md now requires a complete entry, so independent heights
+  // reject regardless of agreement and no valid prefix or suffix can be recovered.
   it.each([
     '5 ft; actual 11 in',
     'height 5 ft; note 11 in',
@@ -25,7 +26,7 @@ describe('boundaries between compound height parts', () => {
   ])('rejects independent heights in %s', raw => {
     expect(parseMeasurement(raw)).toBeNull();
     expect(parseMeasurement(raw, { type: 'height', normalizedUnit: 'cm' })).toBeNull();
-    expect(parseMeasurement(raw, { type: 'height', allowUnqualified: true })).toBeNull();
+    expect(parseMeasurement(raw, { type: 'height', defaultUnit: 'in' })).toBeNull();
   });
 
   it('applies the same boundary to fuzzy unit names', () => {
@@ -48,35 +49,38 @@ describe('boundaries between compound height parts', () => {
     }
   );
 
-  // Only the explicitly supported unit still supplies a measurement; its number is unchanged.
-  it.each([
-    ['5 fté 11 in', 11, 'in'],
-    ['5éft 11 in', 11, 'in'],
-    ['5 ft 11éin', 5, 'ft'],
-  ] as const)('keeps the valid measurement beside an attached word in %s', (raw, value, unit) => {
-    expect(parseMeasurement(raw)).toEqual({
-      value,
-      unit,
-      type: 'height',
-      raw,
-      matches: [{ value, unit }],
-    });
-  });
-
-  it.each(['0 m; actual 80 cm', '0 m actual 80 cm', '0 m; 80 cm'])(
-    'leaves only the nonzero measurement in %s',
+  // PARSING.md Complete Entries: unknown words invalidate the whole entry, including
+  // when an intact number-unit pair remains before or after the attached word.
+  it.each(['5 fté 11 in', '5éft 11 in', '5 ft 11éin'])(
+    'rejects the incomplete entry beside an attached word in %s',
     raw => {
-      expect(parseMeasurement(raw)).toEqual({
-        value: 80,
-        unit: 'cm',
-        type: 'height',
-        raw,
-        matches: [{ value: 80, unit: 'cm' }],
-      });
+      expect(parseMeasurement(raw)).toBeNull();
     }
   );
 
-  // These are the ticket's must-not-change cases, plus each compound input form.
+  // PARSING.md Semicolons: an invalid or zero independent expression is never discarded.
+  it.each(['0 m; actual 80 cm', '0 m actual 80 cm', '0 m; 80 cm'])(
+    'rejects the independent zero measurement in %s',
+    raw => {
+      expect(parseMeasurement(raw)).toBeNull();
+    }
+  );
+
+  // The complete-entry policy on main retires recovery across semicolons, ranges,
+  // and intervening measurements. Keep every original preservation input as a rejection.
+  it.each([
+    '5; ft 11; in',
+    '6 1-2 ft 3 in',
+    '6 ft 1-2 11 in',
+    '6 1-2 ft; 3 in',
+    '5 ft 8 lbs 3 in',
+    '5 ft eight pounds 3 in',
+    '5 ft one hundred grams 3 in',
+  ])('rejects recovery across an interrupted compound in %s', raw => {
+    expect(parseMeasurement(raw, { type: 'height' })).toBeNull();
+  });
+
+  // These are the complete compounds shared by the ticket and the current specification.
   // Expected totals are feet * 12 + inches, or meters * 100 + centimeters.
   it.each([
     ['5 ft 11 in', 71, 'in', 5, 'ft', 11],
@@ -93,13 +97,6 @@ describe('boundaries between compound height parts', () => {
     ['1 m 80 cm', 180, 'cm', 1, 'm', 80],
     ['m: 1 cm: 80', 180, 'cm', 1, 'm', 80],
     ['1 m and 80 cm', 180, 'cm', 1, 'm', 80],
-    ['5; ft 11; in', 71, 'in', 5, 'ft', 11],
-    ['6 1-2 ft 3 in', 75, 'in', 6, 'ft', 3],
-    ['6 ft 1-2 11 in', 83, 'in', 6, 'ft', 11],
-    ['6 1-2 ft; 3 in', 75, 'in', 6, 'ft', 3],
-    ['5 ft 8 lbs 3 in', 63, 'in', 5, 'ft', 3],
-    ['5 ft eight pounds 3 in', 63, 'in', 5, 'ft', 3],
-    ['5 ft one hundred grams 3 in', 63, 'in', 5, 'ft', 3],
   ] as const)('preserves the compound %s', (raw, value, unit, larger, largerUnit, smaller) => {
     expect(parseMeasurement(raw, { type: 'height' })).toEqual({
       value,
@@ -114,34 +111,20 @@ describe('boundaries between compound height parts', () => {
   });
 
   it.each(['0 feet; 11 inches', 'invalid -5 ft; 11 inches'])(
-    'preserves the valid independent measurement in %s',
+    'rejects the invalid independent measurement in %s',
     raw => {
-      expect(parseMeasurement(raw)).toEqual({
-        value: 11,
-        unit: 'in',
-        type: 'height',
-        raw,
-        matches: [{ value: 11, unit: 'in' }],
-      });
+      expect(parseMeasurement(raw)).toBeNull();
     }
   );
 
-  it('keeps agreeing conversions and type selection across ordinary words', () => {
-    expect(parseMeasurement('5 ft tall, or 60 in')).toMatchObject({
-      value: 5,
-      unit: 'ft',
-      matches: [{ value: 5, unit: 'ft' }],
-    });
-    expect(
-      parseMeasurement('5 ft tall, with 2 in heels, 150 lbs', { type: 'weight' })
-    ).toMatchObject({ value: 150, unit: 'lb', matches: [{ value: 150, unit: 'lb' }] });
+  // PARSING.md More Than One Measurement: duplicate heights and invalid mixed entries
+  // reject even when the values agree or a selector requests the other measurement type.
+  it('rejects agreeing conversions and type selection across ordinary words', () => {
+    expect(parseMeasurement('5 ft tall, or 60 in')).toBeNull();
+    expect(parseMeasurement('5 ft tall, with 2 in heels, 150 lbs', { type: 'weight' })).toBeNull();
   });
 
-  it('does not retain a separate zero-inch part in the first height', () => {
-    expect(parseMeasurement('5 ft; 0 in')).toMatchObject({
-      value: 5,
-      unit: 'ft',
-      matches: [{ value: 5, unit: 'ft' }],
-    });
+  it('rejects a separate zero-inch measurement after a semicolon', () => {
+    expect(parseMeasurement('5 ft; 0 in')).toBeNull();
   });
 });

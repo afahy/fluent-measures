@@ -11,19 +11,15 @@ export interface ParseOptions {
   type?: MeasurementType;
   fuzziness?: number;
   /**
-   * Read a number that has no unit. Without `type`, `parseMeasurement` can throw an error.
+   * Source unit for one complete unwrapped number. Without it, a bare number is rejected.
+   * Explicit units win. This unit never depends on the number's magnitude or normalizedUnit.
+   * Must match the dimension selected by type or normalizedUnit, if either is supplied.
    */
-  allowUnqualified?: boolean;
-  /**
-   * The unit system for a number that has no unit. Without it, or with 'imperial', a height is
-   * in inches and a weight in pounds. With 'metric', a weight is in kilograms, a height below 3
-   * in meters, and any other height in centimeters.
-   */
-  inferUnit?: 'metric' | 'imperial';
+  defaultUnit?: Unit;
   /**
    * The unit to normalize the final value to. It also selects the measurement type, so a weight
    * unit reads only a weight. A `type` that contradicts it throws an error. Bare shorthand such
-   * as "5-11", and `allowUnqualified`, still need `type`.
+   * as "5-11" still needs type. This option does not supply a unit for a bare number.
    */
   normalizedUnit?: Unit;
 }

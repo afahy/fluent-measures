@@ -6,16 +6,18 @@
     <title>fluent-measures: parse height and weight text in TypeScript</title>
     <meta
       name="description"
-      content="A TypeScript library that reads a height or a weight from everyday text, such as five feet eleven inches or 150 lbs, and returns its value and unit. It has no dependencies."
+      content="A JavaScript and TypeScript library that parses height and weight text, converts metric and imperial units, and reads numbers in words. No dependencies."
     />
     <link rel="canonical" href="https://afahy.github.io/fluent-measures/" />
-    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0b0f17" media="(prefers-color-scheme: dark)" />
+    <link rel="alternate" type="text/markdown" href="README.md" title="View Markdown" />
+    <link rel="describedby" type="text/plain" href="llms.txt" title="Agent index" />
+    <meta name="theme-color" content="#fafbfc" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)" />
     <meta name="color-scheme" content="light dark" />
     <link
       rel="icon"
       type="image/svg+xml"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-6 -6 36 36' fill='none' stroke='%23fff' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='-6' y='-6' width='36' height='36' rx='9' fill='%230f766e' stroke='none'/%3E%3Cpath d='M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z'/%3E%3Cpath d='m14.5 12.5 2-2m-5-1 2-2m-5-1 2-2m7 11 2-2'/%3E%3C/svg%3E"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-6 -6 36 36' fill='none' stroke='%23fff' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='-6' y='-6' width='36' height='36' rx='9' fill='%232456b3' stroke='none'/%3E%3Cpath d='M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z'/%3E%3Cpath d='m14.5 12.5 2-2m-5-1 2-2m-5-1 2-2m7 11 2-2'/%3E%3C/svg%3E"
     />
 
     <meta property="og:type" content="website" />
@@ -26,12 +28,16 @@
     />
     <meta
       property="og:description"
-      content="Reads a height or a weight from everyday text, such as five feet eleven inches or 150 lbs, and returns its value and unit."
+      content="A JavaScript and TypeScript library that parses height and weight text, converts metric and imperial units, and reads numbers in words. No dependencies."
     />
     <meta property="og:url" content="https://afahy.github.io/fluent-measures/" />
     <meta property="og:image" content="https://afahy.github.io/fluent-measures/og.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="fluent-measures parses height and weight text into structured data: 5 feet 11 inches converted to 180.34 cm, five foot ten read as 70 in, eighty kilograms read as 80 kg, a unit typo read with fuzziness 2, and text with no measurement returning null."
+    />
     <meta name="twitter:card" content="summary_large_image" />
 
     <link rel="preload" href="fonts/geist-latin.woff2" as="font" type="font/woff2" crossorigin />
@@ -50,48 +56,49 @@
     <style media="(prefers-color-scheme: dark)" data-dark-theme>
       :root {
         color-scheme: dark;
-        --bg: #0b0f17;
-        --bg-tint: #0e1520;
-        --surface: #111723;
-        --surface-muted: #161e2c;
-        --border: #263142;
-        --border-strong: #3a475c;
-        --border-control: #56657c;
-        --heading: #f1f5f9;
-        --text: #cbd5e1;
-        --text-muted: #9aa6b8;
-        --accent: #2dd4bf;
-        --accent-hover: #5eead4;
-        --accent-soft: rgba(45, 212, 191, 0.1);
-        --accent-line: rgba(45, 212, 191, 0.45);
-        --on-accent: #042f2e;
-        --inline-code-bg: #1a2333;
-        --inline-code-text: #e2e8f0;
-        --header-bg: rgba(11, 15, 23, 0.97);
-        --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px -16px rgba(0, 0, 0, 0.6);
-        --null: #c4b5fd;
-        --null-soft: rgba(196, 181, 253, 0.07);
-        --error: #fca5a5;
-        --error-line: rgba(252, 165, 165, 0.35);
-        --error-soft: rgba(252, 165, 165, 0.08);
+        --bg: #0f1115;
+        --bg-tint: #12161c;
+        --surface: #15181e;
+        --surface-muted: #1b1f27;
+        --border: #303640;
+        --border-strong: #464c59;
+        --border-control: #7c8795;
+        --heading: #f2f2f4;
+        --result-value: #f2f2f4;
+        --text: #d1d4d9;
+        --text-muted: #afb5bf;
+        --accent: #8db5ff;
+        --accent-hover: #afcbff;
+        --accent-soft: #1f2633;
+        --accent-line: #8db5ff88;
+        --on-accent: #16191e;
+        --inline-code-bg: #212730;
+        --inline-code-text: #e5e8ed;
+        --header-bg: #0f1115;
+        --shadow-card: 0 1px 2px #00000050, 0 12px 32px -16px #00000090;
+        --null: #d7bbdf;
+        --null-soft: #d7bbdf0e;
+        --error: #ffb3b0;
+        --error-line: #ffb3b066;
+        --error-soft: #ffb3b010;
 
-        --code-bg: #141c2b;
-        --code-head: #1a2436;
-        --code-border: #2e3a4e;
-        --code-divider: rgba(255, 255, 255, 0.08);
-        --code-text: #e6edf3;
-        --code-muted: #9aa5b1;
-        --code-accent: #5eead4;
-        --code-accent-line: rgba(94, 234, 212, 0.45);
-        --code-null: #c4b5fd;
-        --code-hover: rgba(255, 255, 255, 0.06);
-        --code-shadow: 0 8px 20px -8px rgba(0, 0, 0, 0.6);
-        --tok-comment: #929eab;
-        --tok-keyword: #7dd3c8;
-        --tok-string: #a5d6ff;
-        --tok-number: #fbbf77;
-        --tok-property: #c9d1d9;
-        --tok-punctuation: #94a0ae;
+        --code-bg: #191d24;
+        --code-head: #1f242d;
+        --code-border: #373d49;
+        --code-divider: #323843;
+        --code-text: #e5e8ed;
+        --code-muted: #aeb7c2;
+        --code-accent: #8db5ff;
+        --code-accent-line: #8db5ff88;
+        --code-null: #d7bbdf;
+        --code-hover: #ffffff0c;
+        --code-shadow: 0 8px 20px -8px #00000090;
+        --tok-comment: #aeb7c2;
+        --tok-keyword: #8db5ff;
+        --tok-string: #a0d5bd;
+        --tok-number: #e6b884;
+        --tok-property: #ccd6df;
+        --tok-punctuation: #aeb7c2;
       }
 
       .site-header {
@@ -105,10 +112,6 @@
 
       .page-scrim {
         background: rgba(0, 0, 0, 0.5);
-      }
-
-      .callout {
-        --callout-line: rgba(45, 212, 191, 0.3);
       }
 
       .callout.is-caution {
@@ -139,7 +142,7 @@
           darkSheet.media =
             choice === 'system' ? '(prefers-color-scheme: dark)' : dark ? 'all' : 'not all';
           document.querySelectorAll('meta[name="theme-color"]').forEach(meta => {
-            meta.content = dark ? '#0b0f17' : '#ffffff';
+            meta.content = dark ? '#0f1115' : '#fafbfc';
           });
         };
         apply();
@@ -307,7 +310,10 @@
             href="https://www.npmjs.com/package/@afahy/fluent-measures?activeTab=versions"
             data-npm-version
             hidden
-          ></a>
+          >
+            <svg class="icon" aria-hidden="true"><use href="#i-tag" /></svg>
+            <span data-npm-version-text></span>
+          </a>
           <details class="page-menu" data-page-menu>
             <summary class="icon-link">
               <svg class="icon icon-sm" aria-hidden="true"><use href="#i-list" /></svg>
@@ -401,7 +407,10 @@
                   href="https://www.npmjs.com/package/@afahy/fluent-measures?activeTab=versions"
                   data-npm-version
                   hidden
-                ></a>
+                >
+                  <svg class="icon" aria-hidden="true"><use href="#i-tag" /></svg>
+                  <span data-npm-version-text></span>
+                </a>
               </div>
             </div>
           </details>
@@ -431,21 +440,17 @@
         <div class="container">
           <div class="hero-grid">
             <div>
-              <p class="hero-eyebrow">
-                <svg class="icon icon-sm" aria-hidden="true"><use href="#i-tag" /></svg>
-                @afahy/fluent-measures
-              </p>
               <h1 class="hero-title">
                 Parse <span class="title-long">everyday </span>height and weight text into
-                structured data.
+                structured data
               </h1>
               <p class="hero-intro">
                 <span class="intro-long"
-                  >A TypeScript library for health apps, fitness trackers and web forms. It reads
-                  metric and imperial units, and numbers in digits or in words, as in
-                  <strong>5' 11"</strong> or <strong>five feet eleven inches</strong>.</span
+                  >A JavaScript and TypeScript library for health apps, fitness trackers and web
+                  forms. It reads metric and imperial units, and numbers in digits or in words, as
+                  in <strong>5' 11"</strong> or <strong>five feet eleven inches</strong>.</span
                 ><span class="intro-short"
-                  >A TypeScript library for input like <strong>5' 11"</strong> or
+                  >A JavaScript and TypeScript library for input like <strong>5' 11"</strong> or
                   <strong>five feet eleven inches</strong>.</span
                 >
               </p>
@@ -486,6 +491,11 @@
                   View on npm
                   <svg class="icon ext" aria-hidden="true"><use href="#i-external" /></svg>
                 </a>
+              </div>
+              <div class="docs-resources">
+                <a href="README.md">View Markdown</a>
+                <a href="llms.txt">Agent index (llms.txt)</a>
+                <a href="README.md#documentation-for-your-version">Docs for your version</a>
               </div>
             </div>
 
@@ -737,8 +747,8 @@
               <p class="code-note">
                 <svg class="icon icon-sm" aria-hidden="true"><use href="#i-package-check" /></svg>
                 <span
-                  ><strong>Small footprint.</strong> No runtime dependencies. At most 5.5 kB,
-                  minified and compressed with Brotli.</span
+                  ><strong>Small footprint.</strong> No runtime dependencies. At most 6.0 kB for ESM
+                  and 6.0 kB for CommonJS, minified and compressed with Brotli.</span
                 >
               </p>
             </div>
@@ -1219,13 +1229,11 @@ const rejected = parseMeasurement(
                   ></a>
                 </div>
                 <p>
-                  People sometimes type only a number, for example in a field that already names the
-                  unit. Set <a href="#parse-options"><code>allowUnqualified</code></a> to read it,
-                  and <code>type</code> to say whether it is a height or a weight. Without
-                  <code>type</code>, the call throws an error for almost any input.
-                  <a href="#parse-options"><code>inferUnit</code></a> chooses metric or imperial
-                  units, and imperial is the default. With <code>'metric'</code>, a weight is in
-                  kilograms, a height below 3 is in meters, and any other height is in centimeters.
+                  People sometimes type only a number, for example in a calculator field labeled
+                  “Height (in)”. Set <a href="#parse-options"><code>defaultUnit</code></a> to that
+                  source unit. Written units take precedence. <code>normalizedUnit</code> chooses
+                  the output unit and measurement type; it never supplies a source unit. There is no
+                  magnitude guessing: <code>1.8</code> with a centimeter default means 1.8 cm.
                 </p>
                 <div class="code on-code">
                   <div class="code-head">
@@ -1236,7 +1244,7 @@ const rejected = parseMeasurement(
                       disabled
                       type="button"
                       data-copy
-                      aria-label="Copy unit inference example"
+                      aria-label="Copy source unit default example"
                     >
                       <svg class="icon icon-sm icon-copy" aria-hidden="true">
                         <use href="#i-copy" />
@@ -1251,9 +1259,7 @@ const rejected = parseMeasurement(
                     tabindex="0"
                     data-returns
                   ><code class="language-typescript">parseMeasurement('72', {
-  type: 'height',
-  allowUnqualified: true,
-  inferUnit: 'imperial',
+  defaultUnit: 'in',
 });
 /* ✓ Returns:
 {
@@ -1272,7 +1278,8 @@ const rejected = parseMeasurement(
                       Returns
                     </div>
                     <p class="summary">
-                      <span><b>72</b> in</span><span class="summary-note">imperial, so inches</span>
+                      <span><b>72</b> in</span
+                      ><span class="summary-note">source default: inches</span>
                     </p>
                   </div>
                 </div>
@@ -1393,10 +1400,20 @@ const strict = parseMeasurement(
               <p class="measure">
                 Reads one height or weight from a string. When it returns <code>null</code>,
                 <a href="#troubleshooting">Troubleshooting</a> lists the causes to look for,
-                including input longer than <code>maxLength</code>. It can throw an error for an
-                invalid <code>maxLength</code>, for a <code>type</code> that contradicts
-                <code>normalizedUnit</code>, and for <code>allowUnqualified</code> without
-                <code>type</code>.
+                including input longer than <code>maxLength</code>. For string input it validates
+                options before length or text: the options object, <code>maxLength</code>,
+                <code>type</code>, <code>normalizedUnit</code>, <code>defaultUnit</code>, retired
+                options, then dimension conflicts. Invalid options throw even for empty or overlong
+                strings. Non-string runtime input returns <code>null</code> before reading options.
+                Empty strings and null values for <code>type</code> or
+                <code>normalizedUnit</code> count as absent.
+              </p>
+              <p class="measure">
+                To migrate, remove <code>allowUnqualified</code> and <code>inferUnit</code>; either
+                throws when defined, including <code>false</code>. An explicitly
+                <code>undefined</code> property is absent. Use <code>defaultUnit: 'in'</code> or
+                <code>'lb'</code> for imperial fields, <code>'kg'</code> for metric weight, and
+                choose <code>'m'</code> or <code>'cm'</code> explicitly for metric height.
               </p>
               <div class="api-card">
                 <p class="decl">
@@ -1464,8 +1481,8 @@ const strict = parseMeasurement(
                       <div>
                         <dt>When omitted</dt>
                         <dd>
-                          Selected by <code>normalizedUnit</code> when set; otherwise inferred from
-                          the input.
+                          Selected by <code>normalizedUnit</code> when set; otherwise by written
+                          units or <code>defaultUnit</code> for a bare number.
                         </dd>
                       </div>
                       <div>
@@ -1493,15 +1510,15 @@ const strict = parseMeasurement(
                       </div>
                       <div>
                         <dt>When omitted</dt>
-                        <dd>Uses the parsed or inferred unit.</dd>
+                        <dd>Uses the written or default source unit.</dd>
                       </div>
                       <div>
                         <dt>Constraints</dt>
                         <dd>
                           Also selects the measurement type, so a weight unit reads only a weight. A
                           <code>type</code> that contradicts it throws an error. Shorthand such as
-                          <code>5-11</code> still needs <code>type</code>, and so does
-                          <code>allowUnqualified</code>.
+                          <code>5-11</code> still needs <code>type</code>. This option never
+                          supplies a source unit for a bare number.
                         </dd>
                       </div>
                     </dl>
@@ -1532,62 +1549,31 @@ const strict = parseMeasurement(
                     </dl>
                   </dd>
                 </div>
-                <div id="option-allow-unqualified">
+                <div id="option-default-unit">
                   <dt>
-                    <a class="name" href="#option-allow-unqualified">allowUnqualified?</a
-                    ><span class="type">boolean</span>
+                    <a class="name" href="#option-default-unit">defaultUnit?</a
+                    ><span class="type"><a href="#unit-type">Unit</a></span>
                   </dt>
                   <dd>
                     <dl class="option-facts">
                       <div>
                         <dt>Purpose</dt>
                         <dd>
-                          Read a number that has no unit. See
+                          Source unit for one complete unwrapped number, including supported
+                          fractions and number words. See
                           <a href="#ex-unqualified">Numbers without a unit</a>.
                         </dd>
                       </div>
                       <div>
-                        <dt>Default</dt>
-                        <dd><code>false</code> — bare-number inference is off.</dd>
-                      </div>
-                      <div>
-                        <dt>Constraints</dt>
-                        <dd>
-                          Requires an explicit <code>type</code> when enabled. Without it,
-                          <code>parseMeasurement</code> throws an error for almost any input.
-                        </dd>
-                      </div>
-                    </dl>
-                  </dd>
-                </div>
-                <div id="option-infer-unit">
-                  <dt>
-                    <a class="name" href="#option-infer-unit">inferUnit?</a
-                    ><span class="type"
-                      ><span class="str">'metric'</span> | <span class="str">'imperial'</span></span
-                    >
-                  </dt>
-                  <dd>
-                    <dl class="option-facts">
-                      <div>
-                        <dt>Purpose</dt>
-                        <dd>
-                          The unit system for a number that has no unit, when
-                          <code>allowUnqualified</code> and <code>type</code> are set.
-                        </dd>
-                      </div>
-                      <div>
                         <dt>When omitted</dt>
-                        <dd>
-                          Same as <code>'imperial'</code>: a height is in inches and a weight in
-                          pounds.
-                        </dd>
+                        <dd>Bare numbers return null.</dd>
                       </div>
                       <div>
                         <dt>Constraints</dt>
                         <dd>
-                          With <code>'metric'</code>, a weight is in kilograms, a height below 3 in
-                          meters, and any other height in centimeters.
+                          One of the six canonical units. Written units win. Must agree with the
+                          dimension selected by <code>type</code> or <code>normalizedUnit</code>, if
+                          supplied. No magnitude guessing or discarded wrappers or text.
                         </dd>
                       </div>
                     </dl>
@@ -1788,6 +1774,7 @@ const strict = parseMeasurement(
                     <td class="system">Metric</td>
                     <td>
                       <ul class="alias-list" aria-label="Aliases for cm">
+                        <li><span class="input-chip">cms</span></li>
                         <li><span class="input-chip">centimeter</span></li>
                         <li><span class="input-chip">centimeters</span></li>
                         <li><span class="input-chip">centimetre</span></li>
@@ -1832,6 +1819,7 @@ const strict = parseMeasurement(
                     <td class="system">Metric</td>
                     <td>
                       <ul class="alias-list" aria-label="Aliases for kg">
+                        <li><span class="input-chip">kgs</span></li>
                         <li><span class="input-chip">kilo</span></li>
                         <li><span class="input-chip">kilos</span></li>
                         <li><span class="input-chip">kilogram</span></li>
@@ -1897,8 +1885,8 @@ const strict = parseMeasurement(
                       <th scope="row"><span class="input-chip">70 kg (154 lbs)</span></th>
                       <td>
                         <div class="res-note">
-                          <span class="result"><b>70</b> kg</span
-                          ><span class="note">The second weight agrees</span>
+                          <span class="result result-null">null</span
+                          ><span class="note">Two weights, even when they agree</span>
                         </div>
                       </td>
                     </tr>
@@ -1907,7 +1895,7 @@ const strict = parseMeasurement(
                       <td>
                         <div class="res-note">
                           <span class="result result-null">null</span
-                          ><span class="note">The two weights disagree</span>
+                          ><span class="note">A range is not one measurement</span>
                         </div>
                       </td>
                     </tr>
@@ -1915,20 +1903,21 @@ const strict = parseMeasurement(
                 </table>
               </div>
               <p class="topic-lead">
-                When the text has more than one height, or more than one weight, the result is the
-                first one. The others must agree with it within 1%. If not, the result is
-                <code>null</code>. If the text has both a height and a weight, set
-                <a href="#ex-type"><code>type</code></a> to choose which one you get. Without
-                <code>type</code>, the result can be either one, or <code>null</code>.
+                The whole entry must be one complete measurement, including supported compounds such
+                as <code>5 ft 11 in</code>. Two heights or two weights return <code>null</code>,
+                even when they agree. For exactly one complete height and one complete weight, set
+                <a href="#ex-type"><code>type</code></a> or <code>normalizedUnit</code> to select
+                one. Both expressions must be valid; without a selector the result is
+                <code>null</code>.
               </p>
               <div class="callout is-caution">
                 <svg class="icon" aria-hidden="true"><use href="#i-alert" /></svg>
                 <div class="callout-body">
-                  <p class="callout-title">Ordinary words can read as units</p>
+                  <p class="callout-title">Only supported wrappers may surround a measurement</p>
                   <p>
-                    Fuzzy matching can read an ordinary word as a unit. Even without it,
-                    <code>in</code> after a number means inches, so
-                    <code>Top 10 in the class</code> returns 10 inches.
+                    <code>I'm five foot eleven tall</code> and <code>about 180 cm</code> are
+                    supported. Unrelated prose is not: <code>Top 10 in the class</code> returns
+                    <code>null</code>. Fuzzy matching does not discard leftover text.
                   </p>
                 </div>
               </div>
@@ -1962,16 +1951,17 @@ const strict = parseMeasurement(
                     >.
                   </li>
                   <li>
-                    A number has no unit. Set <code>type</code>,
-                    <a href="#ex-unqualified"><code>allowUnqualified</code></a> and
-                    <code>inferUnit</code>.
+                    A number has no unit. Set
+                    <a href="#ex-unqualified"><code>defaultUnit</code></a> to the source unit shown
+                    by the field.
                   </li>
                   <li>
                     A unit name has a spelling error. Set
                     <a href="#ex-fuzzy"><code>fuzziness</code></a> to 1 or 2.
                   </li>
                   <li>
-                    The text has a range, or measurements that disagree. See
+                    The text has a range, duplicate measurements, an incomplete fragment or
+                    unsupported text. See
                     <a href="#limits">Limits</a>.
                   </li>
                   <li>
@@ -2090,7 +2080,13 @@ const strict = parseMeasurement(
 
     <footer class="site-footer">
       <div class="container footer-inner">
-        <p>Released under the MIT License. © 2025 <span class="nowrap">Adam Fahy</span>.</p>
+        <div>
+          <p>
+            Docs track <code>main</code> and may include changes not yet released on npm. Source:
+            <!-- docs-source -->local checkout<!-- /docs-source -->.
+          </p>
+          <p>Released under the MIT License. © 2025 <span class="nowrap">Adam Fahy</span>.</p>
+        </div>
         <ul>
           <li>
             <a href="https://github.com/afahy/fluent-measures">GitHub</a>
@@ -2522,7 +2518,7 @@ const strict = parseMeasurement(
             .then(data => {
               if (!data || !/^\d+\.\d+\.\d+/.test(data.version ?? '')) return;
               versionPills.forEach(pill => {
-                pill.textContent = 'v' + data.version;
+                pill.querySelector('[data-npm-version-text]').textContent = 'v' + data.version;
                 pill.setAttribute('aria-label', `Latest npm release: v${data.version}`);
                 pill.title = 'Latest release on npm';
                 pill.hidden = false;

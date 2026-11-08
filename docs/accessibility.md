@@ -15,7 +15,12 @@ The audit does not waive the following manual checks just because Lighthouse pas
 
 ## Review of the current page
 
-Reviewed on 6 November 2026, using the page's markup, styles and Chrome layout/keyboard checks.
+Reviewed on 6 November 2026 with Atlas, using the page's markup, styles and Chrome 158.
+`pnpm docs:audit` passed all 46 axe scans with zero violations. Each of its three mobile and
+three desktop Lighthouse samples scored 100 for performance, accessibility, best practices
+and SEO. `pnpm docs:sweep` passed from 320 to 1600 CSS pixels in both themes, including its
+keyboard and no-script navigation checks. Axe's remaining manual-review items are gradient
+contrast and table header associations, discussed below. Reports are in `reports/docs-audit/`.
 
 - **Text and non-text content (1.1.1, 1.3.1, 1.3.2):** examples, units and results are text.
   Decorative SVGs are hidden from assistive technology. Controls have names. Headings and
@@ -26,9 +31,10 @@ Reviewed on 6 November 2026, using the page's markup, styles and Chrome layout/k
 - **Contrast (1.4.3):** axe checks the solid surfaces in both themes. It cannot evaluate the
   hero's gradient automatically. Using the WCAG relative-luminance calculation at the two
   gradient endpoints, the minimum ratios for heading, body and muted text are respectively
-  15.83:1, 9.18:1 and 5.23:1 in light; 13.98:1, 10.31:1 and 6.21:1 in dark. The dark endpoint
-  composites the 10% teal overlay over `--bg-tint`. All exceed 4.5:1. Recalculate if these
-  colors, opacity or gradient layers change.
+  13.18:1, 9.46:1 and 5.25:1 in Atlas light; 13.58:1, 10.21:1 and 7.36:1 in Atlas dark.
+  The endpoints are the opaque `--accent-soft` and `--bg-tint` tokens: `#e7ebf3` / `#f2f4f8`
+  in light and `#1f2633` / `#12161c` in dark. All exceed 4.5:1. These calculations supplement
+  axe's gradient manual-review item. Recalculate if colors, opacity or gradient layers change.
 - **Color and controls (1.4.1, 1.4.11):** result text names the value and unit or says `null`;
   color is not its only distinction. Selected tabs use an underline and selected state.
   Links in prose are underlined, and keyboard focus has an outline in both themes. Review
@@ -45,6 +51,8 @@ Reviewed on 6 November 2026, using the page's markup, styles and Chrome layout/k
   A second desktop skip link reaches the contents navigation before the article. Ordinary code
   examples join the Tab order only when scrollable; selected tab-panel code retains a content
   entry. The sweep checks these paths in both themes, including the no-script fallback.
+  The separately tracked brand-anchor clipping issue AFA-245 remains open; this color update
+  does not repair or certify that path.
 - **Names, states and feedback (2.4.2, 2.4.4, 2.4.6, 2.5.3, 4.1.2, 4.1.3):** the page has a
   descriptive title, labeled controls and links, selected/expanded states, and live messages
   for copy outcomes and example expansion. Tabs and copy actions become interactive only

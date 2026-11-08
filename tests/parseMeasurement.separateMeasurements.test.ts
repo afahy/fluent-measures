@@ -1,31 +1,36 @@
+// AFA-250: recovery expectations now follow the approved complete-entry contract in PARSING.md.
+// Earlier ticket rationales below describe their historical extraction contract; original
+// assertions are retained separately under design/afa-250.
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
 
 describe('separate measurements in one input', () => {
   it.each([
-    ['70 kg (154 lbs)', 70, 'kg', 'weight'],
-    ['154 lbs (70 kg)', 154, 'lb', 'weight'],
-    ['180 cm (5\'11")', 180, 'cm', 'height'],
-    ['6 ft or 183 cm', 6, 'ft', 'height'],
+    '70 kg (154 lbs)',
+    '154 lbs (70 kg)',
+    '180 cm (5\'11")',
+    '6 ft or 183 cm',
     // A smaller part of one unit or more is a conversion, not part of a compound height
-    ['6 ft (72 in)', 6, 'ft', 'height'],
-    ['6 ft; 72 in', 6, 'ft', 'height'],
-    ['6 ft = 72 inches', 6, 'ft', 'height'],
-    ['1 m (100 cm)', 1, 'm', 'height'],
-    ['1.8 m (180 cm)', 1.8, 'm', 'height'],
+    '6 ft (72 in)',
+    '6 ft; 72 in',
+    '6 ft = 72 inches',
+    '1 m (100 cm)',
+    '1.8 m (180 cm)',
     // A compound starts from a whole number, so these are conversions too
-    ['0.8 m (80 cm)', 0.8, 'm', 'height'],
-    ['0.5 ft (6 in)', 0.5, 'ft', 'height'],
-    ['0.5 m (50 cm)', 0.5, 'm', 'height'],
-  ] as const)('returns the first of two agreeing measurements in %s', (raw, value, unit, type) => {
-    expect(parseMeasurement(raw)).toEqual({ value, unit, type, raw, matches: [{ value, unit }] });
+    '0.8 m (80 cm)',
+    '0.5 ft (6 in)',
+    '0.5 m (50 cm)',
+  ] as const)('rejects two agreeing measurements in %s', raw => {
+    // AFA-250 intentionally retires the first-result/1% policy. Keep the historical inputs.
+    expect(parseMeasurement(raw)).toBeNull();
   });
 
   it('runs without Array.prototype.at, which the ES2020 target lacks', () => {
     const descriptor = Object.getOwnPropertyDescriptor(Array.prototype, 'at');
     Reflect.deleteProperty(Array.prototype, 'at');
     try {
-      expect(parseMeasurement('70 kg (154 lbs)')?.value).toBe(70);
+      expect(parseMeasurement('70 kg')?.value).toBe(70);
+      expect(parseMeasurement('70 kg (154 lbs)')).toBeNull();
     } finally {
       if (descriptor) Object.defineProperty(Array.prototype, 'at', descriptor);
     }
@@ -38,11 +43,8 @@ describe('separate measurements in one input', () => {
     }
   );
 
-  it('converts only the first measurement to the requested unit', () => {
-    const result = parseMeasurement('70 kg (154 lbs)', { normalizedUnit: 'lb' });
-    expect(result?.value).toBeCloseTo(70 / 0.45359237);
-    expect(result?.unit).toBe('lb');
-    expect(result?.matches).toEqual([{ value: 70, unit: 'kg' }]);
+  it('rejects duplicates before normalization', () => {
+    expect(parseMeasurement('70 kg (154 lbs)', { normalizedUnit: 'lb' })).toBeNull();
   });
 
   it.each([
@@ -54,12 +56,12 @@ describe('separate measurements in one input', () => {
     ['5 ft-1 m', { normalizedUnit: 'm' }],
     ['150 lbs - 180 lbs', {}],
     ['5 ft 10 cm', { normalizedUnit: 'cm' }],
-    // 12 in or more after feet is a separate measurement, and it disagrees
+    // 12 in or more after feet is a separate measurement.
     ['5 ft 12 in', {}],
     ['5 feet twenty one inches', {}],
     // A fractional larger part doesn't start a compound
     ['5.5 ft 2 in', {}],
-  ] as const)('returns null for measurements that disagree in %s', (raw, options) => {
+  ] as const)('returns null for independent measurements in %s', (raw, options) => {
     expect(parseMeasurement(raw, options)).toBeNull();
   });
 
@@ -100,37 +102,31 @@ describe('separate measurements in one input', () => {
     ]);
   });
 
-  it('ignores a measurement that adds up to zero', () => {
-    expect(parseMeasurement('0 feet; actual 1.8 meters')?.matches).toEqual([
-      { value: 1.8, unit: 'm' },
-    ]);
-    expect(parseMeasurement('0 kg; actual 70 kg')?.matches).toEqual([{ value: 70, unit: 'kg' }]);
+  it('rejects a zero measurement before another reading', () => {
+    expect(parseMeasurement('0 feet; actual 1.8 meters')).toBeNull();
+    expect(parseMeasurement('0 kg; actual 70 kg')).toBeNull();
     // "m" can't take the number after it, so 0 m stays a measurement of its own.
-    expect(parseMeasurement('0 m; actual 1.8 m')?.matches).toEqual([{ value: 1.8, unit: 'm' }]);
+    // AFA-250: once both readings reach grouping, even a zero group cannot be discarded.
+    expect(parseMeasurement('0 m; actual 1.8 m')).toBeNull();
   });
 
-  it('keeps a measurement with a zero part, as in 5 ft 0 in (152 cm)', () => {
-    const result = parseMeasurement('5 ft 0 in (152 cm)');
-    expect(result?.value).toBe(60);
-    expect(result?.matches).toEqual([
-      { value: 5, unit: 'ft' },
-      { value: 0, unit: 'in' },
-    ]);
+  it('rejects a second height after a compound with a zero part', () => {
+    expect(parseMeasurement('5 ft 0 in (152 cm)')).toBeNull();
   });
 
-  it('looks for a weight when the only height adds up to zero', () => {
-    expect(parseMeasurement('0 m, 180 lbs')?.matches).toEqual([{ value: 180, unit: 'lb' }]);
+  it('rejects zero height instead of selecting the weight', () => {
+    expect(parseMeasurement('0 m, 180 lbs')).toBeNull();
     expect(parseMeasurement('0 m')).toBeNull();
   });
 
   it.each([
-    ['100 cm (101 cm)', 100],
+    '100 cm (101 cm)',
     // Decimals whose difference is exactly 1% but rounds to slightly more
-    ['1 m; 1.01 m', 1],
-    ['70 kg; 70.7 kg', 70],
-    ['0.3 m (0.303 m)', 0.3],
-  ])('accepts a difference of exactly 1% in %s', (raw, value) => {
-    expect(parseMeasurement(raw)?.value).toBe(value);
+    '1 m; 1.01 m',
+    '70 kg; 70.7 kg',
+    '0.3 m (0.303 m)',
+  ])('rejects a difference of exactly 1% in %s', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
   });
 
   it.each(['100 cm (101.1 cm)', '1 m; 1.0101 m'])(
@@ -144,11 +140,7 @@ describe('separate measurements in one input', () => {
 // AFA-165: 0 ft 0 in is one measurement of zero, which doesn't count, as in PARSING.md's
 // `0 feet; actual 1.8 meters` (1.8 m). So the result is 5 in, and its matches hold only that part.
 describe('a zero measurement before another one', () => {
-  it('leaves the zero parts out of matches', () => {
-    expect(parseMeasurement('0 ft 0 in, 5 in')).toMatchObject({
-      value: 5,
-      unit: 'in',
-      matches: [{ value: 5, unit: 'in' }],
-    });
+  it('rejects separate zero fragments instead of dropping their matches', () => {
+    expect(parseMeasurement('0 ft 0 in, 5 in')).toBeNull();
   });
 });

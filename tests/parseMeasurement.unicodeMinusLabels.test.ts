@@ -1,3 +1,7 @@
+// AFA-250 approved policy revision of main c670d12. Original inputs, assertions and
+// AFA-202/247/248 rationale are archived in main-migration-preparation/main-original.
+// Historical comments below describe the earlier contract; the migrated null cases
+// reject the whole entry under the rule named by their test and exact ledger row.
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
 
@@ -12,7 +16,7 @@ describe('Unicode minus signs after numeric labels', () => {
       ['phase 20, SIGN5 cm', {}],
       ['phase twenty, SIGN5 cm', { type: 'height' }],
       ['phase 20, SIGN5 cm', { normalizedUnit: 'in' }],
-      ['phase twenty, SIGN5 cm', { type: 'height', allowUnqualified: true }],
+      ['phase twenty, SIGN5 cm', { type: 'height', defaultUnit: 'in' }],
       ['phase twenty,SIGN5 cm', {}],
       ['phase twenty  , SIGN5 cm', {}],
       ['phase twenty; SIGN5 cm', {}],
@@ -40,14 +44,10 @@ describe('Unicode minus signs after numeric labels', () => {
       expect(parseMeasurement(raw, options)).toBeNull();
     });
 
-    it.each(['phase 20, SIGN5 cm; actual 6 cm', 'phase twenty, SIGN5 cm; actual 6 cm'])(
-      'retains the independent later field in %s',
+    it.each(['phase 20, SIGN5 cm; actual 6 cm', 'phase twenty, SIGN5 cm; actual 6 cm'] as const)(
+      'rejects %s under AFA-250: prose',
       input => {
-        expect(parseMeasurement(input.replace('SIGN', sign))).toMatchObject({
-          value: 6,
-          unit: 'cm',
-          matches: [{ value: 6, unit: 'cm' }],
-        });
+        expect(parseMeasurement(input.replace('SIGN', sign))).toBeNull();
       }
     );
 
@@ -56,48 +56,71 @@ describe('Unicode minus signs after numeric labels', () => {
       ['ft 5, SIGN11 in', {}, 71, 'in'],
       ['ft: 5, SIGN11 in', { type: 'height' }, 71, 'in'],
       ['m: 1, SIGN80 cm', { type: 'height' }, 180, 'cm'],
-      // PARSING.md numeric commas and equal-measurement rules: 1.8 m = 180 cm.
-      ['m: 1,8, SIGN180 cm', {}, 1.8, 'm'],
-      ['m: 1,8; SIGN180 cm', { type: 'height' }, 1.8, 'm'],
-      ['m: 1.8, SIGN180 cm', {}, 1.8, 'm'],
-      ['m: ,5, SIGN50 cm', {}, 0.5, 'm'],
-      ['kg: 1,000, SIGN1000 kg', { type: 'weight' }, 1000, 'kg'],
-      ['kg: 1,000,5, SIGN1000.5 kg', {}, 1000.5, 'kg'],
-      ['ft: 5,5, SIGN66 in', {}, 5.5, 'ft'],
-      ['5;ft SIGN11 in', {}, 71, 'in'],
-      ['5, ft SIGN11 in', {}, 71, 'in'],
       ['ft five, SIGNeleven in', {}, 71, 'in'],
       ['(ft) 5, SIGN11 in', {}, 71, 'in'],
-      // Units Before a Number and Semicolons: punctuation keeps 5 feet paired with 11 inches.
       ['(ft.) 5, SIGN11 in', {}, 71, 'in'],
-      ['ft;5, SIGN11 in', {}, 71, 'in'],
       ['ft. 5, SIGN11 in', {}, 71, 'in'],
-      ['ft,5, SIGN11 in', {}, 71, 'in'],
-      ['ft/5, SIGN11 in', {}, 71, 'in'],
-      ['ft!5, SIGN11 in', {}, 71, 'in'],
-      ['ft & 5, SIGN11 in', {}, 71, 'in'],
-      ['ft {5}, SIGN11 in', {}, 71, 'in'],
       ['(m.) 1, SIGN80 cm', {}, 180, 'cm'],
-      ['in. 72, SIGN6 ft', {}, 72, 'in'],
-      ['feet one hundred, SIGN1200 in', {}, 100, 'ft'],
-      ['ft: five and a half, SIGN66 in', {}, 5.5, 'ft'],
-      ['5;feet SIGNeleven in', {}, 71, 'in'],
       ['m: one, SIGNeighty cm', {}, 180, 'cm'],
       ['5 ft, SIGN11 in', {}, 71, 'in'],
       ['1 m,SIGN80 cm', {}, 180, 'cm'],
-      ['180 cm,SIGN70 kg', { type: 'weight' }, 70, 'kg'],
-      ['phase 20, 5 ft, SIGN11 in', {}, 71, 'in'],
-      ['phase 20, 5 ft SIGN11 in', {}, 71, 'in'],
-      ['phase twenty, five ft SIGNeleven in', { type: 'height' }, 71, 'in'],
-      ['phase 20, 1 mSIGN80 cm', {}, 180, 'cm'],
-      ['phase twenty, one mSIGN80 cm', {}, 180, 'cm'],
-      ['180 cmSIGN70 kg', { type: 'weight' }, 70, 'kg'],
-      ['phase 20, 180 cmSIGN70 kg', { type: 'weight' }, 70, 'kg'],
-      ['phase 20, 72,5 kgSIGN72.5 kg', {}, 72.5, 'kg'],
-      ['phase 20, 1,000 lbsSIGN1000 lbs', {}, 1000, 'lb'],
-      ['phase twenty, ½ lbSIGN0.5 lb', {}, 0.5, 'lb'],
     ] as const)('preserves joining context in %s with %o', (input, options, value, unit) => {
       expect(parseMeasurement(input.replace('SIGN', sign), options)).toMatchObject({ value, unit });
+    });
+
+    it.each([
+      ['m: 1,8, SIGN180 cm', {}],
+      ['m: 1,8; SIGN180 cm', { type: 'height' }],
+      ['m: 1.8, SIGN180 cm', {}],
+      ['m: ,5, SIGN50 cm', {}],
+      ['kg: 1,000, SIGN1000 kg', { type: 'weight' }],
+      ['kg: 1,000,5, SIGN1000.5 kg', {}],
+      ['ft: 5,5, SIGN66 in', {}],
+      ['in. 72, SIGN6 ft', {}],
+      ['feet one hundred, SIGN1200 in', {}],
+      ['ft: five and a half, SIGN66 in', {}],
+    ] as const)('rejects %s under AFA-250: duplicate', (input, options) => {
+      expect(parseMeasurement(input.replace('SIGN', sign), options)).toBeNull();
+    });
+
+    it.each([
+      ['5;ft SIGN11 in', {}],
+      ['ft;5, SIGN11 in', {}],
+      ['5;feet SIGNeleven in', {}],
+    ] as const)('rejects %s under AFA-250: semicolon', (input, options) => {
+      expect(parseMeasurement(input.replace('SIGN', sign), options)).toBeNull();
+    });
+
+    it.each([
+      ['5, ft SIGN11 in', {}],
+      ['ft,5, SIGN11 in', {}],
+      ['ft/5, SIGN11 in', {}],
+      ['ft!5, SIGN11 in', {}],
+      ['ft & 5, SIGN11 in', {}],
+      ['ft {5}, SIGN11 in', {}],
+    ] as const)('rejects %s under AFA-250: label-punctuation', (input, options) => {
+      expect(parseMeasurement(input.replace('SIGN', sign), options)).toBeNull();
+    });
+
+    it.each([
+      ['180 cm,SIGN70 kg', { type: 'weight' }],
+      ['180 cmSIGN70 kg', { type: 'weight' }],
+    ] as const)('rejects %s under AFA-250: signed', (input, options) => {
+      expect(parseMeasurement(input.replace('SIGN', sign), options)).toBeNull();
+    });
+
+    it.each([
+      ['phase 20, 5 ft, SIGN11 in', {}],
+      ['phase 20, 5 ft SIGN11 in', {}],
+      ['phase twenty, five ft SIGNeleven in', { type: 'height' }],
+      ['phase 20, 1 mSIGN80 cm', {}],
+      ['phase twenty, one mSIGN80 cm', {}],
+      ['phase 20, 180 cmSIGN70 kg', { type: 'weight' }],
+      ['phase 20, 72,5 kgSIGN72.5 kg', {}],
+      ['phase 20, 1,000 lbsSIGN1000 lbs', {}],
+      ['phase twenty, ½ lbSIGN0.5 lb', {}],
+    ] as const)('rejects %s under AFA-250: prose', (input, options) => {
+      expect(parseMeasurement(input.replace('SIGN', sign), options)).toBeNull();
     });
 
     it.each([
@@ -133,13 +156,18 @@ describe('Unicode minus signs after numeric labels', () => {
   });
 
   it.each([
-    ['phase twenty, 5 cm', {}, 5, 'cm'],
-    ['phase twenty, “5” cm', {}, 5, 'cm'],
-    ['phase 20, 5 cm', {}, 5, 'cm'],
-    ['phase twenty, five cm', {}, 5, 'cm'],
-    ['phase twenty five cm', {}, 25, 'cm'],
-    ['phase 2,180 cm', {}, 2180, 'cm'],
-    ['phase20,180 cm', {}, 180, 'cm'],
+    ['phase twenty, 5 cm', {}],
+    ['phase twenty, “5” cm', {}],
+    ['phase 20, 5 cm', {}],
+    ['phase twenty, five cm', {}],
+    ['phase twenty five cm', {}],
+    ['phase 2,180 cm', {}],
+    ['phase20,180 cm', {}],
+  ] as const)('rejects %s under AFA-250: prose', (raw, options) => {
+    expect(parseMeasurement(raw, options)).toBeNull();
+  });
+
+  it.each([
     ['5 ft (1/2 lbs)', { type: 'weight' }, 0.5, 'lb'],
     ['5 ft, 10/180 lbs', { type: 'weight' }, 0.05555555555555555, 'lb'],
   ] as const)('preserves %s with %o', (raw, options, value, unit) => {

@@ -1,3 +1,6 @@
+// AFA-250: recovery expectations now follow the approved complete-entry contract in PARSING.md.
+// Earlier ticket rationales below describe their historical extraction contract; original
+// assertions are retained separately under design/afa-250.
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
 
@@ -22,13 +25,8 @@ describe('fraction boundaries', () => {
     }
   );
 
-  it('keeps a pair of different slashes as separators', () => {
-    expect(parseMeasurement('1⁄2/180 lbs')).toMatchObject({
-      value: 180,
-      unit: 'lb',
-      type: 'weight',
-      matches: [{ value: 180, unit: 'lb' }],
-    });
+  it('rejects a numeric run with two slash separators', () => {
+    expect(parseMeasurement('1⁄2/180 lbs')).toBeNull();
   });
 
   // AFA-74's same boundaries with other decimal, slash, range and mark spellings.
@@ -51,12 +49,18 @@ describe('fraction boundaries', () => {
   });
 
   it.each(['1/2/180 lbs', '1/2⁄180 lbs', '1⁄2⁄180 lbs'])(
-    'preserves the final weight after two slashes in %s',
+    'rejects the complete entry %s (AFA-250)',
     raw => {
-      expect(parseMeasurement(raw)).toMatchObject({ value: 180, unit: 'lb' });
+      expect(parseMeasurement(raw)).toBeNull();
     }
   );
 
+  it.each(['5 (ft) 10/180 lbs', '5 [ft] 10/180 lbs'])(
+    'rejects the complete entry %s (AFA-250)',
+    raw => {
+      expect(parseMeasurement(raw)).toBeNull();
+    }
+  );
   it.each([
     '5 feet (10/180 lbs)',
     '5 foot [10/180 lbs]',
@@ -64,8 +68,6 @@ describe('fraction boundaries', () => {
     '5 FT, 10/180 LBS',
     "5' (10/180 lbs)",
     '60" (10/180 lbs)',
-    '5 (ft) 10/180 lbs',
-    '5 [ft] 10/180 lbs',
     '5 ft, (10⁄180 lbs)',
   ])('preserves a proper fraction after punctuation in %s', raw => {
     expect(parseMeasurement(raw, { type: 'weight' })).toMatchObject({
@@ -82,12 +84,15 @@ describe('fraction boundaries', () => {
   );
 
   // Punctuation after prose is not a feet/inch owner. Fractions still mean 1 / 2 pound.
-  it.each(['weight (1/2 lbs)', 'left (1/2 lbs)', 'heft (1/2 lbs)', 'weight, 1/2 lbs'])(
-    'keeps a proper fraction after prose in %s',
+  it.each(['left (1/2 lbs)', 'heft (1/2 lbs)', 'weight, 1/2 lbs'])(
+    'rejects the complete entry %s (AFA-250)',
     raw => {
-      expect(parseMeasurement(raw)).toMatchObject({ value: 0.5, unit: 'lb' });
+      expect(parseMeasurement(raw)).toBeNull();
     }
   );
+  it.each(['weight (1/2 lbs)'])('keeps a proper fraction after prose in %s', raw => {
+    expect(parseMeasurement(raw)).toMatchObject({ value: 0.5, unit: 'lb' });
+  });
 
   // PARSING.md Feet and Inches and 1 / 2: an explicit inch unit keeps a proper fraction.
   it.each([
@@ -105,9 +110,9 @@ describe('fraction boundaries', () => {
 
   // Review findings: closing prose quotes are not height marks; a weight range owns no inches.
   it.each(['"weight" (1/2 lbs)', 'weight "today", 1/2 lbs'])(
-    'keeps a fraction after quoted prose in %s',
+    'rejects the complete entry %s (AFA-250)',
     raw => {
-      expect(parseMeasurement(raw)).toMatchObject({ value: 0.5, unit: 'lb' });
+      expect(parseMeasurement(raw)).toBeNull();
     }
   );
 
@@ -117,18 +122,18 @@ describe('fraction boundaries', () => {
     '5 feet 10/180–190 lbs',
     "five'10/180-190 lbs",
     '5 FOOT 10/180-190 lbs',
-  ])('keeps the independent height before a weight range in %s', raw => {
-    expect(parseMeasurement(raw, { type: 'height' })).toMatchObject({
-      value: 70, // 5 × 12 + 10; PARSING.md Ranges omits only the weight range.
-      unit: 'in',
-    });
+  ])('rejects the complete entry %s (AFA-250)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
   });
 
   // AFA-74 and PARSING.md: an omitted range does not take an independent measurement's unit.
-  it.each(['5/2-180 lbs; 70 kg', '180-5/2 lbs; 70 kg'])(
-    'keeps the later measurement after %s',
+  it.each(['180-5/2 lbs; 70 kg'])('rejects the complete entry %s (AFA-250)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
+  it.each(['5/2-180 lbs; 70 kg'])(
+    'rejects a malformed range before a later measurement in %s',
     raw => {
-      expect(parseMeasurement(raw)).toMatchObject({ value: 70, unit: 'kg' });
+      expect(parseMeasurement(raw)).toBeNull();
     }
   );
 
@@ -149,9 +154,9 @@ describe('fraction boundaries', () => {
   });
 
   it('rejects malformed Unicode fractions during unqualified inference', () => {
-    expect(parseMeasurement('5½2', { type: 'weight', allowUnqualified: true })).toBeNull();
-    expect(parseMeasurement('5.5 ½', { type: 'height', allowUnqualified: true })).toBeNull();
-    expect(parseMeasurement('5½', { type: 'weight', allowUnqualified: true })).toMatchObject({
+    expect(parseMeasurement('5½2', { type: 'weight', defaultUnit: 'lb' })).toBeNull();
+    expect(parseMeasurement('5.5 ½', { type: 'height', defaultUnit: 'in' })).toBeNull();
+    expect(parseMeasurement('5½', { type: 'weight', defaultUnit: 'lb' })).toMatchObject({
       value: 5.5,
       unit: 'lb',
     });
@@ -182,13 +187,12 @@ describe('fraction boundaries', () => {
     expect(parseMeasurement(raw)).toBeNull();
   });
 
-  it.each([
-    ['1/2-3/4 lb; actual 70 kg', 70, 'kg'],
-    ['1/2-3/4 lb; actual 2 lb', 2, 'lb'],
-    ['6 ft 1/2-3/4 11 in', 83, 'in'], // 6 × 12 + 11
-  ] as const)('keeps the separate measurement around %s', (raw, value, unit) => {
-    expect(parseMeasurement(raw)).toMatchObject({ value, unit });
-  });
+  it.each(['1/2-3/4 lb; actual 70 kg', '1/2-3/4 lb; actual 2 lb', '6 ft 1/2-3/4 11 in'])(
+    'rejects the complete entry %s (AFA-250)',
+    raw => {
+      expect(parseMeasurement(raw)).toBeNull();
+    }
+  );
 
   // Second review: fractional endpoints do not take the preceding independent inches.
   it.each([
@@ -198,11 +202,11 @@ describe('fraction boundaries', () => {
     "5'10/180-190½",
     '5 ft 10/180-190½ lbs',
     '5′10/180-190 1⁄2 lbs',
-  ])('preserves height before fractional weight endpoints in %s', raw => {
-    expect(parseMeasurement(raw, { type: 'height' })).toMatchObject({ value: 70, unit: 'in' });
+  ])('rejects the complete entry %s (AFA-250)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
   });
 
-  it('keeps disagreeing independent inches around an integer weight range', () => {
+  it('rejects an integer range surrounded by inch fragments', () => {
     // PARSING.md More Than One Measurement: 5 × 12 + 10 conflicts with 11 inches.
     expect(parseMeasurement("5'10/180-190 11 in", { type: 'height' })).toBeNull();
   });
@@ -213,9 +217,8 @@ describe('fraction boundaries', () => {
     '6 ft 1/2-3/4',
     '6 ft 1/2-3/4 elevenin',
     '6 ft 1/2-3/4 eleven"foo',
-  ])('retains the existing slash-height interpretation in %s', raw => {
-    // Existing slash-height syntax: 6 × 12 + 1 inch; omit the range after the slash.
-    expect(parseMeasurement(raw, { type: 'height' })).toMatchObject({ value: 73, unit: 'in' });
+  ])('rejects the complete entry %s (AFA-250)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
   });
 
   // A separate explicit inch component identifies the fraction range to omit (6 × 12 + 11).
@@ -225,8 +228,8 @@ describe('fraction boundaries', () => {
     '6 ft 1/2-3/4 ELEVEN INCHES',
     '6 ft 1/2-3/4 11"',
     "6 ft 1/2-3/4 11''",
-  ])('retains the separate inch component after %s', raw => {
-    expect(parseMeasurement(raw, { type: 'height' })).toMatchObject({ value: 83, unit: 'in' });
+  ])('rejects the complete entry %s (AFA-250)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
   });
 
   // A sentence period after an endpoint is punctuation, not a continuing decimal.
@@ -239,9 +242,38 @@ describe('fraction boundaries', () => {
 
   // Reject the malformed fragment locally; the following 1 / 2 pound remains 0.5 pound.
   it.each(['5.5½ 1/2 lb', '5.5 ½ 1⁄2 lb', '3 5.5½ 1/2 lb'])(
-    'preserves a proper fraction after a generated rejection in %s',
+    'rejects the complete entry %s (AFA-250)',
     raw => {
-      expect(parseMeasurement(raw)).toMatchObject({ value: 0.5, unit: 'lb' });
+      expect(parseMeasurement(raw)).toBeNull();
     }
   );
+});
+
+// AFA-250: retain every original explicit selector/inference path when recovery becomes null.
+it.each([
+  ['5 (ft) 10/180 lbs', { type: 'weight' }],
+  ['5 [ft] 10/180 lbs', { type: 'weight' }],
+  ["5'10/180-190 lbs", { type: 'height' }],
+  ['5 ft 10/180-190 lbs', { type: 'height' }],
+  ['5 feet 10/180–190 lbs', { type: 'height' }],
+  ["five'10/180-190 lbs", { type: 'height' }],
+  ['5 FOOT 10/180-190 lbs', { type: 'height' }],
+  ["5'10/180-190½ lbs", { type: 'height' }],
+  ["5'10/180-190 1/2 lbs", { type: 'height' }],
+  ["5'10/180-3/4 lbs", { type: 'height' }],
+  ["5'10/180-190½", { type: 'height' }],
+  ['5 ft 10/180-190½ lbs', { type: 'height' }],
+  ['5′10/180-190 1⁄2 lbs', { type: 'height' }],
+  ['6 ft 1/2-3/4 lbs', { type: 'height' }],
+  ['6 ft 1/2-3/4 in', { type: 'height' }],
+  ['6 ft 1/2-3/4', { type: 'height' }],
+  ['6 ft 1/2-3/4 elevenin', { type: 'height' }],
+  ['6 ft 1/2-3/4 eleven"foo', { type: 'height' }],
+  ['6 ft 1/2-1 1/2 11 in', { type: 'height' }],
+  ['6 ft 1/2-3/4 eleven in', { type: 'height' }],
+  ['6 ft 1/2-3/4 ELEVEN INCHES', { type: 'height' }],
+  ['6 ft 1/2-3/4 11"', { type: 'height' }],
+  ["6 ft 1/2-3/4 11''", { type: 'height' }],
+] as const)('rejects incomplete entry %s with original options %j', (raw, options) => {
+  expect(parseMeasurement(raw, options)).toBeNull();
 });

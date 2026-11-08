@@ -59,7 +59,7 @@ describe('unit conversions', () => {
     expect(result?.value).toBeCloseTo(value, 10);
   });
 
-  // Contradicting options throw for any input with a token, as allowUnqualified without type does.
+  // AFA-251 / AFA-178: contradictory options throw before reading any string input.
   it.each([
     ['6 ft', { type: 'height', normalizedUnit: 'kg' }, 'normalizedUnit kg is not a height unit'],
     ['hello', { type: 'height', normalizedUnit: 'kg' }, 'normalizedUnit kg is not a height unit'],
@@ -68,28 +68,45 @@ describe('unit conversions', () => {
     expect(() => parseMeasurement(raw, options)).toThrow(message);
   });
 
-  // normalizedUnit doesn't count as a type for allowUnqualified.
+  // AFA-251: retired options reject with a migration error, even without a type.
   it.each([
     ['hello', { allowUnqualified: true }],
     ['72', { allowUnqualified: true, normalizedUnit: 'cm' }],
-  ] as const)('throws for %s with %o, which has no type', (raw, options: ParseOptions) => {
-    expect(() => parseMeasurement(raw, options)).toThrow('allowUnqualified requires type');
+  ] as const)('throws for %s with retired options %o', (raw, options) => {
+    expect(() => parseMeasurement(raw, options as unknown as ParseOptions)).toThrow(Error);
+    expect(() => parseMeasurement(raw, options as unknown as ParseOptions)).toThrow(
+      /allowUnqualified/
+    );
+    expect(() => parseMeasurement(raw, options as unknown as ParseOptions)).toThrow(/defaultUnit/);
   });
 
-  // The tokenizer drops a lone comma, so this input has no token and returns null.
-  it('returns null for an input without a token, even with contradicting options', () => {
-    expect(parseMeasurement(',', { type: 'height', normalizedUnit: 'kg' })).toBeNull();
+  // AFA-251 / AFA-178: validate options before all string content.
+  it('reports contradicting options when the complete-entry stream retains a comma', () => {
+    expect(() => parseMeasurement(',', { type: 'height', normalizedUnit: 'kg' })).toThrow(
+      'normalizedUnit kg is not a height unit'
+    );
+  });
+
+  it('still rejects a lone comma with default options', () => {
+    expect(parseMeasurement(',')).toBeNull();
+  });
+
+  it('validates contradictory options before empty input', () => {
+    expect(() => parseMeasurement('', { type: 'height', normalizedUnit: 'kg' })).toThrow(
+      'normalizedUnit kg is not a height unit'
+    );
   });
 
   // JavaScript callers can pass values that TypeScript rejects.
-  it('treats an empty type as no type', () => {
+  it('rejects an unselected pair when type is empty', () => {
     const options = { type: '', normalizedUnit: 'kg' } as unknown as ParseOptions;
     expect(parseMeasurement('6 ft', options)).toBeNull();
   });
 
-  it('still throws for a normalizedUnit that has no conversion', () => {
+  it('rejects an invalid normalizedUnit before parsing', () => {
     const options = { normalizedUnit: 'st' } as unknown as ParseOptions;
-    expect(() => parseMeasurement('6 ft', options)).toThrow('Cannot convert ft to st');
+    expect(() => parseMeasurement('6 ft', options)).toThrow(TypeError);
+    expect(() => parseMeasurement('6 ft', options)).toThrow(/normalizedUnit/);
   });
 
   it('keeps a normalizedUnit of the requested type', () => {

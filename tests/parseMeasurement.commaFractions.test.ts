@@ -1,20 +1,23 @@
+// AFA-250: recovery expectations now follow the approved complete-entry contract in PARSING.md.
+// Earlier ticket rationales below describe their historical extraction contract; original
+// assertions are retained separately under design/afa-250.
 import { describe, it, expect } from 'vitest';
 import { parseMeasurement } from '../src';
 import { tokenize } from '../src/tokenize';
 
 describe('decimal commas without a leading zero', () => {
-  it.each([',5 kg', ',5kg', 'kg ,5', '(,5) kg', 'kg;,5'])(
-    'preserves the fractional value in %s',
-    raw => {
-      expect(parseMeasurement(raw)).toEqual({
-        value: 0.5,
-        unit: 'kg',
-        type: 'weight',
-        raw,
-        matches: [{ value: 0.5, unit: 'kg' }],
-      });
-    }
-  );
+  it.each(['kg;,5'])('rejects the complete entry %s (AFA-250)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
+  it.each([',5 kg', ',5kg', 'kg ,5', '(,5) kg'])('preserves the fractional value in %s', raw => {
+    expect(parseMeasurement(raw)).toEqual({
+      value: 0.5,
+      unit: 'kg',
+      type: 'weight',
+      raw,
+      matches: [{ value: 0.5, unit: 'kg' }],
+    });
+  });
 
   it('keeps both decimal digits', () => {
     expect(parseMeasurement(',05kg')?.value).toBe(0.05);
@@ -39,9 +42,11 @@ describe('decimal commas without a leading zero', () => {
   });
 
   it('infers a unit for an unqualified comma fraction', () => {
-    expect(
-      parseMeasurement(',5', { type: 'weight', allowUnqualified: true, inferUnit: 'metric' })
-    ).toMatchObject({ value: 0.5, unit: 'kg', raw: ',5' });
+    expect(parseMeasurement(',5', { type: 'weight', defaultUnit: 'kg' })).toMatchObject({
+      value: 0.5,
+      unit: 'kg',
+      raw: ',5',
+    });
   });
 
   it('includes comma fractions in written number phrases', () => {
@@ -57,9 +62,9 @@ describe('decimal commas without a leading zero', () => {
   });
 
   it.each(['weight,5 kg', 'KG,5', 'weight_,5 kg'])(
-    'keeps a comma after a word as punctuation in %s',
+    'rejects the complete entry %s (AFA-250)',
     raw => {
-      expect(parseMeasurement(raw)?.value).toBe(5);
+      expect(parseMeasurement(raw)).toBeNull();
     }
   );
 });

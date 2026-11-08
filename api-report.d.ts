@@ -4,8 +4,7 @@ interface ParseOptions {
   maxLength?: number;
   type?: MeasurementType;
   fuzziness?: number;
-  allowUnqualified?: boolean;
-  inferUnit?: 'metric' | 'imperial';
+  defaultUnit?: Unit;
   normalizedUnit?: Unit;
 }
 interface Match {

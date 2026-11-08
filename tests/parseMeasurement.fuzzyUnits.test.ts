@@ -1,3 +1,6 @@
+// AFA-250: recovery expectations now follow the approved complete-entry contract in PARSING.md.
+// Earlier ticket rationales below describe their historical extraction contract; original
+// assertions are retained separately under design/afa-250.
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
 
@@ -74,14 +77,8 @@ describe('conservative fuzzy unit matching', () => {
     expect(parseMeasurement(raw, { fuzziness: 0.5 })).toBeNull();
   });
 
-  it('finds a real measurement after unrelated prose', () => {
+  it('rejects unrelated prose even with fuzzy matching', () => {
     const raw = 'I ate 5 food; weight 80 kilo';
-    expect(parseMeasurement(raw, { fuzziness: 2 })).toEqual({
-      value: 80,
-      unit: 'kg',
-      type: 'weight',
-      raw,
-      matches: [{ value: 80, unit: 'kg' }],
-    });
+    expect(parseMeasurement(raw, { fuzziness: 2 })).toBeNull();
   });
 });

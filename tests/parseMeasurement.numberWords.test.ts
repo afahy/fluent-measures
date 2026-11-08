@@ -1,3 +1,6 @@
+// AFA-250: recovery expectations now follow the approved complete-entry contract in PARSING.md.
+// Earlier ticket rationales below describe their historical extraction contract; original
+// assertions are retained separately under design/afa-250.
 import { describe, it, expect, vi } from 'vitest';
 import { parseMeasurement } from '../src';
 import * as numberWords from '../src/wordsToNumber';
@@ -22,22 +25,16 @@ describe('measurement number phrases', () => {
   });
 
   it.each([
-    ['140 and 150 pounds', 150, 'lb', 'weight'],
-    ['5 11 inches', 11, 'in', 'height'],
-    ['20 and 5 pounds', 5, 'lb', 'weight'],
-    ['one and two pounds', 2, 'lb', 'weight'],
-    ['one hundred and 150 pounds', 150, 'lb', 'weight'],
-    ['one hundred and two hundred pounds', 200, 'lb', 'weight'],
-    ['5 hundred and 6 hundred pounds', 600, 'lb', 'weight'],
-    ['one thousand and two thousand pounds', 2000, 'lb', 'weight'],
-  ])('keeps independent values separate in %s', (raw, value, unit, type) => {
-    expect(parseMeasurement(raw)).toEqual({
-      value,
-      unit,
-      type,
-      raw,
-      matches: [{ value, unit }],
-    });
+    '140 and 150 pounds',
+    '5 11 inches',
+    '20 and 5 pounds',
+    'one and two pounds',
+    'one hundred and 150 pounds',
+    'one hundred and two hundred pounds',
+    '5 hundred and 6 hundred pounds',
+    'one thousand and two thousand pounds',
+  ])('rejects the complete entry %s (AFA-250)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
   });
 
   it.each([
@@ -79,16 +76,18 @@ describe('measurement number phrases', () => {
     ['.5 hundred', 50],
     ['one hundred thousand two hundred fifty', 100250],
   ])('parses complete unqualified phrases in %s', (raw, value) => {
-    expect(parseMeasurement(raw, { type: 'weight', allowUnqualified: true })?.value).toBe(value);
+    expect(parseMeasurement(raw, { type: 'weight', defaultUnit: 'lb' })?.value).toBe(value);
   });
 
   it.each(['1 ', 'and '])('bounds phrase parsing work for a long run of %s', prefix => {
     const raw = prefix.repeat(1000) + '1 pounds';
-    const parser = vi.spyOn(numberWords, 'wordsToNumber');
+    const parser = vi.spyOn(numberWords, 'readNumberTokens');
     try {
-      expect(parseMeasurement(raw, { maxLength: Infinity })?.value).toBe(1);
+      // AFA-250: reject the invalid complete phrase; retain the historical work bound.
+      expect(parseMeasurement(raw, { maxLength: Infinity })).toBeNull();
+      expect(parser.mock.calls.length).toBeGreaterThan(0);
       const parsedCharacters = parser.mock.calls.reduce(
-        (total, [phrase]) => total + phrase.length,
+        (total, [phrase]) => total + phrase.join(' ').length,
         0
       );
       expect(parsedCharacters).toBeLessThan(raw.length * 4);

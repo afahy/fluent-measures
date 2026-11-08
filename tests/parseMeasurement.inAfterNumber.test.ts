@@ -1,3 +1,6 @@
+// AFA-250: recovery expectations now follow the approved complete-entry contract in PARSING.md.
+// Earlier ticket rationales below describe their historical extraction contract; original
+// assertions are retained separately under design/afa-250.
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
 
@@ -5,50 +8,33 @@ import { parseMeasurement } from '../src';
 // what such inches do next to another measurement. Each reason is a rule or an option in the
 // README or PARSING.md, or the ticket's row.
 describe('"N in" in ordinary text next to another measurement', () => {
-  // AFA-51's approved policy: words other than "and" separate independent heights.
-  // 6 ft is 72 in, so neither 3 in nor 10 in agrees. Keep the ordinary inch match itself.
   it.each(['6 ft and ranked 3 in the state', '6 ft, top 10 in the class'])(
-    'rejects the independent heights in %s',
+    'rejects the complete entry %s (AFA-250)',
     raw => {
       expect(parseMeasurement(raw)).toBeNull();
     }
   );
 
-  // The `type` option reads only that measurement (ParseOptions). Without a type, the corpus
-  // accepts the height, the weight or null for text with both (multiple-height-weight-no-type),
-  // and the ticket's row gives 10 in, so this test pins that.
-  it.each([
-    [{ type: 'weight' }, 180, 'lb'],
-    [{ type: 'height' }, 10, 'in'],
-    [{}, 10, 'in'],
-  ] as const)('reads 180 lbs, top 10 in the class with %j as %s %s', (options, value, unit) => {
-    expect(parseMeasurement('180 lbs, top 10 in the class', options)).toMatchObject({
-      value,
-      unit,
-      matches: [{ value, unit }],
-    });
-  });
+  // AFA-250: selectors cannot discard unrelated prose or make it a complete second expression.
+  // Preserve the historical literal and all three original option paths.
+  it.each([{ type: 'weight' }, { type: 'height' }, {}] as const)(
+    'rejects 180 lbs, top 10 in the class with %j',
+    options => {
+      expect(parseMeasurement('180 lbs, top 10 in the class', options)).toBeNull();
+    }
+  );
 
   // Weight: a capital G right after a number makes a network generation, as in "5G", so "in"
   // comes after a word, not a number, and isn't inches. Only 6 ft is read, unlike
   // "ranked 3 in the state and 6 ft".
-  it('reads 5G in the house, 6 ft as 6 ft', () => {
-    expect(parseMeasurement('5G in the house, 6 ft')).toMatchObject({
-      value: 6,
-      unit: 'ft',
-      type: 'height',
-      matches: [{ value: 6, unit: 'ft' }],
-    });
+  it('rejects unrelated network prose before a height', () => {
+    expect(parseMeasurement('5G in the house, 6 ft')).toBeNull();
   });
 
   // More Than One Measurement (PARSING.md): inches before feet aren't parts of one height, so they
-  // are two measurements. When they agree, the first is returned: 72 in is 6 ft.
-  it('reads ranked 72 in the state and 6 ft as 72 in', () => {
-    expect(parseMeasurement('ranked 72 in the state and 6 ft')).toMatchObject({
-      value: 72,
-      unit: 'in',
-      type: 'height',
-    });
+  // are two measurements. AFA-250 rejects even equal readings: 72 in is 6 ft.
+  it('rejects ranked 72 in the state and 6 ft', () => {
+    expect(parseMeasurement('ranked 72 in the state and 6 ft')).toBeNull();
   });
 
   it.each([

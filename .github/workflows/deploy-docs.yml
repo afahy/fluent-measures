@@ -1,24 +1,58 @@
 name: Deploy to GitHub Pages
 
+# Explicit reruns and release-docs.yml dispatch this on main, as the Pages environment requires.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Exact already published stable npm version (for example 0.2.0)'
+        required: true
+        type: string
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: 'pages'
   cancel-in-progress: false
 
 jobs:
-  build:
+  # One job is deliberate: re-running a failed job must re-read the durable version ledger,
+  # reverify the package and reject stale candidates, not deploy an old uploaded artifact.
+  release-docs:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: ./.github/actions/setup
+        with:
+          node-version: 24
+
+      - name: Verify the exact published release and build documentation
+        env:
+          REQUESTED_VERSION: ${{ inputs.version }}
+        run: |
+          node .github/scripts/docs-release.mjs "$REQUESTED_VERSION"
+
+      - name: Check the release documentation design and accessibility
+        run: |
+          pnpm docs:audit --directory build/verified-release
+          pnpm docs:sweep build/verified-release/index.html
+
+      - name: Retain verified versions and reject stale promotion
+        run: node .github/scripts/docs-promote.mjs
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -26,15 +60,20 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs
+          path: build/docs
 
-  deploy:
-    needs: build
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      # Read the uploaded artifact, not a rebuild or the event's possibly different SHA.
+      - uses: actions/download-artifact@v4
+        with:
+          name: github-pages
+
+      - name: Verify public documentation
+        timeout-minutes: 3
+        run: |
+          mkdir -p "$RUNNER_TEMP/pages-expected"
+          tar -xf artifact.tar -C "$RUNNER_TEMP/pages-expected"
+          node .github/scripts/docs-verify-public.mjs "$RUNNER_TEMP/pages-expected"

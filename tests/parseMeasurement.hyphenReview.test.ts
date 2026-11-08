@@ -1,3 +1,6 @@
+// AFA-250: recovery expectations now follow the approved complete-entry contract in PARSING.md.
+// Earlier ticket rationales below describe their historical extraction contract; original
+// assertions are retained separately under design/afa-250.
 import { describe, it, expect } from 'vitest';
 import { parseMeasurement } from '../src';
 
@@ -30,8 +33,8 @@ describe('hyphenated height review regressions', () => {
     'rejects numeric ranges in %s',
     raw => {
       expect(parseMeasurement(raw)).toBeNull();
-      expect(parseMeasurement(raw, { type: 'weight', allowUnqualified: true })).toBeNull();
-      expect(parseMeasurement(raw, { type: 'height', allowUnqualified: true })).toBeNull();
+      expect(parseMeasurement(raw, { type: 'weight', defaultUnit: 'lb' })).toBeNull();
+      expect(parseMeasurement(raw, { type: 'height', defaultUnit: 'in' })).toBeNull();
     }
   );
 
@@ -63,28 +66,22 @@ describe('hyphenated height review regressions', () => {
   );
 
   it.each(['recorded 2025-09-01 at 180 lbs', 'record 12-34 weighs 180 lbs'])(
-    'ignores unrelated numeric hyphens in %s',
+    'rejects the complete entry %s (AFA-250)',
     raw => {
-      expect(parseMeasurement(raw)?.value).toBe(180);
-      expect(parseMeasurement(raw)?.unit).toBe('lb');
+      expect(parseMeasurement(raw)).toBeNull();
     }
   );
 
   it.each(['0 feet, 180 lbs', 'zero feet, 180 lbs'])(
-    'continues to a valid weight after an empty height in %s',
+    'rejects the complete entry %s (AFA-250)',
     raw => {
-      expect(parseMeasurement(raw)?.value).toBe(180);
-      expect(parseMeasurement(raw)?.unit).toBe('lb');
+      expect(parseMeasurement(raw)).toBeNull();
     }
   );
 
-  it.each(['weight - kg 70', 'weight -- kg 70'])(
-    'allows a unit-prefix value after a prose separator in %s',
-    raw => {
-      expect(parseMeasurement(raw)?.value).toBe(70);
-      expect(parseMeasurement(raw)?.unit).toBe('kg');
-    }
-  );
+  it.each(['weight - kg 70', 'weight -- kg 70'])('rejects the complete entry %s (AFA-250)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
 
   it.each(['weight_-70 kg', 'height_-5 feet', 'weight: -70 kg'])(
     'preserves negative signs after labels in %s',
@@ -108,10 +105,9 @@ describe('hyphenated height review regressions', () => {
   );
 
   it.each(['0 feet, 180 lbs', 'zero feet, 180 lbs'])(
-    'normalizes the valid weight after a zero-height fragment in %s',
+    'rejects the complete entry %s (AFA-250)',
     raw => {
-      expect(parseMeasurement(raw, { normalizedUnit: 'lb' })?.value).toBe(180);
-      expect(parseMeasurement(raw, { normalizedUnit: 'kg' })?.value).toBeCloseTo(81.6466266);
+      expect(parseMeasurement(raw)).toBeNull();
     }
   );
 
@@ -147,15 +143,14 @@ describe('hyphenated height review regressions', () => {
   );
 
   it.each(['record 1-2; kg 70', 'record 2026-09-26; kg 70', 'record 1–2; kg 70'])(
-    'ignores unrelated ranges before unit-prefix values in %s',
+    'rejects the complete entry %s (AFA-250)',
     raw => {
-      expect(parseMeasurement(raw)?.value).toBe(70);
-      expect(parseMeasurement(raw)?.unit).toBe('kg');
+      expect(parseMeasurement(raw)).toBeNull();
     }
   );
 
-  it('retains a valid weight after a rejected signed compound height', () => {
-    expect(parseMeasurement('-5\'-11", 180 lbs', { normalizedUnit: 'lb' })?.value).toBe(180);
+  it('rejects a signed compound before a valid weight', () => {
+    expect(parseMeasurement('-5\'-11", 180 lbs', { normalizedUnit: 'lb' })).toBeNull();
   });
 
   it.each(['foots-5', 'poundz-150', 'meterz-1.5', 'and ft-5'])(
@@ -197,32 +192,25 @@ describe('hyphenated height review regressions', () => {
   });
 
   it.each([
-    ['invalid -5 ft; actual 180 cm', 180, 'cm'],
-    ['invalid -5 ft; 11 inches', 11, 'in'],
-    ['-5\'-11"; actual 180 cm', 180, 'cm'],
-    ['180 cm; invalid -5\'-11"', 180, 'cm'],
-  ])('retains independent heights around a signed fragment in %s', (raw, value, unit) => {
-    expect(parseMeasurement(raw)?.value).toBe(value);
-    expect(parseMeasurement(raw)?.unit).toBe(unit);
+    'invalid -5 ft; actual 180 cm',
+    'invalid -5 ft; 11 inches',
+    '-5\'-11"; actual 180 cm',
+    '180 cm; invalid -5\'-11"',
+  ])('rejects the complete entry %s (AFA-250)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
   });
 
   it.each([
-    ['0 feet; actual 1.8 meters', 1.8, 'm'],
-    ['0 feet; actual 180 cm', 180, 'cm'],
-    ['180 cm; zero feet', 180, 'cm'],
-    ['0 inches; actual 1.8 meters', 1.8, 'm'],
-    ['zero inches; actual 180 cm', 180, 'cm'],
-    ['0 feet; 11 inches', 11, 'in'],
-    ['0 feet 0 inches; actual 1.8 meters', 1.8, 'm'],
-    ['0 feet 0 inches; actual 180 cm', 180, 'cm'],
-  ])('ignores a separate zero-height fragment in %s', (raw, value, unit) => {
-    expect(parseMeasurement(raw)).toEqual({
-      value,
-      unit,
-      type: 'height',
-      raw,
-      matches: [{ value, unit }],
-    });
+    '0 feet; actual 1.8 meters',
+    '0 feet; actual 180 cm',
+    '180 cm; zero feet',
+    '0 inches; actual 1.8 meters',
+    'zero inches; actual 180 cm',
+    '0 feet; 11 inches',
+    '0 feet 0 inches; actual 1.8 meters',
+    '0 feet 0 inches; actual 180 cm',
+  ])('rejects the complete entry %s (AFA-250)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
   });
 
   it.each([
@@ -249,19 +237,19 @@ describe('hyphenated height review regressions', () => {
   });
 
   it.each(['180;lbs', 'lbs;180', '180;;lbs', 'lbs; ;180', 'one hundred;fifty pounds'])(
-    'treats semicolons within a single measurement as punctuation in %s',
+    'rejects the complete entry %s (AFA-250)',
     raw => {
-      expect(parseMeasurement(raw)?.value).toBe(raw.startsWith('one') ? 150 : 180);
-      expect(parseMeasurement(raw)?.unit).toBe('lb');
+      expect(parseMeasurement(raw)).toBeNull();
     }
   );
 
+  // AFA-251 intentionally retires the earlier semicolon-discarding fallback: a default applies
+  // only to the complete unwrapped number, as approved with AFA-250's shared boundary.
   it.each(['180;', ';180', 'one hundred;fifty;'])(
-    'ignores semicolons in unqualified input %s',
+    'rejects semicolons in default-unit input %s',
     raw => {
-      expect(parseMeasurement(raw, { type: 'weight', allowUnqualified: true })?.value).toBe(
-        raw.startsWith('one') ? 150 : 180
-      );
+      expect(parseMeasurement(raw)).toBeNull();
+      expect(parseMeasurement(raw, { type: 'weight', defaultUnit: 'lb' })).toBeNull();
     }
   );
 
@@ -275,25 +263,31 @@ describe('hyphenated height review regressions', () => {
     raw => expect(parseMeasurement(raw)).toBeNull()
   );
 
-  it.each([
-    ['record 0; kg 70', 70, 'kg'],
-    ['0; cm 180', 180, 'cm'],
-    ['record 0; ft 5', 5, 'ft'],
-  ])('retains unit-prefix values after an unrelated zero in %s', (raw, value, unit) => {
-    expect(parseMeasurement(raw)).toEqual({
-      value,
-      unit,
-      type: unit === 'kg' ? 'weight' : 'height',
-      raw,
-      matches: [{ value, unit }],
-    });
-  });
+  it.each(['record 0; kg 70', '0; cm 180', 'record 0; ft 5'])(
+    'rejects the complete entry %s (AFA-250)',
+    raw => {
+      expect(parseMeasurement(raw)).toBeNull();
+    }
+  );
 
-  it('reads a meter-qualified suffix after a feet separator as a separate measurement', () => {
+  it('rejects incompatible units across a compound separator', () => {
     // 5 ft is 1.524 m, which doesn't agree with 1 m, so there's no single answer.
     const raw = '5 ft-1 m';
     expect(parseMeasurement(raw)).toBeNull();
     expect(parseMeasurement(raw, { normalizedUnit: 'ft' })).toBeNull();
     expect(parseMeasurement(raw, { normalizedUnit: 'm' })).toBeNull();
   });
+});
+
+// AFA-250: retain every original explicit selector/inference path when recovery becomes null.
+it.each([
+  ['0 feet, 180 lbs', { normalizedUnit: 'lb' }],
+  ['0 feet, 180 lbs', { normalizedUnit: 'kg' }],
+  ['zero feet, 180 lbs', { normalizedUnit: 'lb' }],
+  ['zero feet, 180 lbs', { normalizedUnit: 'kg' }],
+  ['180;', { type: 'weight', defaultUnit: 'lb' }],
+  [';180', { type: 'weight', defaultUnit: 'lb' }],
+  ['one hundred;fifty;', { type: 'weight', defaultUnit: 'lb' }],
+] as const)('rejects incomplete entry %s with original options %j', (raw, options) => {
+  expect(parseMeasurement(raw, options)).toBeNull();
 });

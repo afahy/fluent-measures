@@ -1,3 +1,6 @@
+// AFA-250: recovery expectations now follow the approved complete-entry contract in PARSING.md.
+// Earlier ticket rationales below describe their historical extraction contract; original
+// assertions are retained separately under design/afa-250.
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
 
@@ -5,10 +8,20 @@ import { parseMeasurement } from '../src';
 // are hand calculated: 5 × 12 + 11 = 71 and 5 × 12 + 10 = 70.
 describe('quotation context and spaced unit marks', () => {
   it.each([
-    ['he said “about 180” lbs', 180, 'lb'],
-    ['“~180” lbs', 180, 'lb'],
-    ['weighs “around 70” kg', 70, 'kg'],
-    ['the ‘roughly 5’ kg bag', 5, 'kg'],
+    'he said “about 180” lbs',
+    '“~180” lbs',
+    'weighs “around 70” kg',
+    'the ‘roughly 5’ kg bag',
+    'He said “about 180” cm',
+    '“+5” kg',
+    'He said ＂180＂ cm',
+    'the ＇5＇ kg bag',
+    'the " 5" kg',
+    'the “ 5” kg',
+  ])('rejects the complete entry %s (AFA-250 policy revision)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
+  it.each([
     ['„180” lbs', 180, 'lb'],
     ['”180” lbs', 180, 'lb'],
     ['"180” lbs', 180, 'lb'],
@@ -17,17 +30,11 @@ describe('quotation context and spaced unit marks', () => {
     ['5 ’ 11”', 71, 'in'],
     ['‘5’ 11”', 71, 'in'],
     ['5ʹ11ʺ', 71, 'in'],
-    ['He said “about 180” cm', 180, 'cm'],
-    ['“+5” kg', 5, 'kg'],
-    ['He said ＂180＂ cm', 180, 'cm'],
     ['＂180＂ lbs', 180, 'lb'],
-    ['the ＇5＇ kg bag', 5, 'kg'],
     ['five’10”', 70, 'in'],
     ['five’ ten”', 70, 'in'],
     ['six’', 6, 'ft'],
     ['"180" lbs', 180, 'lb'],
-    ['the " 5" kg', 5, 'kg'],
-    ['the “ 5” kg', 5, 'kg'],
   ] as const)('reads %s as %s %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });
@@ -50,16 +57,20 @@ describe('quotation context and spaced unit marks', () => {
   );
 
   it.each([
+    'He said ‘180 lbs’',
+    'He said “180” cm',
+    'the ‘5’ kg bag',
+    '‘bout 5’11”',
+    'the ‘5’11” guy',
+  ])('rejects the complete entry %s (AFA-250 policy revision)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
+  it.each([
     ['5’11”', 71, 'in'],
     ['5′11″', 71, 'in'],
     ['１８０ｃｍ', 180, 'cm'],
     ['70 ㎏', 70, 'kg'],
-    ['He said ‘180 lbs’', 180, 'lb'],
-    ['He said “180” cm', 180, 'cm'],
-    ['the ‘5’ kg bag', 5, 'kg'],
     ['“5 1/2” ft', 5.5, 'ft'],
-    ['‘bout 5’11”', 71, 'in'],
-    ['the ‘5’11” guy', 71, 'in'],
     ['I’m about 180 lbs', 180, 'lb'],
     ['５＇１１＂', 71, 'in'],
     ['５＇', 5, 'ft'],
@@ -70,6 +81,12 @@ describe('quotation context and spaced unit marks', () => {
   });
 
   // Spaces, case, fractions and mixed number words keep their normal numeric meaning.
+  it.each(["the '5 1/2' ft board", 'tone’ 5 ft', 'one’s 180 lbs', "12kilo 6 'foot"])(
+    'rejects the complete entry %s (AFA-250 policy revision)',
+    raw => {
+      expect(parseMeasurement(raw)).toBeNull();
+    }
+  );
   it.each([
     ['six ’', 6, 'ft'],
     ['SIX’', 6, 'ft'],
@@ -78,12 +95,7 @@ describe('quotation context and spaced unit marks', () => {
     ['5½ ’', 5.5, 'ft'],
     ['“72,5” KG', 72.5, 'kg'],
     ['“1,000” pounds', 1000, 'lb'],
-    ["the '5 1/2' ft board", 5.5, 'ft'],
     ['“one hundred and 50” pounds', 150, 'lb'],
-    ['tone’ 5 ft', 5, 'ft'],
-    ['one’s 180 lbs', 180, 'lb'],
-    // Without an opening quote, an ASCII apostrophe attached to a word keeps that boundary.
-    ["12kilo 6 'foot", 12, 'kg'],
   ] as const)('reads contextual form %s as %s %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });
@@ -104,11 +116,7 @@ describe('quotation context and spaced unit marks', () => {
 
   it('does not infer a height unit from a weight quotation', () => {
     expect(parseMeasurement('he said “about 180” lbs', { type: 'height' })).toBeNull();
-    expect(parseMeasurement('he said “about 180” lbs', { type: 'weight' })).toMatchObject({
-      value: 180,
-      unit: 'lb',
-      type: 'weight',
-    });
+    expect(parseMeasurement('he said “about 180” lbs', { type: 'weight' })).toBeNull();
   });
 
   // Independent probes: the ticket permits a full compound or null, never only the inches.
@@ -133,24 +141,27 @@ describe('quotation context and spaced unit marks', () => {
     expect(parseMeasurement('"seventy” kilograms')).toMatchObject({ value: 70, unit: 'kg' });
   });
 
-  // Case never changes a unit. Both quoted measurements must be recognized: 154 lb is
-  // 69.85322498 kg, within 1% of 70 kg (the documented conversion-agreement example).
-  it.each([
-    '"70" KG',
-    '70” KG',
-    '“seventy”kg',
-    '‘seventy’kg',
-    '"70" kg; "154" lbs',
-    '“about 70” kg; “about 154” lbs',
-  ])('retains named units throughout %s', raw => {
+  // Case never changes a unit.
+  it.each(['70” KG'])('rejects the complete entry %s (AFA-250 policy revision)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
+  it.each(['"70" KG', '“seventy”kg', '‘seventy’kg'])('retains named units throughout %s', raw => {
     expect(parseMeasurement(raw)).toMatchObject({ value: 70, unit: 'kg', type: 'weight' });
   });
 
+  // AFA-250: quoting two readings does not make them one measurement.
+  it.each(['"70" kg; "154" lbs', '“about 70” kg; “about 154” lbs'])(
+    'rejects duplicate quoted weights in %s',
+    raw => {
+      expect(parseMeasurement(raw)).toBeNull();
+    }
+  );
+
   // A separate number is not an inches component of a quoted quantity (Codex round 2).
   it.each(['“72” 180 cm', '‘5’ 180 cm', '“seventy two” 180 cm'])(
-    'keeps the separate measurement after %s',
+    'rejects the complete entry %s (AFA-250 policy revision)',
     raw => {
-      expect(parseMeasurement(raw)).toMatchObject({ value: 180, unit: 'cm', type: 'height' });
+      expect(parseMeasurement(raw)).toBeNull();
     }
   );
 
@@ -161,24 +172,26 @@ describe('quotation context and spaced unit marks', () => {
     }
   );
 
-  it('retains a following weight after a quotation containing an apostrophe', () => {
-    expect(parseMeasurement('he said ‘it’s five’ and weighs 180 lbs')).toMatchObject({
-      value: 180,
-      unit: 'lb',
-      type: 'weight',
-    });
+  it('rejects unrelated quoted prose before a weight', () => {
+    expect(parseMeasurement('he said ‘it’s five’ and weighs 180 lbs')).toBeNull();
   });
 
   // "In" is prose after an existing feet mark, as for ASCII apostrophes and primes.
   it.each(['he is 6’ in height', '6’ in shoes', 'six’ in height', '6’ IN shoes'])(
-    'reads the unquoted feet mark in %s',
+    'rejects the complete entry %s (AFA-250 policy revision)',
     raw => {
-      expect(parseMeasurement(raw)).toMatchObject({ value: 6, unit: 'ft', type: 'height' });
+      expect(parseMeasurement(raw)).toBeNull();
     }
   );
 
   // A genuine quoted quantity still takes the following named inch unit.
-  it.each(['‘6’ in', '‚6’ in', '‘it’s six’ in', "'it’s six’ in", '“6” in', '"6" in'])(
+  it.each(['‘it’s six’ in', "'it’s six’ in"])(
+    'rejects the complete entry %s (AFA-250 policy revision)',
+    raw => {
+      expect(parseMeasurement(raw)).toBeNull();
+    }
+  );
+  it.each(['‘6’ in', '‚6’ in', '“6” in', '"6" in'])(
     'retains the explicit inch unit after %s',
     raw => {
       expect(parseMeasurement(raw)).toMatchObject({ value: 6, unit: 'in', type: 'height' });
@@ -187,15 +200,15 @@ describe('quotation context and spaced unit marks', () => {
 
   // A completed quotation cannot hide a later unit mark. The ticket's number-word marks
   // represent the same six feet or inches as numeric marks.
-  it.each([
-    ['‘hello’ six’', 'ft'],
-    ['“hello” six”', 'in'],
-  ])('keeps the mark after the completed quotation in %s', (raw, unit) => {
-    expect(parseMeasurement(raw)).toMatchObject({ value: 6, unit, type: 'height' });
-  });
+  it.each(['‘hello’ six’', '“hello” six”'])(
+    'rejects the complete entry %s (AFA-250 policy revision)',
+    raw => {
+      expect(parseMeasurement(raw)).toBeNull();
+    }
+  );
 
   it('does not make a double quotation part of a following inch measurement', () => {
-    expect(parseMeasurement('“72” 60 inches')).toMatchObject({ value: 60, unit: 'in' });
+    expect(parseMeasurement('“72” 60 inches')).toBeNull();
   });
 
   // Preserve the existing adjacent-digit rule. 72 inches is 182.88 cm, not 180 cm, so the

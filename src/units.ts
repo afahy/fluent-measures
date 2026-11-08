@@ -5,12 +5,12 @@ export const UNIT_ALIASES: Record<MeasurementType, [Unit, ...string[]][]> = {
   height: [
     ['ft', 'feet', 'foot', "'"],
     ['in', 'inch', 'inches', '"'],
-    ['cm', 'centimeter', 'centimeters', 'centimetre', 'centimetres'],
+    ['cm', 'cms', 'centimeter', 'centimeters', 'centimetre', 'centimetres'],
     ['m', 'meter', 'meters', 'metre', 'metres'],
   ],
   weight: [
     ['lb', 'lbs', 'pound', 'pounds'],
-    ['kg', 'kilo', 'kilos', 'kilogram', 'kilograms'],
+    ['kg', 'kgs', 'kilo', 'kilos', 'kilogram', 'kilograms'],
   ],
 };
 
@@ -30,20 +30,12 @@ export const UNIT_TYPES: Readonly<Record<Unit, MeasurementType>> = Object.assign
 );
 
 // Short aliases that are usually ordinary words before a number, as in "in 2020" and "M 28".
-// They can come before their number only as a label, such as "(in)" or "m:", which the
-// tokenizer spells out as the alias given here.
-export const LABEL_ALIASES = new Map([
-  ['in', 'inch'],
-  ['m', 'meter'],
-]);
+// They can come before their number only as a label, such as "(in)" or "m:".
+export const LABEL_ALIASES = new Set(['in', 'm']);
 
 // The unit of the next smaller part of a compound measurement, as in "5 ft 11 in" and
 // "1 m 80 cm". Inches have no smaller part.
 export const NEXT_PART: Partial<Record<Unit, Unit>> = { ft: 'in', m: 'cm' };
-
-// Weight units the library doesn't support. A weight with a part in one of them returns null
-// rather than the supported part alone, as in "12st 4lb".
-export const UNSUPPORTED_WEIGHT_UNITS = /^(?:st|stones?|oz|ounces?|g|grams?)$/;
 
 export const ftToIn = (value: number): number => value * 12;
 

@@ -4,8 +4,16 @@ import { normalizeForms } from '../src/tokenize';
 describe('normalizeForms', () => {
   it.each([
     ['5’11”', '5\'11"'],
-    ['5′11″', '5\'11"'],
-    ['5´11´´', "5'11''"],
+    // Explicit inch primes retain their unit identity; they cannot close an ASCII entry.
+    ['5′11″', '5′11″'],
+    ['5ʹ11ʺ', '5′11″'],
+    // The quoted-feet lookahead sees canonical primes before paired inch tokens are joined.
+    ['‘5’ 11′′', "‘5' 11′′"],
+    ['‘5’ 11´´', "‘5' 11′′"],
+    ['‘5’ 11ʹʹ', "‘5' 11′′"],
+    ["‘5’ 11′'", "‘5' 11′'"],
+    ["‘5’ 11'′", "‘5' 11'′"],
+    ['5´11´´', '5′11′′'],
     ['１８０ｃｍ', '180cm'],
     ['180 ㎝', '180 cm'],
     ['70 ㎏', '70 kg'],
@@ -14,6 +22,12 @@ describe('normalizeForms', () => {
     // Every mark in the input converts, not only the first.
     ['5’11’’', "5'11''"],
     ['72” or 70”', '72" or 70"'],
+    ['“72” or 70”', '“72” or 70"'],
+    ['”72” or 70”', '”72” or 70"'],
+    ['72 ” or 70 ”', '72 " or 70 "'],
+    ['seventy” or eighty”', 'seventy" or eighty"'],
+    ['six and a half ” or seven ”', 'six and a half " or seven "'],
+    ['5½” or 6¼”', '5½" or 6¼"'],
     // A minus sign before the first number becomes a hyphen-minus, in each place before it.
     ['−5 ft', '-5 ft'],
     ['﹣5 ft', '-5 ft'],
@@ -38,6 +52,23 @@ describe('normalizeForms', () => {
     '5\'11"',
     '‘180 lbs’',
     '“180 lbs”',
+    // A closing entry quote cannot become an inch or feet mark after bare smaller parts.
+    '“5 ft 11”',
+    '„5 ft 11”',
+    '”5 ft 11”',
+    '‚5 ft 11’',
+    '„1 m 80”',
+    '”1 m 80”',
+    '‚1 m 80’',
+    '„72” kg',
+    '‚72’ kg',
+    '‘5 ft 11’',
+    '“1 m 80”',
+    '‘1 m 80’',
+    '“kg 72.5”',
+    // A following named unit keeps the preceding curly mark in its original form.
+    '72’ kg',
+    '5½’ ft',
     'she’s',
     'the 70s’ fashion',
     '5−11',
