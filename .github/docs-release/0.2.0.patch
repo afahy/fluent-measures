@@ -1,0 +1,3012 @@
+--- a/docs/index.html
++++ b/docs/index.html
+@@ -9 +9 @@
+-      content="A lightweight TypeScript library that converts everyday height and weight descriptions into structured data. Metric and imperial units, written-out numbers and fuzzy matching, with zero dependencies."
++      content="A JavaScript and TypeScript library that parses height and weight text, converts metric and imperial units, and reads numbers in words. No dependencies."
+@@ -12,2 +12,4 @@
+-    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+-    <meta name="theme-color" content="#0b0f17" media="(prefers-color-scheme: dark)" />
++    <link rel="alternate" type="text/markdown" href="README.md" title="View Markdown" />
++    <link rel="describedby" type="text/plain" href="llms.txt" title="Agent index" />
++    <meta name="theme-color" content="#fafbfc" media="(prefers-color-scheme: light)" />
++    <meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)" />
+@@ -18 +20 @@
+-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-6 -6 36 36' fill='none' stroke='%23fff' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='-6' y='-6' width='36' height='36' rx='9' fill='%230f766e' stroke='none'/%3E%3Cpath d='M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z'/%3E%3Cpath d='m14.5 12.5 2-2m-5-1 2-2m-5-1 2-2m7 11 2-2'/%3E%3C/svg%3E"
++      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-6 -6 36 36' fill='none' stroke='%23fff' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='-6' y='-6' width='36' height='36' rx='9' fill='%232456b3' stroke='none'/%3E%3Cpath d='M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z'/%3E%3Cpath d='m14.5 12.5 2-2m-5-1 2-2m-5-1 2-2m7 11 2-2'/%3E%3C/svg%3E"
+@@ -29 +31 @@
+-      content="Converts everyday height and weight descriptions into structured data. Metric and imperial units, written-out numbers and fuzzy matching."
++      content="A JavaScript and TypeScript library that parses height and weight text, converts metric and imperial units, and reads numbers in words. No dependencies."
+@@ -34,0 +37,4 @@
++    <meta
++      property="og:image:alt"
++      content="fluent-measures parses height and weight text into structured data: 5 feet 11 inches converted to 180.34 cm, five foot ten read as 70 in, eighty kilograms read as 80 kg, a unit typo read with fuzziness 2, and text with no measurement returning null."
++    />
+@@ -39,8 +44,0 @@
+-    <!-- Prism's base theme. The page's own stylesheet below sets the token colors for each theme. -->
+-    <link
+-      rel="stylesheet"
+-      href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css"
+-      integrity="sha512-vswe+cgvic/XBoF1OcM/TeJ2FW0OofqAVdCZiEYkd6dwGXthvkSFWOoGGJgS2CW70VK5dQM5Oh+7ne47s74VTg=="
+-      crossorigin="anonymous"
+-      referrerpolicy="no-referrer"
+-    />
+@@ -61,24 +59,25 @@
+-        --bg: #0b0f17;
+-        --bg-tint: #0e1520;
+-        --surface: #111723;
+-        --surface-muted: #161e2c;
+-        --border: #263142;
+-        --border-strong: #3a475c;
+-        --border-control: #56657c;
+-        --heading: #f1f5f9;
+-        --text: #cbd5e1;
+-        --text-muted: #9aa6b8;
+-        --accent: #2dd4bf;
+-        --accent-hover: #5eead4;
+-        --accent-soft: rgba(45, 212, 191, 0.1);
+-        --accent-line: rgba(45, 212, 191, 0.45);
+-        --on-accent: #042f2e;
+-        --inline-code-bg: #1a2333;
+-        --inline-code-text: #e2e8f0;
+-        --header-bg: rgba(11, 15, 23, 0.97);
+-        --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px -16px rgba(0, 0, 0, 0.6);
+-        --null: #c4b5fd;
+-        --null-soft: rgba(196, 181, 253, 0.07);
+-        --error: #fca5a5;
+-        --error-line: rgba(252, 165, 165, 0.35);
+-        --error-soft: rgba(252, 165, 165, 0.08);
++        --bg: #0f1115;
++        --bg-tint: #12161c;
++        --surface: #15181e;
++        --surface-muted: #1b1f27;
++        --border: #303640;
++        --border-strong: #464c59;
++        --border-control: #7c8795;
++        --heading: #f2f2f4;
++        --result-value: #f2f2f4;
++        --text: #d1d4d9;
++        --text-muted: #afb5bf;
++        --accent: #8db5ff;
++        --accent-hover: #afcbff;
++        --accent-soft: #1f2633;
++        --accent-line: #8db5ff88;
++        --on-accent: #16191e;
++        --inline-code-bg: #212730;
++        --inline-code-text: #e5e8ed;
++        --header-bg: #0f1115;
++        --shadow-card: 0 1px 2px #00000050, 0 12px 32px -16px #00000090;
++        --null: #d7bbdf;
++        --null-soft: #d7bbdf0e;
++        --error: #ffb3b0;
++        --error-line: #ffb3b066;
++        --error-soft: #ffb3b010;
+@@ -86,17 +85,17 @@
+-        --code-bg: #141c2b;
+-        --code-head: #1a2436;
+-        --code-border: #2e3a4e;
+-        --code-divider: rgba(255, 255, 255, 0.08);
+-        --code-text: #e6edf3;
+-        --code-muted: #9aa5b1;
+-        --code-accent: #5eead4;
+-        --code-accent-line: rgba(94, 234, 212, 0.45);
+-        --code-null: #c4b5fd;
+-        --code-hover: rgba(255, 255, 255, 0.06);
+-        --code-shadow: 0 8px 20px -8px rgba(0, 0, 0, 0.6);
+-        --tok-comment: #929eab;
+-        --tok-keyword: #7dd3c8;
+-        --tok-string: #a5d6ff;
+-        --tok-number: #fbbf77;
+-        --tok-property: #c9d1d9;
+-        --tok-punctuation: #94a0ae;
++        --code-bg: #191d24;
++        --code-head: #1f242d;
++        --code-border: #373d49;
++        --code-divider: #323843;
++        --code-text: #e5e8ed;
++        --code-muted: #aeb7c2;
++        --code-accent: #8db5ff;
++        --code-accent-line: #8db5ff88;
++        --code-null: #d7bbdf;
++        --code-hover: #ffffff0c;
++        --code-shadow: 0 8px 20px -8px #00000090;
++        --tok-comment: #aeb7c2;
++        --tok-keyword: #8db5ff;
++        --tok-string: #a0d5bd;
++        --tok-number: #e6b884;
++        --tok-property: #ccd6df;
++        --tok-punctuation: #aeb7c2;
+@@ -114,4 +112,0 @@
+-      .theme-panel {
+-        box-shadow: 0 16px 32px -12px rgba(0, 0, 0, 0.7);
+-      }
+-
+@@ -122,4 +116,0 @@
+-      .callout {
+-        --callout-line: rgba(45, 212, 191, 0.3);
+-      }
+-
+@@ -154 +145 @@
+-            meta.content = dark ? '#0b0f17' : '#ffffff';
++            meta.content = dark ? '#0f1115' : '#fafbfc';
+@@ -164,0 +156 @@
++    <a class="skip-link skip-navigation" href="#page-navigation">Skip to page navigation</a>
+@@ -321 +313,4 @@
+-          ></a>
++          >
++            <svg class="icon" aria-hidden="true"><use href="#i-tag" /></svg>
++            <span data-npm-version-text></span>
++          </a>
+@@ -356 +351 @@
+-                        aria-label="Usage examples"
++                        aria-label="Usage tasks"
+@@ -362,2 +356,0 @@
+-                      <li><a href="#ex-basic">Basic height and weight</a></li>
+-                      <li><a href="#ex-feet-inches">Feet and inches</a></li>
+@@ -368 +360,0 @@
+-                      <li><a href="#ex-null">No match</a></li>
+@@ -418 +410,4 @@
+-                ></a>
++                >
++                  <svg class="icon" aria-hidden="true"><use href="#i-tag" /></svg>
++                  <span data-npm-version-text></span>
++                </a>
+@@ -422,20 +417,8 @@
+-          <details class="theme-menu" data-theme-menu>
+-            <summary class="icon-link" aria-label="Color theme">
+-              <svg class="icon theme-light" aria-hidden="true"><use href="#i-sun" /></svg>
+-              <svg class="icon theme-dark" aria-hidden="true"><use href="#i-moon" /></svg>
+-            </summary>
+-            <div class="theme-panel" role="group" aria-label="Color theme">
+-              <button type="button" aria-pressed="false" data-theme-choice="light">
+-                <svg class="icon icon-sm" aria-hidden="true"><use href="#i-sun" /></svg>
+-                Light
+-              </button>
+-              <button type="button" aria-pressed="false" data-theme-choice="dark">
+-                <svg class="icon icon-sm" aria-hidden="true"><use href="#i-moon" /></svg>
+-                Dark
+-              </button>
+-              <button type="button" aria-pressed="false" data-theme-choice="system">
+-                <svg class="icon icon-sm" aria-hidden="true"><use href="#i-monitor" /></svg>
+-                System
+-              </button>
+-            </div>
+-          </details>
++          <button
++            class="icon-link theme-toggle"
++            type="button"
++            aria-label="Color theme: System. Switch to Dark."
++            hidden
++          >
++            <svg class="icon" aria-hidden="true"><use href="#i-monitor" /></svg>
++          </button>
+@@ -460,4 +442,0 @@
+-              <p class="hero-eyebrow">
+-                <svg class="icon icon-sm" aria-hidden="true"><use href="#i-tag" /></svg>
+-                @afahy/fluent-measures
+-              </p>
+@@ -466 +445 @@
+-                structured data.
++                structured data
+@@ -470,3 +449,3 @@
+-                  >A small TypeScript library for health apps, fitness trackers and web forms. It
+-                  reads metric and imperial units, in digits or in words, as in
+-                  <strong>5' 11"</strong> or <strong>five feet eleven inches</strong>.</span
++                  >A JavaScript and TypeScript library for health apps, fitness trackers and web
++                  forms. It reads metric and imperial units, and numbers in digits or in words, as
++                  in <strong>5' 11"</strong> or <strong>five feet eleven inches</strong>.</span
+@@ -474 +453 @@
+-                  >A TypeScript library for input like <strong>5' 11"</strong> or
++                  >A JavaScript and TypeScript library for input like <strong>5' 11"</strong> or
+@@ -487,0 +467,2 @@
++                  hidden
++                  disabled
+@@ -513,0 +495,5 @@
++              <div class="docs-resources">
++                <a href="README.md">View Markdown</a>
++                <a href="llms.txt">Agent index (llms.txt)</a>
++                <a href="README.md#documentation-for-your-version">Docs for your version</a>
++              </div>
+@@ -544 +530 @@
+-                <div class="demo-wide">
++                <div>
+@@ -554 +540 @@
+-                <div class="demo-wide">
++                <div>
+@@ -608,10 +593,0 @@
+-              <button
+-                class="demo-more"
+-                type="button"
+-                aria-expanded="false"
+-                aria-controls="demo-list"
+-                data-demo-more
+-              >
+-                <span data-demo-more-label>More input examples</span>
+-                <svg class="icon icon-sm chevron" aria-hidden="true"><use href="#i-chevron" /></svg>
+-              </button>
+@@ -619,2 +595,26 @@
+-                Results show <code>value</code> and <code>unit</code>; see
+-                <a href="#ex-basic">Usage</a> for the full objects.
++                <span class="demo-note"
++                  >Results show <code>value</code> and <code>unit</code>.</span
++                >
++                <div class="demo-links">
++                  <button
++                    class="demo-more"
++                    type="button"
++                    aria-expanded="false"
++                    aria-controls="demo-list"
++                    aria-describedby="demo-help"
++                    data-demo-more
++                  >
++                    <span data-demo-more-label>Show all 8 examples</span>
++                    <svg class="icon icon-sm chevron" aria-hidden="true">
++                      <use href="#i-chevron" />
++                    </svg>
++                  </button>
++                  <a href="#usage"
++                    >Usage<svg class="icon icon-sm" aria-hidden="true">
++                      <use href="#i-arrow" /></svg
++                  ></a>
++                </div>
++                <span class="visually-hidden" id="demo-help"
++                  >Additional examples appear above this button.</span
++                >
++                <span class="visually-hidden" role="status" data-demo-status></span>
+@@ -625 +625 @@
+-          <ul class="features features-hero">
++          <ul class="features" aria-label="Parsing capabilities">
+@@ -630 +629,0 @@
+-              <p class="feature-title">Metric and imperial units</p>
+@@ -632 +631,2 @@
+-                Heights and weights in ft, in, cm, m, lb and kg, converted to the unit you select.
++                <strong class="feature-title">Metric and imperial:</strong>
++                ft, in, cm, m, lb and kg; convert with <code>normalizedUnit</code>.
+@@ -639 +638,0 @@
+-              <p class="feature-title">Numbers in digits or words</p>
+@@ -641,2 +640,3 @@
+-                Thousands separators and decimal commas, and unit names with spelling errors when
+-                you set <code>fuzziness</code>.
++                <strong class="feature-title">Flexible input:</strong>
++                Digits or words, thousands separators and decimal commas; allow unit typos with
++                <code>fuzziness</code>.
+@@ -645,7 +644,0 @@
+-            <li>
+-              <span class="feature-icon" aria-hidden="true"
+-                ><svg class="icon"><use href="#i-package-check" /></svg
+-              ></span>
+-              <p class="feature-title">No dependencies</p>
+-              <p>Tree-shakeable, and supports both ES modules and CommonJS.</p>
+-            </li>
+@@ -669 +662 @@
+-                  <div class="tabs" role="tablist" aria-label="Package manager" data-tab-group="pm">
++                  <div class="tabs" hidden aria-label="Package manager" data-tab-group="pm">
+@@ -673 +666 @@
+-                      role="tab"
++                      disabled
+@@ -676 +668,0 @@
+-                      aria-selected="true"
+@@ -684 +676 @@
+-                      role="tab"
++                      disabled
+@@ -687,2 +678,0 @@
+-                      aria-selected="false"
+-                      tabindex="-1"
+@@ -696 +686 @@
+-                      role="tab"
++                      disabled
+@@ -699,2 +688,0 @@
+-                      aria-selected="false"
+-                      tabindex="-1"
+@@ -707,0 +696,2 @@
++                    hidden
++                    disabled
+@@ -720 +710,8 @@
+-                <div role="tabpanel" id="panel-npm" aria-labelledby="tab-npm" data-value="npm">
++                <div
++                  role="group"
++                  data-example-panel
++                  id="panel-npm"
++                  aria-labelledby="label-npm"
++                  data-value="npm"
++                >
++                  <p class="code-head code-label" id="label-npm" data-example-label>npm</p>
+@@ -726 +723,2 @@
+-                  role="tabpanel"
++                  role="group"
++                  data-example-panel
+@@ -728 +726 @@
+-                  aria-labelledby="tab-yarn"
++                  aria-labelledby="label-yarn"
+@@ -730 +727,0 @@
+-                  hidden
+@@ -731,0 +729 @@
++                  <p class="code-head code-label" id="label-yarn" data-example-label>yarn</p>
+@@ -737 +735,2 @@
+-                  role="tabpanel"
++                  role="group"
++                  data-example-panel
+@@ -739 +738 @@
+-                  aria-labelledby="tab-pnpm"
++                  aria-labelledby="label-pnpm"
+@@ -741 +739,0 @@
+-                  hidden
+@@ -742,0 +741 @@
++                  <p class="code-head code-label" id="label-pnpm" data-example-label>pnpm</p>
+@@ -747,0 +747,7 @@
++              <p class="code-note">
++                <svg class="icon icon-sm" aria-hidden="true"><use href="#i-package-check" /></svg>
++                <span
++                  ><strong>Small footprint.</strong> No runtime dependencies. At most 6.0 kB for ESM
++                  and 6.0 kB for CommonJS, minified and compressed with Brotli.</span
++                >
++              </p>
+@@ -751 +757 @@
+-              <h3 id="quick-start">Quick start</h3>
++              <h3 id="quick-start"><span id="ex-basic">Quick start</span></h3>
+@@ -759 +765,2 @@
+-                to read, and check the result before you use it.
++                to read, and check the result before you use it. The unit in the text identifies a
++                height or weight, so these inputs need no options.
+@@ -763,6 +770 @@
+-                  <div
+-                    class="tabs"
+-                    role="tablist"
+-                    aria-label="Module format"
+-                    data-tab-group="module"
+-                  >
++                  <div class="tabs" hidden aria-label="Module format" data-tab-group="module">
+@@ -772 +774 @@
+-                      role="tab"
++                      disabled
+@@ -775 +776,0 @@
+-                      aria-selected="true"
+@@ -783 +784 @@
+-                      role="tab"
++                      disabled
+@@ -786,2 +786,0 @@
+-                      aria-selected="false"
+-                      tabindex="-1"
+@@ -793 +792,8 @@
+-                  <button class="copy-button" type="button" data-copy aria-label="Copy quick start">
++                  <button
++                    class="copy-button"
++                    hidden
++                    disabled
++                    type="button"
++                    data-copy
++                    aria-label="Copy quick start"
++                  >
+@@ -802 +808,8 @@
+-                <div role="tabpanel" id="panel-esm" aria-labelledby="tab-esm" data-value="esm">
++                <div
++                  role="group"
++                  data-example-panel
++                  id="panel-esm"
++                  aria-labelledby="label-esm"
++                  data-value="esm"
++                >
++                  <p class="code-head code-label" id="label-esm" data-example-label>ES modules</p>
+@@ -805,0 +819 @@
++                    data-returns
+@@ -808,0 +823,11 @@
++/* ✓ Returns:
++{
++  value: 6,
++  unit: 'ft',
++  type: 'height',
++  matches: [
++    { value: 6, unit: 'ft' }
++  ],
++  raw: '6 ft'
++}
++*/
+@@ -823 +848,2 @@
+-                  role="tabpanel"
++                  role="group"
++                  data-example-panel
+@@ -825 +851 @@
+-                  aria-labelledby="tab-cjs"
++                  aria-labelledby="label-cjs"
+@@ -827 +852,0 @@
+-                  hidden
+@@ -828,0 +854 @@
++                  <p class="code-head code-label" id="label-cjs" data-example-label>CommonJS</p>
+@@ -858,3 +884 @@
+-                      ><span class="summary-note"
+-                        >a height; <a href="#ex-basic">see the full object</a></span
+-                      >
++                      ><span class="summary-note">a height</span>
+@@ -862,0 +887,9 @@
++                  <details class="full-object" open data-full-object hidden>
++                    <summary>
++                      <svg class="icon icon-sm chevron" aria-hidden="true">
++                        <use href="#i-chevron" />
++                      </svg>
++                      Full returned object
++                    </summary>
++                    <pre tabindex="0"><code class="language-typescript"></code></pre>
++                  </details>
+@@ -865 +898,6 @@
+-              <p class="code-note">
++              <p class="measure">
++                <code>value</code> and <code>unit</code> describe the measurement,
++                <code>type</code> identifies height or weight, <code>matches</code> lists the parts
++                found, and <code>raw</code> keeps the original text.
++              </p>
++              <p class="code-note" id="ex-null">
+@@ -868,2 +906,2 @@
+-                  >When the text holds no measurement, <code>result</code> is <code>null</code>; see
+-                  <a href="#ex-null">No match</a>.</span
++                  >When the text holds no measurement, <code>result</code> is <code>null</code>. The
++                  <code>if (result)</code> guard above checks before using it.</span
+@@ -872,29 +910,10 @@
+-              <ul class="features features-docs" aria-label="Features">
+-                <li>
+-                  <span class="feature-icon" aria-hidden="true"
+-                    ><svg class="icon"><use href="#i-measure" /></svg
+-                  ></span>
+-                  <p class="feature-title">Metric and imperial units</p>
+-                  <p>
+-                    Heights and weights in ft, in, cm, m, lb and kg, converted to the unit you
+-                    select.
+-                  </p>
+-                </li>
+-                <li>
+-                  <span class="feature-icon" aria-hidden="true"
+-                    ><svg class="icon"><use href="#i-numbers" /></svg
+-                  ></span>
+-                  <p class="feature-title">Numbers in digits or words</p>
+-                  <p>
+-                    Thousands separators and decimal commas, and unit names with spelling errors
+-                    when you set <code>fuzziness</code>.
+-                  </p>
+-                </li>
+-                <li>
+-                  <span class="feature-icon" aria-hidden="true"
+-                    ><svg class="icon"><use href="#i-package-check" /></svg
+-                  ></span>
+-                  <p class="feature-title">No dependencies</p>
+-                  <p>Tree-shakeable, and supports both ES modules and CommonJS.</p>
+-                </li>
+-              </ul>
++              <dl class="input-results" aria-label="More inputs without options">
++                <div>
++                  <dt><code class="input-text">150 lbs</code></dt>
++                  <dd><b>150</b> lb</dd>
++                </div>
++                <div>
++                  <dt><code class="input-text">not a measurement</code></dt>
++                  <dd class="is-null">null</dd>
++                </div>
++              </dl>
+@@ -913,2 +932,2 @@
+-              Each call reads one height or weight and returns an object, or <code>null</code> when
+-              the text has no measurement.
++              Adapt the parser to your field: restrict its type, convert the result, accept a number
++              without a unit, or allow spelling errors.
+@@ -916,2 +935,2 @@
+-            <nav class="local-index" aria-label="Usage examples">
+-              <p class="local-index-label" aria-hidden="true">Examples</p>
++            <nav class="local-index" aria-label="Usage tasks">
++              <p class="local-index-label" aria-hidden="true">Tasks</p>
+@@ -919,2 +937,0 @@
+-                <li><a href="#ex-basic">Basic height and weight</a></li>
+-                <li><a href="#ex-feet-inches">Feet and inches</a></li>
+@@ -925 +941,0 @@
+-                <li><a href="#ex-null">No match</a></li>
+@@ -931 +947 @@
+-                Jump to an example
++                Choose a task
+@@ -933 +949 @@
+-              <ul class="topic-links" aria-label="Usage examples">
++              <ul class="topic-links" aria-label="Usage tasks">
+@@ -935,12 +950,0 @@
+-                  <a href="#ex-basic"
+-                    >Basic height and weight<svg class="icon icon-sm" aria-hidden="true">
+-                      <use href="#i-arrow" /></svg
+-                  ></a>
+-                </li>
+-                <li>
+-                  <a href="#ex-feet-inches"
+-                    >Feet and inches<svg class="icon icon-sm" aria-hidden="true">
+-                      <use href="#i-arrow" /></svg
+-                  ></a>
+-                </li>
+-                <li>
+@@ -970,6 +973,0 @@
+-                <li>
+-                  <a href="#ex-null"
+-                    >No match<svg class="icon icon-sm" aria-hidden="true">
+-                      <use href="#i-arrow" /></svg
+-                  ></a>
+-                </li>
+@@ -980,227 +977,0 @@
+-              <article class="example" aria-labelledby="ex-basic">
+-                <div class="hd hd-3">
+-                  <h3 id="ex-basic">Basic height and weight</h3>
+-                  <a class="anchor" href="#ex-basic" aria-label="Link to Basic height and weight"
+-                    ><svg class="icon" aria-hidden="true"><use href="#i-link" /></svg
+-                  ></a>
+-                </div>
+-                <ul class="ex-opts" aria-label="Options this example passes">
+-                  <li class="ex-opts-label" aria-hidden="true">Options</li>
+-                  <li class="is-none">none</li>
+-                </ul>
+-                <p>
+-                  The unit in the text shows if it is a height or a weight, so <code>6 ft</code> and
+-                  <code>150 lbs</code> need no options. Pick an input to see its call and the object
+-                  it returns.
+-                </p>
+-                <div class="picker">
+-                  <span class="picker-label" id="basic-input-label">Input</span>
+-                  <div
+-                    class="picker-options"
+-                    role="tablist"
+-                    aria-labelledby="basic-input-label"
+-                    data-tab-group="basic"
+-                  >
+-                    <button
+-                      class="pick"
+-                      type="button"
+-                      role="tab"
+-                      id="tab-basic-height"
+-                      aria-controls="panel-basic-height"
+-                      aria-selected="true"
+-                      data-value="height"
+-                    >
+-                      6 ft</button
+-                    ><button
+-                      class="pick"
+-                      type="button"
+-                      role="tab"
+-                      id="tab-basic-weight"
+-                      aria-controls="panel-basic-weight"
+-                      aria-selected="false"
+-                      tabindex="-1"
+-                      data-value="weight"
+-                    >
+-                      150 lbs
+-                    </button>
+-                  </div>
+-                </div>
+-                <div class="code on-code">
+-                  <div class="code-head">
+-                    <span class="code-label">TypeScript</span
+-                    ><button
+-                      class="copy-button"
+-                      type="button"
+-                      data-copy
+-                      aria-label="Copy basic example"
+-                    >
+-                      <svg class="icon icon-sm icon-copy" aria-hidden="true">
+-                        <use href="#i-copy" />
+-                      </svg>
+-                      <svg class="icon icon-sm icon-check" aria-hidden="true">
+-                        <use href="#i-check" />
+-                      </svg>
+-                      <span data-copy-label>Copied</span>
+-                    </button>
+-                  </div>
+-                  <div
+-                    role="tabpanel"
+-                    id="panel-basic-height"
+-                    aria-labelledby="tab-basic-height"
+-                    data-value="height"
+-                  >
+-                    <pre
+-                      tabindex="0"
+-                      data-returns
+-                    ><code class="language-typescript">parseMeasurement('6 ft');
+-/* ✓ Returns:
+-{
+-  value: 6,
+-  unit: 'ft',
+-  type: 'height',
+-  matches: [
+-    { value: 6, unit: 'ft' }
+-  ],
+-  raw: '6 ft'
+-}
+-*/</code></pre>
+-                    <div class="returns">
+-                      <div class="returns-label">
+-                        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-return" /></svg>
+-                        Returns
+-                      </div>
+-                      <p class="summary">
+-                        <span><b>6</b> ft</span><span class="summary-note">a height</span>
+-                      </p>
+-                      <details class="full-object" open data-full-object hidden>
+-                        <summary>
+-                          <svg class="icon icon-sm chevron" aria-hidden="true">
+-                            <use href="#i-chevron" />
+-                          </svg>
+-                          Full returned object
+-                        </summary>
+-                        <pre tabindex="0"><code class="language-typescript"></code></pre>
+-                      </details>
+-                    </div>
+-                  </div>
+-                  <div
+-                    role="tabpanel"
+-                    id="panel-basic-weight"
+-                    aria-labelledby="tab-basic-weight"
+-                    data-value="weight"
+-                    hidden
+-                  >
+-                    <pre
+-                      tabindex="0"
+-                      data-returns
+-                    ><code class="language-typescript">parseMeasurement('150 lbs');
+-/* ✓ Returns:
+-{
+-  value: 150,
+-  unit: 'lb',
+-  type: 'weight',
+-  matches: [
+-    { value: 150, unit: 'lb' }
+-  ],
+-  raw: '150 lbs'
+-}
+-*/</code></pre>
+-                    <div class="returns">
+-                      <div class="returns-label">
+-                        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-return" /></svg>
+-                        Returns
+-                      </div>
+-                      <p class="summary">
+-                        <span><b>150</b> lb</span><span class="summary-note">a weight</span>
+-                      </p>
+-                      <details class="full-object" open data-full-object hidden>
+-                        <summary>
+-                          <svg class="icon icon-sm chevron" aria-hidden="true">
+-                            <use href="#i-chevron" />
+-                          </svg>
+-                          Full returned object
+-                        </summary>
+-                        <pre tabindex="0"><code class="language-typescript"></code></pre>
+-                      </details>
+-                    </div>
+-                  </div>
+-                </div>
+-              </article>
+-              <article class="example" aria-labelledby="ex-feet-inches">
+-                <div class="hd hd-3">
+-                  <h3 id="ex-feet-inches">Feet and inches</h3>
+-                  <a class="anchor" href="#ex-feet-inches" aria-label="Link to Feet and inches"
+-                    ><svg class="icon" aria-hidden="true"><use href="#i-link" /></svg
+-                  ></a>
+-                </div>
+-                <ul class="ex-opts" aria-label="Options this example passes">
+-                  <li class="ex-opts-label" aria-hidden="true">Options</li>
+-                  <li><code>type</code></li>
+-                </ul>
+-                <p>
+-                  A height in feet and inches gives the total in inches. <code>matches</code> gives
+-                  each part.
+-                </p>
+-                <div class="code on-code">
+-                  <div class="code-head">
+-                    <span class="code-label">TypeScript</span
+-                    ><button
+-                      class="copy-button"
+-                      type="button"
+-                      data-copy
+-                      aria-label="Copy feet and inches example"
+-                    >
+-                      <svg class="icon icon-sm icon-copy" aria-hidden="true">
+-                        <use href="#i-copy" />
+-                      </svg>
+-                      <svg class="icon icon-sm icon-check" aria-hidden="true">
+-                        <use href="#i-check" />
+-                      </svg>
+-                      <span data-copy-label>Copied</span>
+-                    </button>
+-                  </div>
+-                  <pre
+-                    class="code-wide"
+-                    tabindex="0"
+-                    data-returns
+-                  ><code class="language-typescript">parseMeasurement('five foot ten', { type: 'height' });
+-/* ✓ Returns:
+-{
+-  value: 70,
+-  unit: 'in',
+-  type: 'height',
+-  matches: [
+-    { value: 5, unit: 'ft' },
+-    { value: 10, unit: 'in' }
+-  ],
+-  raw: 'five foot ten'
+-}
+-*/</code></pre>
+-                  <pre
+-                    class="code-narrow"
+-                    tabindex="0"
+-                  ><code class="language-typescript">parseMeasurement(
+-  'five foot ten',
+-  { type: 'height' },
+-);</code></pre>
+-                  <div class="returns">
+-                    <div class="returns-label">
+-                      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-return" /></svg>
+-                      Returns
+-                    </div>
+-                    <p class="summary">
+-                      <span><b>70</b> in</span
+-                      ><span class="summary-note">5 ft and 10 in in <code>matches</code></span>
+-                    </p>
+-                    <details class="full-object" open data-full-object hidden>
+-                      <summary>
+-                        <svg class="icon icon-sm chevron" aria-hidden="true">
+-                          <use href="#i-chevron" />
+-                        </svg>
+-                        Full returned object
+-                      </summary>
+-                      <pre tabindex="0"><code class="language-typescript"></code></pre>
+-                    </details>
+-                  </div>
+-                </div>
+-              </article>
+@@ -1214,4 +984,0 @@
+-                <ul class="ex-opts" aria-label="Options this example passes">
+-                  <li class="ex-opts-label" aria-hidden="true">Options</li>
+-                  <li><code>type</code></li>
+-                </ul>
+@@ -1226,0 +994,2 @@
++                      hidden
++                      disabled
+@@ -1244 +1013,4 @@
+-                  ><code class="language-typescript">parseMeasurement('eighty kilograms', { type: 'weight' });
++                  ><code class="language-typescript">const accepted = parseMeasurement(
++  'eighty kilograms',
++  { type: 'weight' },
++);
+@@ -1255 +1027,4 @@
+-*/</code></pre>
++*/
++
++const rejected = parseMeasurement('6 ft', { type: 'weight' });
++/* ✓ Returns: null */</code></pre>
+@@ -1259 +1034 @@
+-                  ><code class="language-typescript">parseMeasurement(
++                  ><code class="language-typescript">const accepted = parseMeasurement(
+@@ -1261,0 +1037,5 @@
++);
++
++const rejected = parseMeasurement(
++  '6 ft',
++  { type: 'weight' },
+@@ -1268,12 +1048,10 @@
+-                    <p class="summary">
+-                      <span><b>80</b> kg</span><span class="summary-note">a weight</span>
+-                    </p>
+-                    <details class="full-object" data-full-object hidden>
+-                      <summary>
+-                        <svg class="icon icon-sm chevron" aria-hidden="true">
+-                          <use href="#i-chevron" />
+-                        </svg>
+-                        Full returned object
+-                      </summary>
+-                      <pre tabindex="0"><code class="language-typescript"></code></pre>
+-                    </details>
++                    <div class="summary-grid">
++                      <p class="summary">
++                        <span class="summary-key">accepted</span><span><b>80</b> kg</span
++                        ><span class="summary-note">a weight</span>
++                      </p>
++                      <p class="summary">
++                        <span class="summary-key">rejected</span><span class="is-null">null</span
++                        ><span class="summary-note">a height in a weight field</span>
++                      </p>
++                    </div>
+@@ -1285 +1063 @@
+-                  <h3 id="ex-convert">Convert to one unit</h3>
++                  <h3 id="ex-convert"><span id="ex-feet-inches">Convert to one unit</span></h3>
+@@ -1290,5 +1067,0 @@
+-                <ul class="ex-opts" aria-label="Options this example passes">
+-                  <li class="ex-opts-label" aria-hidden="true">Options</li>
+-                  <li><code>type</code></li>
+-                  <li><code>normalizedUnit</code></li>
+-                </ul>
+@@ -1299,32 +1071,0 @@
+-                <div class="picker">
+-                  <span class="picker-label" id="convert-input-label">Input</span>
+-                  <div
+-                    class="picker-options"
+-                    role="tablist"
+-                    aria-labelledby="convert-input-label"
+-                    data-tab-group="convert"
+-                  >
+-                    <button
+-                      class="pick"
+-                      type="button"
+-                      role="tab"
+-                      id="tab-convert-height"
+-                      aria-controls="panel-convert-height"
+-                      aria-selected="true"
+-                      data-value="height"
+-                    >
+-                      5' 11"</button
+-                    ><button
+-                      class="pick"
+-                      type="button"
+-                      role="tab"
+-                      id="tab-convert-weight"
+-                      aria-controls="panel-convert-weight"
+-                      aria-selected="false"
+-                      tabindex="-1"
+-                      data-value="weight"
+-                    >
+-                      150 lbs
+-                    </button>
+-                  </div>
+-                </div>
+@@ -1333,2 +1074,22 @@
+-                    <span class="code-label">TypeScript</span
+-                    ><button
++                    <div class="tabs" hidden aria-label="Conversion input" data-tab-group="convert">
++                      <button
++                        class="tab"
++                        type="button"
++                        disabled
++                        id="tab-convert-height"
++                        aria-controls="panel-convert-height"
++                        data-value="height"
++                      >
++                        5' 11"</button
++                      ><button
++                        class="tab"
++                        type="button"
++                        disabled
++                        id="tab-convert-weight"
++                        aria-controls="panel-convert-weight"
++                        data-value="weight"
++                      >
++                        150 lbs
++                      </button>
++                    </div>
++                    <button
+@@ -1335,0 +1097,2 @@
++                      hidden
++                      disabled
+@@ -1350 +1113,2 @@
+-                    role="tabpanel"
++                    role="group"
++                    data-example-panel
+@@ -1352 +1116 @@
+-                    aria-labelledby="tab-convert-height"
++                    aria-labelledby="label-convert-height"
+@@ -1354,0 +1119,3 @@
++                    <p class="code-head code-label" id="label-convert-height" data-example-label>
++                      Height conversion
++                    </p>
+@@ -1386 +1153 @@
+-                        ><span class="summary-note">from 5 ft and 11 in</span>
++                        ><span class="summary-note"><code>matches</code>: 5 ft and 11 in</span>
+@@ -1388,9 +1154,0 @@
+-                      <details class="full-object" data-full-object hidden>
+-                        <summary>
+-                          <svg class="icon icon-sm chevron" aria-hidden="true">
+-                            <use href="#i-chevron" />
+-                          </svg>
+-                          Full returned object
+-                        </summary>
+-                        <pre tabindex="0"><code class="language-typescript"></code></pre>
+-                      </details>
+@@ -1400 +1158,2 @@
+-                    role="tabpanel"
++                    role="group"
++                    data-example-panel
+@@ -1402 +1161 @@
+-                    aria-labelledby="tab-convert-weight"
++                    aria-labelledby="label-convert-weight"
+@@ -1404 +1162,0 @@
+-                    hidden
+@@ -1405,0 +1164,3 @@
++                    <p class="code-head code-label" id="label-convert-weight" data-example-label>
++                      Weight conversion
++                    </p>
+@@ -1436 +1197 @@
+-                        ><span class="summary-note">from 150 lb</span>
++                        ><span class="summary-note"><code>matches</code>: 150 lb</span>
+@@ -1438,9 +1198,0 @@
+-                      <details class="full-object" data-full-object hidden>
+-                        <summary>
+-                          <svg class="icon icon-sm chevron" aria-hidden="true">
+-                            <use href="#i-chevron" />
+-                          </svg>
+-                          Full returned object
+-                        </summary>
+-                        <pre tabindex="0"><code class="language-typescript"></code></pre>
+-                      </details>
+@@ -1449,0 +1202,14 @@
++                <p>
++                  Without conversion, feet and inches combine into inches. Written-out numbers work
++                  too:
++                </p>
++                <dl class="input-results" aria-label="Compound height without conversion">
++                  <div>
++                    <dt>
++                      <code class="input-text">five foot ten</code
++                      ><code class="input-options">{ type: 'height' }</code>
++                    </dt>
++                    <dd><b>70</b> in</dd>
++                  </div>
++                </dl>
++                <p><code>matches</code> keeps 5 ft and 10 in, just as it keeps the parts above.</p>
+@@ -1461,6 +1226,0 @@
+-                <ul class="ex-opts" aria-label="Options this example passes">
+-                  <li class="ex-opts-label" aria-hidden="true">Options</li>
+-                  <li><code>type</code></li>
+-                  <li><code>allowUnqualified</code></li>
+-                  <li><code>inferUnit</code></li>
+-                </ul>
+@@ -1476,0 +1237,2 @@
++                      hidden
++                      disabled
+@@ -1517,9 +1278,0 @@
+-                    <details class="full-object" data-full-object hidden>
+-                      <summary>
+-                        <svg class="icon icon-sm chevron" aria-hidden="true">
+-                          <use href="#i-chevron" />
+-                        </svg>
+-                        Full returned object
+-                      </summary>
+-                      <pre tabindex="0"><code class="language-typescript"></code></pre>
+-                    </details>
+@@ -1536,4 +1288,0 @@
+-                <ul class="ex-opts" aria-label="Options this example passes">
+-                  <li class="ex-opts-label" aria-hidden="true">Options</li>
+-                  <li><code>fuzziness</code></li>
+-                </ul>
+@@ -1550,0 +1300,2 @@
++                      hidden
++                      disabled
+@@ -1614,9 +1364,0 @@
+-                    <details class="full-object" data-full-object hidden>
+-                      <summary>
+-                        <svg class="icon icon-sm chevron" aria-hidden="true">
+-                          <use href="#i-chevron" />
+-                        </svg>
+-                        Full returned object
+-                      </summary>
+-                      <pre tabindex="0"><code class="language-typescript"></code></pre>
+-                    </details>
+@@ -1626,57 +1367,0 @@
+-              <article class="example" aria-labelledby="ex-null">
+-                <div class="hd hd-3">
+-                  <h3 id="ex-null">No match</h3>
+-                  <a class="anchor" href="#ex-null" aria-label="Link to No match"
+-                    ><svg class="icon" aria-hidden="true"><use href="#i-link" /></svg
+-                  ></a>
+-                </div>
+-                <ul class="ex-opts" aria-label="Options this example passes">
+-                  <li class="ex-opts-label" aria-hidden="true">Options</li>
+-                  <li class="is-none">none</li>
+-                </ul>
+-                <p>
+-                  Text with no measurement returns <code>null</code>. Check for it before you use
+-                  the result.
+-                </p>
+-                <div class="code on-code">
+-                  <div class="code-head">
+-                    <span class="code-label">TypeScript</span
+-                    ><button
+-                      class="copy-button"
+-                      type="button"
+-                      data-copy
+-                      aria-label="Copy no match example"
+-                    >
+-                      <svg class="icon icon-sm icon-copy" aria-hidden="true">
+-                        <use href="#i-copy" />
+-                      </svg>
+-                      <svg class="icon icon-sm icon-check" aria-hidden="true">
+-                        <use href="#i-check" />
+-                      </svg>
+-                      <span data-copy-label>Copied</span>
+-                    </button>
+-                  </div>
+-                  <pre
+-                    class="code-wide"
+-                    tabindex="0"
+-                    data-returns
+-                  ><code class="language-typescript">parseMeasurement('not a measurement');
+-/* ✓ Returns: null */</code></pre>
+-                  <pre
+-                    class="code-narrow"
+-                    tabindex="0"
+-                  ><code class="language-typescript">parseMeasurement(
+-  'not a measurement',
+-);</code></pre>
+-                  <div class="returns">
+-                    <div class="returns-label">
+-                      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-return" /></svg>
+-                      Returns
+-                    </div>
+-                    <p class="summary">
+-                      <span class="is-null">null</span
+-                      ><span class="summary-note">no measurement found</span>
+-                    </p>
+-                  </div>
+-                </div>
+-              </article>
+@@ -1709 +1394,3 @@
+-              <p class="measure">Reads one height or weight from a string.</p>
++              <p class="measure">
++                Reads one height or weight from a string.
++              </p>
+@@ -1758,3 +1445,6 @@
+-              <dl class="props" aria-label="Properties">
+-                <div>
+-                  <dt><span class="name">maxLength?</span><span class="type">number</span></dt>
++              <dl class="props option-list" aria-label="ParseOptions properties">
++                <div id="option-type">
++                  <dt>
++                    <a class="name" href="#option-type">type?</a
++                    ><span class="type"><a href="#measurement-type">MeasurementType</a></span>
++                  </dt>
+@@ -1762,3 +1452,23 @@
+-                    The largest raw <code>input.length</code> before trimming or parsing; defaults
+-                    to 1,000. Must be a number of at least 1, or <code>Infinity</code> for no limit.
+-                    Other values throw.
++                    <dl class="option-facts">
++                      <div>
++                        <dt>Purpose</dt>
++                        <dd>
++                          The measurement type to read. See
++                          <a href="#ex-type">Read only one type</a>.
++                        </dd>
++                      </div>
++                      <div>
++                        <dt>When omitted</dt>
++                        <dd>
++                          Selected by <code>normalizedUnit</code> when set; otherwise inferred from
++                          the input.
++                        </dd>
++                      </div>
++                      <div>
++                        <dt>Constraints</dt>
++                        <dd>
++                          <code>'height'</code> or <code>'weight'</code>. Must agree with
++                          <code>normalizedUnit</code>.
++                        </dd>
++                      </div>
++                    </dl>
+@@ -1767 +1477 @@
+-                <div>
++                <div id="option-normalized-unit">
+@@ -1769,2 +1479,2 @@
+-                    <span class="name">type?</span
+-                    ><span class="type"><a href="#measurement-type">MeasurementType</a></span>
++                    <a class="name" href="#option-normalized-unit">normalizedUnit?</a
++                    ><span class="type"><a href="#unit-type">Unit</a></span>
+@@ -1773,2 +1483,21 @@
+-                    The measurement type to read: <code>'height'</code> or <code>'weight'</code>.
+-                    See <a href="#ex-type">Read only one type</a>.
++                    <dl class="option-facts">
++                      <div>
++                        <dt>Purpose</dt>
++                        <dd>
++                          The unit of the result. See <a href="#ex-convert">Convert to one unit</a>.
++                        </dd>
++                      </div>
++                      <div>
++                        <dt>When omitted</dt>
++                        <dd>Uses the parsed or inferred unit.</dd>
++                      </div>
++                      <div>
++                        <dt>Constraints</dt>
++                        <dd>
++                          Also selects the measurement type, so a weight unit reads only a weight. A
++                          <code>type</code> that contradicts it throws an error. Shorthand such as
++                          <code>5-11</code> still needs <code>type</code>, and so does
++                          <code>allowUnqualified</code>.
++                        </dd>
++                      </div>
++                    </dl>
+@@ -1777,2 +1506,5 @@
+-                <div>
+-                  <dt><span class="name">fuzziness?</span><span class="type">number</span></dt>
++                <div id="option-fuzziness">
++                  <dt>
++                    <a class="name" href="#option-fuzziness">fuzziness?</a
++                    ><span class="type">number</span>
++                  </dt>
+@@ -1780,2 +1512,17 @@
+-                    The largest number of spelling errors in a unit name, from 0 to 2. Without it, a
+-                    unit name must be exact. See <a href="#ex-fuzzy">Spelling errors in units</a>.
++                    <dl class="option-facts">
++                      <div>
++                        <dt>Purpose</dt>
++                        <dd>
++                          The largest number of spelling errors in a unit name. See
++                          <a href="#ex-fuzzy">Spelling errors in units</a>.
++                        </dd>
++                      </div>
++                      <div>
++                        <dt>Default</dt>
++                        <dd><code>0</code> — unit names must be exact.</dd>
++                      </div>
++                      <div>
++                        <dt>Constraints</dt>
++                        <dd>From <code>0</code> to <code>2</code>.</dd>
++                      </div>
++                    </dl>
+@@ -1784 +1531 @@
+-                <div>
++                <div id="option-allow-unqualified">
+@@ -1786 +1533,2 @@
+-                    <span class="name">allowUnqualified?</span><span class="type">boolean</span>
++                    <a class="name" href="#option-allow-unqualified">allowUnqualified?</a
++                    ><span class="type">boolean</span>
+@@ -1789,2 +1537,20 @@
+-                    Read a number that has no unit. See
+-                    <a href="#ex-unqualified">Numbers without a unit</a>.
++                    <dl class="option-facts">
++                      <div>
++                        <dt>Purpose</dt>
++                        <dd>
++                          Read a number that has no unit. See
++                          <a href="#ex-unqualified">Numbers without a unit</a>.
++                        </dd>
++                      </div>
++                      <div>
++                        <dt>Default</dt>
++                        <dd><code>false</code> — bare-number inference is off.</dd>
++                      </div>
++                      <div>
++                        <dt>Constraints</dt>
++                        <dd>
++                          Requires an explicit <code>type</code> when enabled. Without it,
++                          <code>parseMeasurement</code> throws an error for almost any input.
++                        </dd>
++                      </div>
++                    </dl>
+@@ -1793 +1559 @@
+-                <div>
++                <div id="option-infer-unit">
+@@ -1795 +1561 @@
+-                    <span class="name">inferUnit?</span
++                    <a class="name" href="#option-infer-unit">inferUnit?</a
+@@ -1800,3 +1566,27 @@
+-                  <dd>The unit system for a number that has no unit.</dd>
+-                </div>
+-                <div>
++                  <dd>
++                    <dl class="option-facts">
++                      <div>
++                        <dt>Purpose</dt>
++                        <dd>
++                          The unit system for a number that has no unit, when
++                          <code>allowUnqualified</code> and <code>type</code> are set.
++                        </dd>
++                      </div>
++                      <div>
++                        <dt>When omitted</dt>
++                        <dd>
++                          Same as <code>'imperial'</code>: a height is in inches and a weight in
++                          pounds.
++                        </dd>
++                      </div>
++                      <div>
++                        <dt>Constraints</dt>
++                        <dd>
++                          With <code>'metric'</code>, a weight is in kilograms, a height below 3 in
++                          meters, and any other height in centimeters.
++                        </dd>
++                      </div>
++                    </dl>
++                  </dd>
++                </div>
++                <div id="option-max-length">
+@@ -1804,2 +1594,2 @@
+-                    <span class="name">normalizedUnit?</span
+-                    ><span class="type"><a href="#unit-type">Unit</a></span>
++                    <a class="name" href="#option-max-length">maxLength?</a
++                    ><span class="type">number</span>
+@@ -1808,4 +1598,19 @@
+-                    The unit of the result. It also selects the measurement type, so a weight unit
+-                    reads only a weight. A <code>type</code> that contradicts it throws an error.
+-                    Shorthand such as <code>5-11</code>, and <code>allowUnqualified</code>, still
+-                    need <code>type</code>. See <a href="#ex-convert">Convert to one unit</a>.
++                    <dl class="option-facts">
++                      <div>
++                        <dt>Purpose</dt>
++                        <dd>
++                          The largest raw <code>input.length</code> before trimming or parsing.
++                        </dd>
++                      </div>
++                      <div>
++                        <dt>Default</dt>
++                        <dd><code>1000</code>.</dd>
++                      </div>
++                      <div>
++                        <dt>Constraints</dt>
++                        <dd>
++                          A number of at least <code>1</code>, or <code>Infinity</code> for no
++                          limit. Other values throw.
++                        </dd>
++                      </div>
++                    </dl>
+@@ -2037 +1842,9 @@
+-              Most units can also come before their number, as in <code>kg 70</code>.
++              Most units can also come before their number, as in <code>kg 70</code>. The short
++              forms <code>in</code> and <code>m</code> can come first only as a label, because
++              before a number they are usually ordinary words.
++              <a
++                href="https://github.com/afahy/fluent-measures/blob/main/PARSING.md#units-before-a-number"
++                >PARSING.md<svg class="icon ext" aria-hidden="true">
++                  <use href="#i-external" /></svg
++              ></a>
++              says what counts as a label.
+@@ -2101,2 +1914,5 @@
+-                When the text has more than one measurement, the result is the first one. The others
+-                must agree with it within 1%. If not, the result is <code>null</code>.
++                When the text has more than one height, or more than one weight, the result is the
++                first one. The others must agree with it within 1%. If not, the result is
++                <code>null</code>. If the text has both a height and a weight, set
++                <a href="#ex-type"><code>type</code></a> to choose which one you get. Without
++                <code>type</code>, the result can be either one, or <code>null</code>.
+@@ -2109,2 +1925,2 @@
+-                    Fuzzy matching can read an ordinary word as a unit. After a number,
+-                    <code>in</code> means inches, also in ordinary text, so
++                    Fuzzy matching can read an ordinary word as a unit. Even without it,
++                    <code>in</code> after a number means inches, so
+@@ -2140 +1956 @@
+-                    The text doesn't show if it is a height or a weight. Set
++                    The text doesn't say whether it is a height or a weight. Set
+@@ -2145 +1961 @@
+-                    A number has no unit. Set
++                    A number has no unit. Set <code>type</code>,
+@@ -2172,3 +1988,4 @@
+-                  Still stuck? Search the
+-                  <a href="https://github.com/afahy/fluent-measures/issues">GitHub issues</a>, or
+-                  open a new one if you've found a bug.
++                  If none of these explains the result, search the
++                  <a href="https://github.com/afahy/fluent-measures/issues">GitHub issues</a>. To
++                  report a bug, open an issue with the input, the options and the result that you
++                  expected.
+@@ -2190 +2007 @@
+-          <nav class="toc" aria-label="On this page">
++          <nav class="toc" id="page-navigation" tabindex="-1" aria-label="On this page">
+@@ -2218 +2035 @@
+-                    aria-label="Usage examples"
++                    aria-label="Usage tasks"
+@@ -2224,2 +2040,0 @@
+-                  <li><a href="#ex-basic">Basic height and weight</a></li>
+-                  <li><a href="#ex-feet-inches">Feet and inches</a></li>
+@@ -2230 +2044,0 @@
+-                  <li><a href="#ex-null">No match</a></li>
+@@ -2275 +2089,7 @@
+-        <p>Released under the MIT License. © 2025 <span class="nowrap">Adam Fahy</span>.</p>
++        <div>
++          <p>
++            Docs track <code>main</code> and may include changes not yet released on npm. Source:
++            <!-- docs-source -->local checkout<!-- /docs-source -->.
++          </p>
++          <p>Released under the MIT License. © 2025 <span class="nowrap">Adam Fahy</span>.</p>
++        </div>
+@@ -2318,4 +2138,4 @@
+-      // Each example's code ends with a Returns comment that shows its result, and
+-      // tests/docsExamples.test.ts checks that result against the library. The comment moves to
+-      // the example's Returns panel here, before Prism highlights the code. Without JavaScript,
+-      // the comment stays in the code.
++      // Returns comments keep complete results checked by tests/docsExamples.test.ts and
++      // readable without JavaScript. Before highlighting, remove them from the runnable code;
++      // Quick start reveals the full object beside its module tabs, and later lessons use
++      // short summaries to focus on the behavior they teach.
+@@ -2332 +2152,3 @@
+-        const full = code.closest('[role="tabpanel"], .code').querySelector('[data-full-object]');
++        const full =
++          code.closest('[data-example-panel], .code').querySelector('[data-full-object]') ??
++          code.closest('.code').querySelector('[data-full-object]');
+@@ -2339,0 +2162 @@
++      defer
+@@ -2345,0 +2169 @@
++      defer
+@@ -2351,0 +2176 @@
++      defer
+@@ -2357,0 +2183 @@
++      defer
+@@ -2364,2 +2190,2 @@
+-      // Copy buttons. If the browser blocked clipboard.js, or cdnjs is down, a copy button shows
+-      // the error toast.
++      // Copy actions stay hidden and disabled until the library and feedback handlers are ready.
++      // Failed copy attempts still explain how to select and copy the code manually.
+@@ -2387 +2213 @@
+-        if (typeof ClipboardJS === 'undefined') {
++        if (typeof ClipboardJS === 'undefined' || !ClipboardJS.isSupported('copy')) {
+@@ -2419,0 +2246,4 @@
++        document.querySelectorAll('.copy-button').forEach(button => {
++          button.disabled = false;
++          button.hidden = false;
++        });
+@@ -2447,0 +2278,12 @@
++        // Text spacing and zoom can wrap the header. Anchor targets and the side rail must
++        // clear its actual height, rather than assuming it always occupies one row.
++        const measuredHeader = document.querySelector('.site-header');
++        const measureHeader = () => {
++          document.documentElement.style.setProperty(
++            '--header-offset',
++            `${measuredHeader.getBoundingClientRect().height}px`
++          );
++        };
++        new ResizeObserver(measureHeader).observe(measuredHeader);
++        measureHeader();
++
+@@ -2452,0 +2295,4 @@
++          // Tab-panel text needs a content entry; ordinary examples need focus only to scroll.
++          // Keep tabindex="0" in the markup so the no-script page stays keyboard scrollable.
++          const scrollable = el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight;
++          el.tabIndex = scrollable || el.closest('[role="tabpanel"]') ? 0 : -1;
+@@ -2458,0 +2305,3 @@
++        const codeObserver = new ResizeObserver(entries => {
++          entries.forEach(entry => markOverflow(entry.target));
++        });
+@@ -2460,0 +2310 @@
++          codeObserver.observe(el);
+@@ -2467,2 +2317 @@
+-        // Hero demo: four rows (two on phones) show until "More input examples" is pressed.
+-        // On desktop the next four replace them; narrower layouts add them below.
++        // Four curated examples at every width; append the remaining four on request.
+@@ -2471,9 +2319,0 @@
+-        const demoSwaps = matchMedia('(min-width: 1024px)');
+-        function labelDemo() {
+-          const expanded = demo.dataset.expanded === 'true';
+-          demoMore.querySelector('[data-demo-more-label]').textContent = !expanded
+-            ? 'More input examples'
+-            : demoSwaps.matches
+-              ? 'Back to the first examples'
+-              : 'Fewer input examples';
+-        }
+@@ -2485 +2325,17 @@
+-            labelDemo();
++            demoMore.querySelector('[data-demo-more-label]').textContent = expanded
++              ? 'Show fewer examples'
++              : 'Show all 8 examples';
++            // The new rows precede the focused control in reading order. Announce their location
++            // without moving focus or asking a reader to listen to all eight examples again.
++            demo.querySelector('[data-demo-status]').textContent = expanded
++              ? 'All 8 examples are shown above. The 4 additional examples start with 150 lbs.'
++              : 'Showing the first 4 examples.';
++            if (!expanded) {
++              const rect = demoMore.getBoundingClientRect();
++              const headerBottom = document
++                .querySelector('.site-header')
++                .getBoundingClientRect().bottom;
++              if (rect.top < headerBottom + 12 || rect.bottom > innerHeight - 12) {
++                demoMore.scrollIntoView({ block: 'nearest', behavior: 'instant' });
++              }
++            }
+@@ -2487 +2342,0 @@
+-          demoSwaps.addEventListener('change', labelDemo);
+@@ -2499 +2354 @@
+-        const tabLists = [...document.querySelectorAll('[role="tablist"][data-tab-group]')];
++        const tabLists = [...document.querySelectorAll('[data-tab-group]')];
+@@ -2505 +2360 @@
+-              list.querySelectorAll('[role="tab"]').forEach(tab => {
++              list.querySelectorAll('.tab').forEach(tab => {
+@@ -2530 +2385 @@
+-          const tabs = [...list.querySelectorAll('[role="tab"]')];
++          const tabs = [...list.querySelectorAll('.tab')];
+@@ -2547,0 +2403,12 @@
++          // Keep labeled static groups until both interaction handlers are attached.
++          list.setAttribute('role', 'tablist');
++          tabs.forEach(tab => {
++            tab.setAttribute('role', 'tab');
++            tab.disabled = false;
++            const panel = document.getElementById(tab.getAttribute('aria-controls'));
++            panel.setAttribute('role', 'tabpanel');
++            panel.setAttribute('aria-labelledby', tab.id);
++            panel.querySelector('[data-example-label]').hidden = true;
++          });
++          selectTab(group, tabs[0].dataset.value, { save: false });
++          list.hidden = false;
+@@ -2573,3 +2440,3 @@
+-        // Header menus ("On this page" and the theme picker): one open at a time. They close
+-        // after a choice, on Escape, or on a click outside.
+-        const menus = [...document.querySelectorAll('[data-page-menu], [data-theme-menu]')];
++        // The "On this page" menu closes after a choice, on Escape, or when focus or a click
++        // moves outside.
++        const menus = [...document.querySelectorAll('[data-page-menu]')];
+@@ -2577,0 +2445,10 @@
++        let pressedMenu = null;
++        // Some browsers clear focus on a pointer press without focusing the clicked choice.
++        document.addEventListener('pointerdown', event => {
++          pressedMenu = menus.find(menu => menu.contains(event.target));
++        });
++        ['pointerup', 'pointercancel'].forEach(type => {
++          document.addEventListener(type, () => {
++            pressedMenu = null;
++          });
++        });
+@@ -2584 +2461 @@
+-            if (event.target.closest('a, button[data-theme-choice]')) menu.open = false;
++            if (event.target.closest('a')) menu.open = false;
+@@ -2585,0 +2463,4 @@
++          menu.addEventListener('focusout', event => {
++            if (event.relatedTarget === null && pressedMenu === menu) return;
++            if (!menu.contains(event.relatedTarget)) menu.open = false;
++          });
+@@ -2607 +2488,7 @@
+-        const themeButtons = [...document.querySelectorAll('button[data-theme-choice]')];
++        const themeButton = document.querySelector('.theme-toggle');
++        const themes = [
++          { value: 'light', label: 'Light', icon: '#i-sun' },
++          { value: 'system', label: 'System', icon: '#i-monitor' },
++          { value: 'dark', label: 'Dark', icon: '#i-moon' },
++        ];
++        let themeIndex = themes.findIndex(theme => theme.value === root.dataset.themePref);
+@@ -2610,4 +2497,6 @@
+-          themeButtons.forEach(button => {
+-            const pressed = button.dataset.themeChoice === root.dataset.themePref;
+-            button.setAttribute('aria-pressed', String(pressed));
+-          });
++          const current = themes[themeIndex];
++          const next = themes[(themeIndex + 1) % themes.length];
++          const label = `Color theme: ${current.label}. Switch to ${next.label}.`;
++          themeButton.setAttribute('aria-label', label);
++          themeButton.title = label;
++          themeButton.querySelector('use').setAttribute('href', current.icon);
+@@ -2616,9 +2505,8 @@
+-        themeButtons.forEach(button => {
+-          button.addEventListener('click', () => {
+-            const choice = button.dataset.themeChoice;
+-            root.dataset.themePref = choice;
+-            if (choice === 'system') storage.remove('fluent-measures:theme');
+-            else storage.set('fluent-measures:theme', choice);
+-            window.fluentMeasuresTheme?.();
+-            showThemeChoice();
+-          });
++        themeButton.addEventListener('click', () => {
++          themeIndex = (themeIndex + 1) % themes.length;
++          const choice = themes[themeIndex].value;
++          root.dataset.themePref = choice;
++          if (choice === 'system') storage.remove('fluent-measures:theme');
++          else storage.set('fluent-measures:theme', choice);
++          window.fluentMeasuresTheme?.();
++          showThemeChoice();
+@@ -2626,0 +2515 @@
++        themeButton.hidden = false;
+@@ -2638 +2527 @@
+-                pill.textContent = 'v' + data.version;
++                pill.querySelector('[data-npm-version-text]').textContent = 'v' + data.version;
+@@ -2649,2 +2538,20 @@
+-        // Folding navigation groups. The group holding the current section opens itself; a
+-        // group the reader toggles stays that way until the current section enters or leaves it.
++        // A tab stop can be inside the viewport but covered by the sticky header. Scroll
++        // spacing alone doesn't make browsers reveal it. Wait for native focus scrolling,
++        // then leave room for the outline without changing anchor offsets or animating focus.
++        document.addEventListener('focusin', event => {
++          const target = event.target;
++          requestAnimationFrame(() => {
++            if (
++              document.activeElement !== target ||
++              !target.matches(':focus-visible') ||
++              target.closest('.site-header')
++            )
++              return;
++            const top = target.getBoundingClientRect().top;
++            const edge = document.querySelector('.site-header').getBoundingClientRect().bottom + 8;
++            if (top < edge) window.scrollBy({ top: top - edge, behavior: 'instant' });
++          });
++        });
++
++        // Start compact, then let the reader choose which groups stay open. Only an explicit
++        // anchor jump (including the initial hash) reveals its group; scrolling never folds it.
+@@ -2660,0 +2568 @@
++          setGroup(group, false);
+@@ -2662,3 +2570,2 @@
+-            const open = group.dataset.open !== 'true';
+-            group.dataset.pinned = open ? 'open' : 'closed';
+-            setGroup(group, open);
++            setGroup(group, group.dataset.open !== 'true');
++            updateCurrent();
+@@ -2668 +2575 @@
+-        function updateGroups(currentHref) {
++        function revealGroup(href) {
+@@ -2670,8 +2577,2 @@
+-            const targets = [...group.querySelectorAll('a')].map(a => a.getAttribute('href'));
+-            const holds = targets.includes(currentHref);
+-            if (holds !== group._holds) {
+-              group._holds = holds;
+-              delete group.dataset.pinned;
+-            }
+-            const pinned = group.dataset.pinned;
+-            setGroup(group, pinned ? pinned === 'open' : holds);
++            if ([...group.querySelectorAll('a')].some(link => link.getAttribute('href') === href))
++              setGroup(group, true);
+@@ -2711,0 +2613 @@
++          if (jumpTarget) revealGroup('#' + jumpTarget.id);
+@@ -2717 +2619,4 @@
+-          if (link) noteJump(link.getAttribute('href'));
++          if (link) {
++            noteJump(link.getAttribute('href'));
++            updateCurrent();
++          }
+@@ -2750 +2655,3 @@
+-            const active = inSiteNav ? href === currentSection : href === currentHref;
++            // Keep the current section visible even when its nested link is folded away.
++            const collapsed = link.closest('.toc-group')?.dataset.open === 'false';
++            const active = inSiteNav || collapsed ? href === currentSection : href === currentHref;
+@@ -2756 +2662,0 @@
+-            updateGroups(currentHref);
+--- a/docs/site.css
++++ b/docs/site.css
+@@ -24,2 +24,3 @@
+-  --bg: #ffffff;
+-  --bg-tint: #f6faf9;
++  /* Atlas: production palette selected in AFA-246. */
++  --bg: #fafbfc;
++  --bg-tint: #f2f4f8;
+@@ -27,3 +28,3 @@
+-  --surface-muted: #f4f6f9;
+-  --border: #dbe2ea;
+-  --border-strong: #aab6c4;
++  --surface-muted: #eceff3;
++  --border: #d0d4dd;
++  --border-strong: #a1a8b5;
+@@ -31,8 +32,9 @@
+-  --border-control: #8794a5;
+-  --heading: #0f172a;
+-  --text: #334155;
+-  --text-muted: #5a6577;
+-  --accent: #0f766e;
+-  --accent-hover: #115e59;
+-  --accent-soft: #e7f4f2;
+-  --accent-line: rgba(15, 118, 110, 0.4);
++  --border-control: #6d7780;
++  --heading: #202329;
++  --result-value: #202329;
++  --text: #353b43;
++  --text-muted: #59616b;
++  --accent: #2456b3;
++  --accent-hover: #1b448f;
++  --accent-soft: #e7ebf3;
++  --accent-line: #2456b388;
+@@ -40,2 +42,2 @@
+-  --inline-code-bg: #eef2f6;
+-  --inline-code-text: #1e293b;
++  --inline-code-bg: #eaecf1;
++  --inline-code-text: #282e36;
+@@ -43,2 +45,2 @@
+-  --header-bg: #ffffff;
+-  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px -12px rgba(15, 23, 42, 0.12);
++  --header-bg: #fafbfc;
++  --shadow-card: 0 1px 2px #00000008, 0 8px 24px -12px #00000018;
+@@ -46,5 +48,5 @@
+-  --null: #7c3aed;
+-  --null-soft: rgba(124, 58, 237, 0.05);
+-  --error: #b42318;
+-  --error-line: rgba(180, 35, 24, 0.35);
+-  --error-soft: rgba(180, 35, 24, 0.06);
++  --null: #67576d;
++  --null-soft: #67576d0b;
++  --error: #a92321;
++  --error-line: #a9232166;
++  --error-soft: #a923210c;
+@@ -54 +56 @@
+-   * the brand: teal keywords, plain semibold calls, blue strings, warm numbers and quiet
++   * the brand: blue keywords, plain semibold calls, green strings, warm numbers and quiet
+@@ -57,17 +59,17 @@
+-  --code-bg: #f6f8fa;
+-  --code-head: #eef1f5;
+-  --code-border: #dfe3e8;
+-  --code-divider: #e3e7ec;
+-  --code-text: #1f2328;
+-  --code-muted: #59636e;
+-  --code-accent: #0f766e;
+-  --code-accent-line: rgba(15, 118, 110, 0.4);
+-  --code-null: #7c3aed;
+-  --code-hover: rgba(15, 23, 42, 0.06);
+-  --code-shadow: 0 8px 20px -10px rgba(15, 23, 42, 0.25);
+-  --tok-comment: #5f6b78;
+-  --tok-keyword: #0b6e66;
+-  --tok-string: #1a4f96;
+-  --tok-number: #9a3f07;
+-  --tok-property: #36404b;
+-  --tok-punctuation: #5f6b78;
++  --code-bg: #f3f4f7;
++  --code-head: #eaecf1;
++  --code-border: #cdd2db;
++  --code-divider: #d6dae1;
++  --code-text: #282e36;
++  --code-muted: #56616b;
++  --code-accent: #2456b3;
++  --code-accent-line: #2456b388;
++  --code-null: #67576d;
++  --code-hover: #0000000a;
++  --code-shadow: 0 8px 20px -10px #00000026;
++  --tok-comment: #56616b;
++  --tok-keyword: #2456b3;
++  --tok-string: #2c665e;
++  --tok-number: #8b431a;
++  --tok-property: #35424a;
++  --tok-punctuation: #56616b;
+@@ -82,0 +85 @@
++  --header-offset: var(--header-h);
+@@ -133,2 +136,2 @@
+- * The page loads Prism's "Tomorrow" theme before this file, and that theme is for a dark page.
+- * These rules undo it, so the code styles below apply in both color themes.
++ * Code layout and syntax colors belong to this page, in both color themes.
++ * No external Prism stylesheet is needed before the browser can paint the docs.
+@@ -367,0 +371 @@
++  flex-wrap: wrap;
+@@ -370 +374,2 @@
+-  height: var(--header-h);
++  row-gap: 0;
++  min-height: var(--header-h);
+@@ -372,0 +378,5 @@
++/* A native anchor jump must remain visible when a reader enlarges or spaces out text. */
++html:not([data-js]) .site-header {
++  position: relative;
++}
++
+@@ -488,0 +499 @@
++  gap: 4px;
+@@ -503,0 +515,5 @@
++.version-pill .icon {
++  width: 12px;
++  height: 12px;
++}
++
+@@ -531,18 +546,0 @@
+-}
+-
+-/* Theme picker: the button shows the active theme; the panel lists all three choices. */
+-.theme-menu {
+-  position: relative;
+-  display: none;
+-}
+-
+-[data-js] .theme-menu {
+-  display: block;
+-}
+-
+-.theme-menu > summary {
+-  list-style: none;
+-}
+-
+-.theme-menu > summary::-webkit-details-marker {
+-  display: none;
+@@ -551,6 +549,4 @@
+-.theme-menu[open] > summary {
+-  color: var(--heading);
+-  background: var(--surface-muted);
+-}
+-
+-.theme-menu > summary {
++/* One button cycles through light, system, and dark; its icon shows the preference. */
++.theme-toggle {
++  min-width: 44px;
++  min-height: 44px;
+@@ -558,36 +553,0 @@
+-}
+-
+-[data-theme='dark'] .theme-light,
+-[data-theme='light'] .theme-dark {
+-  display: none;
+-}
+-
+-.theme-panel {
+-  position: absolute;
+-  top: calc(100% + 8px);
+-  right: 0;
+-  z-index: 50;
+-  display: grid;
+-  gap: 2px;
+-  min-width: 148px;
+-  padding: 6px;
+-  border: 1px solid var(--border);
+-  border-radius: var(--radius);
+-  background: var(--surface);
+-  box-shadow: 0 16px 32px -16px rgba(15, 23, 42, 0.3);
+-}
+-
+-.theme-panel button {
+-  display: flex;
+-  align-items: center;
+-  gap: 10px;
+-  min-height: 36px;
+-  padding: 0 10px;
+-  border: 0;
+-  border-radius: var(--radius-sm);
+-  background: transparent;
+-  color: var(--text);
+-  font-size: 0.875rem;
+-  font-weight: 500;
+-  text-align: left;
+-  cursor: pointer;
+@@ -596,17 +555,0 @@
+-.theme-panel button:hover {
+-  color: var(--heading);
+-  background: var(--surface-muted);
+-}
+-
+-.theme-panel button[aria-pressed='true'] {
+-  color: var(--accent);
+-  background: var(--accent-soft);
+-  font-weight: 600;
+-}
+-
+-@media (pointer: coarse) {
+-  .theme-panel button {
+-    min-height: 44px;
+-  }
+-}
+-
+@@ -674,0 +618,4 @@
++  .skip-navigation {
++    display: none;
++  }
++
+@@ -814,20 +760,0 @@
+-.hero-eyebrow {
+-  display: inline-flex;
+-  align-items: center;
+-  gap: 8px;
+-  margin-bottom: 18px;
+-  padding: 3px 12px 3px 10px;
+-  border: 1px solid var(--border);
+-  border-radius: 999px;
+-  background: var(--surface);
+-  font-family: var(--font-mono);
+-  font-size: var(--mono-sm);
+-  font-weight: 600;
+-  line-height: 1.5;
+-  color: var(--heading);
+-}
+-
+-.hero-eyebrow .icon {
+-  color: var(--accent);
+-}
+-
+@@ -847 +774 @@
+-/* Phones: a shorter headline and intro, and no eyebrow (the install box names the package). */
++/* Phones: a shorter headline and intro. */
+@@ -849 +775,0 @@
+-  .hero-eyebrow,
+@@ -1013 +939,4 @@
+-/* Rows share one grid so arrows line up just before right-aligned results. */
++/*
++ * Reserve the longest result (68.0388555 kg, 13 characters) plus the row's right padding,
++ * even while it is hidden. Expanding the examples must not resize the shared columns.
++ */
+@@ -1016 +945 @@
+-  grid-template-columns: minmax(0, 1fr) 20px auto;
++  grid-template-columns: minmax(0, 1fr) 20px calc(13ch + 20px);
+@@ -1017,0 +947,2 @@
++  font-family: var(--font-mono);
++  font-size: var(--mono-lg);
+@@ -1108,2 +1039,6 @@
+-.demo-list dd b {
+-  color: var(--accent);
++/* Summarized values share a neutral color; code literals keep their syntax colors. */
++.demo-list dd b,
++.summary b,
++.result b,
++.input-results dd b {
++  color: var(--result-value);
+@@ -1128,0 +1064,7 @@
++.demo-note {
++  display: block;
++  margin-top: 4px;
++  font-size: 0.8125rem;
++  color: var(--text-muted);
++}
++
+@@ -1136,0 +1079,2 @@
++    /* The long result has its own line here; reserve the next longest, 180.34 cm. */
++    grid-template-columns: minmax(0, 1fr) 20px calc(9ch + 16px);
+@@ -1141,2 +1085,2 @@
+-    min-height: 60px;
+-    padding: 10px 16px;
++    min-height: 56px;
++    padding: 7px 16px;
+@@ -1144,0 +1089,9 @@
++  .demo-opts {
++    margin-top: 2px;
++  }
++
++  .demo-head {
++    padding-top: 10px;
++    padding-bottom: 10px;
++  }
++
+@@ -1171,5 +1124 @@
+-/*
+- * Four rows first (height and weight only on phones); four more sit behind "More input
+- * examples". Beside the hero copy, the second four replace the first, so the card keeps
+- * its height; stacked layouts simply grow.
+- */
++/* Four curated examples at every width. Without JavaScript all eight show. */
+@@ -1180,16 +1128,0 @@
+-@media (min-width: 1024px) {
+-  [data-js] .demo[data-expanded='true'] .demo-list > div:not(.demo-extra) {
+-    display: none;
+-  }
+-
+-  [data-js] .demo-list > div:not(.demo-extra) + .demo-extra {
+-    border-top: 0;
+-  }
+-}
+-
+-@media (max-width: 639px) {
+-  [data-js] .demo:not([data-expanded='true']) .demo-wide {
+-    display: none;
+-  }
+-}
+-
+@@ -1197,4 +1130,2 @@
+- * A long result (150 lbs in kg) widens the shared result column. So its input and options take
+- * the whole row, which keeps them on as few lines as in the other rows, and the result sits on
+- * the chip's line. On a phone the result takes its own line instead, so it doesn't widen the
+- * column for every row and push the arrows into the inputs.
++ * The long result's input and options take the whole row, with the result on the chip's line.
++ * On a phone the result takes its own line instead, leaving room for the other rows' inputs.
+@@ -1229 +1160,19 @@
+-/* The hero demo's "More" toggle. Without JavaScript all rows show. */
++/* A quiet disclosure beside Usage, with a full touch target. */
++.demo-links {
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  gap: 12px;
++}
++
++.demo-links a {
++  display: inline-flex;
++  align-items: center;
++  gap: 4px;
++  min-height: 44px;
++}
++
++.demo-links a .icon {
++  transform: rotate(90deg);
++}
++
+@@ -1233 +1181,0 @@
+-  justify-content: center;
+@@ -1235 +1182,0 @@
+-  width: 100%;
+@@ -1236,0 +1184 @@
++  padding: 0;
+@@ -1238,3 +1186,2 @@
+-  border-top: 1px solid var(--border);
+-  background: var(--surface-muted);
+-  color: var(--heading);
++  background: transparent;
++  color: var(--accent);
+@@ -1242 +1189 @@
+-  font-weight: 600;
++  font-weight: 500;
+@@ -1243,0 +1191,3 @@
++  /* An immediate collapse adjustment leaves the control below the sticky header. */
++  scroll-margin-top: calc(var(--header-offset) + 12px);
++  scroll-margin-bottom: 12px;
+@@ -1247 +1197 @@
+-  background: var(--accent-soft);
++  text-decoration: underline;
+@@ -1251,2 +1201,2 @@
+-  outline-offset: -3px;
+-  border-radius: 0;
++  outline-offset: 2px;
++  border-radius: 3px;
+@@ -1263 +1213 @@
+-/* Features */
++/* One compact capability list near the introduction at every width. */
+@@ -1266 +1216 @@
+-  padding: 0 0 56px;
++  padding: 0 0 28px;
+@@ -1268 +1218 @@
+-  gap: 24px;
++  gap: 12px;
+@@ -1273 +1223 @@
+-    grid-template-columns: repeat(3, minmax(0, 1fr));
++    grid-template-columns: repeat(2, minmax(0, 1fr));
+@@ -1275 +1225 @@
+-    padding-bottom: 44px;
++    padding-bottom: 36px;
+@@ -1280,4 +1230,3 @@
+-  display: grid;
+-  grid-template-columns: 40px minmax(0, 1fr);
+-  align-content: start;
+-  gap: 4px 16px;
++  display: flex;
++  align-items: flex-start;
++  gap: 14px;
+@@ -1287,4 +1236,3 @@
+-  grid-row: span 2;
+-  width: 40px;
+-  height: 40px;
+-  border-radius: 10px;
++  flex: 0 0 32px;
++  height: 32px;
++  border-radius: 8px;
+@@ -1297,6 +1245,3 @@
+-.features .feature-title {
+-  color: var(--heading);
+-  font-size: 1rem;
+-  line-height: 1.5;
+-  font-weight: 600;
+-  letter-spacing: -0.005em;
++.feature-icon .icon {
++  width: 18px;
++  height: 18px;
+@@ -1305 +1250 @@
+-.features p:not(.feature-title) {
++.features p {
+@@ -1311,3 +1256,3 @@
+-/* Phones show the feature list after Quick start, so the install steps come first. */
+-.features-docs {
+-  display: none;
++.feature-title {
++  color: var(--heading);
++  font-weight: 600;
+@@ -1315,0 +1261 @@
++/* Inline titles and no decorative icons keep the phone introduction short. */
+@@ -1317 +1263 @@
+-  .features-hero {
++  .feature-icon {
+@@ -1321,27 +1267,2 @@
+-  .stack > .features-docs {
+-    display: grid;
+-    gap: 16px;
+-    margin-top: 32px;
+-    padding: 24px 0 0;
+-    border-top: 1px solid var(--border);
+-  }
+-
+-  .features li {
+-    grid-template-columns: 32px minmax(0, 1fr);
+-    gap: 2px 14px;
+-  }
+-
+-  .feature-icon {
+-    width: 32px;
+-    height: 32px;
+-    border-radius: 8px;
+-  }
+-
+-  .feature-icon .icon {
+-    width: 18px;
+-    height: 18px;
+-  }
+-
+-  .features .feature-title {
+-    line-height: 1.4;
+-    padding-top: 5px;
++  .features p {
++    font-size: 0.875rem;
+@@ -1399,2 +1320,2 @@
+-    top: calc(var(--header-h) + 32px);
+-    max-height: calc(100vh - var(--header-h) - 56px);
++    top: calc(var(--header-offset) + 32px);
++    max-height: calc(100vh - var(--header-offset) - 56px);
+@@ -1468,2 +1389,2 @@
+- * Long groups (examples, API) fold behind a toggle. The group holding the
+- * current section opens itself. Without JavaScript every group stays expanded.
++ * Long groups (examples, API) fold behind a reader-controlled toggle. Scrolling
++ * leaves their state alone. Without JavaScript every group stays expanded.
+@@ -1554,2 +1475,5 @@
+-.doc-section :is(h2, h3, h4) {
+-  scroll-margin-top: var(--anchor-offset);
++.doc-section :is(h2, h3, h4),
++#ex-basic,
++#ex-feet-inches,
++#ex-null {
++  scroll-margin-top: max(var(--anchor-offset), calc(var(--header-offset) + 24px));
+@@ -1757,0 +1682 @@
++  --result-value: var(--code-text);
+@@ -1952,5 +1876,0 @@
+-}
+-
+-.summary b {
+-  color: var(--code-accent);
+-  font-weight: 650;
+@@ -2314,7 +2234,10 @@
+-/*
+- * The option names each example passes, so a reader can scan for the one they need.
+- * Names only: the values are in the code just below.
+- */
+-.ex-opts {
+-  display: flex;
+-  flex-wrap: wrap;
++/* Compact input/output rows keep spelling variants beside the lesson they illustrate. */
++.input-results {
++  border: 1px solid var(--border);
++  border-radius: var(--radius-sm);
++  overflow: hidden;
++}
++
++.input-results > div {
++  display: grid;
++  grid-template-columns: minmax(0, 1fr) max-content;
+@@ -2322,7 +2245,2 @@
+-  gap: 2px 0;
+-  margin-top: 6px;
+-  padding: 0;
+-  list-style: none;
+-  font-size: 0.8125rem;
+-  line-height: 1.6;
+-  color: var(--text-muted);
++  gap: 12px;
++  padding: 12px 16px;
+@@ -2331,3 +2249,2 @@
+-.ex-opts-label {
+-  margin-right: 10px;
+-  font-weight: 500;
++.input-results > div + div {
++  border-top: 1px solid var(--border);
+@@ -2336,8 +2253,5 @@
+-.ex-opts code {
+-  padding: 0;
+-  background: none;
+-  color: var(--heading);
+-  font-family: var(--font-mono);
+-  font-size: var(--mono-md);
+-  font-weight: 500;
+-  white-space: nowrap;
++.input-results dt {
++  display: flex;
++  flex-wrap: wrap;
++  align-items: baseline;
++  gap: 4px 16px;
+@@ -2346,4 +2260,2 @@
+-.ex-opts li:not(.ex-opts-label) + li::before {
+-  content: '·';
+-  margin: 0 8px;
+-  color: var(--text-muted);
++.input-text {
++  overflow-wrap: anywhere;
+@@ -2352,2 +2264,3 @@
+-.ex-opts .is-none {
+-  font-style: italic;
++.input-options {
++  color: var(--text-muted);
++  font-size: var(--mono-sm);
+@@ -2356,10 +2269,5 @@
+-/*
+- * "Input" picker: chooses which example the code panel shows. Sans pills on the page
+- * surface, unlike the underlined tabs on code headers that switch equivalent code.
+- */
+-.picker {
+-  display: flex;
+-  flex-wrap: wrap;
+-  align-items: center;
+-  gap: 8px 12px;
+-  margin-bottom: 12px;
++.input-results dd {
++  margin: 0;
++  font-family: var(--font-mono);
++  white-space: nowrap;
++  color: var(--heading);
+@@ -2368,4 +2276,2 @@
+-.picker-label {
+-  color: var(--text-muted);
+-  font-size: 0.8125rem;
+-  font-weight: 600;
++.input-results .is-null {
++  color: var(--null);
+@@ -2374,4 +2280,4 @@
+-.picker-options {
+-  display: flex;
+-  flex-wrap: wrap;
+-  gap: 6px;
++/* Native focus scrolling must finish before a following Enter jumps to its anchor. Removing
++ * unavailable controls shortens the Tab path, so smooth scrolling can cancel that jump. */
++html:not([data-js]) {
++  scroll-behavior: auto;
+@@ -2380,20 +2286,3 @@
+-.pick {
+-  position: relative;
+-  display: inline-flex;
+-  align-items: center;
+-  min-height: 32px;
+-  padding: 0 12px;
+-  border: 1px solid var(--border-control);
+-  border-radius: var(--radius-sm);
+-  background: var(--surface);
+-  color: var(--text);
+-  font-family: var(--font-sans);
+-  font-size: 0.875rem;
+-  font-weight: 500;
+-  line-height: 1.2;
+-  white-space: nowrap;
+-  cursor: pointer;
+-  transition:
+-    background-color 0.15s ease,
+-    border-color 0.15s ease,
+-    color 0.15s ease;
++/* Static groups carry their own labels until the tab handlers are ready. */
++.code-head:has(> [data-tab-group][hidden]) {
++  display: none;
+@@ -2402,3 +2291,3 @@
+-.pick:hover {
+-  color: var(--heading);
+-  border-color: var(--text-muted);
++/* All lesson examples remain readable when scripts are unavailable. */
++html:not([data-js]) .code .code-wide {
++  display: block;
+@@ -2407,5 +2296,2 @@
+-.pick[aria-selected='true'] {
+-  border-color: var(--accent);
+-  background: var(--accent-soft);
+-  color: var(--accent);
+-  font-weight: 600;
++html:not([data-js]) .code .code-narrow {
++  display: none;
+@@ -2414,7 +2300,3 @@
+-/* A taller invisible target on touch screens, without a taller pill. */
+-@media (pointer: coarse) {
+-  .pick::after {
+-    content: '';
+-    position: absolute;
+-    inset: -6px -3px;
+-  }
++html:not([data-js]) .code pre {
++  white-space: pre-wrap;
++  overflow-wrap: anywhere;
+@@ -2583,0 +2466,41 @@
++/* Keep option metadata in the same order, with labels that reflow above their values. */
++.option-list > div {
++  padding-block: 20px;
++  scroll-margin-top: 100px;
++}
++
++.option-list > div > dd {
++  margin-top: 12px;
++}
++
++.option-facts {
++  display: grid;
++  gap: 10px;
++}
++
++.option-facts > div {
++  display: grid;
++  grid-template-columns: 7rem minmax(0, 1fr);
++  gap: 12px;
++}
++
++.option-facts dt {
++  display: block;
++  font-family: var(--font-sans);
++  font-size: 0.8125rem;
++  font-weight: 600;
++  line-height: 1.85;
++  color: var(--text-muted);
++}
++
++.option-facts dd {
++  margin: 0;
++}
++
++@container (max-width: 470px) {
++  .option-facts > div {
++    grid-template-columns: minmax(0, 1fr);
++    gap: 2px;
++  }
++}
++
+@@ -2664,5 +2586,0 @@
+-}
+-
+-.result b {
+-  color: var(--accent);
+-  font-weight: 650;
+@@ -2917 +2835 @@
+-/* Callouts: a tinted box with a full 1px border and an icon. Teal informs; amber cautions. */
++/* Callouts: a tinted box with a full 1px border and an icon. Blue informs; amber cautions. */
+@@ -2920 +2838 @@
+-  --callout-line: rgba(15, 118, 110, 0.28);
++  --callout-line: var(--accent-line);
+@@ -3164,0 +3083,8 @@
++}
++
++.docs-resources {
++  display: flex;
++  flex-wrap: wrap;
++  gap: 4px 24px;
++  margin-top: 16px;
++  font-size: 0.875rem;
+@@ -3166,0 +3093,8 @@
++.docs-resources a {
++  display: inline-flex;
++  align-items: center;
++  min-height: 32px;
++  text-decoration: underline;
++  text-underline-offset: 3px;
++}
++
+--- a/docs/tailwind.css
++++ b/docs/tailwind.css
+@@ -27,2 +27,3 @@
+-  --bg: #ffffff;
+-  --bg-tint: #f6faf9;
++  /* Atlas: production palette selected in AFA-246. */
++  --bg: #fafbfc;
++  --bg-tint: #f2f4f8;
+@@ -30,3 +31,3 @@
+-  --surface-muted: #f4f6f9;
+-  --border: #dbe2ea;
+-  --border-strong: #aab6c4;
++  --surface-muted: #eceff3;
++  --border: #d0d4dd;
++  --border-strong: #a1a8b5;
+@@ -34,8 +35,9 @@
+-  --border-control: #8794a5;
+-  --heading: #0f172a;
+-  --text: #334155;
+-  --text-muted: #5a6577;
+-  --accent: #0f766e;
+-  --accent-hover: #115e59;
+-  --accent-soft: #e7f4f2;
+-  --accent-line: rgba(15, 118, 110, 0.4);
++  --border-control: #6d7780;
++  --heading: #202329;
++  --result-value: #202329;
++  --text: #353b43;
++  --text-muted: #59616b;
++  --accent: #2456b3;
++  --accent-hover: #1b448f;
++  --accent-soft: #e7ebf3;
++  --accent-line: #2456b388;
+@@ -43,2 +45,2 @@
+-  --inline-code-bg: #eef2f6;
+-  --inline-code-text: #1e293b;
++  --inline-code-bg: #eaecf1;
++  --inline-code-text: #282e36;
+@@ -46,2 +48,2 @@
+-  --header-bg: #ffffff;
+-  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px -12px rgba(15, 23, 42, 0.12);
++  --header-bg: #fafbfc;
++  --shadow-card: 0 1px 2px #00000008, 0 8px 24px -12px #00000018;
+@@ -49,5 +51,5 @@
+-  --null: #7c3aed;
+-  --null-soft: rgba(124, 58, 237, 0.05);
+-  --error: #b42318;
+-  --error-line: rgba(180, 35, 24, 0.35);
+-  --error-soft: rgba(180, 35, 24, 0.06);
++  --null: #67576d;
++  --null-soft: #67576d0b;
++  --error: #a92321;
++  --error-line: #a9232166;
++  --error-soft: #a923210c;
+@@ -56 +58 @@
+-   * the brand: teal keywords, plain semibold calls, blue strings, warm numbers and quiet
++   * the brand: blue keywords, plain semibold calls, green strings, warm numbers and quiet
+@@ -59,17 +61,17 @@
+-  --code-bg: #f6f8fa;
+-  --code-head: #eef1f5;
+-  --code-border: #dfe3e8;
+-  --code-divider: #e3e7ec;
+-  --code-text: #1f2328;
+-  --code-muted: #59636e;
+-  --code-accent: #0f766e;
+-  --code-accent-line: rgba(15, 118, 110, 0.4);
+-  --code-null: #7c3aed;
+-  --code-hover: rgba(15, 23, 42, 0.06);
+-  --code-shadow: 0 8px 20px -10px rgba(15, 23, 42, 0.25);
+-  --tok-comment: #5f6b78;
+-  --tok-keyword: #0b6e66;
+-  --tok-string: #1a4f96;
+-  --tok-number: #9a3f07;
+-  --tok-property: #36404b;
+-  --tok-punctuation: #5f6b78;
++  --code-bg: #f3f4f7;
++  --code-head: #eaecf1;
++  --code-border: #cdd2db;
++  --code-divider: #d6dae1;
++  --code-text: #282e36;
++  --code-muted: #56616b;
++  --code-accent: #2456b3;
++  --code-accent-line: #2456b388;
++  --code-null: #67576d;
++  --code-hover: #0000000a;
++  --code-shadow: 0 8px 20px -10px #00000026;
++  --tok-comment: #56616b;
++  --tok-keyword: #2456b3;
++  --tok-string: #2c665e;
++  --tok-number: #8b431a;
++  --tok-property: #35424a;
++  --tok-punctuation: #56616b;
+@@ -81,0 +84 @@
++  --header-offset: var(--header-h);
+@@ -133,2 +136,2 @@
+- * The page loads Prism's "Tomorrow" theme before this file, and that theme is for a dark page.
+- * These rules undo it, so the code styles below apply in both color themes.
++ * Code layout and syntax colors belong to this page, in both color themes.
++ * No external Prism stylesheet is needed before the browser can paint the docs.
+@@ -376,0 +380 @@
++  flex-wrap: wrap;
+@@ -379 +383,2 @@
+-  height: var(--header-h);
++  row-gap: 0;
++  min-height: var(--header-h);
+@@ -381,0 +387,6 @@
++/* A native anchor jump must remain visible when a reader enlarges or spaces out text. */
++
++html:not([data-js]) .site-header {
++  position: relative;
++}
++
+@@ -500,0 +512 @@
++  gap: 4px;
+@@ -515,0 +528,5 @@
++.version-pill .icon {
++  width: 12px;
++  height: 12px;
++}
++
+@@ -546 +563 @@
+-/* Theme picker: the button shows the active theme; the panel lists all three choices. */
++/* One button cycles through light, system, and dark; its icon shows the preference. */
+@@ -548,23 +565,3 @@
+-.theme-menu {
+-  position: relative;
+-  display: none;
+-}
+-
+-[data-js] .theme-menu {
+-  display: block;
+-}
+-
+-.theme-menu > summary {
+-  list-style: none;
+-}
+-
+-.theme-menu > summary::-webkit-details-marker {
+-  display: none;
+-}
+-
+-.theme-menu[open] > summary {
+-  color: var(--heading);
+-  background: var(--surface-muted);
+-}
+-
+-.theme-menu > summary {
++.theme-toggle {
++  min-width: 44px;
++  min-height: 44px;
+@@ -574,53 +570,0 @@
+-[data-theme='dark'] .theme-light,
+-[data-theme='light'] .theme-dark {
+-  display: none;
+-}
+-
+-.theme-panel {
+-  position: absolute;
+-  top: calc(100% + 8px);
+-  right: 0;
+-  z-index: 50;
+-  display: grid;
+-  gap: 2px;
+-  min-width: 148px;
+-  padding: 6px;
+-  border: 1px solid var(--border);
+-  border-radius: var(--radius);
+-  background: var(--surface);
+-  box-shadow: 0 16px 32px -16px rgba(15, 23, 42, 0.3);
+-}
+-
+-.theme-panel button {
+-  display: flex;
+-  align-items: center;
+-  gap: 10px;
+-  min-height: 36px;
+-  padding: 0 10px;
+-  border: 0;
+-  border-radius: var(--radius-sm);
+-  background: transparent;
+-  color: var(--text);
+-  font-size: 0.875rem;
+-  font-weight: 500;
+-  text-align: left;
+-  cursor: pointer;
+-}
+-
+-.theme-panel button:hover {
+-  color: var(--heading);
+-  background: var(--surface-muted);
+-}
+-
+-.theme-panel button[aria-pressed='true'] {
+-  color: var(--accent);
+-  background: var(--accent-soft);
+-  font-weight: 600;
+-}
+-
+-@media (pointer: coarse) {
+-  .theme-panel button {
+-    min-height: 44px;
+-  }
+-}
+-
+@@ -691,0 +636,4 @@
++  .skip-navigation {
++    display: none;
++  }
++
+@@ -834,20 +781,0 @@
+-.hero-eyebrow {
+-  display: inline-flex;
+-  align-items: center;
+-  gap: 8px;
+-  margin-bottom: 18px;
+-  padding: 3px 12px 3px 10px;
+-  border: 1px solid var(--border);
+-  border-radius: 999px;
+-  background: var(--surface);
+-  font-family: var(--font-mono);
+-  font-size: var(--mono-sm);
+-  font-weight: 600;
+-  line-height: 1.5;
+-  color: var(--heading);
+-}
+-
+-.hero-eyebrow .icon {
+-  color: var(--accent);
+-}
+-
+@@ -867 +795 @@
+-/* Phones: a shorter headline and intro, and no eyebrow (the install box names the package). */
++/* Phones: a shorter headline and intro. */
+@@ -870 +797,0 @@
+-  .hero-eyebrow,
+@@ -1038 +965,4 @@
+-/* Rows share one grid so arrows line up just before right-aligned results. */
++/*
++ * Reserve the longest result (68.0388555 kg, 13 characters) plus the row's right padding,
++ * even while it is hidden. Expanding the examples must not resize the shared columns.
++ */
+@@ -1042 +972 @@
+-  grid-template-columns: minmax(0, 1fr) 20px auto;
++  grid-template-columns: minmax(0, 1fr) 20px calc(13ch + 20px);
+@@ -1044,0 +975,2 @@
++  font-family: var(--font-mono);
++  font-size: var(--mono-lg);
+@@ -1137,2 +1069,7 @@
+-.demo-list dd b {
+-  color: var(--accent);
++/* Summarized values share a neutral color; code literals keep their syntax colors. */
++
++.demo-list dd b,
++.summary b,
++.result b,
++.input-results dd b {
++  color: var(--result-value);
+@@ -1157,0 +1095,7 @@
++.demo-note {
++  display: block;
++  margin-top: 4px;
++  font-size: 0.8125rem;
++  color: var(--text-muted);
++}
++
+@@ -1165,0 +1110,2 @@
++    /* The long result has its own line here; reserve the next longest, 180.34 cm. */
++    grid-template-columns: minmax(0, 1fr) 20px calc(9ch + 16px);
+@@ -1171,2 +1117,2 @@
+-    min-height: 60px;
+-    padding: 10px 16px;
++    min-height: 56px;
++    padding: 7px 16px;
+@@ -1174,0 +1121,9 @@
++  .demo-opts {
++    margin-top: 2px;
++  }
++
++  .demo-head {
++    padding-top: 10px;
++    padding-bottom: 10px;
++  }
++
+@@ -1203,5 +1158 @@
+-/*
+- * Four rows first (height and weight only on phones); four more sit behind "More input
+- * examples". Beside the hero copy, the second four replace the first, so the card keeps
+- * its height; stacked layouts simply grow.
+- */
++/* Four curated examples at every width. Without JavaScript all eight show. */
+@@ -1213,16 +1163,0 @@
+-@media (min-width: 1024px) {
+-  [data-js] .demo[data-expanded='true'] .demo-list > div:not(.demo-extra) {
+-    display: none;
+-  }
+-
+-  [data-js] .demo-list > div:not(.demo-extra) + .demo-extra {
+-    border-top: 0;
+-  }
+-}
+-
+-@media (max-width: 639px) {
+-  [data-js] .demo:not([data-expanded='true']) .demo-wide {
+-    display: none;
+-  }
+-}
+-
+@@ -1230,4 +1165,2 @@
+- * A long result (150 lbs in kg) widens the shared result column. So its input and options take
+- * the whole row, which keeps them on as few lines as in the other rows, and the result sits on
+- * the chip's line. On a phone the result takes its own line instead, so it doesn't widen the
+- * column for every row and push the arrows into the inputs.
++ * The long result's input and options take the whole row, with the result on the chip's line.
++ * On a phone the result takes its own line instead, leaving room for the other rows' inputs.
+@@ -1263 +1196 @@
+-/* The hero demo's "More" toggle. Without JavaScript all rows show. */
++/* A quiet disclosure beside Usage, with a full touch target. */
+@@ -1264,0 +1198,18 @@
++.demo-links {
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  gap: 12px;
++}
++
++.demo-links a {
++  display: inline-flex;
++  align-items: center;
++  gap: 4px;
++  min-height: 44px;
++}
++
++.demo-links a .icon {
++  transform: rotate(90deg);
++}
++
+@@ -1268 +1218,0 @@
+-  justify-content: center;
+@@ -1270 +1219,0 @@
+-  width: 100%;
+@@ -1271,0 +1221 @@
++  padding: 0;
+@@ -1273,3 +1223,2 @@
+-  border-top: 1px solid var(--border);
+-  background: var(--surface-muted);
+-  color: var(--heading);
++  background: transparent;
++  color: var(--accent);
+@@ -1277 +1226 @@
+-  font-weight: 600;
++  font-weight: 500;
+@@ -1278,0 +1228,3 @@
++  /* An immediate collapse adjustment leaves the control below the sticky header. */
++  scroll-margin-top: calc(var(--header-offset) + 12px);
++  scroll-margin-bottom: 12px;
+@@ -1282 +1234 @@
+-  background: var(--accent-soft);
++  text-decoration: underline;
+@@ -1286,2 +1238,2 @@
+-  outline-offset: -3px;
+-  border-radius: 0;
++  outline-offset: 2px;
++  border-radius: 3px;
+@@ -1298 +1250 @@
+-/* Features */
++/* One compact capability list near the introduction at every width. */
+@@ -1302 +1254 @@
+-  padding: 0 0 56px;
++  padding: 0 0 28px;
+@@ -1304 +1256 @@
+-  gap: 24px;
++  gap: 12px;
+@@ -1309 +1261 @@
+-    grid-template-columns: repeat(3, minmax(0, 1fr));
++    grid-template-columns: repeat(2, minmax(0, 1fr));
+@@ -1311 +1263 @@
+-    padding-bottom: 44px;
++    padding-bottom: 36px;
+@@ -1316,4 +1268,3 @@
+-  display: grid;
+-  grid-template-columns: 40px minmax(0, 1fr);
+-  align-content: start;
+-  gap: 4px 16px;
++  display: flex;
++  align-items: flex-start;
++  gap: 14px;
+@@ -1323,4 +1274,3 @@
+-  grid-row: span 2;
+-  width: 40px;
+-  height: 40px;
+-  border-radius: 10px;
++  flex: 0 0 32px;
++  height: 32px;
++  border-radius: 8px;
+@@ -1333,6 +1283,3 @@
+-.features .feature-title {
+-  color: var(--heading);
+-  font-size: 1rem;
+-  line-height: 1.5;
+-  font-weight: 600;
+-  letter-spacing: -0.005em;
++.feature-icon .icon {
++  width: 18px;
++  height: 18px;
+@@ -1341 +1288 @@
+-.features p:not(.feature-title) {
++.features p {
+@@ -1347,4 +1294,3 @@
+-/* Phones show the feature list after Quick start, so the install steps come first. */
+-
+-.features-docs {
+-  display: none;
++.feature-title {
++  color: var(--heading);
++  font-weight: 600;
+@@ -1352,0 +1299,2 @@
++/* Inline titles and no decorative icons keep the phone introduction short. */
++
+@@ -1354 +1302 @@
+-  .features-hero {
++  .feature-icon {
+@@ -1358,6 +1306,2 @@
+-  .stack > .features-docs {
+-    display: grid;
+-    gap: 16px;
+-    margin-top: 32px;
+-    padding: 24px 0 0;
+-    border-top: 1px solid var(--border);
++  .features p {
++    font-size: 0.875rem;
+@@ -1365,21 +1308,0 @@
+-
+-  .features li {
+-    grid-template-columns: 32px minmax(0, 1fr);
+-    gap: 2px 14px;
+-  }
+-
+-  .feature-icon {
+-    width: 32px;
+-    height: 32px;
+-    border-radius: 8px;
+-  }
+-
+-  .feature-icon .icon {
+-    width: 18px;
+-    height: 18px;
+-  }
+-
+-  .features .feature-title {
+-    line-height: 1.4;
+-    padding-top: 5px;
+-  }
+@@ -1437,2 +1360,2 @@
+-    top: calc(var(--header-h) + 32px);
+-    max-height: calc(100vh - var(--header-h) - 56px);
++    top: calc(var(--header-offset) + 32px);
++    max-height: calc(100vh - var(--header-offset) - 56px);
+@@ -1508,2 +1431,2 @@
+- * Long groups (examples, API) fold behind a toggle. The group holding the
+- * current section opens itself. Without JavaScript every group stays expanded.
++ * Long groups (examples, API) fold behind a reader-controlled toggle. Scrolling
++ * leaves their state alone. Without JavaScript every group stays expanded.
+@@ -1597,2 +1520,5 @@
+-.doc-section :is(h2, h3, h4) {
+-  scroll-margin-top: var(--anchor-offset);
++.doc-section :is(h2, h3, h4),
++#ex-basic,
++#ex-feet-inches,
++#ex-null {
++  scroll-margin-top: max(var(--anchor-offset), calc(var(--header-offset) + 24px));
+@@ -1805,0 +1732 @@
++  --result-value: var(--code-text);
+@@ -2014,5 +1940,0 @@
+-}
+-
+-.summary b {
+-  color: var(--code-accent);
+-  font-weight: 650;
+@@ -2388,4 +2310 @@
+-/*
+- * The option names each example passes, so a reader can scan for the one they need.
+- * Names only: the values are in the code just below.
+- */
++/* Compact input/output rows keep spelling variants beside the lesson they illustrate. */
+@@ -2393,3 +2312,9 @@
+-.ex-opts {
+-  display: flex;
+-  flex-wrap: wrap;
++.input-results {
++  border: 1px solid var(--border);
++  border-radius: var(--radius-sm);
++  overflow: hidden;
++}
++
++.input-results > div {
++  display: grid;
++  grid-template-columns: minmax(0, 1fr) max-content;
+@@ -2397,7 +2322,2 @@
+-  gap: 2px 0;
+-  margin-top: 6px;
+-  padding: 0;
+-  list-style: none;
+-  font-size: 0.8125rem;
+-  line-height: 1.6;
+-  color: var(--text-muted);
++  gap: 12px;
++  padding: 12px 16px;
+@@ -2406,3 +2326,2 @@
+-.ex-opts-label {
+-  margin-right: 10px;
+-  font-weight: 500;
++.input-results > div + div {
++  border-top: 1px solid var(--border);
+@@ -2411,8 +2330,5 @@
+-.ex-opts code {
+-  padding: 0;
+-  background: none;
+-  color: var(--heading);
+-  font-family: var(--font-mono);
+-  font-size: var(--mono-md);
+-  font-weight: 500;
+-  white-space: nowrap;
++.input-results dt {
++  display: flex;
++  flex-wrap: wrap;
++  align-items: baseline;
++  gap: 4px 16px;
+@@ -2421,4 +2337,2 @@
+-.ex-opts li:not(.ex-opts-label) + li::before {
+-  content: '·';
+-  margin: 0 8px;
+-  color: var(--text-muted);
++.input-text {
++  overflow-wrap: anywhere;
+@@ -2427,2 +2341,3 @@
+-.ex-opts .is-none {
+-  font-style: italic;
++.input-options {
++  color: var(--text-muted);
++  font-size: var(--mono-sm);
+@@ -2431,11 +2346,5 @@
+-/*
+- * "Input" picker: chooses which example the code panel shows. Sans pills on the page
+- * surface, unlike the underlined tabs on code headers that switch equivalent code.
+- */
+-
+-.picker {
+-  display: flex;
+-  flex-wrap: wrap;
+-  align-items: center;
+-  gap: 8px 12px;
+-  margin-bottom: 12px;
++.input-results dd {
++  margin: 0;
++  font-family: var(--font-mono);
++  white-space: nowrap;
++  color: var(--heading);
+@@ -2444,4 +2353,2 @@
+-.picker-label {
+-  color: var(--text-muted);
+-  font-size: 0.8125rem;
+-  font-weight: 600;
++.input-results .is-null {
++  color: var(--null);
+@@ -2450,4 +2357,5 @@
+-.picker-options {
+-  display: flex;
+-  flex-wrap: wrap;
+-  gap: 6px;
++/* Native focus scrolling must finish before a following Enter jumps to its anchor. Removing
++ * unavailable controls shortens the Tab path, so smooth scrolling can cancel that jump. */
++
++html:not([data-js]) {
++  scroll-behavior: auto;
+@@ -2456,20 +2364,4 @@
+-.pick {
+-  position: relative;
+-  display: inline-flex;
+-  align-items: center;
+-  min-height: 32px;
+-  padding: 0 12px;
+-  border: 1px solid var(--border-control);
+-  border-radius: var(--radius-sm);
+-  background: var(--surface);
+-  color: var(--text);
+-  font-family: var(--font-sans);
+-  font-size: 0.875rem;
+-  font-weight: 500;
+-  line-height: 1.2;
+-  white-space: nowrap;
+-  cursor: pointer;
+-  transition:
+-    background-color 0.15s ease,
+-    border-color 0.15s ease,
+-    color 0.15s ease;
++/* Static groups carry their own labels until the tab handlers are ready. */
++
++.code-head:has(> [data-tab-group][hidden]) {
++  display: none;
+@@ -2478,3 +2370,4 @@
+-.pick:hover {
+-  color: var(--heading);
+-  border-color: var(--text-muted);
++/* All lesson examples remain readable when scripts are unavailable. */
++
++html:not([data-js]) .code .code-wide {
++  display: block;
+@@ -2483,5 +2376,2 @@
+-.pick[aria-selected='true'] {
+-  border-color: var(--accent);
+-  background: var(--accent-soft);
+-  color: var(--accent);
+-  font-weight: 600;
++html:not([data-js]) .code .code-narrow {
++  display: none;
+@@ -2490,8 +2380,3 @@
+-/* A taller invisible target on touch screens, without a taller pill. */
+-
+-@media (pointer: coarse) {
+-  .pick::after {
+-    content: '';
+-    position: absolute;
+-    inset: -6px -3px;
+-  }
++html:not([data-js]) .code pre {
++  white-space: pre-wrap;
++  overflow-wrap: anywhere;
+@@ -2661,0 +2547,42 @@
++}
++
++/* Keep option metadata in the same order, with labels that reflow above their values. */
++
++.option-list > div {
++  padding-block: 20px;
++  scroll-margin-top: 100px;
++}
++
++.option-list > div > dd {
++  margin-top: 12px;
++}
++
++.option-facts {
++  display: grid;
++  gap: 10px;
++}
++
++.option-facts > div {
++  display: grid;
++  grid-template-columns: 7rem minmax(0, 1fr);
++  gap: 12px;
++}
++
++.option-facts dt {
++  display: block;
++  font-family: var(--font-sans);
++  font-size: 0.8125rem;
++  font-weight: 600;
++  line-height: 1.85;
++  color: var(--text-muted);
++}
++
++.option-facts dd {
++  margin: 0;
++}
++
++@container (max-width: 470px) {
++  .option-facts > div {
++    grid-template-columns: minmax(0, 1fr);
++    gap: 2px;
++  }
+@@ -2746,5 +2672,0 @@
+-}
+-
+-.result b {
+-  color: var(--accent);
+-  font-weight: 650;
+@@ -3009 +2931 @@
+-/* Callouts: a tinted box with a full 1px border and an icon. Teal informs; amber cautions. */
++/* Callouts: a tinted box with a full 1px border and an icon. Blue informs; amber cautions. */
+@@ -3013 +2935 @@
+-  --callout-line: rgba(15, 118, 110, 0.28);
++  --callout-line: var(--accent-line);
+@@ -3264,0 +3187,8 @@
++}
++
++.docs-resources {
++  display: flex;
++  flex-wrap: wrap;
++  gap: 4px 24px;
++  margin-top: 16px;
++  font-size: 0.875rem;
+@@ -3266,0 +3197,8 @@
++.docs-resources a {
++  display: inline-flex;
++  align-items: center;
++  min-height: 32px;
++  text-decoration: underline;
++  text-underline-offset: 3px;
++}
++
+--- a/tests/docsExamples.test.ts
++++ b/tests/docsExamples.test.ts
+@@ -171,0 +172,23 @@
++  // The disclosure changes only visibility. The accepted design preserves these exact eight
++  // triples from the settled page, including the unrounded conversion and both null cases.
++  it('preserves the eight hero input/options/result triples in their curated order', () => {
++    expect(rows.map(({ input, options, shown }) => ({ input, options, shown }))).toEqual([
++      {
++        input: '5\' 11"',
++        options: { type: 'height', normalizedUnit: 'cm' },
++        shown: { value: 180.34, unit: 'cm' },
++      },
++      { input: 'eighty kilograms', options: { type: 'weight' }, shown: { value: 80, unit: 'kg' } },
++      { input: '5 foots 10 inc', options: { fuzziness: 2 }, shown: { value: 70, unit: 'in' } },
++      { input: 'not a measurement', options: undefined, shown: null },
++      {
++        input: '150 lbs',
++        options: { type: 'weight', normalizedUnit: 'kg' },
++        shown: { value: 68.0388555, unit: 'kg' },
++      },
++      { input: 'five foot ten', options: { type: 'height' }, shown: { value: 70, unit: 'in' } },
++      { input: '72,5 kg', options: undefined, shown: { value: 72.5, unit: 'kg' } },
++      { input: '150-180 lbs', options: undefined, shown: null },
++    ]);
++  });
++
+@@ -193,0 +217,63 @@
++
++/** Compact input/output rows show their literal input and any options beside the result. */
++function compactRows(html: string): ShownCase[] {
++  const lists = [...html.matchAll(/<dl class="input-results"[^>]*>([\s\S]*?)<\/dl>/g)];
++  const row =
++    /<dt>\s*<code class="input-text">([^<]*)<\/code\s*>\s*(?:<code class="input-options">([^<]*)<\/code>)?\s*<\/dt>\s*<dd( class="is-null")?>([\s\S]*?)<\/dd>/g;
++  return lists.flatMap(([, list]) =>
++    [...list.matchAll(row)].map(([, input, options, isNull, result]) =>
++      shownCase(
++        input,
++        options ? (new Function(`return (${options});`)() as ParseOptions) : undefined,
++        shownResult(Boolean(isNull), result)
++      )
++    )
++  );
++}
++
++const compact = compactRows(page);
++
++describe('compact docs examples', () => {
++  it('checks every displayed compact result', () => {
++    expect(compact.length).toBeGreaterThan(0);
++    expect(compact).toHaveLength(page.split('class="input-text"').length - 1);
++  });
++
++  it.each(compact.map(row => [row.label, row]))('shows %s', (_, row) => {
++    expect(short(row.input, row.options)).toEqual(row.shown);
++  });
++
++  // README Usage supplies these complete objects. Keep checking all their fields even though
++  // the page now displays these format variants as compact rows instead of full code cards.
++  it.each([
++    {
++      input: '150 lbs',
++      options: undefined,
++      expected: {
++        value: 150,
++        unit: 'lb',
++        type: 'weight',
++        matches: [{ value: 150, unit: 'lb' }],
++        raw: '150 lbs',
++      },
++    },
++    {
++      input: 'five foot ten',
++      options: { type: 'height' } as const,
++      expected: {
++        value: 70,
++        unit: 'in',
++        type: 'height',
++        matches: [
++          { value: 5, unit: 'ft' },
++          { value: 10, unit: 'in' },
++        ],
++        raw: 'five foot ten',
++      },
++    },
++    { input: 'not a measurement', options: undefined, expected: null },
++  ])('preserves the complete documented result for $input', ({ input, options, expected }) => {
++    expect(compact.some(row => row.input === input)).toBe(true);
++    expect(parseMeasurement(input, options)).toEqual(expected);
++  });
++});

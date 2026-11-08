@@ -18,10 +18,16 @@ two that disagree. Your app can then ask the person again.
 
 ## Documentation for your version
 
-The documentation site tracks `main` and may describe changes not yet released on npm. To find
-your installed version, run `npm ls @afahy/fluent-measures` in your app (or `pnpm list` / `yarn why`
-with the same package name). Use that exact version, not the `latest` dist-tag or the version
-on `main`.
+The public documentation identifies the exact published npm version and verified source revision
+that it describes. npm may have a newer release while its documentation is being verified. This
+repository's README and parsing rules describe the checked-out source, which can be unreleased.
+
+Find your installed version with `npm ls @afahy/fluent-measures` in your app (or `pnpm list` /
+`yarn why` with the same package name). Select that exact version from the
+[verified documentation versions](https://afahy.github.io/fluent-measures/versions.json), then
+follow its `versions/<version>/README.md` and `versions/<version>/PARSING.md` URLs. These references
+retain their meaning across later deployments. Only complete verified sets appear in the index;
+an absent version does not use the current site's specification as a substitute.
 
 Releases use `v<version>` tags in the
 [repository's tag list](https://github.com/afahy/fluent-measures/tags). For version **0.2.0**, use

@@ -14,6 +14,21 @@ const EXAMPLES = [
   ['convert-weight', 'Weight conversion', '68.0388555'],
 ];
 
+async function examplesForPage(browser) {
+  const version = await browser.evaluate(
+    `document.querySelector('meta[name="docs-package-version"]')?.content ?? ''`
+  );
+  assert.ok(
+    !version || /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version),
+    'valid documented version'
+  );
+  return EXAMPLES.map(([id, label, text]) => [
+    id,
+    label,
+    version && ['npm', 'yarn', 'pnpm'].includes(id) ? `${text}@${version}` : text,
+  ]);
+}
+
 // Runs with page scripts disabled. Runtime evaluation only inspects the fallback and selects
 // its text; it does not initialize the page or repair any of the states being checked.
 function staticControls(examples) {
@@ -125,6 +140,7 @@ async function interactiveControls(browser, url, viewport) {
   await browser.evaluate(`localStorage.removeItem('fluent-measures:pm');
     localStorage.removeItem('fluent-measures:module');`);
   await browser.load(url, viewport);
+  const examples = await examplesForPage(browser);
   const groups = [
     ['pm', ['npm', 'yarn', 'pnpm']],
     ['module', ['esm', 'cjs']],
@@ -153,7 +169,7 @@ async function interactiveControls(browser, url, viewport) {
   );
   for (const id of ['npm', 'yarn', 'pnpm']) {
     await click(browser, '#tab-' + id);
-    const command = EXAMPLES.find(([key]) => key === id)[2];
+    const command = examples.find(([key]) => key === id)[2];
     await copy(browser, '[data-copy="#hero-command"]', command);
     await copy(browser, '[aria-label="Copy install command"][data-copy=""]', command);
   }
@@ -177,7 +193,7 @@ async function interactiveControls(browser, url, viewport) {
   await browser.load(url, viewport);
   await selected(browser, 'pm', 'pnpm');
   await selected(browser, 'module', 'cjs');
-  await copy(browser, '[data-copy="#hero-command"]', 'pnpm add @afahy/fluent-measures');
+  await copy(browser, '[data-copy="#hero-command"]', examples.find(([id]) => id === 'pnpm')[2]);
 }
 
 export async function checkDocsControls(browser, url) {
@@ -198,7 +214,9 @@ export async function checkDocsControls(browser, url) {
           await browser.load(url, viewport);
           if (mode === 'static') {
             assert.deepEqual(
-              await browser.evaluate(`(${staticControls})(${JSON.stringify(EXAMPLES)})`),
+              await browser.evaluate(
+                `(${staticControls})(${JSON.stringify(await examplesForPage(browser))})`
+              ),
               []
             );
             const { nodes } = await browser.send('Accessibility.getFullAXTree');

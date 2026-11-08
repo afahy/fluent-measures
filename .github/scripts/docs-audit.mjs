@@ -16,6 +16,7 @@ import { buildDocs } from './docs-build.mjs';
 const { values } = parseArgs({
   options: {
     url: { type: 'string' },
+    directory: { type: 'string' },
     runs: { type: 'string', default: '3' },
     only: { type: 'string', default: 'all' },
   },
@@ -24,6 +25,7 @@ if (!/^[1-9]\d*$/.test(values.runs)) throw new Error('--runs must be a positive 
 if (!['all', 'accessibility', 'lighthouse'].includes(values.only)) {
   throw new Error('--only must be all, accessibility or lighthouse');
 }
+if (values.url && values.directory) throw new Error('Use --url or --directory, not both');
 const chrome = requireChrome();
 const out = 'reports/docs-audit';
 await mkdir(out, { recursive: true });
@@ -45,7 +47,7 @@ let server;
 let url = values.url;
 if (url && !/^https?:\/\//.test(url)) throw new Error('--url must use http or https');
 if (!url) {
-  const root = buildDocs();
+  const root = values.directory ? resolve(values.directory) : buildDocs();
   server = createServer(async (req, res) => {
     try {
       const pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);

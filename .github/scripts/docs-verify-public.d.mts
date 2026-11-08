@@ -1,4 +1,5 @@
 export interface DocsArtifact {
+  version?: string;
   revision: string;
   documents: Record<string, string>;
 }

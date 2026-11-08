@@ -105,42 +105,65 @@ back to Atlas. **Copy link** preserves the palette and section, while the theme 
 reader's preference. If copying is unavailable, use the fallback link. **Exit preview** returns
 to `docs/index.html` at the same section. Local links require a copy of this checkout.
 
-The production page has no palette loader, controls or URL opt-in. `pnpm docs:build` generates
-the GitHub Pages artifact in `build/docs/` from `docs/` and the authoritative root `README.md`
-and `PARSING.md`. The workflow runs the same builder and uploads only that artifact. Neither
-the preview source assets nor `.docs-preview/` are included. Keep that boundary when changing
-the generator or deployment workflow. Preview assets must stay outside `docs/`. See
-`.github/docs-preview/README.md` for token sources and maintenance details.
+The production page has no palette loader, controls or URL opt-in. `pnpm docs:build` builds a
+local source preview in `build/docs/` from the checked-out `docs/`, README and parsing rules.
+It retains the warning about unreleased changes and is never uploaded by the Pages workflow.
+Preview assets stay outside `docs/`; see `.github/docs-preview/README.md`.
 
-The generated `README.md`, `PARSING.md` and `llms.txt` are available under
-`https://afahy.github.io/fluent-measures/`. The Markdown references come from the root files;
-edit those sources, never the generated copies. The builder preserves their examples, sends
-links between the references to Pages, and pins other repository file links to the deployed
-source commit. HTML discovery links and the visible **View Markdown** and **Agent index** links
-work without JavaScript. The index follows the [llms.txt convention](https://llmstxt.org/);
-client support varies.
+### Verified release documentation
 
-The HTML, Markdown and index identify the checked-out Git commit at build time. These docs
-track `main` and may contain unreleased changes; the npm badge separately identifies the latest
-registry release. Local builds identify `HEAD`, so commit edits before verifying a revision.
-Run `pnpm exec vitest run tests/docsPublishing.test.ts` to check artifact generation, ordinary
-HTTP reads under the project subpath, link targets, revision updates and preview isolation.
+Public HTML, Markdown and `llms.txt` identify one exact npm version and its source commit. They
+link to `versions/<version>/` references. The root aliases identify the currently documented
+version, which can lag npm while verification or deployment is in progress. The npm badge labels
+the latest registry release separately. No main push publishes npm or deploys documentation.
 
-After a successful Pages deployment, the workflow downloads the uploaded artifact and compares
-the public HTML, README, parsing rules and agent index with its exact contents. The source
-revision comes from that artifact, not the workflow event or a newer checkout. Verification
-makes at most six attempts, with ten-second request timeouts and ten seconds between attempts;
-the workflow step also has a three-minute limit. A failure names the affected files and URLs.
-For a manual retry, extract that deployment's `github-pages` artifact and run
-`node .github/scripts/docs-verify-public.mjs /path/to/extracted/artifact`. Do not rebuild from a
-newer `main` to verify an older deployment. Public network checks run only after deployment;
-unit tests use fake responses and waits.
+The existing `release:publish` command pushes a version tag after npm publication. That tag
+dispatches the Pages workflow on `main`, because the existing Pages environment permits only
+that branch. The dispatch workflow has no Pages access and publishes no package. For migration
+or recovery, dispatch **Deploy to GitHub Pages** on
+`main` with the exact already published `version`. This does not publish a package. Locally,
+run `node .github/scripts/docs-release.mjs 0.2.0` after fetching tags and `origin/main`.
 
-The root README explains how to select release-specific documentation and the caveats for old
-tags. Keep its verified links and the agent index in sync when adding a release reference.
-README and homepage changes reach the npm listing with the normal next release; a docs
-deployment does not publish a package. The separate registry-examples workflow already checks
-the latest published package against the examples on `main`.
+Verification exports the tag's commit, checks its name/version and ancestry on main, builds
+with its frozen lockfile, and installs the exact npm version with scripts disabled. It compares
+npm's integrity with the installed lock entry and every published build file (including source
+maps and declarations), README, LICENSE and consumer manifest field with the release build.
+An npm `gitHead`, when present, must agree too. The source's package tests check its README,
+parsing specification and HTML examples through ESM and CommonJS. The rendered HTML summaries
+are then checked against the same installed package. Missing references, mismatched metadata,
+unpublished versions and failed examples prevent an artifact from becoming a candidate.
+
+The first supported release is 0.2.0: its source reproducibly matches the registry package even
+though npm has no `gitHead`. `.github/docs-release/README.md` describes its frozen presentation
+migration. Later releases use their own HTML, README, parsing rules and examples. Main's API
+content is never copied into a release build. Public installation commands select the documented
+version. Links within the specification stay on that version; other file links pin the source
+commit. Discovery links remain static and available without JavaScript.
+
+The workflow has one job in the `pages` concurrency group. It reads the durable `verified-docs`
+branch, rejects a version older than its current version, and retains every previously verified
+version directory byte-for-byte. The branch is an append-only ledger of verified artifacts,
+not npm publication or a Pages source branch setting. Its commit is pushed fast-forward only,
+before upload/deploy. An identical rerun can redeploy it; changed bytes at a previously retained
+version fail closed. A failed build or check never changes the ledger or the site. A failed
+Pages deployment leaves the previous public release available; the ledger can be ahead of Pages
+until a rerun succeeds. A job retry repeats verification and the ordering check, so it cannot
+reuse an old deployment step to roll back a newer release. Do not delete or rewrite the ledger.
+
+After deployment, the workflow downloads the uploaded `github-pages` artifact and compares
+public responses for the root documents, metadata and every retained release's documents.
+Verification makes at most six attempts, with ten-second request timeouts and ten seconds
+between attempts; the workflow step also has a three-minute limit. A failure names the affected
+URLs. To retry only delivery verification, extract that deployment's artifact and run
+`node .github/scripts/docs-verify-public.mjs /path/to/extracted/artifact`. Never rebuild expected
+content from a newer checkout. These read-only public checks cannot roll back an already completed
+Pages deployment. npm and Pages publication are not atomic.
+
+Run `pnpm exec vitest run tests/docsPublishing.test.ts tests/docsRelease.test.ts` for deterministic
+artifact, release binding, exact-install, retention, failure and stale-promotion checks. These
+use offline command stand-ins and fake HTTP responses. The separate registry-examples workflow
+still checks latest npm against main as a development warning; it is not the deployment gate.
+README and homepage changes reach the npm listing only with the next normal package release.
 
 After generating the preview, focused tests can be run with
 `pnpm exec vitest run tests/docsPalettePreview.test.ts`. For browser contrast, axe, keyboard,

@@ -1,7 +1,8 @@
 // Compare public delivery with the exact Pages artifact, including its content, links and SHA.
 // This runs only after deployment; tests inject fetch and sleep and never contact public hosts.
-import { readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import assert from 'node:assert/strict';
+import { join, resolve, sep } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { pathToFileURL } from 'node:url';
 
@@ -18,6 +19,117 @@ export function readDocsArtifact(directory) {
   if (!revision) throw new Error('Pages artifact has no valid HTML source revision');
   const source = `https://github.com/afahy/fluent-measures/tree/${revision}`;
   const metadata = `Source revision: [${revision}](${source}).`;
+  const version = /<meta name="docs-package-version" content="([0-9]+\.[0-9]+\.[0-9]+)" \/>/.exec(
+    documents['index.html']
+  )?.[1];
+  if (version) {
+    const release = JSON.parse(readFileSync(join(directory, 'release.json'), 'utf8'));
+    assert.equal(release.version, version, 'Pages artifact version mismatch');
+    assert.equal(release.revision, revision, 'Pages artifact source mismatch');
+    assert.match(
+      release.integrity ?? '',
+      /^sha512-[A-Za-z0-9+/]+={0,2}$/,
+      'Pages artifact integrity missing'
+    );
+    const base = `${site}versions/${version}/`;
+    const packageLabel = `@afahy/fluent-measures@${version}`;
+    for (const [file, body] of Object.entries(documents)) {
+      for (const marker of file === 'index.html'
+        ? [
+            packageLabel,
+            source,
+            `href="${base}README.md"`,
+            `href="${base}llms.txt"`,
+            `href="${base}README.md#documentation-for-your-version"`,
+          ]
+        : [metadata, packageLabel, `](${base}README.md`, `](${base}PARSING.md`]) {
+        if (!body.includes(marker))
+          throw new Error(`Pages artifact ${file} is missing ${JSON.stringify(marker)}`);
+      }
+      if (/Docs track|may include changes not yet released|blob\/main\//.test(body)) {
+        throw new Error(`Pages artifact ${file} contains an unreleased reference`);
+      }
+    }
+    for (const [file, heading] of [
+      ['README.md', '# fluent-measures'],
+      ['PARSING.md', '# Parsing rules'],
+      ['llms.txt', '# fluent-measures'],
+    ]) {
+      if (!documents[file].startsWith(heading + '\n'))
+        throw new Error(`Pages artifact ${file} has the wrong heading`);
+    }
+    const html = documents['index.html'];
+    const ids = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(([, id]) => id));
+    for (const [, href] of html.matchAll(/\b(?:href|src)="([^"]+)"/g)) {
+      if (href.startsWith('#')) {
+        assert.ok(ids.has(href.slice(1)), `Pages artifact has missing anchor ${href}`);
+      } else if (!/^(?:[a-z][\w+.-]*:|\/\/)/i.test(href)) {
+        const target = resolve(directory, href.split(/[?#]/)[0]);
+        assert.ok(
+          target.startsWith(resolve(directory) + sep) && existsSync(target),
+          `Pages artifact has missing local asset ${href}`
+        );
+      }
+    }
+    const anchors = Object.fromEntries(
+      ['README.md', 'PARSING.md'].map(file => [
+        file,
+        new Set(
+          [...documents[file].matchAll(/^#{1,6} (.+)$/gm)].map(([, heading]) =>
+            heading
+              .toLowerCase()
+              .replace(/[^\p{L}\p{N}_ -]/gu, '')
+              .replaceAll(' ', '-')
+          )
+        ),
+      ])
+    );
+    for (const [file, body] of Object.entries(documents)) {
+      const links =
+        file === 'index.html'
+          ? [...body.matchAll(/\bhref="([^"]+)"/g)].map(([, href]) => href)
+          : [...body.matchAll(/\]\(([^\s)]+)\)/g)].map(([, href]) => href);
+      for (const href of links) {
+        if (file !== 'index.html' && href.startsWith('#')) {
+          assert.ok(
+            anchors[file]?.has(href.slice(1)),
+            `Pages artifact ${file} has missing anchor ${href}`
+          );
+        } else if (href.startsWith(base)) {
+          const target = new URL(href);
+          const path = target.pathname.slice(new URL(base).pathname.length) || 'index.html';
+          assert.ok(
+            Object.hasOwn(documents, path) || existsSync(join(directory, path)),
+            `Pages artifact has missing reference ${href}`
+          );
+          if (target.hash)
+            assert.ok(
+              anchors[path]?.has(target.hash.slice(1)),
+              `Pages artifact has missing reference anchor ${href}`
+            );
+        }
+      }
+    }
+    documents['release.json'] = readFileSync(join(directory, 'release.json'), 'utf8');
+    // An assembled deployment includes every retained release, so public verification checks
+    // old URLs as well as the current aliases. The archive validator checks file digests too.
+    if (existsSync(join(directory, 'versions.json'))) {
+      const index = JSON.parse(readFileSync(join(directory, 'versions.json'), 'utf8'));
+      assert.equal(index.current, version, 'Pages artifact current version mismatch');
+      documents['versions.json'] = readFileSync(join(directory, 'versions.json'), 'utf8');
+      for (const retained of Object.keys(index.releases)) {
+        if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(retained))
+          throw new Error('Pages artifact invalid retained version');
+        const archived = readDocsArtifact(join(directory, 'versions', retained));
+        assert.equal(archived.version, retained, 'Pages artifact retained version mismatch');
+        for (const [file, body] of Object.entries(archived.documents))
+          documents[`versions/${retained}/${file}`] = body;
+      }
+    }
+    return { version, revision, documents };
+  }
+  if (existsSync(join(directory, 'release.json')))
+    throw new Error('Pages artifact has no package version');
   const required = {
     'index.html': [
       'fluent-measures',
@@ -62,7 +174,7 @@ export async function verifyPublicDocs(
   }
   for (let attempt = 1; attempt <= attempts; attempt++) {
     const outcomes = await Promise.allSettled(
-      files.map(async file => {
+      Object.keys(artifact.documents).map(async file => {
         const url = new URL(file === 'index.html' ? './' : file, site);
         // Avoid a stale cached response without changing the document's canonical location.
         url.searchParams.set('revision', artifact.revision);
@@ -80,11 +192,13 @@ export async function verifyPublicDocs(
       })
     );
     const failures = outcomes.flatMap((outcome, index) =>
-      outcome.status === 'rejected' ? [`${files[index]}: ${outcome.reason.message}`] : []
+      outcome.status === 'rejected'
+        ? [`${Object.keys(artifact.documents)[index]}: ${outcome.reason.message}`]
+        : []
     );
     if (failures.length === 0) {
       report(
-        `Verified all four public documents at source revision ${artifact.revision} (attempt ${attempt}/${attempts}).`
+        `Verified ${artifact.version ? `${Object.keys(artifact.documents).length} public files for npm ${artifact.version}` : 'all four public documents'} at source revision ${artifact.revision} (attempt ${attempt}/${attempts}).`
       );
       return;
     }
