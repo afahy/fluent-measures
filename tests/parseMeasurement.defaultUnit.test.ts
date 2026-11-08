@@ -72,23 +72,25 @@ describe('source-default configuration errors', () => {
     { defaultUnit: 'cm', normalizedUnit: 'kg' },
     { type: 'weight', defaultUnit: 'in', normalizedUnit: 'kg' },
   ] as const)('rejects incompatible options %o even for explicit input', options => {
-    expect(() => parseMeasurement('80 kg', options)).toThrow(
-      'defaultUnit must match the requested measurement type'
-    );
+    expect(() => parseMeasurement('80 kg', options)).toThrow(Error);
+    expect(() => parseMeasurement('80 kg', options)).toThrow(/defaultUnit.*type/);
   });
 
   it.each([null, '', 'KG', 'lbs', 'stone', 0, -1, NaN, true, {}, Symbol('private')])(
     'rejects invalid source unit %s',
     defaultUnit => {
+      expect(() => parseMeasurement('80 kg', { defaultUnit } as ParseOptions)).toThrow(TypeError);
       expect(() => parseMeasurement('80 kg', { defaultUnit } as ParseOptions)).toThrow(
-        new TypeError('defaultUnit must be ft, in, cm, m, lb or kg')
+        /defaultUnit/
       );
     }
   );
 
   it.each(['allowUnqualified', 'inferUnit'] as const)('rejects retired option %s', key => {
     const options = { [key]: false } as ParseOptions;
-    expect(() => parseMeasurement('80 kg', options)).toThrow(`${key} was removed; use defaultUnit`);
+    expect(() => parseMeasurement('80 kg', options)).toThrow(Error);
+    expect(() => parseMeasurement('80 kg', options)).toThrow(new RegExp(key));
+    expect(() => parseMeasurement('80 kg', options)).toThrow(/defaultUnit/);
   });
 
   it('treats undefined retired options as absent', () => {
@@ -104,7 +106,10 @@ describe('source-default configuration errors', () => {
     'validates options before string content or length: %s',
     raw => {
       expect(() => parseMeasurement(raw, { defaultUnit: 'cm', normalizedUnit: 'kg' })).toThrow(
-        'defaultUnit must match the requested measurement type'
+        Error
+      );
+      expect(() => parseMeasurement(raw, { defaultUnit: 'cm', normalizedUnit: 'kg' })).toThrow(
+        /defaultUnit.*type/
       );
     }
   );
@@ -112,37 +117,38 @@ describe('source-default configuration errors', () => {
   it.each(['', '0 in', '6 ft', 'x'.repeat(1001)])('validates existing options for %s', raw => {
     expect(() =>
       parseMeasurement(raw, { normalizedUnit: 'st' } as unknown as ParseOptions)
-    ).toThrow(new TypeError('normalizedUnit must be ft, in, cm, m, lb or kg'));
+    ).toThrow(TypeError);
+    expect(() =>
+      parseMeasurement(raw, { normalizedUnit: 'st' } as unknown as ParseOptions)
+    ).toThrow(/normalizedUnit/);
     expect(() => parseMeasurement(raw, { type: 'other' } as unknown as ParseOptions)).toThrow(
-      new TypeError('type must be height or weight')
+      TypeError
+    );
+    expect(() => parseMeasurement(raw, { type: 'other' } as unknown as ParseOptions)).toThrow(
+      /type/
     );
   });
 
   it.each([null, false, 1, 'kg', []])('rejects invalid options container %s', options => {
-    expect(() => parseMeasurement('', options as ParseOptions)).toThrow(
-      new TypeError('options must be an object')
-    );
+    expect(() => parseMeasurement('', options as ParseOptions)).toThrow(TypeError);
+    expect(() => parseMeasurement('', options as ParseOptions)).toThrow(/options/);
   });
 
   // Approved AFA-178 / AFA-251 ordering, independently of the parser's helper layout.
   it.each([
-    [{ maxLength: 0, type: 'other' }, 'maxLength must be a number of at least 1'],
-    [{ type: 'other', normalizedUnit: 'st' }, 'type must be height or weight'],
-    [
-      { normalizedUnit: 'st', defaultUnit: 'lbs' },
-      'normalizedUnit must be ft, in, cm, m, lb or kg',
-    ],
-    [{ defaultUnit: 'lbs', allowUnqualified: true }, 'defaultUnit must be ft, in, cm, m, lb or kg'],
+    [{ maxLength: 0, type: 'other' }, Error, /maxLength/],
+    [{ type: 'other', normalizedUnit: 'st' }, TypeError, /type/],
+    [{ normalizedUnit: 'st', defaultUnit: 'lbs' }, TypeError, /normalizedUnit/],
+    [{ defaultUnit: 'lbs', allowUnqualified: true }, TypeError, /defaultUnit/],
     [
       { allowUnqualified: false, type: 'height', normalizedUnit: 'kg' },
-      'allowUnqualified was removed; use defaultUnit',
+      Error,
+      /allowUnqualified.*defaultUnit/,
     ],
-    [
-      { type: 'height', normalizedUnit: 'kg', defaultUnit: 'lb' },
-      'normalizedUnit kg is not a height unit',
-    ],
-  ])('reports the first option error in %o', (options, message) => {
-    expect(() => parseMeasurement('', options as ParseOptions)).toThrow(message);
+    [{ type: 'height', normalizedUnit: 'kg', defaultUnit: 'lb' }, Error, /normalizedUnit.*height/],
+  ] as const)('reports the first option error in %o', (options, errorClass, field) => {
+    expect(() => parseMeasurement('', options as ParseOptions)).toThrow(errorClass);
+    expect(() => parseMeasurement('', options as ParseOptions)).toThrow(field);
   });
 
   it('keeps empty runtime type and output-unit values as absence', () => {

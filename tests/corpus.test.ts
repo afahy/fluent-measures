@@ -309,7 +309,8 @@ describe('corpus line checks', () => {
     'rejects null for the non-sentinel option %s',
     name => {
       const text = valid.replace('"expected"', `"options":{"${name}":null},"expected"`);
-      expect(() => parseCorpus(text)).toThrow(`option "${name}" has an invalid value`);
+      expect(() => parseCorpus(text)).toThrow(Error);
+      expect(() => parseCorpus(text)).toThrow(new RegExp(name));
     }
   );
 

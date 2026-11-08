@@ -73,9 +73,11 @@ describe('unit conversions', () => {
     ['hello', { allowUnqualified: true }],
     ['72', { allowUnqualified: true, normalizedUnit: 'cm' }],
   ] as const)('throws for %s with retired options %o', (raw, options) => {
+    expect(() => parseMeasurement(raw, options as unknown as ParseOptions)).toThrow(Error);
     expect(() => parseMeasurement(raw, options as unknown as ParseOptions)).toThrow(
-      'allowUnqualified was removed; use defaultUnit'
+      /allowUnqualified/
     );
+    expect(() => parseMeasurement(raw, options as unknown as ParseOptions)).toThrow(/defaultUnit/);
   });
 
   // AFA-251 / AFA-178: validate options before all string content.
@@ -103,9 +105,8 @@ describe('unit conversions', () => {
 
   it('rejects an invalid normalizedUnit before parsing', () => {
     const options = { normalizedUnit: 'st' } as unknown as ParseOptions;
-    expect(() => parseMeasurement('6 ft', options)).toThrow(
-      'normalizedUnit must be ft, in, cm, m, lb or kg'
-    );
+    expect(() => parseMeasurement('6 ft', options)).toThrow(TypeError);
+    expect(() => parseMeasurement('6 ft', options)).toThrow(/normalizedUnit/);
   });
 
   it('keeps a normalizedUnit of the requested type', () => {

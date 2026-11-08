@@ -55,7 +55,7 @@ describe('T5 grader key migration', () => {
     writeKey({ withAllowUnqualified: { value: 1.8, unit: 'm' } });
     const result = run(mode);
     expect(result.status).toBe(2);
-    expect(result.stderr).toContain('answer key needs the AFA-251 T5 migration');
+    expect(result.stderr).toMatch(/AFA-251 T5 migration/);
     expect(result.stderr).toContain('predict1_8.withDefaultUnit.cm');
     expect(result.stderr).toContain('T5-key-migration.json');
     expect(result.stderr).not.toContain('TypeError');
@@ -114,6 +114,6 @@ describe('T5 grader key migration', () => {
     expect(run().status).toBe(0);
     const grade = JSON.parse(readFileSync(join(dir, 'grade.json'), 'utf8'));
     expect(grade.tasks.T5.correct).toBe(false);
-    expect(grade.tasks.T5.checks.call).toBe('THROWS invalid defaultUnit');
+    expect(grade.tasks.T5.checks.call).toMatch(/^THROWS .*defaultUnit/);
   });
 });

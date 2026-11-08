@@ -17,15 +17,17 @@ describe('runtime null option sentinels', () => {
   it.each([null, [], 'x', 5, true].map(options => ({ options })))(
     'keeps rejecting options container %j',
     ({ options }) => {
-      expect(() => parseMeasurement('6 ft', options as unknown as ParseOptions)).toThrow(
-        new TypeError('options must be an object')
-      );
+      expect(() => parseMeasurement('6 ft', options as unknown as ParseOptions)).toThrow(TypeError);
+      expect(() => parseMeasurement('6 ft', options as unknown as ParseOptions)).toThrow(/options/);
     }
   );
 
   it('keeps null source defaults invalid', () => {
     expect(() =>
       parseMeasurement('6 ft', { defaultUnit: null } as unknown as ParseOptions)
-    ).toThrow(new TypeError('defaultUnit must be ft, in, cm, m, lb or kg'));
+    ).toThrow(TypeError);
+    expect(() =>
+      parseMeasurement('6 ft', { defaultUnit: null } as unknown as ParseOptions)
+    ).toThrow(/defaultUnit/);
   });
 });

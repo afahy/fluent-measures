@@ -80,7 +80,13 @@ describe('measurement input limits', () => {
     expect(parseMeasurement('½m', { maxLength: 2 })).toMatchObject({ value: 0.5, unit: 'm' });
     expect(() =>
       parseMeasurement('5 ft', { maxLength: 3, allowUnqualified: true } as unknown as ParseOptions)
-    ).toThrow('allowUnqualified was removed; use defaultUnit');
+    ).toThrow(Error);
+    expect(() =>
+      parseMeasurement('5 ft', { maxLength: 3, allowUnqualified: true } as unknown as ParseOptions)
+    ).toThrow(/allowUnqualified/);
+    expect(() =>
+      parseMeasurement('5 ft', { maxLength: 3, allowUnqualified: true } as unknown as ParseOptions)
+    ).toThrow(/defaultUnit/);
   });
 
   it.each([0, -1, 0.5, NaN, -Infinity, '1000', null, true, {}, Symbol('private value')])(

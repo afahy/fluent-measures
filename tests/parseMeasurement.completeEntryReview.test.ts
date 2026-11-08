@@ -642,15 +642,16 @@ const cases: Array<[string, ParseOptions, Expected | null]> = [
 ];
 
 describe('complete-entry wrapper and prefix review regressions', () => {
-  it('preserves current option error order at an unmatched bracketed unit', () => {
-    // AFA-251 owns early option validation; AFA-254 later adds stone. This current-JS-option
-    // control is not a claim that st must always be unsupported. Default/valid options for
-    // the same malformed entry are null in the table above. Its complete 0.5 ft prefix
-    // currently reaches conversion; an out-of-bound unit must not reinterpret it as zero ft.
+  it('rejects an unsupported normalizedUnit before reading the text', () => {
+    // AFA-178 option B (b9c838a9): reject unsupported normalizedUnit before the text.
+    // Stone support remains AFA-254; default/valid options still reject this malformed entry.
     const raw = '"ft zero and a half ["]';
     expect(() =>
       parseMeasurement(raw, { normalizedUnit: 'st' } as unknown as ParseOptions)
-    ).toThrow('Cannot convert ft to st');
+    ).toThrow(TypeError);
+    expect(() =>
+      parseMeasurement(raw, { normalizedUnit: 'st' } as unknown as ParseOptions)
+    ).toThrow(/normalizedUnit/);
   });
 
   it.each(cases)('keeps the whole public result for %s with %j', (raw, options, expected) => {
