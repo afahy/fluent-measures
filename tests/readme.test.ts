@@ -163,6 +163,11 @@ const cases: ReadmeCase[] = [
   { section: 'Surrounding Words', input: 'weighed 70 kg in 2020', expected: null },
   { section: 'Surrounding Words', input: 'I was 210 lbs, now 180 lbs', expected: null },
   { section: 'Surrounding Words', input: 'Top 10 in the class', expected: null },
+  { section: 'Surrounding Words', input: '5’11”', expected: { value: 71, unit: 'in' } },
+  { section: 'Surrounding Words', input: '(180 cm)', expected: null },
+  { section: 'Surrounding Words', input: '"180 lbs"', expected: null },
+  { section: 'Surrounding Words', input: '“5’11””', expected: null },
+  { section: 'Surrounding Words', input: '(180) lbs', expected: null },
   {
     section: 'Units Before a Number',
     input: 'Height (in): 72',

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { parseMeasurement } from '../src';
+import { parseMeasurement, type ParseOptions } from '../src';
 import * as numbers from '../src/wordsToNumber';
 
 // AFA-250: source-only instrumentation; built packages do not call this private source module.
@@ -105,8 +105,10 @@ describe('complete prefix scalar reader work', () => {
   });
 });
 
-describe('quoted compound reader work', () => {
-  it.each(['"5′11″"', '"5\'11""', 'about "5′11″"', "'5′11″'", '"5\'11"'])(
+// AFA-277: quotation marks no longer wrap an entry, so these are the same heights without the
+// quotation that the earlier cases had around them.
+describe('marked compound reader work', () => {
+  it.each(['5′11″', '5\'11"', 'about 5′11″', '5’11”', "5'11''"])(
     'reads each complete numeric part once in %s',
     raw => {
       const reader = vi.spyOn(numbers, 'readNumberTokens');
@@ -134,7 +136,6 @@ describe('quoted compound reader work', () => {
 
 describe('earlier prefix numeric failure reader work', () => {
   it.each([
-    ['ft five eleven and (70 kg)', 71, 'in', 5, 11, 1],
     ['ft five eleven and weight 70 kg', 71, 'in', 5, 11, 1],
     ['ft five eleven and a half and weight 70 kg', 71.5, 'in', 5, 11.5, 1],
     ['ft a hundred and five eleven and weight 70 kg', 1271, 'in', 105, 11, 3],
@@ -191,26 +192,6 @@ describe('earlier prefix numeric failure reader work', () => {
 
 describe('explicit prefix-compound reader work', () => {
   it.each([
-    'm: "one and eighty" cm',
-    "m: 'one and eighty' cm",
-    'ft "twenty and one" in',
-    "ft 'twenty and one' in",
-  ])('stops numeric work after the quoted left phrase fails in %s', raw => {
-    const reader = vi.spyOn(numbers, 'readNumberTokens');
-    try {
-      expect(parseMeasurement(raw)).toBeNull();
-      expect(reader.mock.calls.length).toBeGreaterThan(0);
-      // One whole-phrase decision and one failed quoted-left decision suffice. After the
-      // split fails, rereading the complete quoted number cannot make a valid compound.
-      expect(reader.mock.calls.filter(([tokens]) => tokens.length > 0)).toHaveLength(2);
-      const chars = reader.mock.calls.reduce((sum, [tokens]) => sum + tokens.join(' ').length, 0);
-      expect(chars).toBeLessThan(raw.length * 4);
-    } finally {
-      reader.mockRestore();
-    }
-  });
-
-  it.each([
     ['m: one and eighty and five cm', 185, 1, 85],
     ['m: one hundred and one and eighty cm', 10180, 101, 80],
     ['m: one hundred and eighty cm', 10080, 100, 80],
@@ -250,15 +231,16 @@ describe('explicit prefix-compound reader work', () => {
   });
 });
 
-// The root quote cursor must not try parsing candidate prefixes while looking for its close.
-describe('whole quoted pair reader work', () => {
+// AFA-277: these pairs had a quotation around them. Without it, each pair still reads its three
+// numbers once.
+describe('pair reader work', () => {
   it.each([
-    '"5\'11", 70 kg"',
-    '"5\'11"; 70 kg"',
-    '"5\'11" / 70 kg"',
-    '"5\'11" and 70 kg"',
-    '"5\'11" (70 kg)"',
-    '"5\'11" [70 kg]"',
+    '5\'11", 70 kg',
+    '5\'11"; 70 kg',
+    '5\'11" / 70 kg',
+    '5\'11" and 70 kg',
+    '5\'11" (70 kg)',
+    '5\'11" [70 kg]',
   ])('reads the three numeric parts once in %s', raw => {
     const reader = vi.spyOn(numbers, 'readNumberTokens');
     try {
@@ -275,6 +257,38 @@ describe('whole quoted pair reader work', () => {
       const calls = reader.mock.calls.filter(([tokens]) => tokens.length > 0);
       expect(calls).toHaveLength(3);
       expect(calls.reduce((sum, [tokens]) => sum + tokens.join(' ').length, 0)).toBe(5);
+    } finally {
+      reader.mockRestore();
+    }
+  });
+});
+
+// AFA-277: quotation marks and brackets cannot surround an entry or a number. A rejected
+// wrapper still does bounded number work.
+describe('wrapped entry reader work', () => {
+  it.each([
+    ['"5′11″"', {}],
+    ['"5\'11""', {}],
+    ['about "5′11″"', {}],
+    ["'5′11″'", {}],
+    ['"5\'11"', {}],
+    ['ft five eleven and (70 kg)', { type: 'height' }],
+    ['m: "one and eighty" cm', {}],
+    ["m: 'one and eighty' cm", {}],
+    ['ft "twenty and one" in', {}],
+    ["ft 'twenty and one' in", {}],
+    ['"5\'11", 70 kg"', { type: 'height' }],
+    ['"5\'11"; 70 kg"', { type: 'height' }],
+    ['"5\'11" / 70 kg"', { type: 'height' }],
+    ['"5\'11" and 70 kg"', { type: 'height' }],
+    ['"5\'11" (70 kg)"', { type: 'height' }],
+    ['"5\'11" [70 kg]"', { type: 'height' }],
+  ] as const)('rejects %s with %j in bounded work', (raw, options: ParseOptions) => {
+    const reader = vi.spyOn(numbers, 'readNumberTokens');
+    try {
+      expect(parseMeasurement(raw, options)).toBeNull();
+      const chars = reader.mock.calls.reduce((sum, [tokens]) => sum + tokens.join(' ').length, 0);
+      expect(chars).toBeLessThan(raw.length * 4);
     } finally {
       reader.mockRestore();
     }

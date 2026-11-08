@@ -1,4 +1,3 @@
-import { UNIT_ALIASES } from './units';
 import { MULTIPLIERS, NUMBER_WORDS } from './wordsToNumber';
 
 /** A token retains every non-whitespace character and its normalized-text boundaries. */
@@ -7,9 +6,6 @@ interface Token {
   start: number;
   end: number;
 }
-
-const LABELS = Object.values(UNIT_ALIASES).flat(2).join('|');
-const FOLLOWING_UNIT = new RegExp(`^\\s*(?:${LABELS})\\b`, 'i');
 
 // A number in a fraction: digits with an optional decimal part, or a decimal part alone. The two
 // forms can't overlap, so a long number that isn't a fraction fails in linear time.
@@ -66,31 +62,6 @@ export function normalizeFractions(input: string): string {
 
 const NUMBER_WORD = [...NUMBER_WORDS.keys(), ...MULTIPLIERS.keys()].join('|');
 
-// Number words have the same boundary and "and a half" rules as the later token split.
-const WORD_END = String.raw`(?:\b(?:${NUMBER_WORD})|(?:\d|\b(?:${NUMBER_WORD}))[\s-]+and[\s-]+a[\s-]+half)`;
-// An apostrophe inside a word does not close the surrounding single quotation.
-const SINGLE_QUOTATION = String.raw`(?:[^’]|(?<=[a-z])’(?=[a-z]))*`;
-
-// Only a following inch component extends a spaced quotation into a compound height. Keep
-// the existing adjacent-digit rule. Match the mark before any backward scan across spaces.
-function curlyMark(open: string, close: string): RegExp {
-  const numberPart = String.raw`(?:[\d.,/⁄${FRACTIONS}]+|(?:${NUMBER_WORD}|and|a|half)\b)`;
-  const inches = String.raw`${numberPart}(?:[\s-]+${numberPart})*\s*(?:["”″]|['’′]{2}|in(?:ch(?:es)?)?\b)`;
-  const nextNumber = String.raw`(?=${close}(?:\d${close === '’' ? String.raw`|\s*${inches}` : ''}))`;
-  const quotation = close === '’' ? SINGLE_QUOTATION : '[^”]*';
-  return new RegExp(
-    String.raw`(?=${close})(?:(?<=[\d${FRACTIONS}]['’′]?\s*)(?:(?<!${open}${quotation})|${nextNumber})|(?<=${WORD_END}\s*)(?!${close}[a-z])(?:(?<!${open}${quotation})|${nextNumber}))${close}`,
-    'gi'
-  );
-}
-// Keep every curly opener already recognized by the entry/number wrapper reader.
-const CURLY_SINGLE = curlyMark('[‘‚]', '’');
-const CURLY_DOUBLE = curlyMark(
-  // A prior right quote in numeric suffix position is a unit, not an opening wrapper.
-  String.raw`(?:[“„]|(?<!(?:[\d${FRACTIONS}]['’′]?|${WORD_END})\s*)”)`,
-  '”'
-);
-
 // A minus sign before a number, when no number comes earlier: no digit, Unicode fraction or number
 // word. The number can be a word too, as in "−five'", also after "a" or "an", as in "−a hundred"
 // and "−a-hundred". After a number, a minus sign joins two parts or values, as in "1 m−80 cm" and
@@ -101,16 +72,30 @@ const MINUS_SIGN = new RegExp(
   'gi'
 );
 
+// A number word, alone or before "and a half", has the same boundaries as in the token split.
+const WORD_END = String.raw`(?:\b(?:${NUMBER_WORD})|(?:\d|\b(?:${NUMBER_WORD}))[\s-]+and[\s-]+a[\s-]+half)`;
+
+/**
+ * A curly closing quote after a number is a feet or inch mark, as in "5’11”" and "five’ ten”".
+ * The number can be digits, a Unicode fraction or a number word, with spaces after it. One feet
+ * mark can come between, as in "5’’". Quotation marks don't wrap an entry or a number, so there
+ * is no quotation to keep. An apostrophe in a word, as in "she’s" and "I’m", stays. The
+ * lookahead keeps the lookbehind from running at every character.
+ */
+const curlyMark = (mark: string): RegExp =>
+  new RegExp(
+    String.raw`(?=${mark})(?:(?<=[\d${FRACTIONS}]['’′]?\s*)|(?<=${WORD_END}\s*)(?!${mark}[a-z]))${mark}`,
+    'gi'
+  );
+const CURLY_SINGLE = curlyMark('’');
+const CURLY_DOUBLE = curlyMark('”');
+
 /**
  * Normalize feet and inch marks, so "5’11”", "5′11″" and "5´11´´" read like 5'11". Primes and
- * acute accents retain their unit identity as ′ and ″, distinct from ASCII entry closes.
- * A curly quote can follow digits, fractions or number
- * words, with optional spaces. A following unit word keeps the number in that unit; otherwise
- * a matching entry or numeric quotation stays a quotation unless an inch component follows a feet mark
- * or a digit immediately follows the mark, as in the existing compact-height syntax.
- * Full-width characters and the units "㎝" and "㎏" become their ASCII forms. Other characters
- * stay, so normalizeFractions still sees "½". The minus signs "−" and "﹣" become a hyphen-minus
- * "-" right before a number when no number comes earlier, so "−5 ft" is negative.
+ * acute accents keep their unit identity as ′ and ″. Full-width characters and the units "㎝" and
+ * "㎏" become their ASCII forms. Other characters stay, so normalizeFractions still sees "½". The
+ * minus signs "−" and "﹣" become a hyphen-minus "-" right before a number when no number comes
+ * earlier, so "−5 ft" is negative.
  */
 export function normalizeForms(input: string): string {
   return input
@@ -118,12 +103,8 @@ export function normalizeForms(input: string): string {
     .replace(MINUS_SIGN, '-')
     .replace(/[′´ʹ]/g, '′')
     .replace(/[″ʺ]/g, '″')
-    .replace(CURLY_SINGLE, (mark, offset, text) =>
-      FOLLOWING_UNIT.test(text.slice(offset + 1)) ? mark : "'"
-    )
-    .replace(CURLY_DOUBLE, (mark, offset, text) =>
-      FOLLOWING_UNIT.test(text.slice(offset + 1)) ? mark : '"'
-    );
+    .replace(CURLY_SINGLE, "'")
+    .replace(CURLY_DOUBLE, '"');
 }
 
 /** Normalize comma groups before interpreting numeric syntax or splitting tokens. */
@@ -169,9 +150,8 @@ export function tokenize(input: string): Token[] {
  */
 export function tokenizeNormalized(input: string): Token[] {
   const text = input
-    // Eligible paired marks are explicit inch units, not entry closes. Mixed prime/apostrophe
-    // pairs stay separate until the bounded unit reader can own both marks.
-    .replace(/(?<=\d)(?:′′|(?='')(?<!(?:^|[^\w'"’])['’]{2}[^'’]*)''(?!['’]))/g, '″')
+    // Two feet marks right after a number are an inch mark, as in "5''" and "5′'".
+    .replace(/(?<=\d)['′]{2}(?!['’′])/g, '″')
     .toLowerCase();
   return [...text.matchAll(/i['’]m\b|[\p{L}\p{M}_][\p{L}\p{M}\p{N}_]*\.?|[\d.]+|[^\s]/gu)].flatMap(
     match => {

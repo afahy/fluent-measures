@@ -6,7 +6,8 @@ The user gets the total height in inches from feet and inches, with each part in
 
 ## How a user reaches it
 
-- Marks: `5'11"`, `5' 11"`, two apostrophes for inches, and Unicode quote marks.
+- Marks: `5'11"`, `5' 11"`, two apostrophes for inches, and Unicode quote marks. Every curly
+  quote or prime after a number is a mark: `5’11”`, `5′11″`, `5´11´´`.
 - Unit names: `5 ft 11 in`, `5 feet 11 inches`, `five foot ten`.
 - Hyphens: `5-foot-11`, `5 ft-11`, `5'-11"`.
 - Shorthand with `type: 'height'`: `5-11`.

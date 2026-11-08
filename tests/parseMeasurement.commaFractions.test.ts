@@ -9,7 +9,7 @@ describe('decimal commas without a leading zero', () => {
   it.each(['kg;,5'])('rejects the complete entry %s (AFA-250)', raw => {
     expect(parseMeasurement(raw)).toBeNull();
   });
-  it.each([',5 kg', ',5kg', 'kg ,5', '(,5) kg'])('preserves the fractional value in %s', raw => {
+  it.each([',5 kg', ',5kg', 'kg ,5'])('preserves the fractional value in %s', raw => {
     expect(parseMeasurement(raw)).toEqual({
       value: 0.5,
       unit: 'kg',
@@ -67,4 +67,9 @@ describe('decimal commas without a leading zero', () => {
       expect(parseMeasurement(raw)).toBeNull();
     }
   );
+
+  // AFA-277: quotation marks and brackets cannot surround an entry or a number.
+  it.each(['(,5) kg'])('rejects the wrapped %s', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
 });

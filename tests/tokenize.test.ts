@@ -17,20 +17,20 @@ describe('complete-entry tokens', () => {
     expect(tokenTexts("72''")).toEqual(['72', '″']);
     expect(tokenTexts(`"5'11''`)).toEqual(['"', '5', "'", '11', '″']);
   });
-  // These existing form rules retain quotation boundaries before the strict parser sees
-  // them. A rejected prose quotation must not become unit marks during normalization.
+  // AFA-277: quotation marks don't wrap an entry, so a curly closing quote after a number is a
+  // feet or inch mark. An apostrophe in a word, as in "it’s", and an opening quote stay.
   it.each([
-    ['‘5’', '‘5’'],
-    ['“72”', '“72”'],
-    ['‘it’s five’', '‘it’s five’'],
-    ['“it’s five”', '“it’s five”'],
-    ['‘a” five’', '‘a” five’'],
-    ['“a’ five”', '“a’ five”'],
-    ['70” KG', '70” KG'],
+    ['‘5’', "‘5'"],
+    ['“72”', '“72"'],
+    ['‘it’s five’', "‘it’s five'"],
+    ['“it’s five”', '“it’s five"'],
+    ['‘a” five’', "‘a” five'"],
+    ['“a’ five”', '“a’ five"'],
+    ['70” KG', '70" KG'],
     ['‘5’ eleven inches', "‘5' eleven inches"],
-    ['“72” 60 inches', '“72” 60 inches'],
+    ['“72” 60 inches', '“72" 60 inches'],
     ['“72”60 cm', '“72"60 cm'],
-  ])('retains the intended quote or unit-mark boundary in %s', (raw, expected) => {
+  ])('writes the closing quote in %s as a mark', (raw, expected) => {
     expect(normalizeForms(raw)).toBe(expected);
   });
 
@@ -92,7 +92,7 @@ describe('complete-entry tokens', () => {
     ['6 ft.. 70 kg...', ['6', 'ft.', '.', '70', 'kg.', '..']],
     ['5.5. ft', ['5.5', '.', 'ft']],
     ['a.b. 5 ft', ['a.', 'b.', '5', 'ft']],
-    ['“+5” kg', ['“', '+', '5', '”', 'kg']],
+    ['“+5” kg', ['“', '+', '5', '"', 'kg']],
     ['70 kg 🧊', ['70', 'kg', '🧊']],
     ['I’m 70 kg', ['i’m', '70', 'kg']],
   ])('retains the full normalized token sequence in %s', (raw, expected) => {

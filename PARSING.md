@@ -35,16 +35,25 @@ weight. Approximation words are `about`, `around`, `roughly`,
 parseMeasurement("I'm five foot eleven tall"); // { value: 71, unit: 'in', ... }
 parseMeasurement('about 180 cm'); // { value: 180, unit: 'cm', ... }
 parseMeasurement('I weigh one hundred fifty pounds'); // { value: 150, unit: 'lb', ... }
-parseMeasurement('weighed 70 kg in 2020'); // null: historical prose is not a supported wrapper
+parseMeasurement('weighed 70 kg in 2020'); // null: historical prose is not a supported introduction
 parseMeasurement('I was 210 lbs, now 180 lbs'); // null: the parser does not select a current reading
-parseMeasurement('Top 10 in the class'); // null: ranking prose is not a supported wrapper
+parseMeasurement('Top 10 in the class'); // null: ranking prose is not a supported introduction
 ```
 
-One balanced pair of parentheses, square brackets or recognized quotation marks may surround
-an entry or a number. Existing Unicode feet/inch marks remain units, and a genuine closing
-quote before an explicit unit does not become a different unit. Quoting arbitrary prose does
-not make it a supported number. A bare number with `defaultUnit` must still occupy the
-whole entry without surrounding words.
+Quotation marks, parentheses and square brackets cannot surround an entry, one measurement of
+a pair, or a number. Such an entry returns `null`. Curly quotes and primes after a number are
+always feet and inch marks, like `'` and `"`: `5’11”`, `5′11″` and `5´11´´` all give 71 inches.
+Brackets keep their other uses: a unit label such as `Height (in): 72`, a smaller part such as
+`5 ft (11 in)`, and the second measurement of a pair. A bare number with `defaultUnit` must
+still occupy the whole entry without surrounding words.
+
+```typescript
+parseMeasurement('5’11”'); // { value: 71, unit: 'in', ... }
+parseMeasurement('(180 cm)'); // null: brackets cannot surround an entry
+parseMeasurement('"180 lbs"'); // null: quotation marks cannot surround an entry
+parseMeasurement('“5’11””'); // null: quotation marks cannot surround an entry
+parseMeasurement('(180) lbs'); // null: brackets cannot surround a number
+```
 
 ## Unsupported Units
 
@@ -220,7 +229,8 @@ parseMeasurement('210 lbs to 180 lbs'); // null: two weights
 A pair with exactly one complete height and one complete weight needs `type` or
 `normalizedUnit` to choose a result. Without a selector it returns `null`. The expressions
 can be separated by a comma, semicolon, ASCII slash or `and`, or the second can be enclosed
-in parentheses or square brackets. Whitespace alone does not separate a pair. Both complete
+in parentheses or square brackets. Brackets or quotation marks cannot enclose the first
+measurement or the whole pair. Whitespace alone does not separate a pair. Both complete
 expressions must be valid; an invalid expression is never ignored because of its type.
 
 ```typescript
@@ -257,8 +267,8 @@ This is also true in a range or in a measurement with two parts. A trailing comm
 number and its unit is not part of a complete measurement:
 `1,000, kg` returns `null`.
 
-Numeric commas keep their meaning in a supported wrapper: `weight 72,5 kg` is 72.5 kg.
-A hyphen after a field name does not turn arbitrary text into a wrapper:
+Numeric commas keep their meaning after a field name: `weight 72,5 kg` is 72.5 kg.
+A hyphen after a field name does not make it an introduction:
 `height-1,800 cm` returns `null`. A separate number word followed by a comma is not joined
 or discarded; `twenty,5 kg`, `twenty, 5 kg` and `kg twenty, 5` return `null`.
 
@@ -293,10 +303,10 @@ parseMeasurement('72', {
 
 If `type` or `normalizedUnit` selects a dimension, `defaultUnit` must agree with it, even for
 input with a written unit. A default alone does not select a dimension for qualified input or
-authorize `5-11` shorthand. Extra words, wrappers, punctuation or a second number cannot be
-discarded to apply a default: `about 80`, `(80)`, `80;` and `80 90` return `null` with a kilogram
-default. `allowUnqualified` and `inferUnit` are removed; passing a defined value throws a
-migration error. See the README for validation order and migration.
+authorize `5-11` shorthand. Extra words, brackets, quotation marks, punctuation or a second
+number cannot be discarded to apply a default: `about 80`, `(80)`, `80;` and `80 90` return
+`null` with a kilogram default. `allowUnqualified` and `inferUnit` are removed; passing a defined
+value throws a migration error. See the README for validation order and migration.
 
 ## Fuzzy Matching
 

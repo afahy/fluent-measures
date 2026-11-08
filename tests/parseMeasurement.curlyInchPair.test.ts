@@ -5,163 +5,21 @@ import { parseMeasurement, type ParseOptions, type ParsedValue } from '../src';
 // to a paired inch mark (twoApostrophes.test.ts); an ordinary single mark allows whitespace.
 // PARSING Surrounding Words permits one balanced wrapper and a height suffix tall.
 // Feet and Inches supplies 5 * 12 + 11 = 71; scalar 5 in and 6 ft keep their values.
+// AFA-277: quotation marks and brackets cannot surround an entry, a measurement of a pair or a
+// number. Each row with such a wrapper expects null.
 const cases: [string, ParseOptions, ParsedValue | null][] = [
   // PARSING forbids discarding a second explicit unit or an unknown fragment.
   ["‘11kg'’", {}, null],
   ['‘11’x’', {}, null],
-  [
-    '‘5 ft 11’’’',
-    {},
-    {
-      value: 71,
-      unit: 'in',
-      type: 'height',
-      raw: '‘5 ft 11’’’',
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11,
-          unit: 'in',
-        },
-      ],
-    },
-  ],
-  [
-    '‘5 foot 11’’’',
-    {},
-    {
-      value: 71,
-      unit: 'in',
-      type: 'height',
-      raw: '‘5 foot 11’’’',
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11,
-          unit: 'in',
-        },
-      ],
-    },
-  ],
+  ['‘5 ft 11’’’', {}, null],
+  ['‘5 foot 11’’’', {}, null],
   ['‘5’11 ’’’', {}, null],
-  [
-    '“5 ””',
-    {},
-    {
-      value: 5,
-      unit: 'in',
-      type: 'height',
-      raw: '“5 ””',
-      matches: [
-        {
-          value: 5,
-          unit: 'in',
-        },
-      ],
-    },
-  ],
-  [
-    '“5’11 ””',
-    {},
-    {
-      value: 71,
-      unit: 'in',
-      type: 'height',
-      raw: '“5’11 ””',
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11,
-          unit: 'in',
-        },
-      ],
-    },
-  ],
-  [
-    '‘6 ’’ tall',
-    {},
-    {
-      value: 6,
-      unit: 'ft',
-      type: 'height',
-      raw: '‘6 ’’ tall',
-      matches: [
-        {
-          value: 6,
-          unit: 'ft',
-        },
-      ],
-    },
-  ],
-  [
-    '“5’11” ”',
-    {},
-    {
-      value: 71,
-      unit: 'in',
-      type: 'height',
-      raw: '“5’11” ”',
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11,
-          unit: 'in',
-        },
-      ],
-    },
-  ],
-  [
-    '‚5 ft 11’’’',
-    {},
-    {
-      value: 71,
-      unit: 'in',
-      type: 'height',
-      raw: '‚5 ft 11’’’',
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11,
-          unit: 'in',
-        },
-      ],
-    },
-  ],
-  [
-    "‘5 ft 11’'’",
-    {},
-    {
-      value: 71,
-      unit: 'in',
-      type: 'height',
-      raw: "‘5 ft 11’'’",
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11,
-          unit: 'in',
-        },
-      ],
-    },
-  ],
+  ['“5 ””', {}, null],
+  ['“5’11 ””', {}, null],
+  ['‘6 ’’ tall', {}, null],
+  ['“5’11” ”', {}, null],
+  ['‚5 ft 11’’’', {}, null],
+  ["‘5 ft 11’'’", {}, null],
   ['‘5 ft 11 ’’’', {}, null],
   ['‘5 ft eleven’’’', {}, null],
   ['‘5 ft 12’’’', {}, null],
