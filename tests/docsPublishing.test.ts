@@ -140,7 +140,9 @@ describe('published documentation', () => {
     );
     expect(index).toContain('Older tags v0.1.0 and v0.1.1 have no PARSING.md');
     expect(index).toContain(`${site}README.md#documentation-for-your-version`);
-    expect(read(output, 'index.html')).toContain('href="README.md#documentation-for-your-version"');
+    // AFA-270: the page links to its own HTML section. Pages serves README.md as Markdown.
+    expect(read(output, 'index.html')).toContain('<a href="#versions">Docs for your version</a>');
+    expect(read(output, 'index.html')).toContain('<h3 id="versions">');
   });
 
   it('refreshes the copied sources and revision and removes stale output on every build', () => {
@@ -362,6 +364,9 @@ describe('public documentation verification', () => {
     ['README.md', 'Source revision:', 'Missing revision:'],
     ['PARSING.md', '# Parsing rules', '# Wrong document'],
     ['llms.txt', `${site}PARSING.md`, `${site}wrong.md`],
+    // AFA-270: a main build must link to the HTML section, not to the Markdown README.
+    ['index.html', 'href="#versions"', 'href="README.md#documentation-for-your-version"'],
+    ['index.html', 'id="versions"', 'id="other-versions"'],
   ])('rejects an incomplete expected artifact in %s before fetching', (file, from, to) => {
     const { output } = setup();
     writeFileSync(join(output, file), read(output, file).replace(from, to));
