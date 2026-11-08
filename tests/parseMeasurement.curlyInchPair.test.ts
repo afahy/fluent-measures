@@ -6,6 +6,9 @@ import { parseMeasurement, type ParseOptions, type ParsedValue } from '../src';
 // PARSING Surrounding Words permits one balanced wrapper and a height suffix tall.
 // Feet and Inches supplies 5 * 12 + 11 = 71; scalar 5 in and 6 ft keep their values.
 const cases: [string, ParseOptions, ParsedValue | null][] = [
+  // PARSING forbids discarding a second explicit unit or an unknown fragment.
+  ["‘11kg'’", {}, null],
+  ['‘11’x’', {}, null],
   [
     '‘5 ft 11’’’',
     {},

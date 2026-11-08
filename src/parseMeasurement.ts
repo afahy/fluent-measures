@@ -113,8 +113,10 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   // still has to consume the unit; this fixed lookahead never searches for another close.
   const unitInsideQuote = (at: number, close: string, depth: number): boolean =>
     (depth === 1 &&
-      (close === '”' || close === '’') &&
-      (text(at + 1) === close || (close === '’' && readUnit(at, false, at + 2)?.unit === 'in'))) ||
+      (close === '”'
+        ? text(at + 1) === close
+        : close === '’' &&
+          (text(at + 1) === close || readUnit(at, false, at + 2)?.unit === 'in'))) ||
     (close === '"'
       ? text(at + 1) === '"'
       : close === "'" &&
@@ -215,7 +217,10 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     const close = text(at) === '(' ? ')' : text(at) === '[' ? ']' : undefined;
     if (close) at++;
     // A mixed pair keeps the existing immediately-after-a-digit inch spelling, but neither
-    // mark may be the excluded entry close. This is fixed-size unit lookahead, not a scan.
+    // mark may be the excluded entry close. Retained apostrophe pairs bind to a curly close:
+    // the wrapper cursor or complete consumption rejects an intervening close. Match the
+    // exact pair/close spelling together; an ASCII entry close is not this curly spelling.
+    // This is fixed-size unit lookahead, not a scan.
     const mixedInch =
       !prefix &&
       at + 1 < limit &&
@@ -224,10 +229,8 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       /\d$/.test(text(at - 1)) &&
       ((text(at) === '′' && text(at + 1) === "'") ||
         (text(at) === "'" && text(at + 1) === '′') ||
-        ((text(at) === "'" || text(at) === '’') &&
-          text(at + 1) === "'" &&
-          at + 2 === limit &&
-          text(limit) === '’'));
+        text(at) + text(at + 1) + text(limit) === "''’" ||
+        text(at) + text(at + 1) + text(limit) === "’'’");
     // Normalization retains an ambiguous curly mark. It is a suffix unit only when the
     // next token is the excluded matching entry close, never the close of a quoted number.
     const curlyUnit =
