@@ -12,14 +12,14 @@ const releaseNote = 'Docs track main and may include changes not yet released on
 
 // These references use inline Markdown links. Keep anchors and external URLs intact, send
 // published references to Pages, and pin other repository links to this source revision.
-function publishLinks(markdown, revision) {
+export function publishLinks(markdown, revision, baseUrl = site) {
   return markdown.replace(/(\]\()([^\s)]+)(\))/g, (link, open, href, close) => {
     const sourcePrefix = `${repositoryUrl}/blob/main/`;
     let target = href.startsWith(sourcePrefix) ? href.slice(sourcePrefix.length) : href;
     if (/^(?:[a-z][\w+.-]*:|\/\/|#)/i.test(target)) return link;
     target = target.replace(/^\.\//, '');
     const file = target.split(/[?#]/)[0];
-    const base = references.includes(file) ? site : `${repositoryUrl}/blob/${revision}/`;
+    const base = references.includes(file) ? baseUrl : `${repositoryUrl}/blob/${revision}/`;
     return `${open}${new URL(target, base).href}${close}`;
   });
 }

@@ -63,7 +63,9 @@ describe('Atlas production and preview boundary', () => {
     expect.hasAssertions();
     const workflow = readFileSync(join(root, '.github/workflows/deploy-docs.yml'), 'utf8');
     expect(workflow.match(/\bpath:\s*([^\n]+)/g)).toEqual(['path: build/docs']);
-    expect(workflow).toContain('run: node .github/scripts/docs-build.mjs');
+    expect(workflow).toContain('node .github/scripts/docs-release.mjs');
+    expect(workflow).toContain('run: node .github/scripts/docs-promote.mjs');
+    expect(workflow).not.toContain('run: node .github/scripts/docs-build.mjs');
     expect(readFileSync(join(root, '.gitignore'), 'utf8')).toContain('/.docs-preview/');
     const deployed = files(join(root, 'docs'));
     expect(Object.keys(deployed).some(name => /palette|switcher|preview/i.test(name))).toBe(false);
