@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement, type ParseOptions, type ParsedValue } from '../src';
 
+// AFA-266 owns selected curly pairs; the two pair controls preserve main null here.
 // AFA-265 probe: a numeric feet mark and a distinct closing quote remain separate.
 const cases: [string, ParseOptions, ParsedValue | null][] = [
   [
@@ -272,36 +273,14 @@ const cases: [string, ParseOptions, ParsedValue | null][] = [
     {
       type: 'height',
     },
-    {
-      value: 6,
-      unit: 'ft',
-      type: 'height',
-      raw: '‘70 kg; 6’’',
-      matches: [
-        {
-          value: 6,
-          unit: 'ft',
-        },
-      ],
-    },
+    null,
   ],
   [
     '‘70 kg; 6’’',
     {
       type: 'weight',
     },
-    {
-      value: 70,
-      unit: 'kg',
-      type: 'weight',
-      raw: '‘70 kg; 6’’',
-      matches: [
-        {
-          value: 70,
-          unit: 'kg',
-        },
-      ],
-    },
+    null,
   ],
   ['‘6’’’ extra', {}, null],
   ['‚6’’ kg', {}, null],

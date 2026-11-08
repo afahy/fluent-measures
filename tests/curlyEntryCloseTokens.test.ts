@@ -3,15 +3,16 @@ import { normalizeForms, tokenize } from '../src/tokenize';
 
 describe('a curly unit followed by its entry close', () => {
   it.each([
-    ['“5’11””', '“5\'11"”'],
-    ['„5’11””', '„5\'11"”'],
-    ['”5’11””', '”5\'11"”'],
-    ['“five’ ten””', '“five\' ten"”'],
+    // Keep main's ambiguous closing tokens: only the existing wrapper cursor owns them.
+    ['“5’11””', "“5'11””"],
+    ['„5’11””', "„5'11””"],
+    ['”5’11””', "”5'11””"],
+    ['“five’ ten””', "“five' ten””"],
     ['‘5’11’’’', "‘5'11''’"],
     ['‚5’11’’’', "‚5'11''’"],
-    ['‚six’’', "‚six'’"],
-    ['“72” ”', '“72" ”'],
-    ['‚six’ ’', "‚six' ’"],
+    ['‚six’’', '‚six’’'],
+    ['“72” ”', '“72” ”'],
+    ['‚six’ ’', '‚six’ ’'],
     // A genuine quotation followed by a named unit retains the closing mark.
     ['‚72’ kg', '‚72’ kg'],
     ['72’ kg', '72’ kg'],
@@ -23,9 +24,9 @@ describe('a curly unit followed by its entry close', () => {
   });
 
   it.each([
-    ['‘5’11’’’', ['‘', '5', "'", '11', '″', '’']],
-    ['‚5’11’’’', ['‚', '5', "'", '11', '″', '’']],
-    ['72’’’', ['72', '″', '’']],
+    ['‘5’11’’’', ['‘', '5', "'", '11', "'", "'", '’']],
+    ['‚5’11’’’', ['‚', '5', "'", '11', "'", "'", '’']],
+    ['72’’’', ['72', "'", "'", '’']],
     // ASCII triples cannot borrow a quote as the absent entry close.
     ["72'''", ['72', "'", "'", "'"]],
     ["''72''", ["'", "'", '72', "'", "'"]],
