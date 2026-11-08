@@ -6,6 +6,12 @@ you to.
 To improve the docs page's design in rounds of AI judging, follow
 `.claude/skills/design-hill-climb/SKILL.md`, but only when the maintainer asks you to.
 
+For a package release, follow [RELEASING.md](RELEASING.md). Prepare a reviewed version PR,
+verify successful main CI for its exact merged SHA, and validate a clean checkout. npm
+publication requires separate explicit maintainer approval naming the version and SHA;
+ordinary ticket or merge authorization does not grant it. `pnpm release` validates only.
+Never push a branch or unrelated tags as part of publication.
+
 ## Commands
 
 Run these commands from the repository root:
