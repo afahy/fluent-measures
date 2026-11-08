@@ -3433,3 +3433,17 @@ options are configuration errors. Options-container errors precede string length
 The forced 2.99 m / 3 cm property controls retain all targets, written-value counterparts and
 no-default controls. The AFA-251 PR description records composition evidence and validation;
 historical findings and their original revision references above remain unchanged.
+
+## Approved policy revision: no quote or bracket wrappers (AFA-277)
+
+The maintainer decided on 2026-11-08 to stop reading wrappers, to reduce bundle size. Quotation
+marks, parentheses and square brackets around an entry, around one measurement of a pair, or
+around a number no longer make a measurement. The F2 and AFA-265 quotation rows above describe
+the earlier implementation and stay as historical evidence.
+
+M1 no longer carries quotation context. `normalizeForms` writes every `’ ′ ´ ʹ` as `'` and every
+`” ″ ʺ` as `"`, so a curly closing quote after a number is always a feet or inch mark. M2 writes
+two apostrophes right after a digit as `"`, with no check for an earlier opening pair. The parser
+no longer has a whole-entry wrapper cursor, quoted numbers or quoted feet. Its bracket cursor
+remains only for the second measurement of a pair, as in `5'11" (180 lbs)`. Bracketed unit
+labels and bracketed smaller parts are unchanged.

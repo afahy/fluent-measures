@@ -242,10 +242,12 @@ parseMeasurement('70 kg (154 lbs)'); // null: two weights, even when they agree
 parseMeasurement('210 lbs to 180 lbs'); // null: two weights
 ```
 
-The parser reads a complete entry, including optional ordinary wrappers such as
+The parser reads a complete entry, including a few ordinary words around it, such as
 `I'm five foot eleven tall` and `about 180 cm`. It does not search arbitrary prose for a
 usable fragment. Extra values, malformed fragments, unsupported units and ranges reject the
-whole entry. `Top 10 in the class` returns `null`.
+whole entry. `Top 10 in the class` returns `null`. Quotation marks and brackets cannot
+surround the entry or a number: `(180 cm)` and `"180 lbs"` return `null`. Curly quotes after a
+number are feet and inch marks, so `5’11”` is 71 inches.
 
 Feet and inches, or meters and centimeters, can form one compound height. Two independent
 heights or two independent weights return `null`, even if they are equal or are conversions
@@ -262,7 +264,7 @@ application metadata outside that value. To display an alternate unit, convert t
 measurement instead of submitting both representations.
 
 [PARSING.md](https://github.com/afahy/fluent-measures/blob/main/PARSING.md) gives the complete
-entry grammar, supported wrappers and examples. Fuzzy matching can still read an ordinary
+entry grammar, the words that can surround a measurement, and examples. Fuzzy matching can still read an ordinary
 word as a unit; it applies only within that grammar.
 
 ## Troubleshooting

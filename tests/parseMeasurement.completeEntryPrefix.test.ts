@@ -101,7 +101,6 @@ describe('complete prefix ownership controls', () => {
     ['kg one hundred and fifty.', 150, 'kg', 'weight'],
     ['kg five hundred.', 500, 'kg', 'weight'],
     ['pounds two and a half thousand.', 2500, 'lb', 'weight'],
-    ['(kg seventy two.)', 72, 'kg', 'weight'],
     ['my weight is kg seventy two.', 72, 'kg', 'weight'],
     ['m: one eighty.', 180, 'm', 'height'],
   ] as const)('keeps the full numeric value in %s', (raw, value, unit, type) => {
@@ -178,5 +177,10 @@ describe('complete prefix ownership controls', () => {
       const raw = prefix + '1 and '.repeat(count) + '1 pounds';
       expect(parseMeasurement(raw, { type: 'weight' })).toBeNull();
     }
+  });
+
+  // AFA-277: quotation marks and brackets cannot surround an entry or a number.
+  it.each(['(kg seventy two.)'])('rejects the wrapped %s', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
   });
 });

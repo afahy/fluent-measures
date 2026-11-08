@@ -2,7 +2,7 @@
 // Earlier ticket rationales below describe their historical extraction contract; original
 // assertions are retained separately under design/afa-250.
 import { describe, expect, it } from 'vitest';
-import { parseMeasurement } from '../src';
+import { parseMeasurement, type ParseOptions } from '../src';
 
 // AFA-74 inputs; the maintainer retained proper fractions after punctuation on 2026-11-06.
 describe('fraction boundaries', () => {
@@ -68,7 +68,6 @@ describe('fraction boundaries', () => {
     '5 FT, 10/180 LBS',
     "5' (10/180 lbs)",
     '60" (10/180 lbs)',
-    '5 ft, (10⁄180 lbs)',
   ])('preserves a proper fraction after punctuation in %s', raw => {
     expect(parseMeasurement(raw, { type: 'weight' })).toMatchObject({
       value: 0.05555555555555555, // 10 / 180
@@ -90,10 +89,6 @@ describe('fraction boundaries', () => {
       expect(parseMeasurement(raw)).toBeNull();
     }
   );
-  it.each(['weight (1/2 lbs)'])('keeps a proper fraction after prose in %s', raw => {
-    expect(parseMeasurement(raw)).toMatchObject({ value: 0.5, unit: 'lb' });
-  });
-
   // PARSING.md Feet and Inches and 1 / 2: an explicit inch unit keeps a proper fraction.
   it.each([
     ["5' (1/2 in)", 60.5],
@@ -102,7 +97,6 @@ describe('fraction boundaries', () => {
     ['6 foot (1/2 inches)', 72.5],
     ['6 ft, 1/2"', 72.5],
     ['6 ft, 1⁄2″', 72.5],
-    ['6 ft (1/2) in', 72.5],
     ["6 ft, 1/2''", 72.5],
   ] as const)('keeps the explicit fraction of an inch in %s', (raw, value) => {
     expect(parseMeasurement(raw, { type: 'height' })).toMatchObject({ value, unit: 'in' });
@@ -275,5 +269,14 @@ it.each([
   ['6 ft 1/2-3/4 11"', { type: 'height' }],
   ["6 ft 1/2-3/4 11''", { type: 'height' }],
 ] as const)('rejects incomplete entry %s with original options %j', (raw, options) => {
+  expect(parseMeasurement(raw, options)).toBeNull();
+});
+
+// AFA-277: quotation marks and brackets cannot surround an entry, a measurement or a number.
+it.each([
+  ['5 ft, (10⁄180 lbs)', { type: 'weight' }],
+  ['weight (1/2 lbs)', {}],
+  ['6 ft (1/2) in', { type: 'height' }],
+] as const)('rejects the wrapped %s', (raw, options: ParseOptions) => {
   expect(parseMeasurement(raw, options)).toBeNull();
 });

@@ -20,45 +20,25 @@ describe('approved complete-entry contract', () => {
     }
   );
 
-  // Both ASCII entry quotes keep their closing marks outside the final part. The
-  // explicit-unit counterparts and both pair orders preserve the same written components.
+  // AFA-277: quotation marks cannot surround a height, alone or in either pair order.
   it.each([
-    ['"5 ft 11"', 71, 'in', 5, 'ft', 11],
-    ["'5 ft 11'", 71, 'in', 5, 'ft', 11],
-    ['"1 m 80"', 180, 'cm', 1, 'm', 80],
-    ["'1 m 80'", 180, 'cm', 1, 'm', 80],
-    ['"5 ft 11 in"', 71, 'in', 5, 'ft', 11],
-    ["'5 ft 11 in'", 71, 'in', 5, 'ft', 11],
-    ['"1 m 80 cm"', 180, 'cm', 1, 'm', 80],
-    ["'1 m 80 cm'", 180, 'cm', 1, 'm', 80],
-  ] as const)(
-    'keeps the closing entry quote outside the complete height in %s',
-    (raw, value, unit, larger, largerUnit, smaller) => {
-      expect.assertions(7);
-      const matches = [
-        { value: larger, unit: largerUnit },
-        { value: smaller, unit },
-      ];
-      expect(parseMeasurement(raw)).toEqual({ value, unit, type: 'height', raw, matches });
-      for (const pair of [raw + ', 70 kg', '70 kg, ' + raw]) {
-        expect(parseMeasurement(pair, { type: 'height' })).toEqual({
-          value,
-          unit,
-          type: 'height',
-          raw: pair,
-          matches,
-        });
-        expect(parseMeasurement(pair, { type: 'weight' })).toEqual({
-          value: 70,
-          unit: 'kg',
-          type: 'weight',
-          raw: pair,
-          matches: [{ value: 70, unit: 'kg' }],
-        });
-        expect(parseMeasurement(pair)).toBeNull();
-      }
+    '"5 ft 11"',
+    "'5 ft 11'",
+    '"1 m 80"',
+    "'1 m 80'",
+    '"5 ft 11 in"',
+    "'5 ft 11 in'",
+    '"1 m 80 cm"',
+    "'1 m 80 cm'",
+  ])('rejects the quoted height in %s', raw => {
+    expect.assertions(7);
+    expect(parseMeasurement(raw)).toBeNull();
+    for (const pair of [raw + ', 70 kg', '70 kg, ' + raw]) {
+      expect(parseMeasurement(pair, { type: 'height' })).toBeNull();
+      expect(parseMeasurement(pair, { type: 'weight' })).toBeNull();
+      expect(parseMeasurement(pair)).toBeNull();
     }
-  );
+  });
 
   it.each([
     '"5 ft 11',
@@ -93,39 +73,20 @@ describe('approved complete-entry contract', () => {
     expect(parseMeasurement(raw, { type: 'weight' })).toBeNull();
   });
 
-  it.each(['(5 ft (11 in), 70 kg)', '[5 ft [11 in]; 70 kg]'])(
-    'keeps compound-part depth inside a single wrapped pair in %s',
-    raw => {
-      expect(parseMeasurement(raw, { type: 'height' })).toEqual({
-        value: 71,
-        unit: 'in',
-        type: 'height',
-        raw,
-        matches: [
-          { value: 5, unit: 'ft' },
-          { value: 11, unit: 'in' },
-        ],
-      });
-      expect(parseMeasurement(raw, { type: 'weight' })).toEqual({
-        value: 70,
-        unit: 'kg',
-        type: 'weight',
-        raw,
-        matches: [{ value: 70, unit: 'kg' }],
-      });
-      expect(parseMeasurement(raw)).toBeNull();
-    }
-  );
-
-  it('allows one approximation before a numeric entry wrapper', () => {
-    const raw = 'about (70 kg)';
-    expect(parseMeasurement(raw)).toEqual({
-      value: 70,
-      unit: 'kg',
-      type: 'weight',
-      raw,
-      matches: [{ value: 70, unit: 'kg' }],
-    });
+  // AFA-277: brackets cannot surround the whole entry or the first measurement of a pair.
+  it.each([
+    '(5 ft (11 in), 70 kg)',
+    '[5 ft [11 in]; 70 kg]',
+    '(5 ft (11 in))',
+    '[5 ft [11 in]]',
+    '(5 ft (11 in)), 70 kg',
+    '70 kg, (5 ft (11 in))',
+    '(5 ft; 180 lbs)',
+    '[5 ft; 180 lbs]',
+  ])('rejects the bracketed entry or measurement in %s', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+    expect(parseMeasurement(raw, { type: 'height' })).toBeNull();
+    expect(parseMeasurement(raw, { type: 'weight' })).toBeNull();
   });
 
   it.each([
@@ -187,45 +148,6 @@ describe('approved complete-entry contract', () => {
     expect(parseMeasurement(raw, { type: 'height' })).toBeNull();
     expect(parseMeasurement(raw, { type: 'weight' })).toBeNull();
   });
-
-  it.each(['(5 ft (11 in))', '[5 ft [11 in]]'])(
-    'allows a compound part wrapper inside the single entry wrapper in %s',
-    raw => {
-      expect(parseMeasurement(raw)).toEqual({
-        value: 71,
-        unit: 'in',
-        type: 'height',
-        raw,
-        matches: [
-          { value: 5, unit: 'ft' },
-          { value: 11, unit: 'in' },
-        ],
-      });
-    }
-  );
-
-  it.each(['(5 ft (11 in)), 70 kg', '70 kg, (5 ft (11 in))'])(
-    'consumes the entire wrapped compound within a selected pair in %s',
-    raw => {
-      expect(parseMeasurement(raw, { type: 'height' })).toEqual({
-        value: 71,
-        unit: 'in',
-        type: 'height',
-        raw,
-        matches: [
-          { value: 5, unit: 'ft' },
-          { value: 11, unit: 'in' },
-        ],
-      });
-      expect(parseMeasurement(raw, { type: 'weight' })).toEqual({
-        value: 70,
-        unit: 'kg',
-        type: 'weight',
-        raw,
-        matches: [{ value: 70, unit: 'kg' }],
-      });
-    }
-  );
 
   it.each(['an hundred kg', 'five-and-a-half kg', 'five and-a-half kg'])(
     'retains an article or an attached number-word hyphen in %s',
@@ -291,27 +213,33 @@ describe('approved complete-entry contract', () => {
     expect(parseMeasurement(raw)).toEqual({ value, unit, type: 'height', raw, matches });
   });
 
-  it.each(['around 70 kg', 'approx. 70 kg', "'70 kg'", '"70 kg"'])(
-    'accepts the exact finite wrapper in %s',
-    raw => {
-      expect(parseMeasurement(raw)).toEqual({
-        value: 70,
-        unit: 'kg',
-        type: 'weight',
-        raw,
-        matches: [{ value: 70, unit: 'kg' }],
-      });
-    }
-  );
-
-  it.each(['"180” cm', "'180’ cm"])('retains a recognized closing numeric quotation in %s', raw => {
+  it.each(['around 70 kg', 'approx. 70 kg'])('accepts the exact finite wrapper in %s', raw => {
     expect(parseMeasurement(raw)).toEqual({
-      value: 180,
-      unit: 'cm',
-      type: 'height',
+      value: 70,
+      unit: 'kg',
+      type: 'weight',
       raw,
-      matches: [{ value: 180, unit: 'cm' }],
+      matches: [{ value: 70, unit: 'kg' }],
     });
+  });
+
+  // AFA-277: quotation marks and brackets cannot surround an entry or a number.
+  it.each([
+    'about (70 kg)',
+    "'70 kg'",
+    '"70 kg"',
+    '"180” cm',
+    "'180’ cm",
+    '“72,5” kg',
+    '‘5’ 11”',
+    '(180 cm)',
+    '[70 kg]',
+    '(180) cm',
+    '"180 cm"',
+    'weight: “180 lbs”',
+    '6 ft (1/2) in',
+  ])('rejects the wrapped entry or number %s', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
   });
 
   it.each([
@@ -392,12 +320,6 @@ describe('approved complete-entry contract', () => {
     ['5\'-11"', 71, 'in'],
     ['5 ft −11 in', 71, 'in'],
     ['one m−80 cm', 180, 'cm'],
-    ['“72,5” kg', 72.5, 'kg'],
-    ['‘5’ 11”', 71, 'in'],
-    ['(180 cm)', 180, 'cm'],
-    ['[70 kg]', 70, 'kg'],
-    ['(180) cm', 180, 'cm'],
-    ['"180 cm"', 180, 'cm'],
     ['1,234,56 kg', 1234.56, 'kg'],
     [',5 kg', 0.5, 'kg'],
     ['5 1/2 ft', 5.5, 'ft'],
@@ -415,8 +337,6 @@ describe('approved complete-entry contract', () => {
     ['ft two and a half hundred eleven', 3011, 'in'],
     ['one-eighty pounds', 180, 'lb'],
     ['185#', 185, 'lb'],
-    ['weight: “180 lbs”', 180, 'lb'],
-    ['6 ft (1/2) in', 72.5, 'in'],
     ['5 ft−11', 71, 'in'],
     ['5 ft-11', 71, 'in'],
     ['1 m-80 cm', 180, 'cm'],
@@ -457,8 +377,6 @@ describe('approved complete-entry contract', () => {
     ['5 ft 11 and 180 lbs', { type: 'weight' }, 180, 'lb'],
     ['5 ft ten and one and two hundred pounds', { type: 'height' }, 71, 'in'],
     ['5 ft ten and one and two hundred pounds', { type: 'weight' }, 200, 'lb'],
-    ['(5 ft; 180 lbs)', { type: 'height' }, 5, 'ft'],
-    ['[5 ft; 180 lbs]', { type: 'weight' }, 180, 'lb'],
     ['180 cm (180 lbs)', { normalizedUnit: 'kg' }, 180 * 0.45359237, 'kg'],
   ] as const)('reads the selected complete pair %s', (raw, options: ParseOptions, value, unit) => {
     expect(parseMeasurement(raw, options)).toMatchObject({ value, unit });

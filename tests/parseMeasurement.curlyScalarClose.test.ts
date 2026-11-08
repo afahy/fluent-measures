@@ -3,234 +3,34 @@ import { parseMeasurement, type ParseOptions, type ParsedValue } from '../src';
 
 // AFA-266 owns selected curly pairs; the two pair controls preserve main null here.
 // AFA-265 probe: a numeric feet mark and a distinct closing quote remain separate.
+// AFA-277: quotation marks and brackets cannot surround an entry, a measurement of a pair or a
+// number. Each row with such a wrapper expects null.
 const cases: [string, ParseOptions, ParsedValue | null][] = [
-  [
-    '‘6’’',
-    {},
-    {
-      value: 6,
-      unit: 'ft',
-      type: 'height',
-      raw: '‘6’’',
-      matches: [
-        {
-          value: 6,
-          unit: 'ft',
-        },
-      ],
-    },
-  ],
-  [
-    '‘5.5’’',
-    {},
-    {
-      value: 5.5,
-      unit: 'ft',
-      type: 'height',
-      raw: '‘5.5’’',
-      matches: [
-        {
-          value: 5.5,
-          unit: 'ft',
-        },
-      ],
-    },
-  ],
-  [
-    '‘5½’’',
-    {},
-    {
-      value: 5.5,
-      unit: 'ft',
-      type: 'height',
-      raw: '‘5½’’',
-      matches: [
-        {
-          value: 5.5,
-          unit: 'ft',
-        },
-      ],
-    },
-  ],
-  [
-    '‘5 1/2’’',
-    {},
-    {
-      value: 5.5,
-      unit: 'ft',
-      type: 'height',
-      raw: '‘5 1/2’’',
-      matches: [
-        {
-          value: 5.5,
-          unit: 'ft',
-        },
-      ],
-    },
-  ],
-  [
-    '‘5,5’’',
-    {},
-    {
-      value: 5.5,
-      unit: 'ft',
-      type: 'height',
-      raw: '‘5,5’’',
-      matches: [
-        {
-          value: 5.5,
-          unit: 'ft',
-        },
-      ],
-    },
-  ],
-  [
-    '‘6’ ’',
-    {},
-    {
-      value: 6,
-      unit: 'ft',
-      type: 'height',
-      raw: '‘6’ ’',
-      matches: [
-        {
-          value: 6,
-          unit: 'ft',
-        },
-      ],
-    },
-  ],
+  ['‘6’’', {}, null],
+  ['‘5.5’’', {}, null],
+  ['‘5½’’', {}, null],
+  ['‘5 1/2’’', {}, null],
+  ['‘5,5’’', {}, null],
+  ['‘6’ ’', {}, null],
   [
     '‘6’’',
     {
       normalizedUnit: 'cm',
     },
-    {
-      value: 182.88,
-      unit: 'cm',
-      type: 'height',
-      raw: '‘6’’',
-      matches: [
-        {
-          value: 6,
-          unit: 'ft',
-        },
-      ],
-    },
+    null,
   ],
-  [
-    '‚6’’',
-    {},
-    {
-      value: 6,
-      unit: 'ft',
-      type: 'height',
-      raw: '‚6’’',
-      matches: [
-        {
-          value: 6,
-          unit: 'ft',
-        },
-      ],
-    },
-  ],
-  [
-    '‚5.5’’',
-    {},
-    {
-      value: 5.5,
-      unit: 'ft',
-      type: 'height',
-      raw: '‚5.5’’',
-      matches: [
-        {
-          value: 5.5,
-          unit: 'ft',
-        },
-      ],
-    },
-  ],
-  [
-    '‚5½’’',
-    {},
-    {
-      value: 5.5,
-      unit: 'ft',
-      type: 'height',
-      raw: '‚5½’’',
-      matches: [
-        {
-          value: 5.5,
-          unit: 'ft',
-        },
-      ],
-    },
-  ],
-  [
-    '‚5 1/2’’',
-    {},
-    {
-      value: 5.5,
-      unit: 'ft',
-      type: 'height',
-      raw: '‚5 1/2’’',
-      matches: [
-        {
-          value: 5.5,
-          unit: 'ft',
-        },
-      ],
-    },
-  ],
-  [
-    '‚5,5’’',
-    {},
-    {
-      value: 5.5,
-      unit: 'ft',
-      type: 'height',
-      raw: '‚5,5’’',
-      matches: [
-        {
-          value: 5.5,
-          unit: 'ft',
-        },
-      ],
-    },
-  ],
-  [
-    '‚6’ ’',
-    {},
-    {
-      value: 6,
-      unit: 'ft',
-      type: 'height',
-      raw: '‚6’ ’',
-      matches: [
-        {
-          value: 6,
-          unit: 'ft',
-        },
-      ],
-    },
-  ],
+  ['‚6’’', {}, null],
+  ['‚5.5’’', {}, null],
+  ['‚5½’’', {}, null],
+  ['‚5 1/2’’', {}, null],
+  ['‚5,5’’', {}, null],
+  ['‚6’ ’', {}, null],
   [
     '‚6’’',
     {
       normalizedUnit: 'cm',
     },
-    {
-      value: 182.88,
-      unit: 'cm',
-      type: 'height',
-      raw: '‚6’’',
-      matches: [
-        {
-          value: 6,
-          unit: 'ft',
-        },
-      ],
-    },
+    null,
   ],
   [
     '‘6’’',
@@ -238,35 +38,9 @@ const cases: [string, ParseOptions, ParsedValue | null][] = [
       type: 'height',
       defaultUnit: 'cm',
     },
-    {
-      value: 6,
-      unit: 'ft',
-      type: 'height',
-      raw: '‘6’’',
-      matches: [
-        {
-          value: 6,
-          unit: 'ft',
-        },
-      ],
-    },
+    null,
   ],
-  [
-    '‘6’ ’',
-    {},
-    {
-      value: 6,
-      unit: 'ft',
-      type: 'height',
-      raw: '‘6’ ’',
-      matches: [
-        {
-          value: 6,
-          unit: 'ft',
-        },
-      ],
-    },
-  ],
+  ['‘6’ ’', {}, null],
   [
     '‘70 kg; 6’’',
     {
