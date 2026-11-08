@@ -58,6 +58,15 @@ if (missingT5.length)
     `answer key needs the AFA-251 T5 migration; missing ${missingT5.join(', ')}. ` +
       'See T5-key-migration.json in the validation-artifacts packet; its path and SHA are in the AFA-251 PR description.'
   );
+const t7Prediction = key.tasks?.T7?.predictNoOptions;
+if (
+  key.tasks?.T7 &&
+  !(t7Prediction && typeof t7Prediction === 'object' && 'expect' in t7Prediction)
+)
+  fail(
+    'answer key needs the AFA-279 T7 change (key v5); missing T7.predictNoOptions.expect. ' +
+      'AFA-279 has the backup path and the hashes.'
+  );
 
 const near = (a, b, tolerance) => typeof a === 'number' && Math.abs(a - b) <= tolerance;
 const sameParts = (a, b) =>
@@ -68,6 +77,11 @@ const sameValue = (got, want) =>
   want === null
     ? got === null || got === undefined
     : got?.value === want.value && got?.unit === want.unit;
+// A missing prediction isn't a prediction of null.
+const samePrediction = (got, want) => (want === null ? got === null : sameValue(got, want));
+// The "View on npm" button opens the 0.2.0 README, which says that the first result wins. A
+// prediction source that names npm, npmjs.com or 0.2.0 marks a miss that the stale page explains.
+const citesNpm = source => /\bnpm(?:js)?\b|\bv?0\.2\.0\b/i.test(String(source ?? ''));
 const median = list => {
   if (!list.length) return null;
   const sorted = [...list].sort((a, b) => a - b);
@@ -118,6 +132,12 @@ if (mode === 'selfcheck') {
     'T6 without fuzziness',
     call(lib, t.T6.reference.input).result,
     call(lib, t.T6.reference.input).result === null
+  );
+  const t7NoOptions = call(lib, t.T7.reference.input);
+  check(
+    'T7 without options',
+    t7NoOptions,
+    !t7NoOptions.threw && samePrediction(t7NoOptions.result, t.T7.predictNoOptions.expect)
   );
   for (const c of t.T4.functionCases) {
     const got = call(lib, c.input, t.T4.reference.options);
@@ -301,6 +321,10 @@ if (mode === 'reviewer') {
       if (id === 'T7') {
         comprehension.predictNoOptions = a.predictNoOptions ?? null;
         comprehension.predictionSource = a.predictionSource ?? '';
+        checks.predictNoOptions = samePrediction(a.predictNoOptions, spec.predictNoOptions.expect);
+        // Still wrong, but counted on its own, so that a stale npm page is told from the docs.
+        comprehension.npmCitedMiss = !checks.predictNoOptions && citesNpm(a.predictionSource);
+        correct &&= checks.predictNoOptions;
       }
       partial ||= !correct && callOk;
     }
@@ -333,8 +357,12 @@ if (mode === 'reviewer') {
   }
   writeFileSync(join(dir, 'grade.json'), JSON.stringify(out, null, 2) + '\n');
   for (const [id, g] of Object.entries(out.tasks)) {
+    const prediction =
+      'predictNoOptions' in g.checks
+        ? ` noOptionsPrediction=${g.checks.predictNoOptions ? 'right' : 'wrong'}${g.comprehension.npmCitedMiss ? ' (cites npm)' : ''}`
+        : '';
     console.log(
-      `${id} ${g.correct ? 'correct' : g.partial ? 'partial' : 'WRONG  '} conf=${g.confidence} views=${g.views}/${g.benchmarkViews} wrongTurns=${g.wrongTurns} (${g.offPath.join(', ') || 'no off-path views'}; ${g.failedRuns} failed runs)`
+      `${id} ${g.correct ? 'correct' : g.partial ? 'partial' : 'WRONG  '} conf=${g.confidence} views=${g.views}/${g.benchmarkViews} wrongTurns=${g.wrongTurns} (${g.offPath.join(', ') || 'no off-path views'}; ${g.failedRuns} failed runs)${prediction}`
     );
   }
   console.log(`Wrote ${join(dir, 'grade.json')}.`);
@@ -404,6 +432,13 @@ if (mode === 'round') {
     },
   };
   const metricPass = Object.values(acceptance).every(x => x.pass);
+  // These misses are already wrong in the scores above. The count only names their likely cause.
+  const t7Graded = grades.map(r => r.tasks.T7).filter(g => g && 'predictNoOptions' in g.checks);
+  const noOptionsPrediction = {
+    n: t7Graded.length,
+    wrong: t7Graded.filter(g => !g.checks.predictNoOptions).length,
+    wrongCitingNpm: t7Graded.filter(g => g.comprehension.npmCitedMiss).length,
+  };
   writeFileSync(
     join(round, 'metrics.json'),
     JSON.stringify(
@@ -414,6 +449,7 @@ if (mode === 'round') {
         metricPass,
         holdoutShare: holdout.length ? share(holdout) : null,
         coreShare: share(perTask),
+        noOptionsPrediction,
       },
       null,
       2
@@ -437,6 +473,8 @@ if (mode === 'round') {
     holdout.length
       ? `Holdout correct: ${Math.round(100 * share(holdout))}% against core ${Math.round(100 * share(perTask))}%. A gap of more than 15 points after a fix round suggests that a fix taught to the test.`
       : 'No holdout tasks in this round.',
+    '',
+    `T7 no-options prediction: ${noOptionsPrediction.wrong}/${noOptionsPrediction.n} wrong, ${noOptionsPrediction.wrongCitingNpm} of them citing npm or the 0.2.0 README. These count as wrong above; the npm count separates a stale npm page from a docs problem.`,
     '',
     '## Metric acceptance',
     '',
