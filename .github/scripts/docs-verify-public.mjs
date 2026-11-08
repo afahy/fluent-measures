@@ -9,12 +9,12 @@ import { pathToFileURL } from 'node:url';
 const site = 'https://afahy.github.io/fluent-measures/';
 const files = ['index.html', 'README.md', 'PARSING.md', 'llms.txt'];
 
-// The page links to its own "Docs for your version" section. Archived pages, such as 0.2.0,
-// keep their older link to the README section, which their digests fix.
+// The page links to its own "Docs for your version" section. The archived 0.2.0 page keeps
+// its older link to the README section, because its digests are fixed.
 function hasVersionLink(html, legacyReadme) {
-  const target = /<a href="([^"]+)">Docs for your version<\/a>/.exec(html)?.[1];
+  const target = /<a\s[^>]*\bhref="([^"]+)"[^>]*>\s*Docs for your version\s*<\/a>/.exec(html)?.[1];
   return (
-    (target === '#versions' && html.includes('id="versions"')) ||
+    (target === '#versions' && /\sid="versions"/.test(html)) ||
     (legacyReadme !== undefined && target === `${legacyReadme}#documentation-for-your-version`)
   );
 }
@@ -63,7 +63,7 @@ export function readDocsArtifact(directory) {
         throw new Error(`Pages artifact ${file} has the wrong heading`);
     }
     const html = documents['index.html'];
-    if (!hasVersionLink(html, `${base}README.md`))
+    if (!hasVersionLink(html, version === '0.2.0' ? `${base}README.md` : undefined))
       throw new Error('Pages artifact index.html is missing the docs for your version link');
     const ids = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(([, id]) => id));
     for (const [, href] of html.matchAll(/\b(?:href|src)="([^"]+)"/g)) {

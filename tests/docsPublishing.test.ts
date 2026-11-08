@@ -366,7 +366,7 @@ describe('public documentation verification', () => {
     ['llms.txt', `${site}PARSING.md`, `${site}wrong.md`],
     // AFA-270: a main build must link to the HTML section, not to the Markdown README.
     ['index.html', 'href="#versions"', 'href="README.md#documentation-for-your-version"'],
-    ['index.html', 'id="versions"', 'id="other-versions"'],
+    ['index.html', 'id="versions"', 'data-id="versions"'],
   ])('rejects an incomplete expected artifact in %s before fetching', (file, from, to) => {
     const { output } = setup();
     writeFileSync(join(output, file), read(output, file).replace(from, to));

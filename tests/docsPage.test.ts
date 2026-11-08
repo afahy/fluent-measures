@@ -638,7 +638,7 @@ describe('the docs for your version section', () => {
   it('starts with a static link to the version list and no empty list', () => {
     expect(page).toContain('<ul data-doc-versions hidden></ul>');
     expect(page).toContain(`<a href="${site}versions.json"`);
-    expect(page).toContain('<code>npm ls @afahy/fluent-measures</code>');
+    expect(page).toContain('<code>npm ls @afahy/<wbr />fluent-measures</code>');
   });
 
   it('lists each verified version newest first, with a link to its HTML docs', async () => {
