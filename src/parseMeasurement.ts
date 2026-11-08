@@ -112,15 +112,16 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   // At deeper levels the first mark closes a numeric quotation. The bounded part reader
   // still has to consume the unit; this fixed lookahead never searches for another close.
   const unitInsideQuote = (at: number, close: string, depth: number): boolean =>
-    depth === 1 && (close === '”' || close === '’') && text(at + 1) === close
-      ? true
-      : close === '"'
-        ? text(at + 1) === '"'
-        : close === "'" &&
-          (text(at + 1) === "'" ||
-            text(at + 1) === '′' ||
-            (text(at + 1) !== '.' && numeric(text(at + 1))) ||
-            (text(at + 1) === '-' && adjacent(at, at + 1) && numeric(text(at + 2))));
+    (depth === 1 &&
+      (close === '”' || close === '’') &&
+      (text(at + 1) === close || (close === '’' && readUnit(at, false, at + 2)?.unit === 'in'))) ||
+    (close === '"'
+      ? text(at + 1) === '"'
+      : close === "'" &&
+        (text(at + 1) === "'" ||
+          text(at + 1) === '′' ||
+          (text(at + 1) !== '.' && numeric(text(at + 1))) ||
+          (text(at + 1) === '-' && adjacent(at, at + 1) && numeric(text(at + 2)))));
   const adjacent = (left: number, right: number): boolean =>
     tokens[left]?.end === tokens[right]?.start;
   const digitToken = (word: string): boolean => /^[\d.]+$/.test(word);
@@ -223,7 +224,10 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       /\d$/.test(text(at - 1)) &&
       ((text(at) === '′' && text(at + 1) === "'") ||
         (text(at) === "'" && text(at + 1) === '′') ||
-        (text(at) === "'" && text(at + 1) === "'" && at + 2 === limit && text(limit) === '’'));
+        ((text(at) === "'" || text(at) === '’') &&
+          text(at + 1) === "'" &&
+          at + 2 === limit &&
+          text(limit) === '’'));
     // Normalization retains an ambiguous curly mark. It is a suffix unit only when the
     // next token is the excluded matching entry close, never the close of a quoted number.
     const curlyUnit =
