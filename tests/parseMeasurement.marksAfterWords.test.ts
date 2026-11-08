@@ -1,3 +1,6 @@
+// AFA-250: recovery expectations now follow the approved complete-entry contract in PARSING.md.
+// Earlier ticket rationales below describe their historical extraction contract; original
+// assertions are retained separately under design/afa-250.
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
 
@@ -10,7 +13,7 @@ describe('a mark right after a word', () => {
     [`5'10 and a half"`, 70.5, 'in'],
     [`5 ft 10 and a half"`, 70.5, 'in'],
     [`six and a half'`, 6.5, 'ft'],
-    // A prime becomes `"` before the tokenizer runs, so it reads the same.
+    // An explicit double prime retains its unit identity and still means inches.
     [`5′ 10 and a half″`, 70.5, 'in'],
     // Number words: 5 × 12 + 10 = 70, 6 × 12 + 2 = 74, and 70 + 0.5 = 70.5.
     [`5' ten"`, 70, 'in'],
@@ -35,18 +38,18 @@ describe('a mark right after a word', () => {
 
   // "Must not change" in AFA-93.
   it.each([
+    "tone' 5 ft",
+    "don't 5 ft",
+    "one's 180 lbs",
+    'size and a half\' 5"',
+    '"it\'s five" 5 ft',
+  ])('rejects the complete entry %s (AFA-250)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
+  it.each([
     [`5' 10.5"`, 70.5, 'in'],
     [`5' 10 1/2"`, 70.5, 'in'],
     [`5' 10 and a half in`, 70.5, 'in'],
-    // An apostrophe in a word that only ends in a number word isn't a mark, and nor is one
-    // before a letter.
-    [`tone' 5 ft`, 5, 'ft'],
-    [`don't 5 ft`, 5, 'ft'],
-    [`one's 180 lbs`, 180, 'lb'],
-    // "and a half" with no number before it isn't a number, so the mark stays with 5.
-    [`size and a half' 5"`, 5, 'in'],
-    // An apostrophe inside a quotation doesn't end it, so the closing quote isn't a mark.
-    [`"it's five" 5 ft`, 5, 'ft'],
   ] as const)('keeps reading %s as %s %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });

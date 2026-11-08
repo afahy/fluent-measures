@@ -12,40 +12,37 @@ export const MULTIPLIERS = new Map<string, number>([
   ['thousand', 1000],
 ]);
 
-/** Parse a complete number phrase, including zero, hundreds, and thousands. */
-export function wordsToNumber(input: string): number | null {
-  const tokens = input.toLowerCase().split(/\s+/);
-  // A trailing conjunction can introduce the next field, as after an integer phrase.
-  while (tokens[tokens.length - 1] === 'and') tokens.pop();
+/** Private shared result. invalidAt indexes the supplied tokens, including skipped "and". */
+export interface NumberReading {
+  value: number | null;
+  invalidAt: number;
+}
+
+/** Read the complete supplied numeric tokens; failure never exposes a partial value. */
+export function readNumberTokens(tokens: readonly string[]): NumberReading {
+  // Preserve the string adapter's trailing-conjunction compatibility without mutating or
+  // renumbering supplied tokens. The complete-entry grammar validates its own joins.
+  let end = tokens.length;
+  while (tokens[end - 1] === 'and') end--;
   const point = tokens.indexOf('point');
-  if (point !== -1) {
-    const whole = point ? wordsToNumber(tokens.slice(0, point).join(' ')) : 0;
-    // After "point", each word names a digit. Keep other words so validation rejects the
-    // complete phrase, including a second "point", rather than accepting a shorter suffix.
-    const digits = tokens
-      .slice(point + 1)
-      .map(word => {
-        const number = NUMBER_WORDS.get(word) ?? 10;
-        return number < 10 ? number : word;
-      })
-      .join('');
-    return Number.isInteger(whole) && /^\d+$/.test(digits) ? whole! + Number(`0.${digits}`) : null;
-  }
-  const words = tokens.filter(word => word !== 'and');
+  const words = tokens
+    .slice(0, point < 0 ? end : point)
+    .map((word, index) => ({ word, index }))
+    .filter(part => part.word !== 'and');
 
   let hasHundred = false;
   let hasThousand = false;
   let total = 0;
   let current = 0;
   for (let index = 0; index < words.length; index++) {
-    const word = words[index];
+    const word = words[index].word;
     const number =
       NUMBER_WORDS.get(word) ?? (/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(word) ? +word : undefined);
     const multiplier = MULTIPLIERS.get(word);
 
     if (number !== undefined) {
       if (index > 0) {
-        const previous = words[index - 1];
+        const previous = words[index - 1].word;
         const previousMultiplier = MULTIPLIERS.get(previous);
         const previousNumber = NUMBER_WORDS.get(previous) ?? 0;
         // Only a tens word and a ones value form an additive pair within a group.
@@ -57,17 +54,17 @@ export function wordsToNumber(input: string): number | null {
           current *= 100;
           hasHundred = true;
         } else if (previousMultiplier !== undefined ? number >= previousMultiplier : !followsTens) {
-          return null;
+          return { value: null, invalidAt: words[index].index };
         }
       }
       current += number;
     } else if (multiplier !== undefined) {
       // Each group can contain one hundred, and the whole phrase one thousand.
       if (word === 'hundred') {
-        if (hasHundred) return null;
+        if (hasHundred) return { value: null, invalidAt: words[index].index };
         hasHundred = true;
       } else {
-        if (hasThousand) return null;
+        if (hasThousand) return { value: null, invalidAt: words[index].index };
         hasThousand = true;
         hasHundred = false;
       }
@@ -78,9 +75,29 @@ export function wordsToNumber(input: string): number | null {
         current = 0;
       }
     } else {
-      return null;
+      return { value: null, invalidAt: words[index].index };
     }
   }
-  // A phrase with no number in it, such as "and", isn't a number.
-  return words.length ? total + current : null;
+  // A phrase with no whole part is valid only when it starts at "point".
+  const whole = words.length ? total + current : point === 0 ? 0 : null;
+  if (point < 0) return { value: whole, invalidAt: tokens.length };
+  if (!Number.isInteger(whole)) return { value: null, invalidAt: point };
+  let digits = '';
+  for (let index = point + 1; index < end; index++) {
+    const word = tokens[index];
+    const number = NUMBER_WORDS.get(word) ?? 10;
+    const digit = number < 10 ? String(number) : word;
+    // Empty chunks retain wordsToNumber's trailing-space behavior; at least one digit is
+    // still required. Conjunctions inside the fraction, signs and another point are invalid.
+    if (!/^\d*$/.test(digit)) return { value: null, invalidAt: index };
+    digits += digit;
+  }
+  return digits
+    ? { value: whole! + Number(`0.${digits}`), invalidAt: tokens.length }
+    : { value: null, invalidAt: end };
+}
+
+/** Compatible adapter for complete number strings; invalid phrases still return null. */
+export function wordsToNumber(input: string): number | null {
+  return readNumberTokens(input.toLowerCase().split(/\s+/)).value;
 }

@@ -2,102 +2,36 @@
 
 exports[`measurement corpus > matches the committed score 1`] = `
 "Category                 total   agree   wrong  missed  throws
-all                        973     964       6       3       0
+all                       3301    3301       0       0       0
 
-symbols                     84      84       0       0       0
-words                       31      31       0       0       0
-mixed-numbers               66      66       0       0       0
-decimals                   114     113       1       0       0
+symbols                    149     149       0       0       0
+words                      142     142       0       0       0
+mixed-numbers               68      68       0       0       0
+decimals                   285     285       0       0       0
 commas                      36      36       0       0       0
 hyphens                     49      49       0       0       0
-compact                     72      72       0       0       0
-unicode                     69      67       2       0       0
+compact                     76      76       0       0       0
+unicode                    396     396       0       0       0
 typos                       32      32       0       0       0
-surrounding-text            65      62       0       3       0
-multiple-measurements      193     193       0       0       0
-unqualified                 29      29       0       0       0
+surrounding-text           171     171       0       0       0
+multiple-measurements     1002    1002       0       0       0
+unqualified                 37      37       0       0       0
 conversion                  41      41       0       0       0
-unsupported                 60      60       0       0       0
-prose                       32      29       3       0       0
+unsupported                778     778       0       0       0
+prose                       39      39       0       0       0
 
-Entries with the outcome "wrong" (6):
+Entries with the outcome "wrong" (0):
 
-decimals-5-11-ft (decimals)
-  input:    "5.11 ft"
-  options:  {}
-  expected: 71 in (height) | null
-  actual:   5.11 ft (height)
-
-prose-fees-fuzzy (prose)
-  input:    "I paid 5 fees"
-  options:  {"fuzziness":1}
-  expected: null
-  actual:   5 ft (height)
-
-prose-ponds-fuzzy (prose)
-  input:    "we visited 2 ponds"
-  options:  {"fuzziness":1}
-  expected: null
-  actual:   2 lb (weight)
-
-prose-kilns-fuzzy (prose)
-  input:    "the studio has 2 kilns"
-  options:  {"fuzziness":1}
-  expected: null
-  actual:   2 kg (weight)
-
-afa-202-review-minus-unit-first-negative (unicode)
-  input:    "phase 20, kg\\u221270.5"
-  options:  {"type":"weight"}
-  expected: null
-  actual:   20 kg (weight)
-
-afa-202-review-small-unit-first-negative (unicode)
-  input:    "phase 20, kg\\ufe6370.5"
-  options:  {"type":"weight"}
-  expected: null
-  actual:   20 kg (weight)
-
-Entries with the outcome "missed" (3):
-
-signed-following-label-1 (surrounding-text)
-  input:    "kg -6 (ft), 70 kg"
-  options:  {}
-  expected: 70 kg (weight)
-  actual:   null
-
-signed-following-label-2 (surrounding-text)
-  input:    "kg: -6 (ft), 70 kg"
-  options:  {}
-  expected: 70 kg (weight)
-  actual:   null
-
-signed-following-label-3 (surrounding-text)
-  input:    "kg -6 (ft), 70 (kg)"
-  options:  {}
-  expected: 70 kg (weight)
-  actual:   null
+Entries with the outcome "missed" (0):
 
 Entries with the outcome "throws" (0):
 
-Entries that agree with one of several outputs (19):
+Entries that agree with one of several outputs (7):
 
 unicode-en-dash-shorthand: null
 unicode-hyphen-shorthand: null
-multiple-kg-with-lbs: 70 kg (weight)
-multiple-height-weight-no-type: 71 in (height)
-multiple-6-1-190-no-type: 73 in (height)
 unqualified-1-75-metric-height: 1.75 m (height)
 unqualified-1-8-metric-height: 1.8 m (height)
-probe-semicolon-suffix-weight: 70 kg (weight)
-probe-semicolon-suffix-inches: 6 in (height)
-probe-semicolon-both-sides: 6 in (height)
-probe-semicolon-suffix-metric: 180 lb (weight)
-probe-semicolon-multiple: 70 kg (weight)
-probe-semicolon-normalized: 15.24 cm (height)
-probe-semicolon-fuzzy: 70 kg (weight)
-probe-semicolon-other-weight: 70 kg (weight)
-probe-semicolon-unicode-range: 70 kg (weight)
 quote-context-opening-height-word-after: 71 in (height)
 quote-context-opening-height-word-first: 71 in (height)
 quote-context-opening-height-all-words: 71 in (height)"

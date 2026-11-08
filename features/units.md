@@ -6,8 +6,8 @@
 
 The user gets the value and the unit of a height or a weight, from a short or a long unit name,
 or from a mark such as `#` for pounds. A weight with a part in stone, ounces or grams gives
-`null`, as in `12st 4lb`. An amount in these units in another part of the text doesn't count, as
-in `I drink 8 oz of water, weight 180 lbs`, which gives 180 lb.
+`null`, as in `12st 4lb`. Any unsupported fragment or unrelated prose invalidates the entry,
+including `I drink 8 oz of water, weight 180 lbs`.
 
 ## How a user reaches it
 
@@ -17,7 +17,7 @@ in `I drink 8 oz of water, weight 180 lbs`, which gives 180 lb.
   gives `null`.
 - Short plurals: `70kgs` and `175cms`.
 - British spellings: `1.8 metres`, `180 centimetres`.
-- `type: 'height'` or `type: 'weight'`, to read only one type.
+- `type: 'height'` or `type: 'weight'`, to select from a fully valid entry.
 - `import` and `require`.
 
 ## Where the rules are
@@ -30,7 +30,7 @@ in `I drink 8 oz of water, weight 180 lbs`, which gives 180 lb.
 ## How to verify it
 
 - Source: `src/units.ts`, `src/matchUnit.ts`, `src/tokenize.ts`, `src/parseMeasurement.ts`
-- Tests: `tests/parseMeasurement.compactUnits.test.ts`, `tests/parseMeasurement.calculator.test.ts`, `tests/parseMeasurement.spokenDecimals.test.ts`, `tests/parseMeasurement.unicodeMinusCost.test.ts`, `tests/parseMeasurement.unicodeMinusLabels.test.ts`, `tests/parseMeasurement.signedOtherTypeOwnership.test.ts`, `tests/parseMeasurement.signedWeightOwnership.test.ts`, `tests/parseMeasurement.quoteContext.test.ts`, `tests/parseMeasurement.fractionBoundaries.test.ts`, `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.test.ts`, `tests/parseMeasurement.britishUnits.test.ts`, `tests/parseMeasurement.wordedRangeBoundaries.test.ts`, `tests/parseMeasurement.wordedRanges.test.ts`,
+- Tests: `tests/parseMeasurement.completeEntryRoundFive.test.ts`, `tests/parseMeasurement.completeEntryQuoteSurvivors.test.ts`, `tests/parseMeasurement.completeEntryQuotes.test.ts`, `tests/parseMeasurement.completeEntryRoundTwo.test.ts`, `tests/parseMeasurement.completeEntry.test.ts`, `tests/parseMeasurement.completeEntryWork.test.ts`, `tests/numberReading.test.ts`, `tests/parseMeasurement.signedOtherTypeOwnership.test.ts`, `tests/parseMeasurement.signedWeightOwnership.test.ts`, `tests/parseMeasurement.quoteContext.test.ts`, `tests/parseMeasurement.fractionBoundaries.test.ts`, `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.test.ts`, `tests/parseMeasurement.britishUnits.test.ts`, `tests/parseMeasurement.compactUnits.test.ts`, `tests/parseMeasurement.calculator.test.ts`, `tests/parseMeasurement.spokenDecimals.test.ts`, `tests/parseMeasurement.unicodeMinusCost.test.ts`, `tests/parseMeasurement.unicodeMinusLabels.test.ts`, `tests/parseMeasurement.wordedRangeBoundaries.test.ts`, `tests/parseMeasurement.wordedRanges.test.ts`,
   `tests/parseMeasurement.conversionOverflow.test.ts`,
   `tests/parseMeasurement.numberWordCommas.test.ts`, `tests/parseMeasurement.commaBetweenWords.test.ts`,
   `tests/parseMeasurement.commaWeightOwnership.test.ts`,

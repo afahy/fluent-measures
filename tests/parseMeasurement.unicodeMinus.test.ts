@@ -1,3 +1,6 @@
+// AFA-250: recovery expectations now follow the approved complete-entry contract in PARSING.md.
+// Earlier ticket rationales below describe their historical extraction contract; original
+// assertions are retained separately under design/afa-250.
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
 
@@ -37,10 +40,14 @@ describe('Unicode minus signs', () => {
 
   // 5 ft and 11 in are one height: 5 × 12 + 11 = 71 in.
   it.each([
+    ['Height − 180 cm', {}],
+    ['180 cm−70 kg', { type: 'weight' }],
+  ] as const)('rejects the complete entry %s (AFA-250)', (raw, options) => {
+    expect(parseMeasurement(raw, options)).toBeNull();
+  });
+  it.each([
     ['5 ft −11 in', {}, 71, 'in'],
     ['5 ft−11', {}, 71, 'in'],
-    ['Height − 180 cm', {}, 180, 'cm'],
-    ['180 cm−70 kg', { type: 'weight' }, 70, 'kg'],
   ] as const)('keeps reading %s with %o as %s %s', (raw, options, value, unit) => {
     expect(parseMeasurement(raw, options)).toMatchObject({ value, unit });
   });

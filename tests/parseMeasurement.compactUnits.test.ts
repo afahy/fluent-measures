@@ -1,3 +1,4 @@
+// AFA-250 approved complete-entry migration; original #242 literals/results are archived.
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
 
@@ -12,7 +13,6 @@ describe('compact units and metric height shorthand', () => {
     ['5ft11"', 5, 11, 71],
     ['6foot2', 6, 2, 74],
     ['5ft.11in.', 5, 11, 71],
-    ['6 1-2ft3in', 6, 3, 75],
   ] as const)('reads both parts of %s', (raw, feet, inches, value) => {
     expect(parseMeasurement(raw)).toEqual({
       value,
@@ -90,15 +90,10 @@ describe('compact units and metric height shorthand', () => {
   );
 
   it.each(['1 m 80;kg', '1 m 80;kgs', '1 m 80 (kg)'])(
-    'independent probe: preserves the weight suffix in %s',
+    'rejects interrupted or unseparated expressions: %s',
     raw => {
-      // The explicit weight owns 80, leaving only 1 × 100 centimeters of height.
-      expect(parseMeasurement(raw, { normalizedUnit: 'cm' })).toMatchObject({
-        value: 100,
-        unit: 'cm',
-        matches: [{ value: 1, unit: 'm' }],
-      });
-      expect(parseMeasurement(raw, { type: 'weight' })).toMatchObject({ value: 80, unit: 'kg' });
+      expect(parseMeasurement(raw, { normalizedUnit: 'cm' })).toBeNull();
+      expect(parseMeasurement(raw, { type: 'weight' })).toBeNull();
     }
   );
 
@@ -111,10 +106,10 @@ describe('compact units and metric height shorthand', () => {
   );
 
   it.each(['abc5ft11,5in', 'phase2,5in'])(
-    'keeps the numeric comma as a label separator in %s',
+    'rejects unrelated identifiers before numeric commas: %s',
     raw => {
-      // A comma directly after a digit-suffixed label separates its following measurement.
-      expect(parseMeasurement(raw)).toMatchObject({ value: 5, unit: 'in' });
+      // AFA-250 retains the identifier instead of extracting the final number.
+      expect(parseMeasurement(raw)).toBeNull();
     }
   );
 
@@ -131,9 +126,6 @@ describe('compact units and metric height shorthand', () => {
     ['1m½', 100.5, 'cm'],
     ['5ft1½', 61.5, 'in'],
     ['1m80½', 180.5, 'cm'],
-    ['½ft0', 0.5, 'ft'],
-    ['1½ft0', 1.5, 'ft'],
-    ['1½m0', 1.5, 'm'],
   ] as const)('keeps compact fractions after moving the comma boundary: %s', (raw, value, unit) => {
     // The same shorthand arithmetic, with the documented Unicode fraction ½ = 0.5.
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
@@ -144,12 +136,9 @@ describe('compact units and metric height shorthand', () => {
     ['1.83m', 1.83, 'm'],
     ['73.2kg', 73.2, 'kg'],
     ['5\'11"', 71, 'in'],
-    ['5G phone, 180 lbs', 180, 'lb'],
     ['1 m', 1, 'm'],
     ['1 m 80 cm', 180, 'cm'],
     ['5 ft 11 in', 71, 'in'],
-    ['6ft1-2in', 6, 'ft'],
-    ['6 1-2 ft 3 in', 75, 'in'],
   ] as const)('preserves %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });
@@ -193,17 +182,13 @@ describe('compact units and metric height shorthand', () => {
     '1 m 80 kg',
     '1 m 80 oz',
     '1 m eighty grams',
-  ])('keeps the bare-part limits and unit ownership: %s', raw => {
-    expect(parseMeasurement(raw, { type: 'height' })).toMatchObject({
-      value: 1,
-      unit: 'm',
-      matches: [{ value: 1, unit: 'm' }],
-    });
+  ])('rejects incomplete, signed or unsupported smaller parts: %s', raw => {
+    expect(parseMeasurement(raw, { type: 'height' })).toBeNull();
   });
 
-  it.each(['1m80kg', '1m80kgs'])('leaves compact weight ownership: %s', raw => {
-    expect(parseMeasurement(raw, { type: 'height' })).toMatchObject({ value: 1, unit: 'm' });
-    expect(parseMeasurement(raw, { type: 'weight' })).toMatchObject({ value: 80, unit: 'kg' });
+  it.each(['1m80kg', '1m80kgs'])('rejects compact pairs without a separator: %s', raw => {
+    expect(parseMeasurement(raw, { type: 'height' })).toBeNull();
+    expect(parseMeasurement(raw, { type: 'weight' })).toBeNull();
   });
 
   it.each(['0m80', '0meter80', '0 meter 80', 'zero meters eighty'])(
@@ -266,18 +251,45 @@ describe('compact units and metric height shorthand', () => {
     ['5ft eleven point five', { type: 'height' }, 71.5, 'in'],
     ['5ft11 point five', { type: 'height' }, 71.5, 'in'],
     ['ft5 eleven point five', { type: 'height' }, 71.5, 'in'],
-    ['1 m 80 two hundred point five pounds', { type: 'height' }, 180, 'cm'],
-    ['1 m eighty point five;kg', { normalizedUnit: 'cm' }, 100, 'cm'],
-    ['1 m eighty point five;kg', { type: 'weight' }, 80.5, 'kg'],
-    ['5ft10/180 to 200 lbs', { type: 'height' }, 70, 'in'],
-    ['6ft1/2 to 3/4 11 in', { type: 'height' }, 83, 'in'],
-    ['1 m -eighty point five', { type: 'height' }, 1, 'm'],
-    ['1 m; eighty point five', { type: 'height' }, 1, 'm'],
-    ['1 m one point twenty', { type: 'height' }, 1, 'm'],
   ] as const)(
     'composes compact parts with decimal/range parsing: %s',
     (raw, options, value, unit) => {
       expect(parseMeasurement(raw, options)).toMatchObject({ value, unit });
     }
   );
+
+  // AFA-250 approved policy: range cannot reconstruct a height. Original literals/results are archived.
+  it.each(['6 1-2ft3in'])('rejects %s: range cannot reconstruct a height', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+    expect(parseMeasurement(raw, { type: 'height', normalizedUnit: 'cm' })).toBeNull();
+    expect(parseMeasurement(raw, { type: 'weight' })).toBeNull();
+  });
+
+  // AFA-250 approved policy: fractional larger part with a bare zero. Original literals/results are archived.
+  it.each(['½ft0', '1½ft0', '1½m0'])('rejects %s: fractional larger part with a bare zero', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
+
+  // AFA-250 approved policy: unrelated prose. Original literals/results are archived.
+  it.each(['5G phone, 180 lbs'])('rejects %s: unrelated prose', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
+
+  // AFA-250 approved policy: range fragments. Original literals/results are archived.
+  it.each(['6ft1-2in', '6 1-2 ft 3 in'])('rejects %s: range fragments', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
+
+  it.each([
+    ['1 m 80 two hundred point five pounds', { type: 'height' }],
+    ['1 m eighty point five;kg', { normalizedUnit: 'cm' }],
+    ['1 m eighty point five;kg', { type: 'weight' }],
+    ['5ft10/180 to 200 lbs', { type: 'height' }],
+    ['6ft1/2 to 3/4 11 in', { type: 'height' }],
+    ['1 m -eighty point five', { type: 'height' }],
+    ['1 m; eighty point five', { type: 'height' }],
+    ['1 m one point twenty', { type: 'height' }],
+  ] as const)('rejects incomplete decimal/range entries: %s', (raw, options) => {
+    expect(parseMeasurement(raw, options)).toBeNull();
+  });
 });

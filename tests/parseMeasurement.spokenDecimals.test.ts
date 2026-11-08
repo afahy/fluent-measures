@@ -1,3 +1,7 @@
+// AFA-250 approved policy revision of main c670d12. Original inputs, assertions and
+// AFA-202/247/248 rationale are archived in main-migration-preparation/main-original.
+// Historical comments below describe the earlier contract; the migrated null cases
+// reject the whole entry under the rule named by their test and exact ledger row.
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
 
@@ -32,15 +36,12 @@ describe('spoken decimal measurements', () => {
     ['zero point zero five kilograms', {}, 0.05, 'kg', 0.05, 'kg'],
     ['point five meters', {}, 0.5, 'm', 0.5, 'm'],
     ['kg point five', {}, 0.5, 'kg', 0.5, 'kg'],
-    ['kg point five 2_notes', {}, 0.5, 'kg', 0.5, 'kg'],
     ['one hundred and fifty point two five pounds', {}, 150.25, 'lb', 150.25, 'lb'],
     ['seventy point 5 kg', {}, 70.5, 'kg', 70.5, 'kg'],
     ['70 point zero five kg', {}, 70.05, 'kg', 70.05, 'kg'],
     ['kg 70 point 25', {}, 70.25, 'kg', 70.25, 'kg'],
     ['SEVENTY POINT FIVE KILOGRAMS', {}, 70.5, 'kg', 70.5, 'kg'],
-    ['I weigh seventy point five kilograms today', {}, 70.5, 'kg', 70.5, 'kg'],
     ['one point eight metrs', { fuzziness: 1 }, 1.8, 'm', 1.8, 'm'],
-    ['seventy point five;kg', {}, 70.5, 'kg', 70.5, 'kg'],
     [
       'one point eight',
       { type: 'height', allowUnqualified: true, inferUnit: 'metric' },
@@ -55,6 +56,20 @@ describe('spoken decimal measurements', () => {
     expect(result?.value).toBeCloseTo(value, 10);
     expect(result).toMatchObject({ unit, raw, matches: [{ value: part, unit: partUnit }] });
   });
+
+  it.each([
+    ['kg point five 2_notes', {}],
+    ['I weigh seventy point five kilograms today', {}],
+  ] as const)('rejects %s under AFA-250: prose', (raw, options) => {
+    expect(parseMeasurement(raw, options)).toBeNull();
+  });
+
+  it.each([['seventy point five;kg', {}]] as const)(
+    'rejects %s under AFA-250: semicolon',
+    (raw, options) => {
+      expect(parseMeasurement(raw, options)).toBeNull();
+    }
+  );
 
   it.each([
     'seventy point',
@@ -101,31 +116,41 @@ describe('spoken decimal measurements', () => {
     ['1,000 lbs', {}, 1000, 'lb'],
     ['72,5 kg', {}, 72.5, 'kg'],
     ['1,234,56 kg', {}, 1234.56, 'kg'],
-    ['my son is two, thirty pounds', {}, 30, 'lb'],
-    ['phase twenty, 5 cm', {}, 5, 'cm'],
-    ['phase twenty, point five cm', {}, 0.5, 'cm'],
-    ['point, five kg', {}, 5, 'kg'],
-    ['point, 5 kg', {}, 5, 'kg'],
-    ['age twenty, seventy point five kg', {}, 70.5, 'kg'],
-    ['age=28, kg=seventy point five', {}, 70.5, 'kg'],
-    ['age=28, kg=seventy point five lbs', {}, 70.5, 'lb'],
-    ['age one point five, kg: seventy', {}, 70, 'kg'],
-    ['age one point five; kg: seventy', {}, 70, 'kg'],
-    ['0 kg, 80 lb', {}, 80, 'lb'],
     ['5 ft eleven point five', {}, 71.5, 'in'],
     ['1 m eighty point five cm', {}, 180.5, 'cm'],
     ['m: one cm: point five', {}, 100.5, 'cm'],
     ['ft: five inches: point five', {}, 60.5, 'in'],
-    ['m: one cm: and eighty', {}, 180, 'cm'],
   ] as const)('preserves the boundaries in %s', (raw, options, value, unit) => {
     expect(parseMeasurement(raw, options)).toMatchObject({ value, unit });
   });
 
-  it('preserves independent labeled fields after invalid decimal text', () => {
-    expect(parseMeasurement('age=one point twenty; kg=seventy')).toMatchObject({
-      value: 70,
-      unit: 'kg',
-    });
+  it.each([
+    ['my son is two, thirty pounds', {}],
+    ['phase twenty, 5 cm', {}],
+    ['phase twenty, point five cm', {}],
+    ['age twenty, seventy point five kg', {}],
+    ['age=28, kg=seventy point five', {}],
+    ['age=28, kg=seventy point five lbs', {}],
+    ['age one point five, kg: seventy', {}],
+    ['age one point five; kg: seventy', {}],
+  ] as const)('rejects %s under AFA-250: prose', (raw, options) => {
+    expect(parseMeasurement(raw, options)).toBeNull();
+  });
+
+  it.each([
+    ['point, five kg', {}],
+    ['point, 5 kg', {}],
+    ['m: one cm: and eighty', {}],
+  ] as const)('rejects %s under AFA-250: number-phrase', (raw, options) => {
+    expect(parseMeasurement(raw, options)).toBeNull();
+  });
+
+  it.each([['0 kg, 80 lb', {}]] as const)('rejects %s under AFA-250: zero', (raw, options) => {
+    expect(parseMeasurement(raw, options)).toBeNull();
+  });
+
+  it('rejects prose under AFA-250; keeps the valid selected pair', () => {
+    expect(parseMeasurement('age=one point twenty; kg=seventy')).toBeNull();
     expect(
       parseMeasurement('m: one point eight; kg: seventy point five', { type: 'weight' })
     ).toMatchObject({ value: 70.5, unit: 'kg' });

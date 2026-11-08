@@ -1,3 +1,6 @@
+// AFA-250: recovery expectations now follow the approved complete-entry contract in PARSING.md.
+// Earlier ticket rationales below describe their historical extraction contract; original
+// assertions are retained separately under design/afa-250.
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
 
@@ -19,15 +22,17 @@ describe('and a half', () => {
 
   // "Must not change" in AFA-63, from PARSING.md and the corpus.
   it.each([
+    '5 ft and a half-hour walk',
+    '5 ft 10 and a hat',
+    '5 ft 10 and the half',
+    '5 ft 10 a half',
+  ])('rejects the complete entry %s (AFA-250 policy revision)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
+  it.each([
     ['one hundred and 50 pounds', 150, 'lb'],
     ['5 foot 10 inches', 70, 'in'],
     ['a hundred and sixty pounds', 160, 'lb'],
-    // "a half-hour" with no number before "and" doesn't add to the feet.
-    ['5 ft and a half-hour walk', 5, 'ft'],
-    // Only the words "and a half" add 0.5, so other words after 10 leave 5 × 12 + 10 = 70 in.
-    ['5 ft 10 and a hat', 70, 'in'],
-    ['5 ft 10 and the half', 70, 'in'],
-    ['5 ft 10 a half', 70, 'in'],
   ] as const)('keeps reading %s as %s %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });
@@ -48,24 +53,20 @@ describe('and a half', () => {
   // AFA-94: a multiplier word after "and a half" multiplies the whole number plus 0.5, so
   // "two and a half thousand" is 2.5 × 1000 = 2500, and "five and a half hundred" is 550.
   it.each([
+    'two and a half thousand; lbs',
+    '5 ft 10 and a half, hundred eighty lbs',
+    'two and a half; thousand lbs',
+    '6 and a half; ft',
+    'and a half thousand pounds',
+  ])('rejects the complete entry %s (AFA-250 policy revision)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
+  it.each([
     ['two and a half thousand pounds', 2500, 'lb'],
     ['2 and a half thousand lbs', 2500, 'lb'],
     ['five and a half hundred pounds', 550, 'lb'],
-    // A semicolon can come between a number and its unit, as in "180;lbs" (PARSING.md).
-    ['two and a half thousand; lbs', 2500, 'lb'],
-    // AFA-63's results don't change: a multiplier that starts the next number isn't the half's.
-    // 5 × 12 + 10.5 = 70.5.
-    ['5 ft 10 and a half, hundred eighty lbs', 70.5, 'in'],
-    // More than one multiplier: 2.5 × 100 × 1000 = 250,000.
     ['two and a half hundred thousand pounds', 250_000, 'lb'],
-    // A semicolon between the half and the multiplier, and with no multiplier, as in "6.5; ft".
-    ['two and a half; thousand lbs', 2500, 'lb'],
-    ['6 and a half; ft', 6.5, 'ft'],
-    // The whole number is smaller than the multiplier, as in "one hundred thousand": 100.5 × 1000.
     ['one hundred and a half thousand lbs', 100_500, 'lb'],
-    // With no number before it, "and a half" isn't read, as in "and a half feet" (null above), so
-    // only "thousand" is, as on main.
-    ['and a half thousand pounds', 1000, 'lb'],
   ] as const)('reads %s as %s %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });
@@ -99,11 +100,8 @@ describe('and a half', () => {
 
   // "1.5 and a half thousand" isn't a number, so "ft" has no number before it, and it takes the
   // number after it, as a unit before its number does (PARSING.md: "record 0; kg 70" → 70 kg).
-  it('reads 1.5 and a half thousand ft 4 as 4 ft', () => {
-    expect(parseMeasurement('1.5 and a half thousand ft 4')).toMatchObject({
-      value: 4,
-      unit: 'ft',
-    });
+  it('rejects the malformed half phrase instead of borrowing the final value', () => {
+    expect(parseMeasurement('1.5 and a half thousand ft 4')).toBeNull();
   });
 
   // A read forward stops before a multiplier after "and a half", as "pounds: two and a half

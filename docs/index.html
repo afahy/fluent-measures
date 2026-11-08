@@ -1909,8 +1909,8 @@ const strict = parseMeasurement(
                       <th scope="row"><span class="input-chip">70 kg (154 lbs)</span></th>
                       <td>
                         <div class="res-note">
-                          <span class="result"><b>70</b> kg</span
-                          ><span class="note">The second weight agrees</span>
+                          <span class="result result-null">null</span
+                          ><span class="note">Two weights, even when they agree</span>
                         </div>
                       </td>
                     </tr>
@@ -1919,7 +1919,7 @@ const strict = parseMeasurement(
                       <td>
                         <div class="res-note">
                           <span class="result result-null">null</span
-                          ><span class="note">The two weights disagree</span>
+                          ><span class="note">A range is not one measurement</span>
                         </div>
                       </td>
                     </tr>
@@ -1927,20 +1927,21 @@ const strict = parseMeasurement(
                 </table>
               </div>
               <p class="topic-lead">
-                When the text has more than one height, or more than one weight, the result is the
-                first one. The others must agree with it within 1%. If not, the result is
-                <code>null</code>. If the text has both a height and a weight, set
-                <a href="#ex-type"><code>type</code></a> to choose which one you get. Without
-                <code>type</code>, the result can be either one, or <code>null</code>.
+                The whole entry must be one complete measurement, including supported compounds such
+                as <code>5 ft 11 in</code>. Two heights or two weights return <code>null</code>,
+                even when they agree. For exactly one complete height and one complete weight, set
+                <a href="#ex-type"><code>type</code></a> or <code>normalizedUnit</code> to select
+                one. Both expressions must be valid; without a selector the result is
+                <code>null</code>.
               </p>
               <div class="callout is-caution">
                 <svg class="icon" aria-hidden="true"><use href="#i-alert" /></svg>
                 <div class="callout-body">
-                  <p class="callout-title">Ordinary words can read as units</p>
+                  <p class="callout-title">Only supported wrappers may surround a measurement</p>
                   <p>
-                    Fuzzy matching can read an ordinary word as a unit. Even without it,
-                    <code>in</code> after a number means inches, so
-                    <code>Top 10 in the class</code> returns 10 inches.
+                    <code>I'm five foot eleven tall</code> and <code>about 180 cm</code> are
+                    supported. Unrelated prose is not: <code>Top 10 in the class</code> returns
+                    <code>null</code>. Fuzzy matching does not discard leftover text.
                   </p>
                 </div>
               </div>
@@ -1983,7 +1984,8 @@ const strict = parseMeasurement(
                     <a href="#ex-fuzzy"><code>fuzziness</code></a> to 1 or 2.
                   </li>
                   <li>
-                    The text has a range, or measurements that disagree. See
+                    The text has a range, duplicate measurements, an incomplete fragment or
+                    unsupported text. See
                     <a href="#limits">Limits</a>.
                   </li>
                   <li>

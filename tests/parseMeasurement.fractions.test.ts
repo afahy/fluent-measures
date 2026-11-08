@@ -1,3 +1,6 @@
+// AFA-250: recovery expectations now follow the approved complete-entry contract in PARSING.md.
+// Earlier ticket rationales below describe their historical extraction contract; original
+// assertions are retained separately under design/afa-250.
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
 import { parseWithin, underStryker } from './timing';
@@ -54,20 +57,29 @@ describe('fractions', () => {
     expect(parseMeasurement(raw)).toBeNull();
   });
 
-  it.each([
-    ['blood pressure 120/80, weight 180 lbs', 180, 'lb'],
-    ['12/25/2020, 180 lbs', 180, 'lb'],
-    ['1,234,56 kg', 1234.56, 'kg'],
-  ] as const)('keeps reading %s as %s %s', (raw, value, unit) => {
-    expect(parseMeasurement(raw)).toMatchObject({ value, unit });
-  });
+  it.each(['blood pressure 120/80, weight 180 lbs', '12/25/2020, 180 lbs'])(
+    'rejects the complete entry %s (AFA-250)',
+    raw => {
+      expect(parseMeasurement(raw)).toBeNull();
+    }
+  );
+  it.each([['1,234,56 kg', 1234.56, 'kg']] as const)(
+    'keeps reading %s as %s %s',
+    (raw, value, unit) => {
+      expect(parseMeasurement(raw)).toMatchObject({ value, unit });
+    }
+  );
 
   // A slash after a number that follows a unit or quote mark separates two measurements.
   it.each([
-    ["5'10/180", {}, 70, 'in'],
+    ["5'10/180", {}],
+    ['5 ft 10/180 lbs', {}],
+  ] as const)('rejects the complete entry %s (AFA-250)', (raw, options) => {
+    expect(parseMeasurement(raw, options)).toBeNull();
+  });
+  it.each([
     ['5ft10/180lbs', { type: 'weight' }, 180, 'lb'],
     ['5ft10/72kg', { type: 'weight' }, 72, 'kg'],
-    ['5 ft 10/180 lbs', {}, 70, 'in'],
     ['5 ft 10/180 lbs', { type: 'weight' }, 180, 'lb'],
     ['5ft 10/180lbs', { type: 'weight' }, 180, 'lb'],
     ["6'1/200 lbs", { type: 'height' }, 73, 'in'],

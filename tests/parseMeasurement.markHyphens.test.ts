@@ -1,3 +1,6 @@
+// AFA-250: recovery expectations now follow the approved complete-entry contract in PARSING.md.
+// Earlier ticket rationales below describe their historical extraction contract; original
+// assertions are retained separately under design/afa-250.
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
 
@@ -6,26 +9,23 @@ import { parseMeasurement } from '../src';
 // expected result is the ticket's, from the same input with a unit word in place of the mark.
 describe('a hyphen after a feet or inch mark', () => {
   it.each([
-    // 5 × 12 + 11 = 71, as `5 ft-eleven`.
+    ['6\'1"-seventy kg', { type: 'weight' }],
+    ['5;"-5 in', {}],
+    ['five;"-5 in', {}],
+    ['5ft11"-185 lbs', {}],
+    ['5 ft11"-185 lbs', {}],
+    ['five ft11"-185 lbs', {}],
+    ['5;ft11"-185 lbs', {}],
+    ['1m80"-5 in', {}],
+    ['5"-5 in', {}],
+    ['6\'1"-185 lbs', { type: 'weight' }],
+  ] as const)('rejects the complete entry %s (AFA-250)', (raw, options) => {
+    expect(parseMeasurement(raw, options)).toBeNull();
+  });
+  it.each([
     [`5'-eleven`, {}, 71, 'in'],
-    // The weight after the height, as `6 ft 1 in-seventy kg`.
-    [`6'1"-seventy kg`, { type: 'weight' }, 70, 'kg'],
-    // A semicolon before the mark, as `5;in-5 in` and `5;" 5 in`.
-    ['5;"-5 in', {}, 5, 'in'],
-    // A number word before the mark, as `five ft-eleven` and `five;in-5 in`.
     [`five'-eleven`, {}, 71, 'in'],
-    ['five;"-5 in', {}, 5, 'in'],
-    // Compact heights now read like spaced units: 5 × 12 + 11 = 71 inches.
-    ['5ft11"-185 lbs', {}, 71, 'in'],
-    ['5 ft11"-185 lbs', {}, 71, 'in'],
-    // A number word or a semicolon before the unit, as `five ft11in-185 lbs` and
-    // `5;ft11in-185 lbs`.
-    ['five ft11"-185 lbs', {}, 71, 'in'],
-    ['5;ft11"-185 lbs', {}, 71, 'in'],
-    // "Must not change" in AFA-112.
     [`5'-11"`, {}, 71, 'in'],
-    ['5"-5 in', {}, 5, 'in'],
-    [`6'1"-185 lbs`, { type: 'weight' }, 185, 'lb'],
   ] as const)('reads %s with %j as %s %s', (raw, options, value, unit) => {
     expect(parseMeasurement(raw, options)).toMatchObject({ value, unit });
   });
@@ -45,26 +45,24 @@ describe('a hyphen after a feet or inch mark', () => {
     // "Must not change" in AFA-112: two heights.
     '72"-74"',
     `5'11"-6'1"`,
-    // The compact meter is now visible; 1 meter, 80 inches and 5 inches disagree.
-    '1m80"-5 in',
   ])('returns null for %s', raw => {
     expect(parseMeasurement(raw)).toBeNull();
   });
 
   it.each(['5ft11"-185 lbs', '5 ft11"-185 lbs', 'five ft11"-185 lbs', '5;ft11"-185 lbs'])(
-    'keeps both explicit type selections for %s',
+    'rejects the dash-separated pair with either selector: %s',
     raw => {
-      expect(parseMeasurement(raw, { type: 'height' })).toMatchObject({ value: 71, unit: 'in' });
-      expect(parseMeasurement(raw, { type: 'weight' })).toMatchObject({ value: 185, unit: 'lb' });
+      expect(parseMeasurement(raw, { type: 'height' })).toBeNull();
+      expect(parseMeasurement(raw, { type: 'weight' })).toBeNull();
     }
   );
 
   it.each(['5 ft 11"-185 lbs', 'five ft 11"-185 lbs', '5;ft 11"-185 lbs'])(
-    'spaced counterpart keeps the height and weight of %s',
+    'rejects the spaced dash-separated pair: %s',
     raw => {
-      expect(parseMeasurement(raw)).toMatchObject({ value: 71, unit: 'in' });
-      expect(parseMeasurement(raw, { type: 'height' })).toMatchObject({ value: 71, unit: 'in' });
-      expect(parseMeasurement(raw, { type: 'weight' })).toMatchObject({ value: 185, unit: 'lb' });
+      expect(parseMeasurement(raw)).toBeNull();
+      expect(parseMeasurement(raw, { type: 'height' })).toBeNull();
+      expect(parseMeasurement(raw, { type: 'weight' })).toBeNull();
     }
   );
 

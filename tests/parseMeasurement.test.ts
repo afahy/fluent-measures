@@ -1,3 +1,6 @@
+// AFA-250: recovery expectations now follow the approved complete-entry contract in PARSING.md.
+// Earlier ticket rationales below describe their historical extraction contract; original
+// assertions are retained separately under design/afa-250.
 import { describe, it, expect } from 'vitest';
 import { parseMeasurement } from '../src';
 
@@ -111,18 +114,9 @@ describe('parseMeasurement', () => {
 
   // The inches' unit belongs to the inches, so it can't also take a number after it.
   it.each(['5 ft 11 inches 2 years old', '5\'11" 2'])(
-    'keeps the inches unit with the inches in %s',
+    'rejects the complete entry %s (AFA-250)',
     raw => {
-      expect(parseMeasurement(raw)).toEqual({
-        value: 71,
-        unit: 'in',
-        type: 'height',
-        matches: [
-          { value: 5, unit: 'ft' },
-          { value: 11, unit: 'in' },
-        ],
-        raw,
-      });
+      expect(parseMeasurement(raw)).toBeNull();
     }
   );
 

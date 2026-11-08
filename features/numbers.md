@@ -15,10 +15,10 @@ fractions, decimal commas and thousands groups.
 - Commas: `1,000 lbs`, `72,5 kg`, `1,234,56 kg`.
 - Decimal commas in compact heights: `5ft11,5in`, `1m80,5`; malformed groups still reject.
 - Spoken decimals after compact units or bare meters: `5ft11 point five` and `one meter eighty point five`.
-- A comma between number words: `my son is two, thirty pounds` gives 30 lb.
-- A comma and space after a label's number word: `phase twenty, 5 cm` gives 5 cm.
+- Incomplete comma-separated phrases reject: `my son is two, thirty pounds` gives `null`.
+- Arbitrary metadata rejects: `phase twenty, 5 cm` gives `null`.
 - Signs, which give `null` for a negative value: `-70 kg`, Unicode minus signs.
-- A zero before a unit, which isn't a measurement: `0 kg, 80 lb` gives 80 lb.
+- A standalone zero invalidates the entry: `0 kg, 80 lb` gives `null`; `1 m 0 cm` gives 100 cm with both parts.
 - `import` and `require`.
 
 ## Where the rules are
@@ -30,7 +30,7 @@ fractions, decimal commas and thousands groups.
 ## How to verify it
 
 - Source: `src/wordsToNumber.ts`, `src/tokenize.ts`, `src/parseMeasurement.ts`
-- Tests: `tests/parseMeasurement.compactUnits.test.ts`, `tests/parseMeasurement.spokenDecimalFields.test.ts`, `tests/parseMeasurement.spokenDecimalSemicolons.test.ts`, `tests/parseMeasurement.spokenDecimalReview.test.ts`, `tests/parseMeasurement.calculator.test.ts`, `tests/parseMeasurement.spokenDecimalBoundaries.test.ts`, `tests/parseMeasurement.spokenDecimals.test.ts`, `tests/parseMeasurement.unicodeMinusCost.test.ts`, `tests/parseMeasurement.unicodeMinusLabels.test.ts`, `tests/parseMeasurement.signedOtherTypeOwnership.test.ts`, `tests/parseMeasurement.signedWeightOwnership.test.ts`, `tests/parseMeasurement.quoteContext.test.ts`, `tests/parseMeasurement.fractionBoundaries.test.ts`, `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.andAHalf.test.ts`, `tests/parseMeasurement.commaBoundaries.test.ts`, `tests/parseMeasurement.wordedRangeBoundaries.test.ts`, `tests/parseMeasurement.wordedRanges.test.ts`,
+- Tests: `tests/parseMeasurement.completeEntryRoundFive.test.ts`, `tests/parseMeasurement.completeEntryQuoteSurvivors.test.ts`, `tests/parseMeasurement.completeEntryQuotes.test.ts`, `tests/parseMeasurement.completeEntryRoundThree.test.ts`, `tests/parseMeasurement.completeEntryRoundTwo.test.ts`, `tests/parseMeasurement.completeEntryReview.test.ts`, `tests/parseMeasurement.completeEntryPrefix.test.ts`, `tests/parseMeasurement.completeEntry.test.ts`, `tests/parseMeasurement.completeEntryDecimals.test.ts`, `tests/parseMeasurement.completeEntryWork.test.ts`, `tests/numberReading.test.ts`, `tests/numberReadingWork.test.ts`, `tests/parseMeasurement.signedOtherTypeOwnership.test.ts`, `tests/parseMeasurement.signedWeightOwnership.test.ts`, `tests/parseMeasurement.quoteContext.test.ts`, `tests/parseMeasurement.fractionBoundaries.test.ts`, `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.andAHalf.test.ts`, `tests/parseMeasurement.commaBoundaries.test.ts`, `tests/parseMeasurement.compactUnits.test.ts`, `tests/parseMeasurement.spokenDecimalFields.test.ts`, `tests/parseMeasurement.spokenDecimalSemicolons.test.ts`, `tests/parseMeasurement.spokenDecimalReview.test.ts`, `tests/parseMeasurement.calculator.test.ts`, `tests/parseMeasurement.spokenDecimalBoundaries.test.ts`, `tests/parseMeasurement.spokenDecimals.test.ts`, `tests/parseMeasurement.unicodeMinusCost.test.ts`, `tests/parseMeasurement.unicodeMinusLabels.test.ts`, `tests/parseMeasurement.wordedRangeBoundaries.test.ts`, `tests/parseMeasurement.wordedRanges.test.ts`,
   `tests/parseMeasurement.numberWordCommas.test.ts`, `tests/parseMeasurement.commaBetweenWords.test.ts`,
   `tests/parseMeasurement.commaWeightOwnership.test.ts`,
   `tests/parseMeasurement.commaFractions.test.ts`, `tests/parseMeasurement.commaGroups.test.ts`,

@@ -1,3 +1,7 @@
+// AFA-250 approved policy revision of main c670d12. Original inputs, assertions and
+// AFA-202/247/248 rationale are archived in main-migration-preparation/main-original.
+// Historical comments below describe the earlier contract; the migrated null cases
+// reject the whole entry under the rule named by their test and exact ledger row.
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
 
@@ -39,92 +43,81 @@ describe('shared-unit ranges with word connectors', () => {
     ).toBeNull();
   });
 
-  it.each(['1 to 2', 'from 1 to 2', 'between 1 and 2'])('retains boundaries around %s', range => {
-    expect(parseMeasurement(`6 ${range} ft`)).toBeNull();
-    expect(parseMeasurement(`ft ${range} 6`)).toBeNull();
-    expect(parseMeasurement(`${range} ft 6`)).toBeNull();
-    expect(parseMeasurement(`6 ${range} ft 3 in`)).toMatchObject({
-      value: 75,
-      unit: 'in',
-      matches: [
-        { value: 6, unit: 'ft' },
-        { value: 3, unit: 'in' },
-      ],
-    });
-    expect(parseMeasurement(`6 ft ${range} 11 in`)).toMatchObject({ value: 83, unit: 'in' });
-    expect(parseMeasurement(`6 ft ${range} in`)).toMatchObject({
-      value: 6,
-      unit: 'ft',
-      matches: [{ value: 6, unit: 'ft' }],
-    });
-  });
+  it.each(['1 to 2', 'from 1 to 2', 'between 1 and 2'] as const)(
+    'rejects %s under AFA-250: range',
+    range => {
+      expect(parseMeasurement(`6 ${range} ft`)).toBeNull();
+      expect(parseMeasurement(`ft ${range} 6`)).toBeNull();
+      expect(parseMeasurement(`${range} ft 6`)).toBeNull();
+      expect(parseMeasurement(`6 ${range} ft 3 in`)).toBeNull();
+      expect(parseMeasurement(`6 ft ${range} 11 in`)).toBeNull();
+      expect(parseMeasurement(`6 ft ${range} in`)).toBeNull();
+    }
+  );
 
   it.each([
-    ['50 to 70 kg, 180 lbs', 180, 'lb'],
-    ['from 50 to 70 kg, 180 lbs', 180, 'lb'],
-    ['between 50 and 70 kg, 180 lbs', 180, 'lb'],
-    ['70 kg, between 150 and 180 lbs', 70, 'kg'],
-    ['between 150 and 180 lbs 70 kg', 70, 'kg'],
-    ['age=20 to 30, kg=70', 70, 'kg'],
-    ['age=between 20 and 30; kg=70', 70, 'kg'],
-    ['1/2 to 3/4 kg; recorded 180 lbs', 180, 'lb'],
-    ['from 1/2 to 3/4 kg; recorded 180 lbs', 180, 'lb'],
-    ['between 1/2 and 3/4 kg; recorded 180 lbs', 180, 'lb'],
-  ] as const)('keeps the independent measurement in %s', (raw, value, unit) => {
-    expect(parseMeasurement(raw, { type: 'weight' })).toEqual({
-      value,
-      unit,
-      type: 'weight',
-      raw,
-      matches: [{ value, unit }],
-    });
+    ['50 to 70 kg, 180 lbs'],
+    ['from 50 to 70 kg, 180 lbs'],
+    ['between 50 and 70 kg, 180 lbs'],
+    ['70 kg, between 150 and 180 lbs'],
+    ['between 150 and 180 lbs 70 kg'],
+    ['1/2 to 3/4 kg; recorded 180 lbs'],
+    ['from 1/2 to 3/4 kg; recorded 180 lbs'],
+    ['between 1/2 and 3/4 kg; recorded 180 lbs'],
+  ] as const)('rejects %s under AFA-250: range', raw => {
+    expect(parseMeasurement(raw, { type: 'weight' })).toBeNull();
   });
 
-  it('normalizes only the independent measurement', () => {
-    expect(parseMeasurement('between 50 and 70 kg, 180 lbs', { normalizedUnit: 'kg' })).toEqual({
-      value: 180 * 0.45359237,
-      unit: 'kg',
-      type: 'weight',
-      raw: 'between 50 and 70 kg, 180 lbs',
-      matches: [{ value: 180, unit: 'lb' }],
-    });
+  it.each([['age=20 to 30, kg=70'], ['age=between 20 and 30; kg=70']] as const)(
+    'rejects %s under AFA-250: prose',
+    raw => {
+      expect(parseMeasurement(raw, { type: 'weight' })).toBeNull();
+    }
+  );
+
+  it('rejects a range even when another weight could be normalized', () => {
+    expect(parseMeasurement('between 50 and 70 kg, 180 lbs', { normalizedUnit: 'kg' })).toBeNull();
   });
 
-  it('keeps inches after an omitted slash-fraction range', () => {
-    expect(parseMeasurement('6 ft 1/2 to 3/4 11 in', { type: 'height' })).toMatchObject({
-      value: 83,
-      unit: 'in',
-      matches: [
-        { value: 6, unit: 'ft' },
-        { value: 11, unit: 'in' },
-      ],
-    });
+  it('rejects a fraction range instead of reconstructing inches', () => {
+    expect(parseMeasurement('6 ft 1/2 to 3/4 11 in', { type: 'height' })).toBeNull();
   });
 
-  it('omits a range with a fuzzy unit', () => {
-    expect(parseMeasurement('150 to 180 poundz, 70 kg', { fuzziness: 1 })).toMatchObject({
-      value: 70,
-      unit: 'kg',
-      matches: [{ value: 70, unit: 'kg' }],
-    });
+  it('rejects a range even when its unit is fuzzy', () => {
+    expect(parseMeasurement('150 to 180 poundz, 70 kg', { fuzziness: 1 })).toBeNull();
   });
 
   it.each([
     ['150 lbs', 150, 'lb'],
-    ['70 kg (154 lbs)', 70, 'kg'],
     ['5 ft and 11 in', 71, 'in'],
     ['one hundred and fifty pounds', 150, 'lb'],
     ['one hundred and 50 pounds', 150, 'lb'],
-    ['150 and 180 lbs', 180, 'lb'],
-    ['150 lbs to 150 lbs', 150, 'lb'],
-    ['from 70 kg to 154 lbs', 70, 'kg'],
-    ['between 70 kg and 154 lbs', 70, 'kg'],
-    ['walk to 180 cm', 180, 'cm'],
-    ['between meals, 180 lbs', 180, 'lb'],
-    ['150 today 180 lbs', 180, 'lb'],
   ] as const)('preserves numbers and independent measurements in %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });
+
+  it.each([['70 kg (154 lbs)']] as const)('rejects %s under AFA-250: duplicate', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
+
+  it.each([['150 and 180 lbs']] as const)('rejects %s under AFA-250: number-phrase', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
+
+  it.each([
+    ['150 lbs to 150 lbs'],
+    ['from 70 kg to 154 lbs'],
+    ['between 70 kg and 154 lbs'],
+  ] as const)('rejects %s under AFA-250: range', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
+
+  it.each([['walk to 180 cm'], ['between meals, 180 lbs'], ['150 today 180 lbs']] as const)(
+    'rejects %s under AFA-250: prose',
+    raw => {
+      expect(parseMeasurement(raw)).toBeNull();
+    }
+  );
 
   it.each(['150-180 lbs', '150 lbs - 180 lbs', '210 lbs to 180 lbs'])(
     'preserves existing rejection of %s',

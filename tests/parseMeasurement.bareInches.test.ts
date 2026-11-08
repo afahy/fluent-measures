@@ -1,3 +1,6 @@
+// AFA-250: recovery expectations now follow the approved complete-entry contract in PARSING.md.
+// Earlier ticket rationales below describe their historical extraction contract; original
+// assertions are retained separately under design/afa-250.
 import { describe, it, expect } from 'vitest';
 import { parseMeasurement } from '../src';
 
@@ -27,31 +30,22 @@ describe('bare inches after feet', () => {
   });
 
   it.each([
-    ['5 ft 11 200 lbs', 71],
-    ['5 ft ten 200 lbs', 70],
-    ['5 ft ten and one 200 lbs', 71],
-    ['5 ft 11 two hundred pounds', 71],
-    ['5 ft 11 and 200 lbs', 71],
-    ['5 ft 11 and two hundred pounds', 71],
-    ['5 ft ten and one and 200 lbs', 71],
-    ['5 ft 11 and 6 lbs', 71],
-    ['5 ft 11 and six pounds', 71],
-    ['5 ft eleven and 6 lbs', 71],
-    ['5 ft eleven and six pounds', 71],
-    ['5 ft one and two pounds', 61],
-    ['5 ft 1 and 2 pounds', 61],
-    ['5 ft ten and one and six pounds', 71],
-  ])('preserves bare inches before a separate weight in %s', (raw, value) => {
-    expect(parseMeasurement(raw)).toEqual({
-      value,
-      unit: 'in',
-      type: 'height',
-      raw,
-      matches: [
-        { value: 5, unit: 'ft' },
-        { value: value - 60, unit: 'in' },
-      ],
-    });
+    '5 ft 11 200 lbs',
+    '5 ft ten 200 lbs',
+    '5 ft ten and one 200 lbs',
+    '5 ft 11 two hundred pounds',
+    '5 ft 11 and 200 lbs',
+    '5 ft 11 and two hundred pounds',
+    '5 ft ten and one and 200 lbs',
+    '5 ft 11 and 6 lbs',
+    '5 ft 11 and six pounds',
+    '5 ft eleven and 6 lbs',
+    '5 ft eleven and six pounds',
+    '5 ft one and two pounds',
+    '5 ft 1 and 2 pounds',
+    '5 ft ten and one and six pounds',
+  ])('rejects the complete entry %s (AFA-250 policy revision)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
   });
 
   it.each(['5 ft 10 in', '5 ft ten inches', '5 ft ten and one inches'])(
@@ -67,27 +61,21 @@ describe('bare inches after feet', () => {
   );
 
   it.each(['5 ft 180 lbs', '5 ft 10 lbs', '5 ft two kg', '5 ft twenty two pounds'])(
-    'leaves a number with its own weight unit in %s',
+    'rejects the complete entry %s (AFA-250 policy revision)',
     raw => {
-      expect(parseMeasurement(raw)).toEqual({
-        value: 5,
-        unit: 'ft',
-        type: 'height',
-        raw,
-        matches: [{ value: 5, unit: 'ft' }],
-      });
+      expect(parseMeasurement(raw)).toBeNull();
     }
   );
 
-  it('leaves a metric component with its own unit, as a separate measurement', () => {
+  it('rejects an incompatible metric component after feet', () => {
     // 10 cm isn't read as inches, and it doesn't agree with 5 ft, so there's no single answer.
     expect(parseMeasurement('5 ft 10 cm', { normalizedUnit: 'cm' })).toBeNull();
   });
 
   it.each(['5 ft 0', '5 ft 12', '5 ft 13', '5 ft -11', '5 ft twenty one'])(
-    'does not infer inches outside the positive range below twelve in %s',
+    'rejects the complete entry %s (AFA-250 policy revision)',
     raw => {
-      expect(parseMeasurement(raw)?.matches).toEqual([{ value: 5, unit: 'ft' }]);
+      expect(parseMeasurement(raw)).toBeNull();
     }
   );
 });

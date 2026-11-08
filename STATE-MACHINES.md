@@ -1164,11 +1164,31 @@ No existing semicolon-field, cross-type or Unicode-sign assertion changes.
 
 ### F6 correction — compact heights and bare centimeters
 
-Status: [PR #242](https://github.com/afahy/fluent-measures/pull/242) remains open on
-`t3/metric-height-shorthand`. Combined source `2c3c6931a08ce71eafa8d997db5a906404f3fc66`
-normally merges selected main `c670d12eadcd81a58e184236b3169e6d20ea5c72` and passes the
-fresh full check, changed-line/source-byte and package validation recorded below. The parent
-owns final-head review, hosted checks, merge and exact-main CI; no merge-completion claim is made.
+Status: complete. [PR #242](https://github.com/afahy/fluent-measures/pull/242) squash-merged
+reviewed head `efc60dbd749dd0b11af2592b15a9b5c7222b51c6` as
+`70f31690c4835ab97d60bf4af9c7a48d2f57d878` at 2026-11-07T17:17:33Z. All 19 PR checks,
+exact-head Codex review, final whole-diff review and pre/post-merge comment audits passed.
+All 12 jobs in exact-merge main CI run `42395577155` passed;
+[ci-ok](https://github.com/afahy/fluent-measures/actions/runs/42395577155/job/128473657888)
+succeeded at 2026-11-07T17:23:48Z.
+
+Combined source `2c3c6931a08ce71eafa8d997db5a906404f3fc66` normally merged selected main
+`c670d12eadcd81a58e184236b3169e6d20ea5c72`; its full check, fresh mutation,
+changed-line/source-byte and package evidence below remains the validation baseline. Later
+`c7e3f1fa` and `efc60db` commits changed only this audit. The merged source tree
+`4a722807146f3a92ca07da493426ebbeaee46a6e` and tests tree
+`95806a5f77cbceee2ffe647f0565199bae221fa7` match that validated source.
+
+Only the merged worktree and local branch were removed. Evidence is archived at
+`/Users/afahy/.t3/artifacts/fluent-measures/afa-62-efc60db/`; its `closeout.json`, CI proof,
+cleanup record and preservation list retain all three AFA-62 stashes:
+`6a09864090c14d25baba2141a4f0222d4ceb8c5f`,
+`1cc769e26022b41e2b2ecef711360a2f12e79d67` and
+`b7c47c50f14efdfb2af0f041021eebeab75b0e01`. Root main is synchronized; the unrelated docs
+edit remains separately archived and stashed by its owner. No local allocation remains.
+The late comma/zero-sign findings and earlier separator findings remain explicitly unfixed
+under AFA-250; completion of F6 does not claim their resolution. Historical baselines below
+and deferred AFA-242/244/249 evidence are unchanged.
 
 Historical pre-integration status: final material-guard source was
 `512cb75f393db54f938cdcea62023e22eb09c9a8` on the same branch.
@@ -1787,14 +1807,14 @@ Keep one ticket per PR. F1, F2 and F4 remain their existing grouped issues; do n
 or fold all tokenizer behavior changes into a single refactor. F3, F5 and F7 share broad ownership
 concerns but have different failure causes and existing preservation requirements.
 
-| Work stream                   | Tickets / order                    | State and required handoff                                                                                                                                    |
-| ----------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Publish this audit            | [AFA-235][audit]                   | [PR #228](https://github.com/afahy/fluent-measures/pull/228) merged at `527f7b5`; main CI passed                                                              |
-| Separate tokenizer refactor   | [AFA-88][refactor]                 | In Progress; preserve existing remote branch `apfahy/afa-88-read-every-number-form-in-one-tokenizer-pass`, last observed `ded9ee0`; requires maintainer merge |
-| Boundary and number fixes     | AFA-75 → AFA-74 → AFA-202 → AFA-62 | Pause lifted by maintainer on 2026-11-06; fresh sessions fix one ticket per PR                                                                                |
-| Quote and ownership fixes     | AFA-78 → AFA-203 → AFA-116         | F2, F5 and F7 complete; F7 merged as `b90ea36` from reviewed `28c3d21`; all 12 exact-merge main CI jobs passed; no successor                                  |
-| Inferred conversion underflow | [AFA-107][underflow]               | Pulled forward independently; [PR #233](https://github.com/afahy/fluent-measures/pull/233) merged at `b76070d`; main ci-ok passed; no successor assigned      |
-| Numeric conversion            | [AFA-236][overflow]                | `units.ts` correction at `ecf7a2e`; full validation passes; [PR #230](https://github.com/afahy/fluent-measures/pull/230) tracks review/merge                  |
+| Work stream                   | Tickets / order                    | State and required handoff                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ----------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Publish this audit            | [AFA-235][audit]                   | [PR #228](https://github.com/afahy/fluent-measures/pull/228) merged at `527f7b5`; main CI passed                                                                                                                                                                                                                                                                                                                                                 |
+| Separate tokenizer refactor   | [AFA-88][refactor]                 | In Progress; preserve existing remote branch `apfahy/afa-88-read-every-number-form-in-one-tokenizer-pass`, last observed `ded9ee0`; requires maintainer merge                                                                                                                                                                                                                                                                                    |
+| Boundary and number fixes     | AFA-75 → AFA-74 → AFA-202 → AFA-62 | Complete through AFA-62: reviewed `efc60db`, merge `70f3169`; all 12 exact-merge main CI jobs passed; no successor                                                                                                                                                                                                                                                                                                                               |
+| Quote and ownership fixes     | AFA-78 → AFA-203 → AFA-116         | F2, F5 and F7 complete; F7 merged as `b90ea36` from reviewed `28c3d21`; all 12 exact-merge main CI jobs passed; no successor                                                                                                                                                                                                                                                                                                                     |
+| Inferred conversion underflow | [AFA-107][underflow]               | Pulled forward independently; [PR #233](https://github.com/afahy/fluent-measures/pull/233) merged at `b76070d`; main ci-ok passed; no successor assigned                                                                                                                                                                                                                                                                                         |
+| Numeric conversion            | [AFA-236][overflow]                | Complete: [PR #230](https://github.com/afahy/fluent-measures/pull/230), reviewed `144c62338b742add6737a790f0a7a88567334658`, merged `b74d185efd9cd1383a9252b151131bcdad5a3d59` at 2026-11-06T21:00:58Z. Original `ecf7a2e` source/full-validation baseline retained; all 12 exact-merge CI jobs passed (run `42293173800`, [ci-ok](https://github.com/afahy/fluent-measures/actions/runs/42293173800/job/128154030833) at 2026-11-06T21:06:07Z). |
 
 The maintainer explicitly lifted the AFA-88 pause for these eight confirmed targeted fixes on
 2026-11-06. Their AFA-88 blocker relations were removed. Other dependencies remain; the tokenizer
@@ -1804,7 +1824,8 @@ AFA-203. AFA-74 completed [PR #232](https://github.com/afahy/fluent-measures/pul
 and all 12 exact-merge main CI jobs. AFA-202 then completed PR #236 at merge `e1d3a457`,
 with all 19 PR checks and all 12 exact-merge main CI jobs passed. The coordinator released the
 implementation hold for the already assigned AFA-62 owner after that gate passed. AFA-62 is the
-final ticket in this targeted queue; no duplicate or successor session is assigned.
+final ticket in this targeted queue and has completed merge, exact-main CI and scoped cleanup;
+no duplicate or successor session is assigned.
 
 Each fix session must:
 
@@ -1823,25 +1844,25 @@ Each fix session must:
 
 <!-- cspell:ignore Amcp Adelegate -->
 
-| Session                                                                                                                                                                                 | Assigned work                                                       | Launch state                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:ab3e225544f4690efa2764d0a191792e86a687eff06d7b4e3bb8c5380b1b736d>                                                       | AFA-235 publication and review of this document                     | [PR #228](https://github.com/afahy/fluent-measures/pull/228) merged at `527f7b5`; main CI passed                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:9df9034c3ce42adbebf696dd9b9d990bec04b84a9494a53e3c9bf77d6c1fc1d4>                                                       | AFA-75, then fresh successor sessions for AFA-74, AFA-202, AFA-62   | [PR #229](https://github.com/afahy/fluent-measures/pull/229) merged at `fa73fd5`; all 12 main CI jobs passed; AFA-74 successor launched                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1a5f5b908ee23500b3eab3c85521ed6236b310c0f375af966f353457aef7d25e>                                                       | Original AFA-78 implementation and recorded successor queue         | Stopped for the maintainer-requested takeover; clean history preserved through `02d463a`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/thread:delegated-task:command%3Amcp%3A07e37d08-94dc-4f21-9274-996c2a7a8c00%3Adelegate-task%3A632fca4a-3251-4d46-b64c-68aa393e85be> | AFA-78 implementation takeover, final validation and PR preparation | Validated at `133aac5`; [PR #231](https://github.com/afahy/fluent-measures/pull/231) prepared for parent stewardship; no successor work                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/b61ed010-1655-4d08-b5ee-8c6e4d3e7ad4>                                                                                              | AFA-78 PR steward                                                   | [PR #231](https://github.com/afahy/fluent-measures/pull/231) merged at `ef39a7b`; all 12 main CI jobs passed; separate AFA-203 session launched                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:437846f95d8fc1b59e8b6aed92f360110a4df975347393dec096581adc8de82f>                                                       | AFA-236 finite conversion overflow                                  | F9 validated; [PR #230](https://github.com/afahy/fluent-measures/pull/230) merged at `b74d185`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:e814642ff8608ad682438ef18ee4080fc919744b9ea078fd9ad8e24e7597c9b4>                                                       | AFA-74; fresh AFA-202 then AFA-62 sessions after each merge/main CI | Complete: [PR #232](https://github.com/afahy/fluent-measures/pull/232), reviewed `70419bd`, merge `bfac12a9`; 19 PR checks, exact-head Codex review, final audits and all 12 exact-merge main CI jobs passed (run 42322049791, ci-ok 2026-11-07T01:11:17Z). Merged worktree/local branch removed; fresh AFA-202 successor launched. Earlier validation and AFA-242 comparisons retained                                                                                                                                                                                                                                                                                     |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:461b3a6bdd48f18b59aa264dedf46356fae143e0f5f4b90936f49716e134a37a>                                                       | AFA-107 inferred conversion underflow; no successor                 | [PR #233](https://github.com/afahy/fluent-measures/pull/233) at `7426e3e` implementation; full checks and independent probes pass; merged at `b76070d`; exact-merge main ci-ok passed                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1e5640d2dbe8ef251e2bb479d46cc5f4fc59c1597ecd270e7941a88df6893b76>                                                       | Fresh AFA-203 implementation, review and PR stewardship             | Complete: [PR #234](https://github.com/afahy/fluent-measures/pull/234), reviewed head `0a33c40`, merge `77bd5ce`; 19 PR checks, pre/post-merge audits and all 12 exact-merge main CI jobs passed (run 42314274182, ci-ok 2026-11-06T23:54:24Z). Earlier validation at `9030111` and `5c9eab1` retained                                                                                                                                                                                                                                                                                                                                                                      |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:2d4a60308bdfb6191174b5f92be891f2f90bd42e44ea1218e394ed52840c6148>                                                       | Fresh AFA-116 signed other-type ownership and named test groups     | Source `1eb0a1b`; focused checks passed against `77bd5ce`. Independent review complete (125/126 agree; existing finding filed as AFA-241); full check and fresh changed-line mutation validation passed at `f80b4be`; [PR #235](https://github.com/afahy/fluent-measures/pull/235) merged as `b90ea36` from reviewed `28c3d21`; all 19 PR checks, exact-head Codex review, final audits and all 12 exact-merge main CI jobs passed (run 42319687195, ci-ok 2026-11-07T00:47:02Z). Ticket Done; merged worktree/local branch removed; audit `513b4c3` preserved. No successor assigned                                                                                       |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:462bb758094ab0a59a27217f4fb643589704bceca25e2bf1c7aba94be4f52c28>                                                       | AFA-202 Unicode-minus correction; handoff to existing AFA-62 owner  | Complete: [PR #236](https://github.com/afahy/fluent-measures/pull/236), reviewed `c819c48`, merge `e1d3a457`; 19 PR checks, exact-head review/late audit and all 12 exact-main CI jobs passed (run 42340992416, ci-ok 2026-11-07T05:08:57Z). Earlier source `93c7c72`/validation `b80d68a`, round-one `ac4970d`, round-two `d6e2ce7`, final backtracking correction `f50c9c5` and their full-check/mutation records remain above. Handoff goes to the existing AFA-62 owner; no duplicate session.                                                                                                                                                                          |
-| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/thread:delegated-task:command%3Amcp%3A18aad716-812d-4b59-b64d-35f626938eb1%3Adelegate-task%3Ae40d7c32-82cc-465c-b9b7-71af5f3f983d> | Existing AFA-62 compact heights and metric shorthand owner          | Work preserved during the AFA-202 hold. Normal fast-forward to exact main `e1d3a457` completed with the unchanged post-merge hook and no install; local changes reapplied from retained stash `6a09864090c14d25baba2141a4f0222d4ceb8c5f`. Then integrated test-only main `b632655` normally, retaining all nine calculator feature links; 342 focused tests pass. Initial commit `8660ec6` passed normal hooks and released the slot. Parent-arranged independent probe completed (129/136); focused corrections replay 136/136. `512cb75` and `2c3c693` validated; [PR #242](https://github.com/afahy/fluent-measures/pull/242), parent owns final review and integration. |
+| Session                                                                                                                                                                                 | Assigned work                                                       | Launch state                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:ab3e225544f4690efa2764d0a191792e86a687eff06d7b4e3bb8c5380b1b736d>                                                       | AFA-235 publication and review of this document                     | [PR #228](https://github.com/afahy/fluent-measures/pull/228) merged at `527f7b5`; main CI passed                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:9df9034c3ce42adbebf696dd9b9d990bec04b84a9494a53e3c9bf77d6c1fc1d4>                                                       | AFA-75, then fresh successor sessions for AFA-74, AFA-202, AFA-62   | [PR #229](https://github.com/afahy/fluent-measures/pull/229) merged at `fa73fd5`; all 12 main CI jobs passed; AFA-74 successor launched                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1a5f5b908ee23500b3eab3c85521ed6236b310c0f375af966f353457aef7d25e>                                                       | Original AFA-78 implementation and recorded successor queue         | Stopped for the maintainer-requested takeover; clean history preserved through `02d463a`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/thread:delegated-task:command%3Amcp%3A07e37d08-94dc-4f21-9274-996c2a7a8c00%3Adelegate-task%3A632fca4a-3251-4d46-b64c-68aa393e85be> | AFA-78 implementation takeover, final validation and PR preparation | Validated at `133aac5`; [PR #231](https://github.com/afahy/fluent-measures/pull/231) prepared for parent stewardship; no successor work                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/b61ed010-1655-4d08-b5ee-8c6e4d3e7ad4>                                                                                              | AFA-78 PR steward                                                   | [PR #231](https://github.com/afahy/fluent-measures/pull/231) merged at `ef39a7b`; all 12 main CI jobs passed; separate AFA-203 session launched                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:437846f95d8fc1b59e8b6aed92f360110a4df975347393dec096581adc8de82f>                                                       | AFA-236 finite conversion overflow                                  | F9 validated; [PR #230](https://github.com/afahy/fluent-measures/pull/230) merged at `b74d185`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:e814642ff8608ad682438ef18ee4080fc919744b9ea078fd9ad8e24e7597c9b4>                                                       | AFA-74; fresh AFA-202 then AFA-62 sessions after each merge/main CI | Complete: [PR #232](https://github.com/afahy/fluent-measures/pull/232), reviewed `70419bd`, merge `bfac12a9`; 19 PR checks, exact-head Codex review, final audits and all 12 exact-merge main CI jobs passed (run 42322049791, ci-ok 2026-11-07T01:11:17Z). Merged worktree/local branch removed; fresh AFA-202 successor launched. Earlier validation and AFA-242 comparisons retained                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:461b3a6bdd48f18b59aa264dedf46356fae143e0f5f4b90936f49716e134a37a>                                                       | AFA-107 inferred conversion underflow; no successor                 | [PR #233](https://github.com/afahy/fluent-measures/pull/233) at `7426e3e` implementation; full checks and independent probes pass; merged at `b76070d`; exact-merge main ci-ok passed                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:1e5640d2dbe8ef251e2bb479d46cc5f4fc59c1597ecd270e7941a88df6893b76>                                                       | Fresh AFA-203 implementation, review and PR stewardship             | Complete: [PR #234](https://github.com/afahy/fluent-measures/pull/234), reviewed head `0a33c40`, merge `77bd5ce`; 19 PR checks, pre/post-merge audits and all 12 exact-merge main CI jobs passed (run 42314274182, ci-ok 2026-11-06T23:54:24Z). Earlier validation at `9030111` and `5c9eab1` retained                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:2d4a60308bdfb6191174b5f92be891f2f90bd42e44ea1218e394ed52840c6148>                                                       | Fresh AFA-116 signed other-type ownership and named test groups     | Source `1eb0a1b`; focused checks passed against `77bd5ce`. Independent review complete (125/126 agree; existing finding filed as AFA-241); full check and fresh changed-line mutation validation passed at `f80b4be`; [PR #235](https://github.com/afahy/fluent-measures/pull/235) merged as `b90ea36` from reviewed `28c3d21`; all 19 PR checks, exact-head Codex review, final audits and all 12 exact-merge main CI jobs passed (run 42319687195, ci-ok 2026-11-07T00:47:02Z). Ticket Done; merged worktree/local branch removed; audit `513b4c3` preserved. No successor assigned                                                                                                                                                                                                                                                                                                                                                                   |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/mcp:launch:462bb758094ab0a59a27217f4fb643589704bceca25e2bf1c7aba94be4f52c28>                                                       | AFA-202 Unicode-minus correction; handoff to existing AFA-62 owner  | Complete: [PR #236](https://github.com/afahy/fluent-measures/pull/236), reviewed `c819c48`, merge `e1d3a457`; 19 PR checks, exact-head review/late audit and all 12 exact-main CI jobs passed (run 42340992416, ci-ok 2026-11-07T05:08:57Z). Earlier source `93c7c72`/validation `b80d68a`, round-one `ac4970d`, round-two `d6e2ce7`, final backtracking correction `f50c9c5` and their full-check/mutation records remain above. Handoff goes to the existing AFA-62 owner; no duplicate session.                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| <t3-thread://v2/b0cb576b-f55b-43bf-ab6f-c1c6d3eb2054/thread:delegated-task:command%3Amcp%3A18aad716-812d-4b59-b64d-35f626938eb1%3Adelegate-task%3Ae40d7c32-82cc-465c-b9b7-71af5f3f983d> | Existing AFA-62 compact heights and metric shorthand owner          | Work preserved during the AFA-202 hold. Normal fast-forward to exact main `e1d3a457` completed with the unchanged post-merge hook and no install; local changes reapplied from retained stash `6a09864090c14d25baba2141a4f0222d4ceb8c5f`. Then integrated test-only main `b632655` normally, retaining all nine calculator feature links; 342 focused tests pass. Initial commit `8660ec6` passed normal hooks and released the slot. Parent-arranged independent probe completed (129/136); focused corrections replay 136/136. `512cb75` and `2c3c693` validated; Complete: [PR #242](https://github.com/afahy/fluent-measures/pull/242), reviewed `efc60db`, merge `70f3169`; all 19 PR checks, exact-head review/final audits and all 12 exact-main CI jobs passed (run 42395577155, ci-ok 2026-11-07T17:23:48Z). Merged worktree/local branch removed; all three stashes and archive retained. Late AFA-250 findings remain unfixed; no successor. |
 
 AFA-202's third-round and late findings remain recorded above, including the separate deferred
 AFA-249 fuzzy-name and Unicode-mark cases. The fixed backtracking defect is included in
-`e1d3a457`; it is not part of AFA-249. The existing AFA-62 owner above continues the preserved
-work after the completed merge/main-CI gate. No replacement implementation owner was launched;
+`e1d3a457`; it is not part of AFA-249. The existing AFA-62 owner above completed the preserved
+work after the AFA-202 merge/main-CI gate, followed by its own final merge/main-CI closeout. No replacement implementation owner was launched;
 the required independent probe was arranged by the parent.
 AFA-249 remains Medium, unassigned and in Backlog, without a successor or queue assignment.
 All original session assignments remain historical.
@@ -2382,3 +2403,998 @@ describe('state machine audit', () => {
   });
 });
 ```
+
+## Approved policy revision: duplicate readings (AFA-250, 2026-11-07)
+
+This section describes the local, uncommitted first implementation slice based on
+`bfac12a943720390c60afd26a522cb67dfa20fa3`, not a merged revision. Approval is recorded in
+AFA-250 comment `fcdbc8e5-5ac2-4f00-9f0d-d15d41e74fa2`. The original b79eae0 inventory,
+M9 table, F1–F11 findings and harness above remain historical evidence.
+
+For this slice M9 no longer collects independent groups, discards zero groups, selects the
+first, or compares converted totals within 1%. Every adjacent part must satisfy the existing
+integral-larger/next-smaller/part-limit predicate; otherwise assembly returns null. One scalar
+or compound keeps its unit selection, conversion arithmetic and finite-result checks. The
+upcoming AFA-51 integration must also retain its `canJoin` boundary predicate.
+
+Thus `70 kg (154 lbs)` changes from 70 kg to null, and `100 cm (101 cm)` changes from 100 cm
+to null by explicit policy, not by correcting an old bug. AFA-170's recovered
+`5 ft 5 1-2 ft 0 in` and `inches 6 1-2 ft 6 in` likewise change from 65 in and 6 in to null
+because they depended on reconciliation. Their historical expectations remain recorded in
+`design/afa-250/corpus-before-duplicate-policy.jsonl`.
+
+Earlier M3/M7/M8 recovery still exists in this partial branch; zero-fragment omission,
+signed-field recovery, arbitrary prose and unselected height/weight pairs are not yet migrated.
+The full approved complete-entry policy will revise those transitions in later slices.
+Focused duplicate assertions fail on bfac12a (19 failures, seven valid controls pass) and pass
+on the local edit. Focused source/spec/corpus validation is recorded in
+`design/afa-250/implementation-slice.md`; 35 reviewed result-snapshot lines migrate to null.
+Parent integration and full checks remain pending a coordinator grant. No performance or size improvement is asserted.
+
+## AFA-250 full complete-entry preparation (2026-11-07, uncommitted)
+
+This appendix records an approved intentional policy revision at base
+`bfac12a943720390c60afd26a522cb67dfa20fa3`. It does not revise the historical b79eae0 audit,
+F1–F11 observations, harness, or the first duplicate-only preparation above. Maintainer approval
+is AFA-250 comment `fcdbc8e5-5ac2-4f00-9f0d-d15d41e74fa2`; the private numeric result seam was
+approved in `ef823540-ac68-4301-985f-8a19c8fe4982` after bounded draft-only failure reproduction.
+
+The prepared active transitions replace M3/M7/M8/M9 recovery and ownership policies: retain
+punctuation/unknown tokens, consume one whole scalar/compound or one valid selected height/weight
+pair, and reject any remaining fragment. There is no first-result/1% reconciliation, range
+reconstruction, field skipping, unsupported-unit adjacency scan, used-token pass, or fallback to
+an earlier label. Finite wrappers and complete forward numeric phrases are explicit grammar.
+Written zero parts stay in positive compounds; standalone zero never disappears to save a field.
+
+AFA-51's canJoin intent is preserved through allowed local joins: no arbitrary words, semicolon,
+range or other measurement can bridge compound parts. Its old callback/field machinery no longer
+exists in this prepared parser. This is deliberate supersession under the approved contract,
+not an assertion that the historical boundary bug or AFA-51 correction was unnecessary. Its
+AFA-88 draft gate is not waived. Existing attached ASCII height-unit hyphens and approved Unicode
+height joins remain distinct from spaced ASCII negative parts. Commas/brackets require explicit
+smaller units; future stone negative joins remain invalid.
+
+The shared number reader returns a complete value or null plus the first invalid supplied-token
+index, retaining skipped conjunction positions. A null value is never a recovered prefix. The
+ordered grammar may validate exactly one complete compound split or conjunction-separated pair
+at that boundary. The string adapter retains its existing signature. Six small resource tests
+first exposed repeated draft reads, then passed the existing parsed-character bound after the
+correction with nonzero shared-reader call counts. This is bounded evidence, not a general
+performance claim or a substitute for future full resource/mutation checks.
+
+See `design/afa-250/implementation-handoff.md` and its migration ledgers for current behavior,
+source seams, baseline failures, pending owner composition, and unblessed snapshot candidates.
+AFA-247 decimal/conjunction semantics, AFA-62's single compact split/aliases, AFA-251 early option
+validation/defaults, and AFA-254 units remain parent-owned composition. No AFA-88/140/141 rewrite
+or additional ticket is started. Historical contract-preserving fixes remain valid evidence.
+
+### Later AFA-247 numeric composition in AFA-250 (2026-11-07)
+
+The same uncommitted complete-entry branch now composes merged AFA-247 decimal semantics from
+`44135485609e80c1bc07fee26481d7c609fb58be` into its single private numeric-token reader. Original
+token indices, including skipped conjunctions, remain intact; failed whole phrases return null,
+and a compound may use only one validated boundary. The string adapter keeps its compatibility,
+while the complete-entry grammar still rejects incomplete conjunctions, unknown prose and signed
+fragments. No old ownership/range marker or backwards parser scan returns. Historical outputs,
+including deferred `age twenty point five: 80 kg` -> 20.58 kg, remain observations; the approved
+whole-entry expectation is null. Exact source hashes, bounded-work results and migration evidence
+are in `design/afa-250/decimal-composition/HANDOFF.md`. Other owner composition and final allocated
+validation remain pending; this appendix does not revise the earlier historical audit.
+
+### AFA-250 current-main composition — publication pending
+
+The same AFA-250 owner normally merged exact `70f31690c4835ab97d60bf4af9c7a48d2f57d878`
+with `--no-ff --no-commit`; no commit or hook ran. The original uncommitted implementation and
+all earlier design evidence are retained in stash `1f95af34f1edb8c001b9591ec4eb34aee0eb046f`
+and `/Users/afahy/.t3/artifacts/fluent-measures/afa-250-pre-main-70f3169/`. Publication remains
+pending the eventual AFA-250 PR; this is focused preparation, not a full-validation or merge claim.
+
+The coordinator-approved F6 closeout patch is incorporated above, preserving its original
+SHA256 `d31abc54fb61b36d990126e9518570c6cebb0a3f1c458abc65da1e5d198cea98`. The separately
+identified F9 ownership-row correction records verified #230 merge/main-CI completion while
+retaining the `ecf7a2e` source/validation baseline. Exact layer evidence is in
+`design/afa-250/main-composition/historical-closeout-proof.json`, `F6-closeout.original.patch`
+and `F9-ownership-closeout.patch`. The original main audit was an exact prefix before those
+approved closeout edits. Original harness, 22 probes, 11 groups and deferred findings remain.
+In particular, the late #242 findings remain historical unfixed findings at its merge.
+
+Under the separately approved AFA-250 policy, current transitions now use the existing ordered
+complete-entry cursor. AFA-62 contributes its single compact split before comma/fraction
+normalization, with Unicode letter/number/mark identifier guards, and cms/kgs aliases.
+Bare metric parts obey the cursor's integral/size/positive bounds and explicit suffix ownership;
+written zero larger parts stay in matches. Invalid remaining parts reject the entry. F3's
+existing Unicode height connectors after a comma, including prefix labels, join only an
+explicit eligible smaller part. Literal ASCII signs, ineligible compounds and stone signs are
+not reinterpreted. No old field/used-token/range-reconstruction scan was restored. The reviewed
+private number reader and its supplied-token coordinates remain byte-identical.
+
+The composition baseline had 61 failures and 463 controls across the explicitly selected
+complete-entry/compact/F3-label suites; after the two bounded source changes all 524 passed.
+The selected eleven number/decimal suites passed 410 tests, including non-vacuous actual-reader
+work bounds. All 14 archived late #242 inputs now satisfy independently specified AFA-250
+outcomes: valid selected metric pairs retain 180 cm; duplicate heights, signs and fragment
+recovery reject. Twenty-six additional connector/selector controls preserve explicit smaller
+units, signs, bounds, both pair orders and type/normalizedUnit selection. These are semantic and
+work-count checks, not timing or user-accuracy measurements.
+
+The final authored corpus contains 2,007 rows: 2,006 agree with their independent labels, no
+misses or throws, and the previously recorded `5.11 ft` label mismatch remains. Its committed
+report snapshot is intentionally not approved or replaced. The existing result snapshot and
+all earlier candidate evidence are also unchanged. Calculator's 37 fixtures/harness, the F3
+long-input timing file and timing helper are exact-main bytes. Current spec/docs and feature
+maps follow the approved complete-entry rules while preserving the Atlas/#243/#244 layout.
+API 251/252/253 and stone 254 remain separate composition steps. Independent probing and full
+coverage/mutation/build/package/size/hook validation remain pending coordinator allocation.
+
+### AFA-250 checkpoint and independent prefix correction — publication pending
+
+The preparation above was subsequently committed with normal hooks as
+`fd3ce2361737438ddc3df268df640793f0ef4a30`, with parents `bfac12a` and `70f3169`.
+The reviewed result snapshot was adopted from independent policy and arithmetic evidence;
+its SHA256 is `ebae8b38c96ac61050493a71b98c08244a84cfb12114005499f5b2684d97a269`.
+The `5.11 ft` label was corrected to 5.11 ft by independent arithmetic, retaining the old
+label and note in the evidence archive. This was an oracle correction, not a runtime fix.
+All 481 design files were preserved outside the checkout at
+`/Users/afahy/.t3/design-evidence/afa-250/t3-1a8416c0/design/`; earlier relative evidence paths
+refer to that retained tree. The original F6 patch, F9 layer and stash remain intact.
+
+A new isolated probe froze 302 expectations before comparing that checkpoint with exact
+main `70f3169`. Ten approved inputs returned null only on the checkpoint: the six selected
+weight pairs `cm: 181 and 72 kg`, `kg: 72 and 181 cm`, `in: 73 and 160 lbs`,
+`feet 6 and 72 kg`, `m: 1.81 and 72 kg`, `pounds 160 and 73 in`; and the four scalar entries
+`kg seventy two.`, `pounds six and a half.`, `m: one point eight.`, `in: seventy three.`.
+Their expected values follow the approved prefix-unit, complete-pair and final-period rules.
+The frozen main results retain 220 agreements and 82 disagreements with the new contract;
+those disagreements are not all null transitions. The immutable probe is separate from the
+same-owner correction replay.
+
+The correction refines the current M2/M4/M5/M9 replacement transitions as follows:
+
+| State or boundary                                                         | Required transition and invariant                                                                                                                                                                                         |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Prefix unit followed by a complete number                                 | A successful whole phrase keeps priority. If the shared reader instead identifies an invalid numeric group at `and`, validate the complete left number once and leave the conjunction for the existing expression cursor. |
+| Conjunction left at a prefix-part boundary                                | The cursor must consume an eligible compound or a complete selected height/weight pair. The left prefix alone cannot make an invalid remaining expression succeed; no later split search is allowed.                      |
+| Number word, multiplier or `half` followed by a period                    | Retain the numeric token and period with their original normalized offsets. The number reader stops at standalone punctuation; the expression owns its permitted final period. Unit-label periods remain unchanged.       |
+| Internal or repeated periods, missing selector, invalid second expression | Reject the complete entry. Do not erase punctuation, discard a field or return a numeric fragment.                                                                                                                        |
+
+The dedicated prefix suite failed 29 assertions and passed 45 controls before correction,
+including all ten reported failures. Final named source suites pass 662 tests; snapshot and
+corpus suites pass 33. The frozen replay changes 292 agreements and ten misses to 302
+agreements. A separate 243-path full-result comparison changes exactly 42 paths over 24
+literals from null to independently justified values; raw input, written matches and symmetric
+selectors are asserted. All 2,007 prior corpus rows are byte-identical; 57 authored cases give
+2,064 agreements. The approved generated result snapshot remains byte-identical.
+
+The shared number reader, supplied-token indices, normalization and single compact split are
+unchanged. Existing reader-work tests and new prefix-pair cases at sizes 8, 16 and 32 assert
+positive actual-reader calls and the existing parsed-character bound. These are focused
+semantic and work-count results, not full validation, bundle measurements or performance claims.
+The missed default assertion for `1.8 (m), 80 kg` now follows the already-approved selector rule,
+with four positive selector controls; its runtime result did not change in this correction.
+
+Exact patches, hashes, immutable-probe checks and changed-result ledgers are retained in
+`/Users/afahy/.t3/design-evidence/afa-250/t3-1a8416c0/prefix-correction/` and ticket comment
+`93599fde-bad9-4937-ab27-9606ae99e88a`. This correction is uncommitted at this review point;
+final committed-source validation and publication remain pending. AFA-250 remains its own
+ticket/PR, without API or stone composition. Historical F6/F9 completion and deferred findings
+above are preserved; publication of their closeout layer remains pending the same AFA-250 PR.
+
+### AFA-250 allocated validation follow-up — publication pending
+
+The prefix correction and preceding audit were committed with normal hooks as
+`7c32bbbc7b7c162b829cc82b83f19e8604bccc32`. Hooks changed only Markdown table formatting;
+every cell and prose line was verified against the parent-reviewed audit. Frozen installation
+left dependency metadata and the lockfile unchanged. The first full check stopped during
+unit coverage with 5,176 passes and seven failures; no later stage ran in that attempt.
+
+Six failures were missed assertions from the retired extraction policy: three consecutive
+calls for `my son is two, thirty pounds`, `phase twenty, 5 kg` with default/weight selection,
+and `180 lbs, top 10 in the class` with default/height/weight selection. Their exact literals,
+options, retry counts and old expectations are archived. They now assert complete-entry null.
+
+The seventh exposes a configuration-error-order consequence of retaining punctuation:
+`parseMeasurement(',', { type: 'height', normalizedUnit: 'kg' })` now throws the existing
+`normalizedUnit kg is not a height unit` error instead of returning null. The parent approved
+this exact disposition. A comma with default options and empty input with contradictory
+options still return null. No other punctuation-only result is claimed here. This is not a
+numeric fix or AFA-251's separate default-unit/early-validator implementation.
+
+The package reproduction found 24 failing private-reader spy assertions, with 146 semantic
+passes: ESM/CJS builds cannot call a separate source-module spy. All public malformed-run
+cases remain in package-selected tests. The unchanged positive-call and parsed-character
+assertions now live in source-only `numberReadingWork.test.ts`; no test is skipped and no
+package selector is weakened. The same 170 ESM/CJS cases then pass, alongside 297 focused
+source tests. Historical failure logs remain separate from these passing runs.
+
+Source coverage exposed two redundant branches. After nonempty normalized text, the private
+stream necessarily contains a token: normalization either rejects the whole entry or retains
+a non-whitespace character, and the token stream retains every such character. The earlier empty
+normalized-text guard remains. The comma/Unicode join is called only for current `NEXT_PART`
+keys ft and m, so its non-height alternative is unreachable. Extending that table with stone
+requires an explicit height-only join policy at composition: stone minus, Unicode-minus and
+comma/Unicode-negative components must not borrow the ft/m connector invariant. No stone
+support or normalization change is made here.
+
+Policy-derived controls cover mismatched unit brackets, nested expression wrappers and a
+missing colon after the fixed weigh-in introduction. All 3,665 parser-facing tests then pass
+with 100% statements, branches, functions and lines. This targeted report is not the final
+full-check/mutation report. Twenty additional authored corpus controls retain all previous
+2,064 rows byte-for-byte, giving 2,084 expected agreements. Full committed-source validation
+and PR publication remain pending at this checkpoint; evidence is archived outside the
+checkout under `final-validation/` beside the earlier design/probe/correction archives.
+
+### AFA-250 failed mutation and focused correction — publication pending
+
+Normal hooks committed the validation follow-up as
+`7ffc2e49d4ecd553a2b5fcc969ec06b137d8ccc5`. The earlier editorial commit attempt failed
+spelling; an orchestration error then launched a non-qualifying lint-only check on the dirty
+checkout. Both logs remain separate. The subsequent clean committed-source full check passed
+5,202 tests, 100% coverage and TypeScript, then stopped at the default non-incremental mutation
+stage: 1,438 killed, 55 timed out, 185 survived, one uncovered and one ignored, score 88.92%.
+No build, size, API or package stage ran in that full check. All eight selected source files
+and all six report source bodies were verified against the committed bytes. The failed report hash is
+`d71974c73c822e45cf3c961c84b33405f28722fcf27eb72b0807b3b22af66c02`.
+
+The coordinator's scheduling hold began at the failed-stage boundary. Every owned process
+group was verified empty and the allocation was explicitly released. Subsequent work here is
+focused source testing and static diagnosis only; no new mutation, coverage, full check,
+build, install or hook run is claimed.
+
+Two focused regressions expose a real prefix-compound result defect: `ft five 0 in` and
+`m: one 0 cm` returned null. The approved written-zero rule requires 60 inches with matches
+`[5 ft, 0 in]` and 100 centimeters with matches `[1 m, 0 cm]`, respectively. Their failing-first
+assertions and two new corpus rows are retained. Smaller-part validity now belongs to the
+existing expression cursor, including explicit zero, integral larger values, upper bounds,
+signs and dimensions. This result-changing fix is separate from redundant-code cleanup.
+
+The cleanup removes the unused unsupported-unit regex, unused label-map values and unused
+wrapper default. It centralizes part and pair validation in their existing cursors, retaining
+one bounded numeric split and the original shared reader. The supplied-token index contract,
+compact split and normalization remain unchanged. Current compound joins rely on `NEXT_PART`
+containing only ft and m; later stone composition still requires explicit height-only sign
+and bare-part eligibility. Nested compound-part brackets remain valid, while nested whole-entry
+wrappers and incomplete phrases remain invalid. Individual failed-report mutant dispositions
+record the precise caller and token preconditions; none is a blanket equivalence exclusion.
+
+The final focused candidate passes 795 tests in 12 named source files, including real-reader
+positive-call/work bounds, the approved generated result snapshot and the corpus report.
+All 2,084 previous corpus rows remain byte-identical; the two arithmetic regressions give
+2,086 expected agreements. The frozen 302-input probe and the separately authored 243 full
+results are replayed without changing their expectations. An initial trial incorrectly
+expected `.5 in .` to reject; it remains archived as a test-oracle mistake, not a production
+bug. Both `.5 in .` and `kg .5 .` retain the approved 0.5 final-period result.
+
+The complete failed-report disposition ledger, focused logs, replay and source hashes are
+under `final-validation/mutation-corrections/` in the external evidence archive. Fresh exact
+committed-source mutation and final validation remain pending a new coordinator grant. No
+mutation-kill, performance or final-readiness claim is made from these focused results. F6/F9
+historical closeout and all earlier deferred findings remain intact; publication is pending.
+
+### AFA-250 second mutation report and wrapper boundary — publication pending
+
+The next coordinator grant committed the focused correction as
+`329deb9950c812025aebd59513e64436f18a12ec`. Normal hooks passed without a file delta.
+Its fresh clean-source full check passed 5,285 tests, 100% coverage and TypeScript, then
+stopped at mutation: 1,411 killed, 42 timed out, 36 survived, none uncovered and one ignored,
+score 97.58%, below the unchanged 98% threshold. No build, size, API or package stage ran.
+The actual report hash is
+`af6e738cf4b9a4a4305ba60b43029c17331dbb59eb8bd9c1c8f1166bd0609330`;
+all eight selected sources and six report bodies match that commit. This failed run remains
+separate from every earlier failed or partial run.
+
+The follow-up fixes one real wrapper-boundary defect: a closing entry quote could be read
+as the suffix unit of its final bare smaller part. The existing part cursor now checks
+`at < limit` before reading a suffix. Both ASCII quote styles preserve `5 ft 11` as
+71 inches with `[5 ft, 11 in]`, and `1 m 80` as 180 centimeters with `[1 m, 80 cm]`.
+The four bare quoted forms and both selected pair orders produce 20 corrected paths from
+`329deb99`; explicit smaller-unit counterparts and malformed quote controls are preserved.
+The original two-failure run was on dirty preparation source, not exact main or the commit.
+A separate source-pinned replay on `329deb99` confirms all 20 failures. Exact main `70f3169`
+already passes `ft five 0 in` and double-quoted `5 ft 11`; it drops the zero part from
+`m: one 0 cm` (1 meter with one match) and rejects single-quoted `1 m 80`. These controls
+are separate from branch-introduced regressions and the earlier written-zero correction.
+
+Remaining cleanup retains a single bounded number split and the shared reader. The two
+wrapper loops use exclusive equality bounds: their cursors advance by one, begin no later
+than the limit, and cannot pass it. Unwrapped expression calls retain the full token limit;
+bounded recursive calls are wrapped and skip that loop. The outer limit changes only
+immediately before a break. The redundant join-start bound is removed, but a null join
+still rejects; an excluded closing token cannot advance the join, and an empty bounded
+numeric phrase cannot form a part. Additional empty reader attempts are bounded and remain
+covered by the positive-call and parsed-character assertions.
+
+The local `next.end <= limit` guard is retained. Two new malformed-wrapper controls,
+`„0 ft “11”` and `‚0 m ‘80’`, return null with default and valid normalized units. With
+today's unsupported JavaScript `normalizedUnit: 'st'`, they also return null because the
+zero first part cannot reach conversion. Applying only actual mutant 853's replacement
+causes premature inch/centimeter conversion errors; the exact source was then restored.
+This is stronger coverage of an existing guard, not a production fix. The separate early
+validation and stone work must revise the unsupported-unit premise when those changes land.
+
+Three individually justified annotations cover only the invalid-article object, invalid-quote
+object and adjacent-conjunction arithmetic alternatives (actual mutants 99, 376 and 134).
+The conjunction reader backs either adjacent member to the same run boundary. No bound-wide
+EqualityOperator annotation, threshold change or blanket survivor exemption was added.
+New independent controls cover semicolon/sign rejection, repeated decorations and depth
+inside a valid wrapped pair. The actual-report disposition ledger does not claim new kills.
+
+The focused follow-up passes 971 tests across 14 named source files. All 302 frozen probe
+results and 243 authored full results remain unchanged. Another 128 independently specified
+full results pass, including raw input and matches; their exact-main and `329deb99` outputs
+are recorded separately. All 2,086 prior corpus rows remain a byte-identical prefix, with
+128 additions giving 2,214 expected agreements. The approved generated result snapshot is
+unchanged. The corpus report counts are derived from independent labels, not observations.
+Evidence is under `final-validation/actual-survivor-followup/` in the external archive.
+Fresh committed-source validation is still required; these focused results make no mutation
+score, performance or final-readiness claim. Historical F6/F9 publication remains pending.
+
+### AFA-250 qualifying local validation — publication pending
+
+The wrapper correction committed as `14ba82d12d429cf255df76cc7ce33e8ae5ea01f5` with
+normal hooks and no formatting delta. Its clean `pnpm check` passed lint, 5,319 tests in
+126 files, 100% coverage (444 statements, 477 branches, 55 functions and 364 lines),
+TypeScript, the build, size limits, unchanged exported API and 7,106 ESM/CJS package tests
+in 136 files. Mutation scored 99.86%, but the separate changed-line check correctly rejected
+one parser survivor: bypassing a successful prefix return reread the same numeric phrase.
+That report remains archived as a passed full command with a failed changed-line gate,
+not as the qualifying final mutation report.
+
+A test-only follow-up, `54b1e1deffb45df1760babf107591b59aadfc9fc`, adds three source-only
+actual-reader assertions: `kg seventy two`, `m: one point eight` and `ft five` each require
+one nonempty numeric read. Empty end-boundary attempts remain allowed. Their values and
+written matches are independently 72 kg, 1.8 m and 5 ft; public counterparts remain package
+selected. Applying only actual mutant 507 made all three work assertions fail (two reads
+instead of one); original source was restored exactly. This changes no production result,
+corpus label, snapshot, API, ignore directive or threshold. The focused source checks pass
+106 tests, and the ESM/CJS counterpart checks pass 182 tests. It is a work-count regression
+check, not a wall-clock performance claim.
+
+The necessary fresh default non-incremental mutation run on that clean test commit scored
+99.93%: 1,392 killed, 43 timed out, one survivor, none uncovered and four ignored. Mutant
+507 is killed by the new `kg seventy two` reader-work assertion. The only survivor is in
+`matchUnit.ts`, whose source is byte-identical to pinned main; matching policy remains
+separate work. All changed-line mutants pass the existing gate. The four ignores are exactly
+the three individually reviewed parser alternatives and the existing invalid-comma replacement.
+The report hash is
+`5776027e0cbea85b9dab1f74feb0d36482b8ca047836c2d297fcde99734d57cc`.
+Every byte of all six report bodies and all eight selected sources matches the commit.
+
+Both validation commits have source tree `61386e4089549953d55dcac9a7dc54e04f7a79bb`;
+the final tested tree for tests is `1f0ae4c3704a94eb093b438ff4432b206c92c1b4`.
+The successful full check, build/API/full-package evidence on identical production source
+and the new committed-test mutation evidence are deliberately recorded with their own SHAs.
+No redundant unchanged-source full check was substituted for that distinction.
+
+A fresh build of exact main `70f31690c4835ab97d60bf4af9c7a48d2f57d878`, using the same
+frozen toolchain, measures 5,736 bytes ESM and 5,795 bytes CJS after minification and Brotli.
+The final build measures 4,581 and 4,630 bytes respectively. Both stay below the unchanged
+6,000-byte limits; this is bundle-size evidence only. Build inputs, outputs, logs and exact
+source hashes are preserved under `final-validation/` in the external evidence archive.
+All earlier failed/partial reports, independent oracles, original audit findings, historical
+F6/F9 closeout and deferred findings remain preserved. Local validation does not publish the
+audit to main or establish hosted PR readiness; publication remains pending.
+
+### AFA-250 PR handoff — publication pending
+
+The complete-entry implementation is proposed in
+[PR #247](https://github.com/afahy/fluent-measures/pull/247), opened from feature commit
+`5cbd7ed91b28d8fedc9d97096ea47342e58c9db1` after normal push hooks passed 5,323 unit tests,
+TypeScript, build and size checks. The URL handoff changes audit text only; source tree
+`61386e4089549953d55dcac9a7dc54e04f7a79bb` and test tree
+`1f0ae4c3704a94eb093b438ff4432b206c92c1b4` retain the validation above.
+The sole unchanged matching survivor can affect higher fuzzy settings; it is not globally
+equivalent or fixed by this PR. Hosted checks, review, qualifying merge and exact-main CI
+remain with the parent. At this local handoff, F6/F9 audit publication is pending: a feature
+push or an open PR does not publish the historical closeout to main.
+
+### AFA-250 first PR review corrections — focused evidence only
+
+Published `7dcd18e140869304a45638c00eaaf4b4bdcfa6f7` rejected `(180 cm).`, `[180 cm].`,
+`about (180 cm).` and `m: one and eighty cm`. All four now have failing-first regression
+records and policy-derived full-result assertions. Exact main `70f3169` returns 180 cm
+for these inputs, but its metric prefix result has only `[180 cm]` in `matches`; the
+corrected compound retains the written `[1 m, 80 cm]`. This provenance change is distinct
+from restoring its total. The existing wrapper cursor owns one external final period;
+a period on each side, as in `(180 cm.).`, still rejects.
+
+A successful prefix phrase followed by its explicit smaller unit can use the first
+conjunction as a compound boundary. The unit lookahead must start and end within the
+expression limit, so an excluded closing quotation cannot become inches. This adds one
+bounded walk over the already-read numeric token span, stopping at the first conjunction,
+and one bounded left-phrase read; it is not a retry search or a normalization pass. The
+cursor advances by one over a fixed span and never retries another conjunction. The
+existing supplied-token failure boundary still handles an invalid whole phrase. Numeric
+reader spies count numeric work, not this token walk. Successful unanchored scalars still
+use one nonempty shared-reader call, including half and multiplier controls.
+
+The explicit interpretation also means `m: one hundred and eighty cm` is 10,080 cm with
+`[100 m, 80 cm]`, while `m: one hundred and eighty` remains the complete 180 m scalar.
+`m: one and eighty and five cm` is 185 cm with `[1 m, 85 cm]`; the complete larger phrase
+in `m: one hundred and one and eighty cm` instead yields `[101 m, 80 cm]` and 10,180 cm.
+These arithmetic and boundary choices are explicit in the review ledger.
+
+The separate 133-case ledger records 53 null-to-valid paths and 80 full-result controls
+against published `7dcd18e`; against exact main it records 70 full-result changes and 63
+controls, including match provenance. All 2,214 prior corpus full objects and all 243
+earlier authored full objects are unchanged. All 302 frozen probe expectations still
+agree, but seven wrapper-period objects change from null to 72 kg within their original
+allowed alternatives. That permissive oracle did not assert rejection; its archive is
+unchanged. A separate seven-row ledger and strict positive tests preserve this distinction.
+Five match main; ASCII-quoted weight entries correct main's 72 in/72 ft to the written 72 kg.
+
+The new corpus has 140 appended rows; all 2,214 earlier rows remain a byte-identical prefix.
+Its 2,354-row report counts come from independent fixture labels. The approved generated
+result snapshot remains unchanged. Focused evidence comprises 1,029 source tests before
+the seven supplemental cases and a final 206-test run covering those cases, work bounds,
+corpus, result snapshot and feature links. Captures pin all eight source bodies for main,
+published and candidate sources, with temporary observation changes restored. Full-result
+oracles, both ledgers, captures, exact hashes and verification limitations are archived in
+`final-validation/review-round-1-corrections/` under the external evidence root above.
+No fresh full check, coverage, mutation, build, package or size result is claimed for these
+corrections. Prior successful evidence retains its original SHA. F6/F9 publication remains
+pending; the parent owns hosted replies, final validation allocation and qualifying merge.
+
+The first review-correction full check on clean `3f608c6d26ee1b8bc2afdfdea7beedad78781fbe`
+passed 5,474 tests in 127 files but stopped at branch coverage (496/497). No later
+TypeScript, mutation, build, package or size stage ran. Its exact coverage/source evidence
+is retained under `final-validation/review-round-1-validation/` in the external archive.
+The uncovered arm rejects a quoted whole number when its internal conjunction cannot
+become a compound separator: `m: "one and eighty" cm` is not `[1 m, 80 cm]`. Eight new
+policy-derived assertions distinguish that invalid duplicate-unit form from
+`m: "one" and eighty cm`, the existing `m: one and "eighty" cm`, and a quote around the
+entire qualified entry. Raw strings and full written matches are checked. The new corpus
+has 2,362 rows, preserving all earlier 2,354 bytes before eight appended controls.
+These additions change tests and audit evidence only; production source is unchanged.
+Actual mutation outcomes remain pending; reaching the arm does not establish a mutant kill.
+
+### AFA-250 actual first-review mutation follow-up — not yet qualified
+
+The necessary fresh full check on `6a024c9a07b40b085c9c4901b9649ae3250fcbcf` passed
+5,482 source tests, 100% coverage, TypeScript, build, API, size and 7,404 ESM/CJS tests.
+Its actual non-incremental mutation report has 1,441 killed, 47 timed out, seven survivors
+and four existing reviewed ignores (99.53%). Report SHA256
+`c6083d5385e1b834c278f3b098b56a8dcc70624e0e0b8fbe40a2203d826003cb` has eight selected
+sources and six byte-verified source bodies. The separate changed-line gate failed six
+new prefix alternatives; overall command success was not treated as qualification.
+
+Actual 523 exposed the same prefix/conjunction cause for selected pairs: `m: one and eighty kg`
+requires 1 m or 80 kg according to the selector, and null without one. A following explicit
+unit now anchors a compound or pair; the existing expression/root still enforce smaller-unit
+bounds, valid positive expressions, different pair dimensions, full consumption and a selector.
+Eighty-eight independent rows cover both orders, both selector paths, normalization, duplicates,
+unsupported units, signs and defaults. Sixteen null-to-valid paths change from `6a024c9a`,
+with 72 preserved full objects; exact main has 51 changes and 37 full-object controls.
+All earlier 2,362 corpus objects and all 302 frozen/243 authored objects are unchanged by
+this follow-up. The seven earlier permissive-probe transitions remain separately disclosed.
+The corpus now contains 2,450 rows and keeps the prior bytes as a prefix.
+
+Actual 510/512 were redundant with the retained unit-end guard: successful `readUnit`
+results have end greater than start, so end within the expression also places the start
+inside it. Non-consuming fixed-size lookahead may inspect a bracketed unit and following
+assignment punctuation; an excluded closing mark is never accepted as part of the unit.
+The ordinary suffix `at < limit` guard remains unchanged. The first-conjunction loop now
+uses an exclusive endpoint: a successful number guarantees start no greater than end,
+the cursor advances only by one, the endpoint never changes, and the first conjunction
+returns immediately. This removes actual 527's redundant extra endpoint iteration.
+
+Actual 520 is behavior-changing and its guard remains. For `"ft zero and a half ["]`,
+default, height and centimeter options reject; current unsupported JavaScript option
+`normalizedUnit: 'st'` retains `Cannot convert ft to st`. Exact main instead extracts
+0.5 in (1.27 cm when normalized) and throws `Cannot convert in to st` for the unsupported
+option. That message difference is explicit historical evidence. This preserves current
+conversion-error order, not a valid malformed measurement or permanent stone policy;
+AFA-251/254 retain their separate validation/unit decisions. Actual 536 adds two redundant
+numeric rereads after the quoted-left failure: four nonempty reader calls versus two.
+Positive-call work assertions distinguish its exact replacement while public results remain null.
+No new ignore or threshold change was added. The 909-test focused run and captured exact
+replacements establish bounded evidence, not fresh mutation qualification. All earlier
+failed/partial reports and F6/F9 publication-pending history remain unchanged.
+
+### AFA-250 first-review corrected-source qualification
+
+Clean `4a04e92be6f87485702c123eb69af596e82d3c51` passed the fresh serial `pnpm check`
+on November 7, 2026. The source tree is `8f9c06c9e61bc5951d484f59bccf320cb3dd1019`
+and test tree is `8708fd3fff968b603f54ef8854e8d2d066e88724`. All 319 committed file
+hashes remained unchanged through the run. This qualifies the corrected source separately
+from the earlier `6a024c9a` command success whose changed-line gate failed.
+
+The run passed 5,575 source tests in 127 files, TypeScript, and 100% coverage: 454 statements,
+494 branches, 55 functions and 374 lines. Fresh default non-incremental mutation scored
+99.93%: 1,435 killed, 50 timed out, one survivor, no uncovered mutants and four ignored
+alternatives. Report SHA256
+`eec8143a7a5034614aceb28d83f6b8b762307821fc7ab054d80e3e21d7d82da4` selects all eight
+sources; all six report source bodies equal the committed and live bytes. The four ignores
+match the prior reviewed alternatives exactly. The official changed-line gate passes against
+pinned main `70f3169`. The sole survivor remains actual 40 in unchanged `matchUnit.ts`;
+removing its initial anchor can affect higher fuzzy settings, so it is not globally equivalent
+or fixed here. No threshold, assertion or exclusion was weakened.
+
+The actual report kills the retained unit-end guard alternative (514) and the failed-left
+retry alternative (527). The latter is caught by the positive-call reader test: four nonempty
+reads instead of the required two. Removed redundant conditions have no claimed kills;
+their caller proofs and the selected-pair behavior correction remain recorded above.
+Build, unchanged exported API and all 7,582 ESM/CJS tests in 138 files passed. Exact sizes
+are 4,668 bytes ESM and 4,706 bytes CJS, minified and Brotli-compressed, versus the preserved
+same-toolchain pinned-main build's 5,736 and 5,795 bytes. The 6,000-byte limits are unchanged.
+All eight baseline source files, shared build/lock settings and six baseline/final build
+outputs were reverified. These measurements make no speed or accuracy claim.
+
+A prior run on the same `4a04e92` stopped during coverage when the unchanged Git-isolation
+nested suite timed out after 180,023 ms. Its 5,574 passing tests, sole failure, full nested
+output, source pins and empty process group are archived; no coverage report or later stage
+was produced. One unchanged targeted diagnosis passed all 11 tests, with the nested suite
+at 100,499 ms on Node 24.21.0. The fresh qualifying full run passed that suite at 99,550 ms.
+The original timeout's cause remains unexplained; no contention or intermittent-defect
+classification is inferred. The real timeout, assertions and configuration were unchanged.
+
+The 133, seven, eight and 88 review ledgers retain 236 rows across 235 distinct input/options
+paths, with 130 full-result changes and 105 controls against exact main. Their one overlap
+is explicit; the unsupported-option error-message comparison remains separate. All earlier
+2,362 corpus objects, 302 frozen objects and 243 authored objects are preserved by the final
+selected-pair correction. The earlier seven permissive-probe changes remain disclosed rather
+than described as identical results. The 2,450-row corpus and approved generated snapshot
+passed; all historical fixtures, ledgers and failed reports remain in the external archive.
+
+Exact logs, report, source-byte verification, size comparison and self-review are under
+`final-validation/review-round-1-validation/`. Normal publication hooks and the final feature
+push are the next local steps. PR #247 remains subject to hosted review and qualifying merge;
+F6/F9 historical audit publication remains pending until that merge.
+
+### AFA-250 second PR review corrections — focused evidence only
+
+Published `87039159e1aea4de27165a5c701e7b89b8e22b41` rejected six approved complete
+entries: `(180 cm) tall`, `height is (180 cm) tall`, `about (5 ft 11) tall`, `“5 ft 11”`,
+`kg 72.5.` and `kg: ½.`. Exact main `70f3169` returns their independently expected full
+objects: 180 cm, 180 cm, 71 in, 71 in, 72.5 kg and 0.5 kg, with written matches preserved.
+All six have failing-first records and strict regression/corpus assertions.
+
+The existing wrapper completion now owns one outer height `tall` suffix, rejecting weight
+and duplicate suffixes. A prior standalone period still cannot precede that suffix. Dotted
+unit spellings remain units: `(72 in.) tall`, `(180 cm.) tall` and `(180 cm.) tall.` retain
+their complete scalars. An outer `tall` owns its own final period, attached or separated by
+space. Without that suffix, the existing double-period guard still rejects `(180 cm.).`.
+No global dot count or additional scan was introduced.
+
+The existing curly-mark normalization expression uses its quotation-context guard for both
+numeric and word endings. A closing whole-entry quote therefore cannot become an inch or
+feet mark merely because the smaller component is bare. The separate quoted-feet and compact
+mark controls remain intact. The unused numeric-only quotation pattern was removed; no new
+normalization pass or general quote policy was added. The existing token split retains a
+period after a complete decimal as punctuation. Malformed dot runs remain invalid, and the
+established `72. kg` numeric spelling stays unchanged. The shared number reader, its supplied
+indices, public types, option policy and single compact split are unchanged.
+
+An initially authored `(180 cm.) tall` null assertion was a trial-oracle error: it confused a
+dotted unit with a standalone terminator. The parent resolved it from existing spelling and
+wrapper rules. The original assertion, six proposed trial records and failed candidate/main
+trial commands remain archived; their observed outputs did not supply the corrected oracle.
+Likewise, the private `5.5. ft` token expectation now retains `5.5`, `.`, `ft`, while the
+public result remains null because the period interrupts the number/unit expression.
+
+The final 155-path ledger has 58 null-to-valid changes and 97 full-object controls against
+published `87039159`; exact main has 63 full-object changes and 92 controls. It combines the
+154 corpus additions with the extra `(72 in.) tall . .` public null control. The latter
+already rejects on the published branch; exact main recovers 72 in, contrary to the approved
+one-period/complete-consumption rule. All 2,450 prior
+corpus objects and all 243 earlier authored objects are unchanged. All 302 frozen allowed
+outcomes still agree, but two full objects change from null to their independently permitted
+positive alternative: `my height is (181 cm) tall` and `I am “six feet” tall.`. Both match
+exact main; a separate two-row ledger and strict new positives retain this oracle limitation.
+The other 300 frozen objects and every original fixture byte remain unchanged.
+
+The corpus now has 2,604 rows, preserving all 2,450 earlier rows as a byte-identical prefix.
+Its report counts derive from fixture labels; the approved generated snapshot is unchanged.
+The 16 named focused suites pass 1,484 tests, including scalar one-read and positive-call
+reader bounds, mark/quote controls, compact notation, corpus and result snapshot. Exact
+source-pinned observations, arithmetic/oracle ledgers, failed trials and process proofs are
+under `final-validation/review-round-2-corrections/` in the external archive. This is focused
+evidence only: `4a04e92` full-check/report qualification remains historical for the changed
+source. Fresh full validation, mutation, package/build/size and publication hooks require a
+separate coordinated grant. F6/F9 publication remains pending until the qualifying merge.
+
+### AFA-250 second PR review — qualified source before final push
+
+Clean source commit `8a2f17f603c3f32eff93897ae5615f1c0bc39e7b` passed one fresh
+`pnpm check` after the reviewed focused corrections. All normal correction-commit hooks
+passed without changing the approved candidate. The existing installed checkout retained
+Node 24.21.0, pnpm 10.10.0 and the verified frozen package/lock/lifecycle setup; no new install
+or borrowed dependency tree was needed.
+
+The source suite passed 5,739 tests in 128 files. Coverage is 100%: 461 statements,
+507 branches, 55 functions and 381 lines. The real Git-isolation test passed in 101,870 ms
+with the unchanged timeout and assertions. Type checking, build, exported API comparison and
+all 7,894 ESM/CJS package tests in 140 files passed on that same committed source.
+
+The default non-incremental mutation report SHA256 is
+`fbb27625cd764b24b52a0b201a666af731d866cc6a1901bdebf94acf311778e8`.
+It records 1,482 killed, 50 timed out, one surviving and four ignored alternatives, scoring
+99.93% with unchanged thresholds. All eight selected source files are pinned to the commit;
+every byte of the six source bodies in the report matches the live and committed source.
+The four existing reviewed ignore signatures, original source expressions and reasons are
+unchanged. The official changed-line gate against exact main `70f3169` passed. No parser or
+tokenizer survivor or uncovered alternative remains in this report.
+
+The sole survivor is still `matchUnit.ts` mutant 40, removing the anchored start of its
+prose-exclusion regex. That source is byte-identical to exact main. Its previously documented
+higher-fuzziness limitation remains; this alternative is not globally equivalent or fixed.
+There is no new ignore, relaxed assertion, threshold change or redundant full sweep.
+
+The preserved exact-main same-toolchain build measures 5,736/5,795 bytes for ESM/CJS; the
+qualified build measures 4,688/4,744 bytes with the same minified and Brotli-compressed
+measurement and unchanged 6,000-byte limits. All baseline configuration/source/build hashes
+and all six final output hashes are recorded. These are size measurements, not performance
+or accuracy claims.
+
+The current 155-path disclosure and historical first-review 235-path inventory remain
+separate because their inputs overlap. The two permissive frozen transitions, original trial
+oracle error, dirty versus exact failing-first pins and all earlier failed/partial reports
+remain immutable. The generated result snapshot is unchanged. Local source qualification
+does not publish the F6/F9 audit or settle hosted reviews: PR #247 still needs the final normal
+push, hosted review and qualifying merge. F6/F9 publication remains pending until that merge.
+
+The exact source, report, coverage, package/build/size records and process proofs are under
+`final-validation/review-round-2-validation/` in the external evidence archive. The final
+audit-only commit keeps the qualified source and test trees unchanged.
+
+### AFA-250 third PR review — earlier numeric failure cursor, focused only
+
+Published `4ac971aa3b4e44a03ad653274f4108386fa9b1df` returned null for both
+`ft five eleven and (70 kg)` and `ft five eleven and weight 70 kg` with either type selector
+or normalized cm/kg. Exact main `70f3169` and the approved complete-entry contract supply
+71 in or 180.34 cm with [5 ft, 11 in], or the independent 70 kg result. All eight reported
+full-object expectations fail on the published checkpoint and pass in the focused candidate.
+
+The parser-local number wrapper already receives the earlier failed numeric token position.
+It formerly replaced that position with a later trailing conjunction, so the single bounded
+prefix split retried an invalid larger phrase. Its existing null return now precedes the
+trailing/repeated-conjunction checks. Empty and leading-conjunction rejection stays first.
+A failed full phrase still returns null; each bounded candidate and the root must independently
+validate complete numeric structure, eligible compounds, both pair dimensions and consumption.
+No shared-reader, normalization, unit-table, public-API or stone change is included.
+
+Article offsets and the supplied numeric-token positions, including skipped conjunctions,
+remain unchanged. The half wrapper still reads its whole-number portion once and validates
+its complete suffix. There is no new scan, normalization pass or retry search. The existing
+single compound split and fixed-span anchored-prefix conjunction walk are reused unchanged.
+New actual-reader instrumentation records six nonempty calls for each of six successful
+compound/pair controls, with first supplied invalidAt 1 or 3 for the article case. Twelve
+scalar controls each make exactly one nonempty call. The six repeated-token controls at
+8/16/32 retain five or six calls and stay below the existing four-times-input character bound.
+These are work-count controls, not timing or mutation-kill claims.
+
+The independently authored 143-path corpus inventory has 56 null-to-valid changes and
+87 controls versus published `4ac971aa`; exact main has 57 changed full objects and 86 controls.
+Six additional malformed work controls retain public null assertions and package counterparts:
+the complete 149-path ledger has 56 changes/93 controls versus published and 63 changes/86
+controls versus main. No overlapping historical review inventories are added to these counts.
+The initial 57-failure trial included a rounded scalar oracle error: binary64 5.5 times 30.48
+is 167.64000000000001. Its original literal/assertion/log is preserved separately from the
+corrected 56-failure baseline; no numeric production change was made for that trial.
+
+The 11 named focused suites pass 1,224 tests. All 3,149 prior full objects remain unchanged:
+2,604 earlier corpus rows, all 302 immutable frozen probes and all 243 authored cases. The
+prior exact-main observations also reproduce exactly. The corpus is now 2,747 rows, preserving
+the old 2,604 rows as a byte-identical prefix and deriving counts from fixture labels. The generated
+result snapshot remains unchanged. All 3,298 candidate observer rows agree with their independent
+expectations; observer command report mismatches from extra temporary rows remain recorded.
+
+Source pins, failing-first runs, complete result/rule ledgers, article/half/work evidence and
+restoration/process proofs are under `final-validation/review-round-3-corrections/` in the
+external archive. The prior 8a2f17f6/fbb27625 full qualification remains historical for this
+changed parser. Fresh full/report/package qualification and normal hooks/push need a separate
+coordinated grant. PR #247 remains blocked on the reported finding; F6/F9 publication is pending.
+
+### AFA-250 third PR review — qualified source and publication handoff
+
+Under the explicit coordinator grant, the normal correction commit and all hooks passed with
+no formatting delta at `bf2565455c302230b68a223010879784c9d92ebd`. Its source tree is
+`847146e23bfeddf3f8f0220a9efaf6f3f157a654` and test tree is
+`d67e15d64fc071e1ccd01b80adcd796b99517fd8`. All 321 tracked file hashes remained identical
+through the fresh clean committed-source `pnpm check`; the retained frozen installation,
+dependency files and toolchain were unchanged, so no new installation was needed.
+
+That full check passed lint, 5,896 source tests in 129 files, TypeScript, build, public API and
+8,186 ESM/CJS package tests in 142 files. Coverage is 100%: 461 statements, 507 branches,
+55 functions and 381 lines. The real nested Git-isolation test passed in 101,867 ms with its
+unchanged timeout. This fresh run qualifies the corrected source; earlier successful runs
+remain evidence only for their recorded source commits.
+
+The actual default non-incremental mutation report is
+`fa48a77d5934a89bc656a9d9caadae16dbe43820c47963a44d51492e6648129d`: 1,484 killed, 48 timeouts,
+one survivor and four ignored mutants. All eight selected source files match the committed
+and live bytes; all six source bodies in the report match exactly. The four ignored source,
+mutator, replacement and reason signatures are unchanged from the previous reviewed report.
+The official changed-line gate against exact main `70f3169` passes. Sole survivor 40 remains
+the unchanged main matcher start-anchor alternative at higher fuzziness settings: it is not
+globally equivalent or fixed, and no new ignore, threshold change or waiver was introduced.
+
+The final measured ESM/CJS sizes are 4,684/4,740 bytes against the preserved exact-main
+5,736/5,795-byte baseline, with unchanged 6,000-byte limits. All eight baseline sources,
+dependency/build/size configurations and six baseline outputs were reverified; all six final
+outputs match this full check. These are build measurements, not runtime performance claims.
+
+The separate 149-path third-review ledger retains all 63 exact-main differences, independent
+arithmetic, full raw/matches objects and malformed controls. The 3,149 prior objects, original
+oracle-error trial, corrected failing-first evidence, earlier review inventories, approved
+generated snapshot and retained stash remain preserved. Their overlapping path counts are
+not combined. No source or test change follows this qualification; this appended audit is
+the only final publication edit.
+
+Exact run, report, coverage, package/build/size identities and process proofs are under
+`final-validation/review-round-3-validation/` in the external evidence archive. Normal final
+push and parent-owned hosted review remain separate from local qualification. PR #247 is not
+declared merge-ready here, and F6/F9 publication remains pending until the qualifying main merge.
+
+### AFA-250 fourth PR review — quote and unit identity correction
+
+The published checkpoint is `5bae01e4c35dff52947fcd43cb12405145c77df0`. Root review
+4504447325 reported three ASCII-quoted compound spellings across three option paths: all nine
+returned null instead of 71 inches or 180.34 cm with both written matches. Exact main `70f3169`
+returns those full expected objects. Two missing ASCII closes with Unicode inch marks returned
+71 inches on both published and main; their approved null outcomes are preserved-main policy
+gaps, not introduced regressions. The modifier-prime counterpart has the same missing-close gap.
+
+The existing normalization path now retains explicit feet and inch identity as canonical prime
+and double-prime tokens. The existing curly-mark lookahead, preceding-mark context and slash
+fraction exclusions use that alphabet. Private normalization strings intentionally change; that
+alone is not a public result change. ASCII quotation delimiters remain distinct. The existing
+token rewrite still handles immediate-digit paired inch marks and preserves its ASCII quoted
+number exception. Mixed prime/apostrophe pairs stay separate until the existing unit reader
+can prove both marks belong inside the current expression, are adjacent to each other and to
+the preceding digit, and occur in suffix position. All three callers supply the same exclusive
+limit; ordinary suffix and following/next-part end guards remain in force.
+
+Both existing wrapper loops use one local token predicate to distinguish an internal unit from
+a closing quote. The predicate inspects a fixed number of token positions per existing cursor
+step, with no numeric-reader call or parsed-candidate retry. Its numeric token check can inspect
+token characters; the reader spies do not measure that predicate. The loops still advance only
+by one within their existing span. Complete inner and root consumption reject missing, extra,
+nested or mismatched closes. A standalone period cannot masquerade as a following number.
+No additional normalization pass, recovery scan, public API, stone support or shared number
+reader change is included. Prefix label punctuation and unsupported-option error order remain.
+
+The independent 261-path full-object ledger contains 180 positives and 81 null controls:
+88 changes/173 controls versus published, and 96 changes/165 controls versus exact main.
+The nine reported regressions and three missing-close gaps are classified separately. Single
+quoted feet scalars with prime, acute and modifier-prime marks restore 6 feet from published
+null; exact main agrees. The double-quoted prime scalar control stays 6 feet here, while main
+returns 6 inches. Curly quoted feet followed by paired prime/acute/mixed inch marks preserve
+published/main 71-inch results. The earlier 228-path candidate ledger remains immutable; its
+missing curly-pair consumer produced 19 failed assertions in the expanded dirty-candidate run,
+then all 261 pass after the existing paired-mark class includes canonical prime.
+
+Candidate-only feet-close, scalar-close and period regressions remain separately archived;
+they are not attributed to published main. The attached-hyphen trial's null oracle was wrong:
+the documented attached mark join gives 71 inches. Its original assertion and failure remain
+separate from independently corrected expectations. Preparation failures and temporary observer
+report mismatches are also retained rather than represented as successful validation commands.
+
+The final 23 named source suites pass 2,196 tests. Another 48 selected normalization spelling
+cases pass; the two unchanged long timing tests were not selected in this focused phase.
+All 29 captured real-reader work records retain positive calls: 12 scalar controls have one
+nonempty read, five quoted compounds have two reads over three numeric characters, and the
+existing repeated-input/article/half controls retain their character bounds and token indices.
+These are work-count checks, not speed measurements or mutation-kill claims.
+
+All 3,298 earlier fixture entries and full objects remain identical: 2,747 corpus rows,
+302 frozen probes, 243 authored cases and six auxiliary work controls. Their exact-main
+observations reproduce too. All 3,559 candidate observer rows meet independent expectations.
+The corpus is 3,008 rows with its old byte prefix intact and report counts derived from labels;
+the approved generated result snapshot is unchanged. Exact failing-first, published/main,
+private spelling, work and restoration evidence is in the external archive under
+`final-validation/review-round-4-corrections/`.
+
+The previous bf256545/fa48a77d full qualification is historical for these changed sources.
+Only focused preparation is complete here; fresh committed-source full/report/package/size
+validation and normal hooks/push require a separate coordinated grant. The review finding and
+PR #247 remain pending, and the distinct F6/F9 historical publication status remains pending.
+
+### AFA-250 fourth review — actual mutation follow-up
+
+The normal correction commit `7d2c715c9ae87454278206a9c52a16cfae6bb6ca` preserved the reviewed
+candidate exactly. Its fresh full check passed 6,169 source tests, TypeScript, build, public API
+and 8,708 ESM/CJS package tests. Coverage was 100%: 475 statements, 544 branches, 57 functions
+and 391 lines. The actual non-incremental report
+`0bb628a3a521ffa135eee05f007efaf4762fbbcb099d4faee6ec56b21bc9c680` has 1,608 killed, 49 timeouts,
+six survivors and the same four individually reviewed ignores. All eight selected source files
+and six report bodies match live, committed and archived bytes. The command passed, but the
+official changed-line gate failed on five survivors; that run is not final qualification.
+
+Exact replacements from that report were tested against 33 independently frozen public cases,
+with source restored after each experiment. Survivor 1071 adds four failures for selection
+from a whole single-quoted pair with an internal feet mark. Survivor 1167 adds six failures
+for quoted or bracketed unqualified inference: the approved bare-number alternative does not
+expand to wrappers. These assertions expose actual alternatives; fresh mutation outcomes
+remain necessary. The unchanged higher-fuzziness matcher survivor 40 retains its prior limit.
+
+Survivors 262 and 268 led to bounded control-flow cleanup, without new ignores. Both wrapper
+loops now invoke the helper inside their existing matching-close branch, so the helper's
+second equality test is redundant and removed. Double versus single ASCII quote handling
+uses a mutually exclusive conditional, retaining the single-quote guard for other closers.
+Continue still occurs before depth decrement; break, inner consumption, and opener depth
+handling retain their original order. Focused observations alone are not an equivalence proof.
+
+Survivor 1349 exposed a real boundary error: eligible paired ASCII apostrophes became an ASCII
+entry close. Three missing-close inputs across nine options incorrectly returned a height.
+The existing same-pass replacement now writes canonical inch identity for every eligible
+pair; its existing eligibility and quoted-number exclusions remain. Private token spelling
+for `72''` changes from ASCII double quote to double prime. A paired unit cannot supply an
+absent entry close. No extra pass, scanner, reader/API/stone change or comma rule is introduced.
+
+Two trial-oracle errors remain archived separately. Approximation around an entire selected
+pair is outside the approved grammar; approximation on one qualified measurement within a
+pair remains valid. An immediately adjacent `,70` is a decimal number, not a pair separator;
+the intended positive counterparts use comma-space. The original positive trials, 13-failure
+and eight-failure logs, and corrected independent dispositions remain intact.
+
+The 58 new full-result controls have 24 positives. They change nine checkpoint results,
+24 published results and 33 exact-main results. The earlier 261-path inventory is unchanged;
+the two sets have 318 distinct raw/options paths, with 112 published and 129 main differences.
+All 3,559 earlier fixture/full objects and their published/main observations remain identical.
+All 3,617 candidate observer objects agree with independent expectations. Corpus counts derive
+from 3,066 labels, retaining its old byte prefix; the approved generated snapshot is unchanged.
+The 18 focused suites pass 1,742 tests, and all 29 real-reader work records retain positive calls,
+indices and bounds. Exact source/experiment/result evidence is under
+`final-validation/review-round-4-validation/actual-survivors/` in the external archive.
+
+This uncommitted follow-up still needs fresh committed-source full/report qualification.
+No new ignore, threshold reduction or claimed mutant kill substitutes for that report.
+PR #247 and the distinct F6/F9 main-publication status remain pending.
+
+### AFA-250 fourth review — final source qualification
+
+The reviewed follow-up is committed as `f925cc5d1107b48251c95e57cf31ed68a3649f51`, with source
+tree `d8e64e29b784e5447f27cc5870e06100dcee0f1b` and test tree
+`5fc58e43f255848003be1b894a0e303a672fad52`. Both normal correction commits passed all hooks
+without a formatting delta. The retained frozen dependency setup, package, lockfile and
+toolchain remain unchanged; no additional install or borrowed dependencies were needed.
+
+The necessary fresh clean-source `pnpm check` passed 6,227 source tests in 131 files,
+TypeScript, build, public API comparison and 8,824 ESM/CJS package tests in 146 files.
+Coverage is 100%: 476 statements, 541 branches, 56 functions and 392 lines. All 323 tracked
+file hashes stayed identical to the committed input throughout the run. The earlier
+7d2c715c full-command pass with a failed changed-line gate remains historical, not qualifying.
+
+The actual report is
+`5b460bdbfab5c1a22560a9a52249a975882aa8464470ce950506bbf6821202b7`: 1,603 killed, 50 timeouts,
+one survivor and four ignored mutants. Mutation was non-incremental, with the unchanged
+98 threshold. All eight selected sources match live, committed and archived bytes; all six
+report source bodies match those same bytes. The four exact source, mutator, replacement
+and reason signatures match the previously reviewed ignores. No new ignore was added.
+The official changed-line gate against exact main 70f3169 passed from this actual report.
+
+The former outer-wrapper survivor 1071 is current mutant 1069, and the former bare-inference
+survivor 1167 is current mutant 1161. Both are actually killed; the report identifies the
+corpus assertion as the killing test. The earlier exact experiments remain separate evidence
+for the independent full-result controls. The redundant equality/quote alternatives and
+conditional inch replacement were removed by the reviewed changes, not suppressed.
+The sole survivor 40 remains in matcher source identical to exact main. Removing its anchor
+affects higher fuzzy settings; it is neither globally equivalent nor fixed by this ticket.
+
+The measured final build is 4,820 bytes ESM and 4,875 bytes CJS, against 5,736 and 5,795 bytes
+for the preserved exact-main build. The same toolchain, package/lock/build configuration,
+eight baseline sources and six baseline outputs were reverified. Both unchanged limits are
+6,000 bytes. All six final build output hashes are archived. This is a build-size comparison,
+not a parser speed or accuracy claim.
+
+The fourth-review union remains 318 distinct input/options paths, with 112 published and
+129 exact-main full-object changes. All earlier observations, the 3,617 current full objects,
+29 positive-call reader records, approved generated snapshot and both trial-oracle corrections
+remain preserved. The original 261-path and subsequent 58-path ledgers remain separate;
+their overlap is not counted twice. The historical full check and failed gate are immutable.
+Final report, coverage, build, size and source pins are under
+`final-validation/review-round-4-validation/` in the external evidence archive.
+
+This section records local source qualification, not hosted review or publication to main.
+The normal evidence-only audit commit and feature push follow under the active grant.
+The parent retains review finding 4504447325 and PR #247 stewardship. The distinct F6/F9
+historical closeout publication remains pending until the eventual PR lands on main.
+
+### AFA-250 fifth review — focused wrapper preparation
+
+Published `b92f9644a9fa6af4dae9c469a936ad091ed674a6` and its f925cc5d qualification remain
+immutable historical evidence. The parent froze 37 full-result paths for review findings
+4504713300 and 4504713301. Ten failed on published source: eight preserve exact-main results,
+while two weight-selector paths are approved-contract gaps already returning null on main.
+The first independently expanded 217-case source run failed 61 cases on exact published
+source. Its original literals and failure log remain separate from later passing evidence.
+
+Only the root whole-entry wrapper loop can now continue past an ASCII inch quote at an
+existing pair separator. Individual expression wrappers still close at that quote, preserving
+a quoted height followed by an outside weight when no final whole-entry quote exists.
+The shared separator set contains only the existing comma, semicolon, slash, conjunction,
+parenthesis and square-bracket routes. Continue remains before depth decrement; matching-close,
+break and depth behavior remain. No numeric read or parsed-candidate retry is added.
+
+A bracketed second expression can own its separator bracket inside an outer pair wrapper.
+The root starts it at a recognized in-bound separator: the first expression has ended before
+the exclusive outer limit. An unwrapped call with an opener therefore has start below limit;
+the wrapper cursor advances only by one without changing that bound. Recursive wrapped calls
+skip this loop. A token beyond the outer limit cannot become a separator. Existing first-part,
+next-part, unit-span, ordinary suffix and complete-consumption bounds remain. Missing, nested,
+mismatched and extra closes reject both selectors; arbitrary nested wrappers are not enabled.
+
+The existing curly normalization guard now recognizes exactly the reader's curly openers:
+left/low single and left/low/right double quotes. Right single quote is not added as an opener.
+A right double quote already in numeric suffix position remains a unit. The first simple
+opener-class candidate failed the existing private spelling control for two separated inch
+marks; that candidate-only failure remains archived. The corrected numeric suffix-context
+lookbehind stays inside the existing pattern. Its quotation segment stops at a right quote;
+the new predicate examines adjacent suffix context, with no separate backward scan or pass.
+Adjacent-digit, following-inch and following-explicit-unit behavior remain covered.
+
+The final independent ledger has 233 paths: 149 positive full arithmetic/match results and
+84 null controls. It records 61 published and 108 exact-main full-object differences, including
+the bracket-pair route separately from the original ten paths. All 3,617 earlier fixture entries
+and full results, including exact-main observations, remain unchanged. All 3,850 current observer
+objects agree with their independent allowed outcomes. The corpus retains its 3,066-row byte
+prefix and adds 233 ticket-sourced rows; report counts derive from its 3,299 labels. The approved
+generated result snapshot remains unchanged. Nineteen private normalization records distinguish
+private spelling changes from public results, including genuine quotations before later units.
+
+All 29 earlier real-reader records remain identical. Six new whole-pair controls each make
+three nonempty numeric reads over five characters. These spies measure numeric work, not regex
+lookbehind work. No speed, size, mutation-kill or full-qualification claim follows. The unchanged
+long timing fixtures await an allocated final run; none was added or run in this focused phase.
+Current captures are the 3,850-row `*-ready-observations.json` files in
+`final-validation/review-round-5-corrections/`; earlier captures remain historical evidence.
+
+Only focused correction is authorized here. Fresh committed-source full/report/package/size
+validation, normal hooks and push require a separate grant. No reader, public API, stone support,
+extra normalization pass or recovery scan is introduced. Both review findings remain pending
+parent publication and hosted review. The distinct F6/F9 historical publication remains pending.
+
+### AFA-250 fifth review — local qualification and corpus disclosure
+
+Under the exclusive grant, production commit `2936db536294dd45d03968a9251dda5e8c3b8cd2` passed:
+6,480 source tests in 132 files, TypeScript, build, public API and 9,290 ESM/CJS package tests
+in 148 files passed. Coverage is 100%: 477 statements, 544 branches, 56 functions and 394 lines.
+The unchanged timing fixtures ran in that full check; reader work counts still do not measure
+regex timing. Its first actual report `4183fa6f` had 1,612 killed, 49 timeouts, three survivors
+and four ignored mutants. The full command passed but the changed-line gate failed. This
+report and its complete logs, sources, coverage and build remain immutable historical evidence.
+
+Two exact tokenizer alternatives, 1278 and 1279, changed the existing following-unit check's
+substring. Frozen experiments showed private curly-mark spelling differences, while all eight
+public full objects remained identical. Commit `091285220ea5a21d7abd81c5392264d206ede986` adds
+only six test lines: two private spelling assertions and two public null counterparts. There
+is no production correction, new ignore or runtime result change in that test commit. Its
+source tree remains `15aa1a89c2bb722b4e7a5298aba39650bf48654d`; its test tree is `e83178a9`.
+The necessary fresh default non-incremental mutation report is
+`96283e8d31c8bf23438b7c9ab30668f4ba7751ac961de652a571b81ed6add978`:
+1,619 killed, 44 timeouts, one survivor and four exact previously reviewed ignores. Both 1278
+and 1279 are killed by test 4909, the private spelling assertion for `72’ kg`. All eight selected
+source paths and six report source bodies equal committed, live and archived bytes. The
+unchanged threshold is 98 and the official changed-line gate against exact main `70f3169`
+passes. The sole survivor, matcher 40, remains byte-identical to main; its higher-fuzziness
+anchor-removal limitation is not called globally equivalent or fixed.
+
+The two public counterparts also expose approved-contract differences from exact main:
+`72’ kg` changes from 72 kg with matches `[72 kg]` to null, and `5½’ ft` changes from 5.5 ft
+with matches `[5.5 ft]` to null. These are preserved mark/duplicate-unit policy differences,
+not new runtime changes from the spelling assertions. Exact main source capture, full raw
+objects and the independent complete-entry basis are archived separately. Corpus commit
+`7461e95630d76df757dacd5332185f40b0337d76` adds only rows `afa250-r5-234` and `afa250-r5-235`
+and two report count lines. The prior 3,299 rows are a byte-exact prefix; the new total is
+3,301. Both rows are Unicode cases because U+2019 mark identity controls the second unit
+rejection. Hand-derived total/agree counts change from 3,299 to 3,301 and Unicode counts
+from 394 to 396. Every other report byte, including seven multiple-outcome dispositions,
+remains unchanged. The approved generated snapshot `ebae8b38` remains unchanged. Whole
+corpus/entry checks pass 61 source tests, and both package formats pass 64 corpus tests.
+The added public counterpart file also passed 470 package tests. Normal hooks ran; their
+configured file globs do not select JSON Lines or snapshot files, so no formatting or spelling
+coverage of those excluded files is claimed. Corpus schema and explicit byte proofs cover them.
+
+The measured unchanged production build is 4,863 bytes ESM and 4,906 bytes CJS, against
+5,736 and 5,795 bytes for preserved exact main. All six current outputs equal the full-check
+build, with identical toolchain/package/lock/build configuration and unchanged 6,000-byte
+limits. This is a size comparison, not a speed or accuracy claim. No redundant full check,
+coverage or mutation run follows the corpus-only assertion additions.
+
+All fifth-review ledgers, original failures, private spellings, 3,850 full objects, 35 real-reader
+records and 3,617 prior preserved objects remain in the external evidence archive under
+`final-validation/review-round-5-corrections/` and `review-round-5-validation/`. The 233-path
+ledger and two supplementary corpus controls remain separately identified. This section
+records local qualification before normal feature push. Parent-owned hosted review findings
+4504713300 and 4504713301 remain pending verified publication and review. The distinct F6/F9
+historical closeout publication remains pending the eventual PR #247 merge and exact-main CI.
