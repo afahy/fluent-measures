@@ -66,6 +66,9 @@ describe('normalizeForms', () => {
     '“1 m 80”',
     '‘1 m 80’',
     '“kg 72.5”',
+    // A following named unit keeps the preceding curly mark in its original form.
+    '72’ kg',
+    '5½’ ft',
     'she’s',
     'the 70s’ fashion',
     '5−11',

@@ -3343,6 +3343,9 @@ const cases: [string, ParseOptions, ParsedValue | null][] = [
   ],
   ['“72” or 70”', {}, null],
   ['”72” or 70”', {}, null],
+  // An unquoted unit mark plus a second named unit is not one complete scalar.
+  ['72’ kg', {}, null],
+  ['5½’ ft', {}, null],
 ];
 
 describe('complete entry fifth review', () => {
