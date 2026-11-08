@@ -460,10 +460,10 @@ html:not([data-js]) .site-header {
   background: var(--accent);
 }
 
-/* The negative margin lines up the theme button's icon, not its 44px box, with the container edge. */
+/* The negative margin lines up the last control's icon, not its padding, with the container edge. */
 .header-actions {
   margin-left: auto;
-  margin-right: -12px;
+  margin-right: -10px;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -546,10 +546,15 @@ html:not([data-js]) .site-header {
   }
 }
 
-/* One button cycles through light, system, and dark; its icon shows the preference. */
+/*
+ * One button cycles through light, system, and dark; its icon shows the preference.
+ * Its 20px icon sits 12px inside its 44px box, 2px more than the 10px padding of the other
+ * controls, so the extra margin lines it up with the edge when it is the last control.
+ */
 .theme-toggle {
   min-width: 44px;
   min-height: 44px;
+  margin-right: -2px;
   padding: 0;
 }
 

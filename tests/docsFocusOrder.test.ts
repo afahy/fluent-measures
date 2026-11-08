@@ -57,9 +57,11 @@ describe('docs keyboard focus order', () => {
       page.indexOf('</header>')
     );
     // Leave out the menu panel, so only the controls in the header bar remain.
-    const bar =
-      actions.slice(0, actions.indexOf('<div class="page-menu-panel">')) +
-      actions.slice(actions.indexOf('</details>'));
+    const panelStart = actions.indexOf('<div class="page-menu-panel">');
+    const panelEnd = actions.lastIndexOf('</details>');
+    expect(panelStart).toBeGreaterThan(-1);
+    expect(panelEnd).toBeGreaterThan(panelStart);
+    const bar = actions.slice(0, panelStart) + actions.slice(panelEnd);
     const controls = [...bar.matchAll(/<(?:a|details|button)\b[^>]*class="([^"]*)"/g)].map(match =>
       match[1].split(/\s+/).find(name => name !== 'icon-link')
     );
