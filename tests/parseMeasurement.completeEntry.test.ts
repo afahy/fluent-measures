@@ -295,6 +295,7 @@ describe('approved complete-entry contract', () => {
     ['70 kg (180 cm tall.) tall', 'height'],
     ['70 kg (180 cm .) tall', 'height'],
     ['70 kg (180 cm.).', 'height'],
+    ['70 kg (180 cm) tall..', 'height'],
   ] as const)('rejects the suffix after the bracketed measurement in %s for %s', (raw, type) => {
     expect(parseMeasurement(raw, { type })).toBeNull();
   });

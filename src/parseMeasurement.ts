@@ -203,7 +203,16 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     if (close && text(at++) !== close) return null;
     const assignment = text(at) === ':' || text(at) === '=';
     if (prefix && assignment) at++;
-    if (prefix && (LABEL_ALIASES.has(alias) || /^['"′″]$/.test(alias)) && !close && !assignment)
+    if (
+      prefix &&
+      (LABEL_ALIASES.has(alias) ||
+        alias === "'" ||
+        alias === '"' ||
+        alias === '′' ||
+        alias === '″') &&
+      !close &&
+      !assignment
+    )
       return null;
     return { unit, end: at };
   }
