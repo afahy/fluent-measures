@@ -185,6 +185,15 @@ and continue with other work. Don't look for another way around the check.
   - Is it worth fixing? Compare how likely a user is to hit the problem with what the fix
     costs in code, bundle size and risk to other results. A showstopper is always worth
     fixing. So is a result that this PR changes from `main` (decision rule 3).
+  - For a parser finding that `main` already has, first ask whether a person would type the
+    input into a height or weight field, or say it to voice input. If not, it isn't worth
+    fixing, even when the spec gives another result. Plausible inputs use digits or number
+    words, common unit names, abbreviations and marks, including the curly quotes of phone
+    keyboards (`5’11”`). They can be compact (`5ft11`), start with a few words such as
+    `I'm` or `about`, end with `tall`, or give one height and one weight (`5'11, 180 lbs`).
+    Inputs that aren't plausible include stacked or mixed punctuation, quotes around the
+    whole entry, signed values, numbers near the limits of floating point, numeric labels
+    such as `phase 20;`, and several measurements inside unrelated prose.
   - For agent tooling, fewer findings are worth fixing. Agent tooling is each file in
     `.github/` and `.claude/`, and the tests of these files. A finding in agent tooling is
     worth fixing only in these cases, also when the PR adds the code:
@@ -306,9 +315,10 @@ description. The maintainer can change any decision at merge review.
 
 1. Keep each result that an existing test or an example in the README or `PARSING.md` shows,
    unless the ticket asks for the change.
-2. If a second bug has the same cause and the same fix location, fix it in the same PR. It
-   must have no ticket of its own, and the fix must break no existing test. Give it its own
-   regression test.
+2. If a second bug has the same cause and the same fix location, and a person could
+   plausibly type its input ("Handle findings and CI"), fix it in the same PR. It must have
+   no ticket of its own, and the fix must break no existing test. Give it its own regression
+   test.
 3. Keep each other result that `main` gives, unless the ticket asks for the change. If the
    fix can't avoid changing one, list it in the PR and in a ticket comment.
 4. If two parts of a ticket conflict, choose the option that changes the fewest results

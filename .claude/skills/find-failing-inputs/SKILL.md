@@ -24,13 +24,20 @@ reviews, so that you don't share their assumptions.
 
 ## 2. Write the inputs and their expected results
 
-Write at least 20 inputs. Aim them at the changed lines:
+Write at least 20 inputs that a person could type into a height or weight field, or say to
+voice input. AGENTS.md "Handle findings and CI" says which inputs are plausible. The library is
+for people who enter their own height or weight, so a failure that nobody can hit doesn't help
+them. You can add up to five inputs that aren't plausible, for example to test a changed
+limit. Mark them in the `note` of the corpus line.
+
+Aim the inputs at the changed lines:
 
 - Each way to reach the feature that the feature file lists, and each option that changes it.
 - The limits of each changed condition, for example 11 and 12 inches, 1% agreement, a unit name
   of three characters, or a comma group of two and of three digits.
 - The same input in other forms: digits and words, a space and no space, marks and unit names.
-- Text around the measurement, and words that are near a unit name.
+- Words that people write around a measurement, such as `I'm`, `about` or `tall`, and words
+  that are near a unit name.
 
 For each input, decide the expected output before you run it. Take it from the README, from
 `PARSING.md` or from a hand calculation. Use 1 lb = 0.45359237 kg, 1 in = 2.54 cm and
@@ -87,7 +94,9 @@ Report only these facts. Don't fix code, commit or post comments.
   the expected output.
 - Mark each one **new** when it agrees on `main`, because the branch causes it. Mark it
   **on main** when it disagrees on both.
+- Mark each one **plausible** or **not plausible**, as AGENTS.md "Handle findings and CI" says.
 - The number of inputs that agree on the branch.
 
 The agent that started you judges each finding as AGENTS.md "Handle findings and CI" says. It
-adds each confirmed input to the corpus in the PR, with the outcome that it has there.
+adds each confirmed input to the corpus in the PR, with the outcome that it has there. It files
+a ticket only for a finding that is plausible, or that the branch causes.
