@@ -5,7 +5,7 @@ import { LABEL_ALIASES, NEXT_PART, UNIT_TYPES, unitConversions } from './units';
 import { ParseOptions, ParsedValue, Match, MeasurementType, Unit } from './types';
 
 type QualifiedMatch = Match & { unit: NonNullable<Match['unit']> };
-type NumberRead = { value: number | null; end: number; invalidAt?: number };
+type NumberRead = { value: number | null; end: number; invalidAt: number };
 type Part = QualifiedMatch & { end: number; suffix?: boolean };
 /** The close of a bracket. Quotation marks are feet and inch marks, not wrappers. */
 const closeOf = (word: string | undefined): string | undefined =>
@@ -215,6 +215,11 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   function readPart(start: number, limit: number, bareUnit?: Unit): Part | null {
     const prefix = readUnit(start, true);
     if (prefix) {
+      // The prefix part ends at split. It is a complete phrase or nothing.
+      const leftPart = (split: number): Part | null => {
+        const left = readNumber(prefix.end, split);
+        return left.value === null ? null : { value: left.value, unit: prefix.unit, end: left.end };
+      };
       const number = readNumber(prefix.end, limit);
       if (number.value !== null) {
         // A following explicit unit can anchor "m: one and eighty cm" as a compound or
@@ -226,22 +231,16 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
           // A successful number has prefix.end <= number.end. This fixed span advances
           // only by one and returns at the first conjunction; it never retries another split.
           for (let split = prefix.end; split !== number.end; split++) {
-            if (text(split) !== 'and') continue;
-            const left = readNumber(prefix.end, split);
-            return left.value === null
-              ? null
-              : { value: left.value, unit: prefix.unit, end: left.end };
+            if (text(split) === 'and') return leftPart(split);
           }
         }
         return { value: number.value, unit: prefix.unit, end: number.end };
       }
-      // One bounded reread can end a complete prefix part. An absent boundary gives an
-      // empty phrase, not another search. The original numeric tokens contain no intervening
-      // unit, so a valid left phrase consumes this exact prefix. The expression/root cursors
-      // alone validate the compound unit or explicit pair separator and the complete right side.
-      const split = number.invalidAt ?? prefix.end;
-      const left = readNumber(prefix.end, split);
-      return left.value === null ? null : { value: left.value, unit: prefix.unit, end: left.end };
+      // One bounded reread can end a complete prefix part at the first invalid token. The
+      // original numeric tokens contain no intervening unit, so a valid left phrase consumes
+      // this exact prefix. The expression/root cursors alone validate the compound unit or
+      // explicit pair separator and the complete right side.
+      return leftPart(number.invalidAt);
     }
     const number = readNumber(start, limit);
     if (number.value === null) return null;
@@ -369,10 +368,11 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         // "5 ft 11 and 180 lbs" has an explicit pair separator after its bare inches. Both
         // numeric phrases must be complete; no substring is returned when either is invalid.
         if (!next) {
-          const split = readNumber(join.start, limit).invalidAt ?? join.start;
-          // No boundary means an empty candidate. A numeric-only candidate without bare
-          // eligibility has no unit. The root still requires an explicit pair separator and
-          // a complete second expression, so an arbitrary invalid numeric token cannot join.
+          const split = readNumber(join.start, limit).invalidAt;
+          // A phrase with no numbers ends at join.start, an empty candidate. A numeric-only
+          // candidate without bare eligibility has no unit. The root still requires an explicit
+          // pair separator and a complete second expression, so an arbitrary invalid numeric
+          // token cannot join.
           next = readPart(join.start, split, bare);
         }
         if (

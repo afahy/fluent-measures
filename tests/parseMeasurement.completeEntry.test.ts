@@ -246,6 +246,59 @@ describe('approved complete-entry contract', () => {
     expect(parseMeasurement(raw)).toBeNull();
   });
 
+  // A bracketed second measurement of a pair can end with "tall" when it is a height, and with
+  // one final period (PARSING.md, "Surrounding Words"). The selected height is 180 cm.
+  it.each([
+    '70 kg (180 cm) tall',
+    '70 kg (180 cm) tall.',
+    '70 kg (180 cm tall).',
+    '70 kg (180 cm).',
+  ])('reads the bracketed height in %s', raw => {
+    expect(parseMeasurement(raw, { type: 'height' })).toEqual({
+      value: 180,
+      unit: 'cm',
+      type: 'height',
+      raw,
+      matches: [{ value: 180, unit: 'cm' }],
+    });
+  });
+
+  // A bracketed second measurement can hold a bracketed smaller part: 5 × 12 + 11 = 71.
+  it.each(['180 lbs (5 ft (11 in))', '180 lbs [5 ft [11 in]]'])(
+    'reads the nested brackets in %s',
+    raw => {
+      expect(parseMeasurement(raw, { type: 'height' })).toEqual({
+        value: 71,
+        unit: 'in',
+        type: 'height',
+        raw,
+        matches: [
+          { value: 5, unit: 'ft' },
+          { value: 11, unit: 'in' },
+        ],
+      });
+      expect(parseMeasurement(raw, { type: 'weight' })).toEqual({
+        value: 180,
+        unit: 'lb',
+        type: 'weight',
+        raw,
+        matches: [{ value: 180, unit: 'lb' }],
+      });
+    }
+  );
+
+  // "tall" after a weight, a second "tall", a period before "tall" and two periods reject.
+  it.each([
+    ['180 cm (70 kg) tall', 'weight'],
+    ['180 cm (70 kg) tall', 'height'],
+    ['70 kg (180 cm tall) tall', 'height'],
+    ['70 kg (180 cm tall.) tall', 'height'],
+    ['70 kg (180 cm .) tall', 'height'],
+    ['70 kg (180 cm.).', 'height'],
+  ] as const)('rejects the suffix after the bracketed measurement in %s for %s', (raw, type) => {
+    expect(parseMeasurement(raw, { type })).toBeNull();
+  });
+
   // A bracketed unit label can still come before the smaller part: 5 × 12 + 11 = 71.
   it('reads a bracketed unit label before the smaller part in 5 ft (in) 11', () => {
     expect(parseMeasurement('5 ft (in) 11')).toEqual({
