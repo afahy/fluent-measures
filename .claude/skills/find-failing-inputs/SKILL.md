@@ -27,8 +27,8 @@ reviews, so that you don't share their assumptions.
 Write at least 20 inputs that a person could type into a height or weight field, or say to
 voice input. AGENTS.md "Handle findings and CI" says which inputs are plausible. The library is
 for people who enter their own height or weight, so a failure that nobody can hit doesn't help
-them. You can add up to five inputs that aren't plausible, for example to test a changed
-limit. Mark them in the `note` of the corpus line.
+them. Use an input that isn't plausible only to reach a changed condition that no plausible
+input reaches.
 
 Aim the inputs at the changed lines:
 
@@ -98,5 +98,6 @@ Report only these facts. Don't fix code, commit or post comments.
 - The number of inputs that agree on the branch.
 
 The agent that started you judges each finding as AGENTS.md "Handle findings and CI" says. It
-adds each confirmed input to the corpus in the PR, with the outcome that it has there. It files
-a ticket only for a finding that is plausible, or that the branch causes.
+adds each confirmed input to the corpus in the PR, with the outcome that it has there. It fixes
+each finding that the branch causes in the PR. For a finding that is also on `main`, it files a
+ticket only when the finding is plausible or a showstopper.
