@@ -3516,3 +3516,5 @@
 {"id": "afa-277-wrapper-18", "input": "height: \"180 cm\"", "expected": null, "category": "surrounding-text", "source": "AFA-277", "note": "AFA-277: quotation marks and brackets cannot surround an entry or a number."}
 {"id": "afa-277-mark-3", "input": "5'′", "expected": {"value": 5, "unit": "in", "type": "height"}, "category": "unicode", "source": "AFA-277", "note": "AFA-277: a curly quote or prime after a number is a feet or inch mark."}
 {"id": "afa-277-mark-4", "input": "I’m 5’11” tall", "expected": {"value": 71, "unit": "in", "type": "height"}, "category": "unicode", "source": "AFA-277", "note": "AFA-277: a curly quote or prime after a number is a feet or inch mark."}
+{"id": "afa-277-wrapper-19", "input": "5 ft (11) in", "expected": null, "category": "surrounding-text", "source": "AFA-277", "note": "AFA-277: quotation marks and brackets cannot surround an entry or a number."}
+{"id": "afa-277-wrapper-20", "input": "1 m (80) cm", "expected": null, "category": "surrounding-text", "source": "AFA-277", "note": "AFA-277: quotation marks and brackets cannot surround an entry or a number."}

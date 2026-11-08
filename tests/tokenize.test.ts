@@ -7,25 +7,25 @@ const tokenTexts = (input: string): string[] => tokenize(input).map(({ text }) =
 // every boundary for the complete-entry reader. Original label/field/erasure expectations are
 // in design/afa-250/tokenize.test.ts.before.txt; no exported package type changed.
 describe('complete-entry tokens', () => {
-  // AFA-277: primes are the ASCII marks "'" and '"', and two marks after a number are '"'.
-  it('writes each prime and double prime as an ASCII mark', () => {
-    expect(tokenTexts('"5′11″"')).toEqual(['"', '5', "'", '11', '"', '"']);
-    expect(tokenTexts('"5ʹ11ʺ')).toEqual(['"', '5', "'", '11', '"']);
+  it('retains explicit inch-unit identity separately from an ASCII entry close', () => {
+    expect(tokenTexts('"5′11″"')).toEqual(['"', '5', '′', '11', '″', '"']);
+    expect(tokenTexts('"5ʹ11ʺ')).toEqual(['"', '5', '′', '11', '″']);
     expect(tokenTexts('"5\'11"')).toEqual(['"', '5', "'", '11', '"']);
-    expect(tokenTexts('″:72')).toEqual(['"', ':', '72']);
-    expect(tokenTexts('72″1/2')).toEqual(['72', '"', '1', '/', '2']);
-    expect(tokenTexts('‘5’ 11″')).toEqual(['‘', '5', "'", '11', '"']);
-    expect(tokenTexts("72''")).toEqual(['72', '"']);
-    expect(tokenTexts(`"5'11''`)).toEqual(['"', '5', "'", '11', '"']);
+    expect(tokenTexts('″:72')).toEqual(['″', ':', '72']);
+    expect(tokenTexts('72″1/2')).toEqual(['72', '″', '1', '/', '2']);
+    expect(tokenTexts('‘5’ 11″')).toEqual(['‘', '5', "'", '11', '″']);
+    expect(tokenTexts("72''")).toEqual(['72', '″']);
+    expect(tokenTexts(`"5'11''`)).toEqual(['"', '5', "'", '11', '″']);
   });
-  // AFA-277: a curly closing quote is always a mark. Opening quotes stay for the parser to reject.
+  // AFA-277: quotation marks don't wrap an entry, so a curly closing quote after a number is a
+  // feet or inch mark. An apostrophe in a word, as in "it’s", and an opening quote stay.
   it.each([
     ['‘5’', "‘5'"],
     ['“72”', '“72"'],
-    ['‘it’s five’', "‘it's five'"],
-    ['“it’s five”', '“it\'s five"'],
-    ['‘a” five’', '‘a" five\''],
-    ['“a’ five”', '“a\' five"'],
+    ['‘it’s five’', "‘it’s five'"],
+    ['“it’s five”', '“it’s five"'],
+    ['‘a” five’', "‘a” five'"],
+    ['“a’ five”', '“a’ five"'],
     ['70” KG', '70" KG'],
     ['‘5’ eleven inches', "‘5' eleven inches"],
     ['“72” 60 inches', '“72" 60 inches'],
@@ -94,7 +94,7 @@ describe('complete-entry tokens', () => {
     ['a.b. 5 ft', ['a.', 'b.', '5', 'ft']],
     ['“+5” kg', ['“', '+', '5', '"', 'kg']],
     ['70 kg 🧊', ['70', 'kg', '🧊']],
-    ['I’m 70 kg', ["i'm", '70', 'kg']],
+    ['I’m 70 kg', ['i’m', '70', 'kg']],
   ])('retains the full normalized token sequence in %s', (raw, expected) => {
     expect(tokenTexts(raw as string)).toEqual(expected);
   });

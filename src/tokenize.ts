@@ -16,7 +16,7 @@ const FRACTION_NUMBER = String.raw`(\d+(?:\.\d+)?|\.\d+)`;
 // retain their ordinary meaning. Both slash characters block partial matches in dates/codes.
 // The lookahead keeps the lookbehind from running at every space.
 const SLASH_FRACTION = new RegExp(
-  String.raw`(?<![\d/⁄.])(?:${FRACTION_NUMBER}\s+|(?=[\d.])(?<![\p{L}'"]\s*))${FRACTION_NUMBER}[/⁄]${FRACTION_NUMBER}(?![\d/⁄])`,
+  String.raw`(?<![\d/⁄.])(?:${FRACTION_NUMBER}\s+|(?=[\d.])(?<![\p{L}'"′″]\s*))${FRACTION_NUMBER}[/⁄]${FRACTION_NUMBER}(?![\d/⁄])`,
   'gu'
 );
 
@@ -72,20 +72,39 @@ const MINUS_SIGN = new RegExp(
   'gi'
 );
 
+// A number word, alone or before "and a half", has the same boundaries as in the token split.
+const WORD_END = String.raw`(?:\b(?:${NUMBER_WORD})|(?:\d|\b(?:${NUMBER_WORD}))[\s-]+and[\s-]+a[\s-]+half)`;
+
 /**
- * Normalize feet and inch marks, so "5’11”", "5′11″" and "5´11´´" read like 5'11". Every curly
- * single quote, prime and acute accent becomes "'", and every curly double quote and double prime
- * becomes '"'. Quotation marks don't wrap an entry or a number, so these are always marks.
- * Full-width characters and the units "㎝" and "㎏" become their ASCII forms. Other characters
- * stay, so normalizeFractions still sees "½". The minus signs "−" and "﹣" become a hyphen-minus
- * "-" right before a number when no number comes earlier, so "−5 ft" is negative.
+ * A curly closing quote after a number is a feet or inch mark, as in "5’11”" and "five’ ten”".
+ * The number can be digits, a Unicode fraction or a number word, with spaces after it. One feet
+ * mark can come between, as in "5’’". Quotation marks don't wrap an entry or a number, so there
+ * is no quotation to keep. An apostrophe in a word, as in "she’s" and "I’m", stays. The
+ * lookahead keeps the lookbehind from running at every character.
+ */
+const curlyMark = (mark: string): RegExp =>
+  new RegExp(
+    String.raw`(?=${mark})(?:(?<=[\d${FRACTIONS}]['’′]?\s*)|(?<=${WORD_END}\s*)(?!${mark}[a-z]))${mark}`,
+    'gi'
+  );
+const CURLY_SINGLE = curlyMark('’');
+const CURLY_DOUBLE = curlyMark('”');
+
+/**
+ * Normalize feet and inch marks, so "5’11”", "5′11″" and "5´11´´" read like 5'11". Primes and
+ * acute accents keep their unit identity as ′ and ″. Full-width characters and the units "㎝" and
+ * "㎏" become their ASCII forms. Other characters stay, so normalizeFractions still sees "½". The
+ * minus signs "−" and "﹣" become a hyphen-minus "-" right before a number when no number comes
+ * earlier, so "−5 ft" is negative.
  */
 export function normalizeForms(input: string): string {
   return input
     .replace(/[！-～㎝㎏]/g, character => character.normalize('NFKC'))
     .replace(MINUS_SIGN, '-')
-    .replace(/[’′´ʹ]/g, "'")
-    .replace(/[”″ʺ]/g, '"');
+    .replace(/[′´ʹ]/g, '′')
+    .replace(/[″ʺ]/g, '″')
+    .replace(CURLY_SINGLE, "'")
+    .replace(CURLY_DOUBLE, '"');
 }
 
 /** Normalize comma groups before interpreting numeric syntax or splitting tokens. */
@@ -131,10 +150,10 @@ export function tokenize(input: string): Token[] {
  */
 export function tokenizeNormalized(input: string): Token[] {
   const text = input
-    // Two feet marks right after a number are an inch mark, as in "5''".
-    .replace(/(?<=\d)''(?!')/g, '"')
+    // Two feet marks right after a number are an inch mark, as in "5''" and "5′'".
+    .replace(/(?<=\d)['′]{2}(?!['’′])/g, '″')
     .toLowerCase();
-  return [...text.matchAll(/i'm\b|[\p{L}\p{M}_][\p{L}\p{M}\p{N}_]*\.?|[\d.]+|[^\s]/gu)].flatMap(
+  return [...text.matchAll(/i['’]m\b|[\p{L}\p{M}_][\p{L}\p{M}\p{N}_]*\.?|[\d.]+|[^\s]/gu)].flatMap(
     match => {
       const token = { text: match[0], start: match.index, end: match.index + match[0].length };
       const word = token.text.slice(0, -1);

@@ -3441,9 +3441,10 @@ marks, parentheses and square brackets around an entry, around one measurement o
 around a number no longer make a measurement. The F2 and AFA-265 quotation rows above describe
 the earlier implementation and stay as historical evidence.
 
-M1 no longer carries quotation context. `normalizeForms` writes every `’ ′ ´ ʹ` as `'` and every
-`” ″ ʺ` as `"`, so a curly closing quote after a number is always a feet or inch mark. M2 writes
-two apostrophes right after a digit as `"`, with no check for an earlier opening pair. The parser
+M1 no longer carries quotation context. `normalizeForms` writes a curly `’` or `”` after a
+number as `'` or `"`, even at the end of the entry or before a unit name. Primes keep their unit
+identity, and an apostrophe in a word stays. M2 writes two feet marks right after a digit, in
+any mix of `'` and `′`, as `″`, with no check for an earlier opening pair. The parser
 no longer has a whole-entry wrapper cursor, quoted numbers or quoted feet. Its bracket cursor
 remains only for the second measurement of a pair, as in `5'11" (180 lbs)`. Bracketed unit
 labels and bracketed smaller parts are unchanged.

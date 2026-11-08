@@ -135,6 +135,8 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     digitToken(word);
   const unitAt = (at: number): Unit | null => {
     const word = text(at)?.replace(/\.$/, '');
+    if (word === '′') return 'ft';
+    if (word === '″') return 'in';
     return word
       ? matchUnit(word, 'height', options.fuzziness) || matchUnit(word, 'weight', options.fuzziness)
       : null;
@@ -201,12 +203,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     if (close && text(at++) !== close) return null;
     const assignment = text(at) === ':' || text(at) === '=';
     if (prefix && assignment) at++;
-    if (
-      prefix &&
-      (LABEL_ALIASES.has(alias) || alias === "'" || alias === '"') &&
-      !close &&
-      !assignment
-    )
+    if (prefix && (LABEL_ALIASES.has(alias) || /^['"′″]$/.test(alias)) && !close && !assignment)
       return null;
     return { unit, end: at };
   }
@@ -222,8 +219,8 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       if (number.value !== null) {
         // A following explicit unit can anchor "m: one and eighty cm" as a compound or
         // "m: one and eighty kg" as a selected pair. The expression/root validate both parts.
-        // Unit lookahead has fixed size and consumes nothing. Its successful end > start,
-        // so end <= limit also ensures that no excluded close can become an owned unit.
+        // Unit lookahead has fixed size and consumes nothing. end <= limit keeps the close of
+        // a bracketed pair from becoming part of this unit.
         const following = readUnit(number.end, false);
         if (following && following.end <= limit) {
           // A successful number has prefix.end <= number.end. This fixed span advances
@@ -293,10 +290,10 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   }
 
   type Expression = { parsed: ParsedValue; end: number };
-  function expression(start: number, limit: number, bracketed = false): Expression | null {
-    // Only the second measurement of a pair can be in brackets, as in "5'11\" (180 lbs)". A
-    // bracketed unit label instead belongs to readUnit when its value follows outside it.
-    const close = bracketed && closeOf(text(start));
+  function expression(start: number, limit: number, close?: string): Expression | null {
+    // Only the second measurement of a pair can be in brackets, as in "5'11\" (180 lbs)". The
+    // caller passes the close of that bracket. A bracketed unit label instead belongs to
+    // readUnit when its value follows outside it.
     if (close) {
       let depth = 1;
       // A pair separator comes before the bracket, so start < limit. The fixed-bound cursor
@@ -336,7 +333,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     }
     let at = start;
     let namedType: MeasurementType | undefined;
-    if (text(at) === "i'm") at++;
+    if (text(at) === "i'm" || text(at) === 'i’m') at++;
     else if (text(at) === 'i' && text(at + 1) === 'am') at += 2;
     else if (text(at) === 'i' && text(at + 1) === 'weigh') {
       namedType = 'weight';
@@ -365,7 +362,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         const bare = join.bare ? nextUnit : undefined;
         let next = readPart(join.start, limit, bare);
         if (!next && join.close) {
-          // A bracket can wrap the number alone when its explicit unit follows outside it.
+          // The bracket can be a unit label before the smaller part, as in "5 ft (in) 11".
           next = readPart(first.end, limit);
           join.close = undefined;
         }
@@ -409,7 +406,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     if (first.end !== limit) {
       if (!onlyType) return null;
       const separator = text(first.end);
-      const bracket = separator === '(' || separator === '[';
+      const bracket = closeOf(separator);
       if (!PAIR_SEPARATORS.has(separator)) return null;
       // Brackets around the second measurement also separate a pair.
       const second = expression(first.end + (bracket ? 0 : 1), limit, bracket);

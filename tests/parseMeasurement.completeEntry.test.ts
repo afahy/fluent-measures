@@ -238,8 +238,26 @@ describe('approved complete-entry contract', () => {
     '"180 cm"',
     'weight: “180 lbs”',
     '6 ft (1/2) in',
+    '5 ft (11) in',
+    '5 ft [11] in',
+    '1 m (80) cm',
+    'I´m 5´11´´',
   ])('rejects the wrapped entry or number %s', raw => {
     expect(parseMeasurement(raw)).toBeNull();
+  });
+
+  // A bracketed unit label can still come before the smaller part: 5 × 12 + 11 = 71.
+  it('reads a bracketed unit label before the smaller part in 5 ft (in) 11', () => {
+    expect(parseMeasurement('5 ft (in) 11')).toEqual({
+      value: 71,
+      unit: 'in',
+      type: 'height',
+      raw: '5 ft (in) 11',
+      matches: [
+        { value: 5, unit: 'ft' },
+        { value: 11, unit: 'in' },
+      ],
+    });
   });
 
   it.each([

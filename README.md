@@ -246,8 +246,9 @@ The parser reads a complete entry, including a few ordinary words around it, suc
 `I'm five foot eleven tall` and `about 180 cm`. It does not search arbitrary prose for a
 usable fragment. Extra values, malformed fragments, unsupported units and ranges reject the
 whole entry. `Top 10 in the class` returns `null`. Quotation marks and brackets cannot
-surround the entry or a number: `(180 cm)` and `"180 lbs"` return `null`. Curly quotes after a
-number are feet and inch marks, so `5’11”` is 71 inches.
+surround the whole entry or a number: `(180 cm)` and `"180 lbs"` return `null`. Brackets still
+mark a unit label, as in `Height (in): 72`. Curly quotes after a number are feet and inch marks,
+so `5’11”` is 71 inches.
 
 Feet and inches, or meters and centimeters, can form one compound height. Two independent
 heights or two independent weights return `null`, even if they are equal or are conversions
