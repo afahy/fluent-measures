@@ -2991,3 +2991,47 @@ under `final-validation/review-round-2-corrections/` in the external archive. Th
 evidence only: `4a04e92` full-check/report qualification remains historical for the changed
 source. Fresh full validation, mutation, package/build/size and publication hooks require a
 separate coordinated grant. F6/F9 publication remains pending until the qualifying merge.
+
+### AFA-250 second PR review — qualified source before final push
+
+Clean source commit `8a2f17f603c3f32eff93897ae5615f1c0bc39e7b` passed one fresh
+`pnpm check` after the reviewed focused corrections. All normal correction-commit hooks
+passed without changing the approved candidate. The existing installed checkout retained
+Node 24.21.0, pnpm 10.10.0 and the verified frozen package/lock/lifecycle setup; no new install
+or borrowed dependency tree was needed.
+
+The source suite passed 5,739 tests in 128 files. Coverage is 100%: 461 statements,
+507 branches, 55 functions and 381 lines. The real Git-isolation test passed in 101,870 ms
+with the unchanged timeout and assertions. Type checking, build, exported API comparison and
+all 7,894 ESM/CJS package tests in 140 files passed on that same committed source.
+
+The default non-incremental mutation report SHA256 is
+`fbb27625cd764b24b52a0b201a666af731d866cc6a1901bdebf94acf311778e8`.
+It records 1,482 killed, 50 timed out, one surviving and four ignored alternatives, scoring
+99.93% with unchanged thresholds. All eight selected source files are pinned to the commit;
+every byte of the six source bodies in the report matches the live and committed source.
+The four existing reviewed ignore signatures, original source expressions and reasons are
+unchanged. The official changed-line gate against exact main `70f3169` passed. No parser or
+tokenizer survivor or uncovered alternative remains in this report.
+
+The sole survivor is still `matchUnit.ts` mutant 40, removing the anchored start of its
+prose-exclusion regex. That source is byte-identical to exact main. Its previously documented
+higher-fuzziness limitation remains; this alternative is not globally equivalent or fixed.
+There is no new ignore, relaxed assertion, threshold change or redundant full sweep.
+
+The preserved exact-main same-toolchain build measures 5,736/5,795 bytes for ESM/CJS; the
+qualified build measures 4,688/4,744 bytes with the same minified and Brotli-compressed
+measurement and unchanged 6,000-byte limits. All baseline configuration/source/build hashes
+and all six final output hashes are recorded. These are size measurements, not performance
+or accuracy claims.
+
+The current 155-path disclosure and historical first-review 235-path inventory remain
+separate because their inputs overlap. The two permissive frozen transitions, original trial
+oracle error, dirty versus exact failing-first pins and all earlier failed/partial reports
+remain immutable. The generated result snapshot is unchanged. Local source qualification
+does not publish the F6/F9 audit or settle hosted reviews: PR #247 still needs the final normal
+push, hosted review and qualifying merge. F6/F9 publication remains pending until that merge.
+
+The exact source, report, coverage, package/build/size records and process proofs are under
+`final-validation/review-round-2-validation/` in the external evidence archive. The final
+audit-only commit keeps the qualified source and test trees unchanged.
