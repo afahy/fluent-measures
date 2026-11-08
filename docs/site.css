@@ -460,7 +460,7 @@ html:not([data-js]) .site-header {
   background: var(--accent);
 }
 
-/* The negative margin aligns the GitHub icon, not its padding, with the container edge. */
+/* The negative margin pulls the theme button's padding past the container edge. */
 .header-actions {
   margin-left: auto;
   margin-right: -10px;
