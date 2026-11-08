@@ -26,13 +26,10 @@ Entries with the outcome "missed" (0):
 
 Entries with the outcome "throws" (0):
 
-Entries that agree with one of several outputs (7):
+Entries that agree with one of several outputs (4):
 
 unicode-en-dash-shorthand: null
 unicode-hyphen-shorthand: null
 unqualified-1-75-metric-height: 1.75 m (height)
-unqualified-1-8-metric-height: 1.8 m (height)
-quote-context-opening-height-word-after: null
-quote-context-opening-height-word-first: null
-quote-context-opening-height-all-words: null"
+unqualified-1-8-metric-height: 1.8 m (height)"
 `;

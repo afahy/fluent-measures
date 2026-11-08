@@ -35,9 +35,9 @@ weight. Approximation words are `about`, `around`, `roughly`,
 parseMeasurement("I'm five foot eleven tall"); // { value: 71, unit: 'in', ... }
 parseMeasurement('about 180 cm'); // { value: 180, unit: 'cm', ... }
 parseMeasurement('I weigh one hundred fifty pounds'); // { value: 150, unit: 'lb', ... }
-parseMeasurement('weighed 70 kg in 2020'); // null: historical prose is not a supported wrapper
+parseMeasurement('weighed 70 kg in 2020'); // null: historical prose is not a supported introduction
 parseMeasurement('I was 210 lbs, now 180 lbs'); // null: the parser does not select a current reading
-parseMeasurement('Top 10 in the class'); // null: ranking prose is not a supported wrapper
+parseMeasurement('Top 10 in the class'); // null: ranking prose is not a supported introduction
 ```
 
 Quotation marks, parentheses and square brackets cannot surround an entry, one measurement of
@@ -268,7 +268,7 @@ number and its unit is not part of a complete measurement:
 `1,000, kg` returns `null`.
 
 Numeric commas keep their meaning after a field name: `weight 72,5 kg` is 72.5 kg.
-A hyphen after a field name does not turn arbitrary text into a wrapper:
+A hyphen after a field name does not make it an introduction:
 `height-1,800 cm` returns `null`. A separate number word followed by a comma is not joined
 or discarded; `twenty,5 kg`, `twenty, 5 kg` and `kg twenty, 5` return `null`.
 
@@ -303,10 +303,10 @@ parseMeasurement('72', {
 
 If `type` or `normalizedUnit` selects a dimension, `defaultUnit` must agree with it, even for
 input with a written unit. A default alone does not select a dimension for qualified input or
-authorize `5-11` shorthand. Extra words, wrappers, punctuation or a second number cannot be
-discarded to apply a default: `about 80`, `(80)`, `80;` and `80 90` return `null` with a kilogram
-default. `allowUnqualified` and `inferUnit` are removed; passing a defined value throws a
-migration error. See the README for validation order and migration.
+authorize `5-11` shorthand. Extra words, brackets, quotation marks, punctuation or a second
+number cannot be discarded to apply a default: `about 80`, `(80)`, `80;` and `80 90` return
+`null` with a kilogram default. `allowUnqualified` and `inferUnit` are removed; passing a defined
+value throws a migration error. See the README for validation order and migration.
 
 ## Fuzzy Matching
 
