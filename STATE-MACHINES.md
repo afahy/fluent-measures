@@ -3083,3 +3083,44 @@ restoration/process proofs are under `final-validation/review-round-3-correction
 external archive. The prior 8a2f17f6/fbb27625 full qualification remains historical for this
 changed parser. Fresh full/report/package qualification and normal hooks/push need a separate
 coordinated grant. PR #247 remains blocked on the reported finding; F6/F9 publication is pending.
+
+### AFA-250 third PR review — qualified source and publication handoff
+
+Under the explicit coordinator grant, the normal correction commit and all hooks passed with
+no formatting delta at `bf2565455c302230b68a223010879784c9d92ebd`. Its source tree is
+`847146e23bfeddf3f8f0220a9efaf6f3f157a654` and test tree is
+`d67e15d64fc071e1ccd01b80adcd796b99517fd8`. All 321 tracked file hashes remained identical
+through the fresh clean committed-source `pnpm check`; the retained frozen installation,
+dependency files and toolchain were unchanged, so no new installation was needed.
+
+That full check passed lint, 5,896 source tests in 129 files, TypeScript, build, public API and
+8,186 ESM/CJS package tests in 142 files. Coverage is 100%: 461 statements, 507 branches,
+55 functions and 381 lines. The real nested Git-isolation test passed in 101,867 ms with its
+unchanged timeout. This fresh run qualifies the corrected source; earlier successful runs
+remain evidence only for their recorded source commits.
+
+The actual default non-incremental mutation report is
+`fa48a77d5934a89bc656a9d9caadae16dbe43820c47963a44d51492e6648129d`: 1,484 killed, 48 timeouts,
+one survivor and four ignored mutants. All eight selected source files match the committed
+and live bytes; all six source bodies in the report match exactly. The four ignored source,
+mutator, replacement and reason signatures are unchanged from the previous reviewed report.
+The official changed-line gate against exact main `70f3169` passes. Sole survivor 40 remains
+the unchanged main matcher start-anchor alternative at higher fuzziness settings: it is not
+globally equivalent or fixed, and no new ignore, threshold change or waiver was introduced.
+
+The final measured ESM/CJS sizes are 4,684/4,740 bytes against the preserved exact-main
+5,736/5,795-byte baseline, with unchanged 6,000-byte limits. All eight baseline sources,
+dependency/build/size configurations and six baseline outputs were reverified; all six final
+outputs match this full check. These are build measurements, not runtime performance claims.
+
+The separate 149-path third-review ledger retains all 63 exact-main differences, independent
+arithmetic, full raw/matches objects and malformed controls. The 3,149 prior objects, original
+oracle-error trial, corrected failing-first evidence, earlier review inventories, approved
+generated snapshot and retained stash remain preserved. Their overlapping path counts are
+not combined. No source or test change follows this qualification; this appended audit is
+the only final publication edit.
+
+Exact run, report, coverage, package/build/size identities and process proofs are under
+`final-validation/review-round-3-validation/` in the external evidence archive. Normal final
+push and parent-owned hosted review remain separate from local qualification. PR #247 is not
+declared merge-ready here, and F6/F9 publication remains pending until the qualifying main merge.
