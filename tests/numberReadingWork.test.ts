@@ -249,3 +249,34 @@ describe('explicit prefix-compound reader work', () => {
     }
   });
 });
+
+// The root quote cursor must not try parsing candidate prefixes while looking for its close.
+describe('whole quoted pair reader work', () => {
+  it.each([
+    '"5\'11", 70 kg"',
+    '"5\'11"; 70 kg"',
+    '"5\'11" / 70 kg"',
+    '"5\'11" and 70 kg"',
+    '"5\'11" (70 kg)"',
+    '"5\'11" [70 kg]"',
+  ])('reads the three numeric parts once in %s', raw => {
+    const reader = vi.spyOn(numbers, 'readNumberTokens');
+    try {
+      expect(parseMeasurement(raw, { type: 'height' })).toEqual({
+        value: 71,
+        unit: 'in',
+        type: 'height',
+        raw,
+        matches: [
+          { value: 5, unit: 'ft' },
+          { value: 11, unit: 'in' },
+        ],
+      });
+      const calls = reader.mock.calls.filter(([tokens]) => tokens.length > 0);
+      expect(calls).toHaveLength(3);
+      expect(calls.reduce((sum, [tokens]) => sum + tokens.join(' ').length, 0)).toBe(5);
+    } finally {
+      reader.mockRestore();
+    }
+  });
+});

@@ -83,8 +83,13 @@ function curlyMark(open: string, close: string): RegExp {
     'gi'
   );
 }
-const CURLY_SINGLE = curlyMark('‘', '’');
-const CURLY_DOUBLE = curlyMark('“', '”');
+// Keep every curly opener already recognized by the entry/number wrapper reader.
+const CURLY_SINGLE = curlyMark('[‘‚]', '’');
+const CURLY_DOUBLE = curlyMark(
+  // A prior right quote in numeric suffix position is a unit, not an opening wrapper.
+  String.raw`(?:[“„]|(?<!(?:[\d${FRACTIONS}]['’′]?|${WORD_END})\s*)”)`,
+  '”'
+);
 
 // A minus sign before a number, when no number comes earlier: no digit, Unicode fraction or number
 // word. The number can be a word too, as in "−five'", also after "a" or "an", as in "−a hundred"

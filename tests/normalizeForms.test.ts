@@ -22,6 +22,12 @@ describe('normalizeForms', () => {
     // Every mark in the input converts, not only the first.
     ['5’11’’', "5'11''"],
     ['72” or 70”', '72" or 70"'],
+    ['“72” or 70”', '“72” or 70"'],
+    ['”72” or 70”', '”72” or 70"'],
+    ['72 ” or 70 ”', '72 " or 70 "'],
+    ['seventy” or eighty”', 'seventy" or eighty"'],
+    ['six and a half ” or seven ”', 'six and a half " or seven "'],
+    ['5½” or 6¼”', '5½" or 6¼"'],
     // A minus sign before the first number becomes a hyphen-minus, in each place before it.
     ['−5 ft', '-5 ft'],
     ['﹣5 ft', '-5 ft'],
@@ -48,6 +54,14 @@ describe('normalizeForms', () => {
     '“180 lbs”',
     // A closing entry quote cannot become an inch or feet mark after bare smaller parts.
     '“5 ft 11”',
+    '„5 ft 11”',
+    '”5 ft 11”',
+    '‚5 ft 11’',
+    '„1 m 80”',
+    '”1 m 80”',
+    '‚1 m 80’',
+    '„72” kg',
+    '‚72’ kg',
     '‘5 ft 11’',
     '“1 m 80”',
     '‘1 m 80’',

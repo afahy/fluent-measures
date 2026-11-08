@@ -3289,3 +3289,57 @@ This section records local source qualification, not hosted review or publicatio
 The normal evidence-only audit commit and feature push follow under the active grant.
 The parent retains review finding 4504447325 and PR #247 stewardship. The distinct F6/F9
 historical closeout publication remains pending until the eventual PR lands on main.
+
+### AFA-250 fifth review — focused wrapper preparation
+
+Published `b92f9644a9fa6af4dae9c469a936ad091ed674a6` and its f925cc5d qualification remain
+immutable historical evidence. The parent froze 37 full-result paths for review findings
+4504713300 and 4504713301. Ten failed on published source: eight preserve exact-main results,
+while two weight-selector paths are approved-contract gaps already returning null on main.
+The first independently expanded 217-case source run failed 61 cases on exact published
+source. Its original literals and failure log remain separate from later passing evidence.
+
+Only the root whole-entry wrapper loop can now continue past an ASCII inch quote at an
+existing pair separator. Individual expression wrappers still close at that quote, preserving
+a quoted height followed by an outside weight when no final whole-entry quote exists.
+The shared separator set contains only the existing comma, semicolon, slash, conjunction,
+parenthesis and square-bracket routes. Continue remains before depth decrement; matching-close,
+break and depth behavior remain. No numeric read or parsed-candidate retry is added.
+
+A bracketed second expression can own its separator bracket inside an outer pair wrapper.
+The root starts it at a recognized in-bound separator: the first expression has ended before
+the exclusive outer limit. An unwrapped call with an opener therefore has start below limit;
+the wrapper cursor advances only by one without changing that bound. Recursive wrapped calls
+skip this loop. A token beyond the outer limit cannot become a separator. Existing first-part,
+next-part, unit-span, ordinary suffix and complete-consumption bounds remain. Missing, nested,
+mismatched and extra closes reject both selectors; arbitrary nested wrappers are not enabled.
+
+The existing curly normalization guard now recognizes exactly the reader's curly openers:
+left/low single and left/low/right double quotes. Right single quote is not added as an opener.
+A right double quote already in numeric suffix position remains a unit. The first simple
+opener-class candidate failed the existing private spelling control for two separated inch
+marks; that candidate-only failure remains archived. The corrected numeric suffix-context
+lookbehind stays inside the existing pattern. Its quotation segment stops at a right quote;
+the new predicate examines adjacent suffix context, with no separate backward scan or pass.
+Adjacent-digit, following-inch and following-explicit-unit behavior remain covered.
+
+The final independent ledger has 233 paths: 149 positive full arithmetic/match results and
+84 null controls. It records 61 published and 108 exact-main full-object differences, including
+the bracket-pair route separately from the original ten paths. All 3,617 earlier fixture entries
+and full results, including exact-main observations, remain unchanged. All 3,850 current observer
+objects agree with their independent allowed outcomes. The corpus retains its 3,066-row byte
+prefix and adds 233 ticket-sourced rows; report counts derive from its 3,299 labels. The approved
+generated result snapshot remains unchanged. Nineteen private normalization records distinguish
+private spelling changes from public results, including genuine quotations before later units.
+
+All 29 earlier real-reader records remain identical. Six new whole-pair controls each make
+three nonempty numeric reads over five characters. These spies measure numeric work, not regex
+lookbehind work. No speed, size, mutation-kill or full-qualification claim follows. The unchanged
+long timing fixtures await an allocated final run; none was added or run in this focused phase.
+Current captures are the 3,850-row `*-ready-observations.json` files in
+`final-validation/review-round-5-corrections/`; earlier captures remain historical evidence.
+
+Only focused correction is authorized here. Fresh committed-source full/report/package/size
+validation, normal hooks and push require a separate grant. No reader, public API, stone support,
+extra normalization pass or recovery scan is introduced. Both review findings remain pending
+parent publication and hosted review. The distinct F6/F9 historical publication remains pending.

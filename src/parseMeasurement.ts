@@ -20,6 +20,7 @@ const CLOSE: Readonly<Record<string, string>> = Object.assign(Object.create(null
 });
 const NUMBER_CONNECTORS = new Set(['and', 'a', 'an', 'half', 'point']);
 const QUALIFIERS = new Set(['about', 'around', 'roughly', 'approximately', 'approx.']);
+const PAIR_SEPARATORS = new Set([',', ';', '/', 'and', '(', '[']);
 
 /** Read exactly this phrase, never a valid prefix or suffix of an invalid phrase. */
 function numberValue(words: string[]): NumberReading {
@@ -341,8 +342,8 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     const close = CLOSE[text(start)];
     if (close && !wrapped) {
       let depth = 1;
-      // Unwrapped calls retain the full token limit; a present opener gives start + 1 <= limit.
-      // Bounded recursive calls are wrapped and skip this loop. The cursor advances only by 1.
+      // An unwrapped call with a present opener has start < limit, including a bracketed
+      // second expression inside an outer pair. The fixed-bound cursor advances only by 1.
       for (let at = start + 1; at !== limit; at++) {
         if (text(at) === close) {
           if (unitInsideQuote(at, close)) continue;
@@ -465,7 +466,13 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     // A present opener gives 1 <= limit. The only limit change is immediately before break.
     for (let at = 1; at !== limit; at++) {
       if (text(at) === outerClose) {
-        if (unitInsideQuote(at, outerClose)) continue;
+        // Only this whole-entry cursor can keep an inch mark before a pair separator.
+        // If no later whole-entry close exists, expression still owns the earlier close.
+        if (
+          unitInsideQuote(at, outerClose) ||
+          (outerClose === '"' && PAIR_SEPARATORS.has(text(at + 1)))
+        )
+          continue;
         if (--depth === 0) {
           const finalPeriod =
             at === limit - 2 && text(at + 1) === '.' && !text(at - 1).endsWith('.');
@@ -486,8 +493,9 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       if (!onlyType) return null;
       const separator = text(first.end);
       const bracket = separator === '(' || separator === '[';
-      if (!bracket && ![',', ';', '/', 'and'].includes(separator)) return null;
-      const second = expression(first.end + (bracket ? 0 : 1), limit, begin !== 0);
+      if (!PAIR_SEPARATORS.has(separator)) return null;
+      // Brackets are an existing pair separator, even inside one whole-entry wrapper.
+      const second = expression(first.end + (bracket ? 0 : 1), limit, begin !== 0 && !bracket);
       if (!second || second.end !== limit || second.parsed.type === first.parsed.type) return null;
       if (second.parsed.type === onlyType) chosen = second;
     }
