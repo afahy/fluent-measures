@@ -3419,8 +3419,8 @@ cursor and original audit closeout. The original whole bare numeric read is reta
 part reduction; the former fallback reread and magnitude/system switch are removed. The
 shared numeric reader, tokenizer and unit tables remain unchanged. The two real-reader
 controls in `tests/defaultUnitWork.test.ts` require exactly one call for each bare number.
-This composition is uncommitted; focused evidence and pending full-validation gates are
-recorded separately from the historical audit.
+Composition evidence and validation results are recorded in
+[PR #252](https://github.com/afahy/fluent-measures/pull/252), separately from the historical audit.
 
 ### AFA-251 composition and compatibility policy
 
