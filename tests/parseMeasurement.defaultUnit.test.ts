@@ -86,6 +86,16 @@ describe('source-default configuration errors', () => {
     }
   );
 
+  // AFA-251 proposal 534f6270: configuration objects are invalid and never coerced.
+  it.each([
+    ['defaultUnit', 'kg', '80 kg'],
+    ['normalizedUnit', 'cm', '180 cm'],
+  ] as const)('rejects a coercible array for %s', (name, unit, raw) => {
+    const options = { [name]: [unit] } as unknown as ParseOptions;
+    expect(() => parseMeasurement(raw, options)).toThrow(TypeError);
+    expect(() => parseMeasurement(raw, options)).toThrow(new RegExp(name));
+  });
+
   it.each(['allowUnqualified', 'inferUnit'] as const)('rejects retired option %s', key => {
     const options = { [key]: false } as ParseOptions;
     expect(() => parseMeasurement('80 kg', options)).toThrow(Error);

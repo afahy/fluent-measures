@@ -290,7 +290,8 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   }
 
   // Retain the original whole bare read; a failed expression must not trigger a second parse.
-  let bareNumber: number | null = null;
+  // Zero also represents an absent read: result rejects a nonpositive total.
+  let bareNumber = 0;
 
   function readPart(start: number, limit: number, bareUnit?: Unit): Part | null {
     const quotedNumber = CLOSE[text(start)] ? readNumber(start, limit) : null;
@@ -325,10 +326,10 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       return left.value === null ? null : { value: left.value, unit: prefix.unit, end: left.end };
     }
     const number = readNumber(start, limit);
+    if (number.value === null) return null;
     if (start === 0 && number.end === tokens.length && !CLOSE[text(start)]) {
       bareNumber = number.value;
     }
-    if (number.value === null) return null;
     let at = number.end;
     // An attached word-unit hyphen belongs to the scalar: "5-foot". A sign before a
     // prefix number remains at its cursor and cannot be skipped.
@@ -551,7 +552,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   }
 
   // Only the original complete, undecorated, unwrapped number can use the source default.
-  if (defaultUnit && bareNumber !== null) {
+  if (defaultUnit) {
     return result([{ value: bareNumber, unit: defaultUnit }], input, normalizedUnit);
   }
   return null;
