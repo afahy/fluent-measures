@@ -18,7 +18,7 @@ describe('Unicode minus signs', () => {
     ['kg−70.5', {}],
     ['Weight: −70 kg', {}],
     ['−5 ft 11 in', {}],
-    ['−180', { type: 'height', allowUnqualified: true }],
+    ['−180', { type: 'height', defaultUnit: 'in' }],
   ] as const)('returns null for %s with %o', (raw, options) => {
     expect(parseMeasurement(raw, options)).toBeNull();
   });

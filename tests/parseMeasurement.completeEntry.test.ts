@@ -12,10 +12,11 @@ describe('approved complete-entry contract', () => {
       expect(parseMeasurement(raw)).toBeNull();
       expect(parseMeasurement(raw, { normalizedUnit: 'cm' })).toBeNull();
       expect(parseMeasurement(raw, { normalizedUnit: 'kg' })).toBeNull();
-      // This preserves today's JS option order; the separate early-validation/stone work
-      // will replace st's role here when it becomes a supported unit.
+      // AFA-178 option B (b9c838a9): reject unsupported normalizedUnit before the text.
+      // Stone support remains AFA-254.
       const options = { normalizedUnit: 'st' } as unknown as ParseOptions;
-      expect(parseMeasurement(raw, options)).toBeNull();
+      expect(() => parseMeasurement(raw, options)).toThrow(TypeError);
+      expect(() => parseMeasurement(raw, options)).toThrow(/normalizedUnit/);
     }
   );
 

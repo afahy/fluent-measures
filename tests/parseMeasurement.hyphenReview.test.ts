@@ -33,8 +33,8 @@ describe('hyphenated height review regressions', () => {
     'rejects numeric ranges in %s',
     raw => {
       expect(parseMeasurement(raw)).toBeNull();
-      expect(parseMeasurement(raw, { type: 'weight', allowUnqualified: true })).toBeNull();
-      expect(parseMeasurement(raw, { type: 'height', allowUnqualified: true })).toBeNull();
+      expect(parseMeasurement(raw, { type: 'weight', defaultUnit: 'lb' })).toBeNull();
+      expect(parseMeasurement(raw, { type: 'height', defaultUnit: 'in' })).toBeNull();
     }
   );
 
@@ -243,10 +243,13 @@ describe('hyphenated height review regressions', () => {
     }
   );
 
+  // AFA-251 intentionally retires the earlier semicolon-discarding fallback: a default applies
+  // only to the complete unwrapped number, as approved with AFA-250's shared boundary.
   it.each(['180;', ';180', 'one hundred;fifty;'])(
-    'rejects the complete entry %s (AFA-250)',
+    'rejects semicolons in default-unit input %s',
     raw => {
       expect(parseMeasurement(raw)).toBeNull();
+      expect(parseMeasurement(raw, { type: 'weight', defaultUnit: 'lb' })).toBeNull();
     }
   );
 
@@ -282,9 +285,9 @@ it.each([
   ['0 feet, 180 lbs', { normalizedUnit: 'kg' }],
   ['zero feet, 180 lbs', { normalizedUnit: 'lb' }],
   ['zero feet, 180 lbs', { normalizedUnit: 'kg' }],
-  ['180;', { type: 'weight', allowUnqualified: true }],
-  [';180', { type: 'weight', allowUnqualified: true }],
-  ['one hundred;fifty;', { type: 'weight', allowUnqualified: true }],
+  ['180;', { type: 'weight', defaultUnit: 'lb' }],
+  [';180', { type: 'weight', defaultUnit: 'lb' }],
+  ['one hundred;fifty;', { type: 'weight', defaultUnit: 'lb' }],
 ] as const)('rejects incomplete entry %s with original options %j', (raw, options) => {
   expect(parseMeasurement(raw, options)).toBeNull();
 });

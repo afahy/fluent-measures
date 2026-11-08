@@ -69,11 +69,7 @@ const cases: readonly [input: string, options: ParseOptions, expected: Expected]
     { normalizedUnit: 'cm' },
     { value: 180, unit: 'cm', matches: [{ value: 1.8, unit: 'm' }] },
   ],
-  [
-    'one point eight',
-    { type: 'height', allowUnqualified: true, inferUnit: 'metric' },
-    { value: 1.8, unit: 'm' },
-  ],
+  ['one point eight', { type: 'height', defaultUnit: 'm' }, { value: 1.8, unit: 'm' }],
   [
     'one m zero point zero cm',
     {},

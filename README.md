@@ -115,13 +115,12 @@ parseMeasurement('150 lbs', { type: 'weight', normalizedUnit: 'kg' });
 // { value: 68.0388555, unit: 'kg', type: 'weight', matches: [{ value: 150, unit: 'lb' }], raw: '150 lbs' }
 ```
 
-People sometimes type only a number, for example in a field that already names the unit. Set
-`allowUnqualified` to read it, and `type` to say whether it is a height or a weight. Without
-`type`, the call throws an error for almost any input. `inferUnit` chooses metric or imperial
-units, and imperial is the default:
+People sometimes type only a number, for example in a calculator field labeled “Height (in)”.
+Set `defaultUnit` to that field's source unit. Written units take precedence; `normalizedUnit`
+only chooses the output unit and measurement type. It never supplies a source unit:
 
 ```typescript
-parseMeasurement('72', { type: 'height', allowUnqualified: true, inferUnit: 'imperial' });
+parseMeasurement('72', { defaultUnit: 'in' });
 // { value: 72, unit: 'in', type: 'height', matches: [{ value: 72, unit: 'in' }], raw: '72' }
 ```
 
@@ -165,21 +164,30 @@ interface ParseOptions {
   // name must be exact.
   fuzziness?: number;
 
-  // Read a number that has no unit. Without type, parseMeasurement throws an error for almost
-  // any input.
-  allowUnqualified?: boolean;
-
-  // The unit system for a number that has no unit. Without it, or with 'imperial', a height is
-  // in inches and a weight in pounds. With 'metric', a weight is in kilograms, a height below 3
-  // in meters, and any other height in centimeters.
-  inferUnit?: 'metric' | 'imperial';
+  // Source unit for one complete number with no unit. Without it, a bare number returns null.
+  // Written units win. No magnitude guessing: 1.8 with defaultUnit: 'cm' means 1.8 cm.
+  // Must agree with the dimension selected by type or normalizedUnit, when supplied.
+  defaultUnit?: 'ft' | 'in' | 'cm' | 'm' | 'lb' | 'kg';
 
   // The unit of the result. It also selects the measurement type from a valid complete entry.
-  // A type that contradicts it throws an error. Shorthand such as 5-11 still needs type,
-  // and so does allowUnqualified.
+  // A type that contradicts it throws an error. Shorthand such as 5-11 still needs type.
+  // This option never supplies a source unit for a bare number.
   normalizedUnit?: 'ft' | 'in' | 'cm' | 'm' | 'lb' | 'kg';
 }
 ```
+
+For string input, these checks run before raw length or text: the options object shape,
+`maxLength`, `type`, `normalizedUnit`, `defaultUnit`, retired options, then dimension conflicts.
+Invalid values for those checks throw, even for empty or overlong strings. `fuzziness` retains
+its existing numeric interpretation. Non-string runtime input returns `null` before reading
+options. Empty strings and null values for `type` or `normalizedUnit` count as absent;
+`defaultUnit` must be one of the six canonical units when defined, so null remains invalid.
+
+Migration: remove `allowUnqualified` and `inferUnit`. Either retired option throws when its value
+is defined, including `false`; an explicitly `undefined` property is absent. Replace imperial
+height/weight inference with `defaultUnit: 'in'`/`'lb'`, metric weight with `'kg'`, and choose
+`'m'` or `'cm'` explicitly for height. The parser no longer guesses meters below 3. A default
+applies only to an entire unwrapped number, including supported fractions or number words.
 
 #### `ParsedValue`
 
@@ -263,7 +271,7 @@ If `parseMeasurement` returns `null`, look for these causes:
 
 1. The unit isn't supported. See [Supported units](#supported-units).
 2. The text doesn't say whether it is a height or a weight. Set `type`.
-3. A number has no unit. Set `type`, `allowUnqualified` and `inferUnit`.
+3. A number has no unit. Set `defaultUnit` to the source unit shown by the field.
 4. A unit name has a spelling error. Set `fuzziness` to 1 or 2.
 5. The entry has a range, duplicate measurement, unsupported fragment or extra text. See
    [Limits](#limits).

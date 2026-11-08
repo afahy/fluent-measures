@@ -363,7 +363,7 @@ const cases: [string, ParseOptions, ParsedValue | null][] = [
     '"72"',
     {
       type: 'height',
-      allowUnqualified: true,
+      defaultUnit: 'in',
     },
     null,
   ],
@@ -371,8 +371,7 @@ const cases: [string, ParseOptions, ParsedValue | null][] = [
     '"72"',
     {
       type: 'weight',
-      allowUnqualified: true,
-      inferUnit: 'metric',
+      defaultUnit: 'kg',
     },
     null,
   ],
@@ -380,7 +379,7 @@ const cases: [string, ParseOptions, ParsedValue | null][] = [
     "'72'",
     {
       type: 'height',
-      allowUnqualified: true,
+      defaultUnit: 'in',
     },
     null,
   ],
@@ -388,8 +387,7 @@ const cases: [string, ParseOptions, ParsedValue | null][] = [
     "'72'",
     {
       type: 'weight',
-      allowUnqualified: true,
-      inferUnit: 'metric',
+      defaultUnit: 'kg',
     },
     null,
   ],
@@ -397,7 +395,7 @@ const cases: [string, ParseOptions, ParsedValue | null][] = [
     '(72)',
     {
       type: 'height',
-      allowUnqualified: true,
+      defaultUnit: 'in',
     },
     null,
   ],
@@ -405,8 +403,7 @@ const cases: [string, ParseOptions, ParsedValue | null][] = [
     '(72)',
     {
       type: 'weight',
-      allowUnqualified: true,
-      inferUnit: 'metric',
+      defaultUnit: 'kg',
     },
     null,
   ],
@@ -414,7 +411,7 @@ const cases: [string, ParseOptions, ParsedValue | null][] = [
     '72',
     {
       type: 'height',
-      allowUnqualified: true,
+      defaultUnit: 'in',
     },
     {
       value: 72,
@@ -433,8 +430,7 @@ const cases: [string, ParseOptions, ParsedValue | null][] = [
     '72',
     {
       type: 'weight',
-      allowUnqualified: true,
-      inferUnit: 'metric',
+      defaultUnit: 'kg',
     },
     {
       value: 72,

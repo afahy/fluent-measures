@@ -139,9 +139,8 @@ describe('parseMeasurement', () => {
 
   it('handles unqualified input with metric preference', () => {
     const result = parseMeasurement('180', {
-      allowUnqualified: true,
       type: 'weight',
-      inferUnit: 'metric',
+      defaultUnit: 'kg',
     });
     expect(result).toEqual({
       matches: [

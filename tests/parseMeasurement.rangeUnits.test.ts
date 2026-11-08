@@ -46,8 +46,8 @@ describe('units next to an omitted numeric range', () => {
     '6 1-2; ft 3',
   ])('does not lend the range unit to an unqualified number in %s', raw => {
     expect(parseMeasurement(raw)).toBeNull();
-    expect(parseMeasurement(raw, { type: 'height', allowUnqualified: true })).toBeNull();
-    expect(parseMeasurement(raw, { type: 'weight', allowUnqualified: true })).toBeNull();
+    expect(parseMeasurement(raw, { type: 'height', defaultUnit: 'in' })).toBeNull();
+    expect(parseMeasurement(raw, { type: 'weight', defaultUnit: 'lb' })).toBeNull();
   });
 
   // The maintainer asks for 6 ft + 3 in, without using a midpoint of the range.
@@ -147,13 +147,13 @@ describe('units next to an omitted numeric range', () => {
     expect(
       parseMeasurement('twenty 1-2 five', {
         type: 'height',
-        allowUnqualified: true,
+        defaultUnit: 'in',
       })
     ).toBeNull();
     expect(
       parseMeasurement('twenty 1-2 five', {
         type: 'weight',
-        allowUnqualified: true,
+        defaultUnit: 'lb',
       })
     ).toBeNull();
   });
@@ -286,26 +286,26 @@ it.each([
   ['(kg): 50-70, 180 lbs', { type: 'weight' }],
   ['record 1-2; lbs 70 kg', { type: 'height' }],
   ['record 1-2; lbs 70 kg', { type: 'weight' }],
-  ['1-2 ft 6', { type: 'height', allowUnqualified: true }],
-  ['1-2 ft 6', { type: 'weight', allowUnqualified: true }],
-  ['ft 1-2 6', { type: 'height', allowUnqualified: true }],
-  ['ft 1-2 6', { type: 'weight', allowUnqualified: true }],
-  ['6 1-2 ft', { type: 'height', allowUnqualified: true }],
-  ['6 1-2 ft', { type: 'weight', allowUnqualified: true }],
-  ['two and a half 1-2; ft 3', { type: 'height', allowUnqualified: true }],
-  ['two and a half 1-2; ft 3', { type: 'weight', allowUnqualified: true }],
-  ['1-2 inches 6', { type: 'height', allowUnqualified: true }],
-  ['1-2 inches 6', { type: 'weight', allowUnqualified: true }],
-  ['kg 50-70 180', { type: 'height', allowUnqualified: true }],
-  ['kg 50-70 180', { type: 'weight', allowUnqualified: true }],
-  ['6 1-2 ft text in', { type: 'height', allowUnqualified: true }],
-  ['6 1-2 ft text in', { type: 'weight', allowUnqualified: true }],
-  ['6 1-2 ft in', { type: 'height', allowUnqualified: true }],
-  ['6 1-2 ft in', { type: 'weight', allowUnqualified: true }],
-  ['height 1-2 ft 6', { type: 'height', allowUnqualified: true }],
-  ['height 1-2 ft 6', { type: 'weight', allowUnqualified: true }],
-  ['6 1-2; ft 3', { type: 'height', allowUnqualified: true }],
-  ['6 1-2; ft 3', { type: 'weight', allowUnqualified: true }],
+  ['1-2 ft 6', { type: 'height', defaultUnit: 'in' }],
+  ['1-2 ft 6', { type: 'weight', defaultUnit: 'lb' }],
+  ['ft 1-2 6', { type: 'height', defaultUnit: 'in' }],
+  ['ft 1-2 6', { type: 'weight', defaultUnit: 'lb' }],
+  ['6 1-2 ft', { type: 'height', defaultUnit: 'in' }],
+  ['6 1-2 ft', { type: 'weight', defaultUnit: 'lb' }],
+  ['two and a half 1-2; ft 3', { type: 'height', defaultUnit: 'in' }],
+  ['two and a half 1-2; ft 3', { type: 'weight', defaultUnit: 'lb' }],
+  ['1-2 inches 6', { type: 'height', defaultUnit: 'in' }],
+  ['1-2 inches 6', { type: 'weight', defaultUnit: 'lb' }],
+  ['kg 50-70 180', { type: 'height', defaultUnit: 'in' }],
+  ['kg 50-70 180', { type: 'weight', defaultUnit: 'lb' }],
+  ['6 1-2 ft text in', { type: 'height', defaultUnit: 'in' }],
+  ['6 1-2 ft text in', { type: 'weight', defaultUnit: 'lb' }],
+  ['6 1-2 ft in', { type: 'height', defaultUnit: 'in' }],
+  ['6 1-2 ft in', { type: 'weight', defaultUnit: 'lb' }],
+  ['height 1-2 ft 6', { type: 'height', defaultUnit: 'in' }],
+  ['height 1-2 ft 6', { type: 'weight', defaultUnit: 'lb' }],
+  ['6 1-2; ft 3', { type: 'height', defaultUnit: 'in' }],
+  ['6 1-2; ft 3', { type: 'weight', defaultUnit: 'lb' }],
   ['5 kg 6 1-2 ft 3 in', { type: 'height' }],
   ['five and a half kg 6 1-2 ft 3 in', { type: 'height' }],
   ['in 6 1-2 ft 3 in', { type: 'height' }],

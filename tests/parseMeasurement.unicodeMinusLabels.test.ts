@@ -16,7 +16,7 @@ describe('Unicode minus signs after numeric labels', () => {
       ['phase 20, SIGN5 cm', {}],
       ['phase twenty, SIGN5 cm', { type: 'height' }],
       ['phase 20, SIGN5 cm', { normalizedUnit: 'in' }],
-      ['phase twenty, SIGN5 cm', { type: 'height', allowUnqualified: true }],
+      ['phase twenty, SIGN5 cm', { type: 'height', defaultUnit: 'in' }],
       ['phase twenty,SIGN5 cm', {}],
       ['phase twenty  , SIGN5 cm', {}],
       ['phase twenty; SIGN5 cm', {}],

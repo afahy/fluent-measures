@@ -95,7 +95,7 @@ describe('worded range boundaries', () => {
     'Weight is between 150 and 180.',
     '150 to 180.',
   ])('does not infer an unqualified range endpoint: %s', raw => {
-    expect(parseMeasurement(raw, { type: 'weight', allowUnqualified: true })).toBeNull();
+    expect(parseMeasurement(raw, { type: 'weight', defaultUnit: 'lb' })).toBeNull();
   });
 
   it.each(['lbs 150 to 180. 70 kg', '150 to 180. lbs; 70 kg', '150 to 180... lbs; 70 kg'] as const)(

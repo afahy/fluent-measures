@@ -3398,3 +3398,38 @@ ledger and two supplementary corpus controls remain separately identified. This 
 records local qualification before normal feature push. Parent-owned hosted review findings
 4504713300 and 4504713301 remain pending verified publication and review. The distinct F6/F9
 historical closeout publication remains pending the eventual PR #247 merge and exact-main CI.
+
+## Approved policy revision: explicit source defaults (AFA-251)
+
+The historical findings and reproductions above describe their recorded revisions, including
+AFA-66 magnitude inference and token-dependent option errors. They remain historical evidence;
+this policy change does not reclassify them as mistakes or rewrite their expected outputs.
+
+The AFA-251 preparation against `bfac12a943720390c60afd26a522cb67dfa20fa3` implements the approved
+replacement of `allowUnqualified`/`inferUnit` with an exact `defaultUnit`. It removes implicit
+imperial selection and the below-three metric-height guess. Options now validate for every
+string before length or tokenization, in the approved AFA-178 order; the non-string guard still
+runs first. Defined retired options raise migration errors. Bare defaults read the complete
+unwrapped number, with no discarded punctuation or suffix recovery. AFA-250 owns the wider
+complete-expression grammar integration; AFA-253 owns fuzzy removal; AFA-252 owns detailed
+failure/provenance results. Those changes are separate from this preparation.
+
+Composition onto `ae985e1c7d257c7ceb215d9fa51243c4df85d8d8` retains the merged complete-entry
+cursor and original audit closeout. The original whole bare numeric read is retained before
+part reduction; the former fallback reread and magnitude/system switch are removed. The
+shared numeric reader, tokenizer and unit tables remain unchanged. The two real-reader
+controls in `tests/defaultUnitWork.test.ts` require exactly one call for each bare number.
+Composition evidence and validation results are recorded in
+[PR #252](https://github.com/afahy/fluent-measures/pull/252), separately from the historical audit.
+
+### AFA-251 composition and compatibility policy
+
+The bfac12a and ae985e1 paragraphs above describe earlier preparation stages. The AFA-251 PR
+composes explicit defaults onto `d874ded31ecedf9a7c0a874685e034999ab6989e`, preserving the
+complete-entry cursor and the landed AFA-265 curly-unit rules. Bare numbers use the caller's
+source unit at every magnitude; written units override that default. Empty strings and null
+values for type and normalizedUnit count as absent, while null defaultUnit and defined retired
+options are configuration errors. Options-container errors precede string length/content checks.
+The forced 2.99 m / 3 cm property controls retain all targets, written-value counterparts and
+no-default controls. The AFA-251 PR description records composition evidence and validation;
+historical findings and their original revision references above remain unchanged.

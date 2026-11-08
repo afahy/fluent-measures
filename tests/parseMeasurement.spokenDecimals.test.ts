@@ -42,15 +42,8 @@ describe('spoken decimal measurements', () => {
     ['kg 70 point 25', {}, 70.25, 'kg', 70.25, 'kg'],
     ['SEVENTY POINT FIVE KILOGRAMS', {}, 70.5, 'kg', 70.5, 'kg'],
     ['one point eight metrs', { fuzziness: 1 }, 1.8, 'm', 1.8, 'm'],
-    [
-      'one point eight',
-      { type: 'height', allowUnqualified: true, inferUnit: 'metric' },
-      1.8,
-      'm',
-      1.8,
-      'm',
-    ],
-    ['seventy point five', { type: 'weight', allowUnqualified: true }, 70.5, 'lb', 70.5, 'lb'],
+    ['one point eight', { type: 'height', defaultUnit: 'm' }, 1.8, 'm', 1.8, 'm'],
+    ['seventy point five', { type: 'weight', defaultUnit: 'lb' }, 70.5, 'lb', 70.5, 'lb'],
   ] as const)('reads all of %s', (raw, options, value, unit, part, partUnit) => {
     const result = parseMeasurement(raw, options);
     expect(result?.value).toBeCloseTo(value, 10);
@@ -86,7 +79,7 @@ describe('spoken decimal measurements', () => {
   ])('rejects the complete malformed phrase %s', phrase => {
     expect(parseMeasurement(`${phrase} kg`)).toBeNull();
     expect(parseMeasurement(`kg ${phrase}`)).toBeNull();
-    expect(parseMeasurement(phrase, { type: 'weight', allowUnqualified: true })).toBeNull();
+    expect(parseMeasurement(phrase, { type: 'weight', defaultUnit: 'lb' })).toBeNull();
   });
 
   it.each([

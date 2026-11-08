@@ -1229,13 +1229,11 @@ const rejected = parseMeasurement(
                   ></a>
                 </div>
                 <p>
-                  People sometimes type only a number, for example in a field that already names the
-                  unit. Set <a href="#parse-options"><code>allowUnqualified</code></a> to read it,
-                  and <code>type</code> to say whether it is a height or a weight. Without
-                  <code>type</code>, the call throws an error for almost any input.
-                  <a href="#parse-options"><code>inferUnit</code></a> chooses metric or imperial
-                  units, and imperial is the default. With <code>'metric'</code>, a weight is in
-                  kilograms, a height below 3 is in meters, and any other height is in centimeters.
+                  People sometimes type only a number, for example in a calculator field labeled
+                  “Height (in)”. Set <a href="#parse-options"><code>defaultUnit</code></a> to that
+                  source unit. Written units take precedence. <code>normalizedUnit</code> chooses
+                  the output unit and measurement type; it never supplies a source unit. There is no
+                  magnitude guessing: <code>1.8</code> with a centimeter default means 1.8 cm.
                 </p>
                 <div class="code on-code">
                   <div class="code-head">
@@ -1246,7 +1244,7 @@ const rejected = parseMeasurement(
                       disabled
                       type="button"
                       data-copy
-                      aria-label="Copy unit inference example"
+                      aria-label="Copy source unit default example"
                     >
                       <svg class="icon icon-sm icon-copy" aria-hidden="true">
                         <use href="#i-copy" />
@@ -1261,9 +1259,7 @@ const rejected = parseMeasurement(
                     tabindex="0"
                     data-returns
                   ><code class="language-typescript">parseMeasurement('72', {
-  type: 'height',
-  allowUnqualified: true,
-  inferUnit: 'imperial',
+  defaultUnit: 'in',
 });
 /* ✓ Returns:
 {
@@ -1282,7 +1278,8 @@ const rejected = parseMeasurement(
                       Returns
                     </div>
                     <p class="summary">
-                      <span><b>72</b> in</span><span class="summary-note">imperial, so inches</span>
+                      <span><b>72</b> in</span
+                      ><span class="summary-note">source default: inches</span>
                     </p>
                   </div>
                 </div>
@@ -1403,10 +1400,20 @@ const strict = parseMeasurement(
               <p class="measure">
                 Reads one height or weight from a string. When it returns <code>null</code>,
                 <a href="#troubleshooting">Troubleshooting</a> lists the causes to look for,
-                including input longer than <code>maxLength</code>. It can throw an error for an
-                invalid <code>maxLength</code>, for a <code>type</code> that contradicts
-                <code>normalizedUnit</code>, and for <code>allowUnqualified</code> without
-                <code>type</code>.
+                including input longer than <code>maxLength</code>. For string input it validates
+                options before length or text: the options object, <code>maxLength</code>,
+                <code>type</code>, <code>normalizedUnit</code>, <code>defaultUnit</code>, retired
+                options, then dimension conflicts. Invalid options throw even for empty or overlong
+                strings. Non-string runtime input returns <code>null</code> before reading options.
+                Empty strings and null values for <code>type</code> or
+                <code>normalizedUnit</code> count as absent.
+              </p>
+              <p class="measure">
+                To migrate, remove <code>allowUnqualified</code> and <code>inferUnit</code>; either
+                throws when defined, including <code>false</code>. An explicitly
+                <code>undefined</code> property is absent. Use <code>defaultUnit: 'in'</code> or
+                <code>'lb'</code> for imperial fields, <code>'kg'</code> for metric weight, and
+                choose <code>'m'</code> or <code>'cm'</code> explicitly for metric height.
               </p>
               <div class="api-card">
                 <p class="decl">
@@ -1474,8 +1481,8 @@ const strict = parseMeasurement(
                       <div>
                         <dt>When omitted</dt>
                         <dd>
-                          Selected by <code>normalizedUnit</code> when set; otherwise inferred from
-                          the input.
+                          Selected by <code>normalizedUnit</code> when set; otherwise by written
+                          units or <code>defaultUnit</code> for a bare number.
                         </dd>
                       </div>
                       <div>
@@ -1503,15 +1510,15 @@ const strict = parseMeasurement(
                       </div>
                       <div>
                         <dt>When omitted</dt>
-                        <dd>Uses the parsed or inferred unit.</dd>
+                        <dd>Uses the written or default source unit.</dd>
                       </div>
                       <div>
                         <dt>Constraints</dt>
                         <dd>
                           Also selects the measurement type, so a weight unit reads only a weight. A
                           <code>type</code> that contradicts it throws an error. Shorthand such as
-                          <code>5-11</code> still needs <code>type</code>, and so does
-                          <code>allowUnqualified</code>.
+                          <code>5-11</code> still needs <code>type</code>. This option never
+                          supplies a source unit for a bare number.
                         </dd>
                       </div>
                     </dl>
@@ -1542,62 +1549,31 @@ const strict = parseMeasurement(
                     </dl>
                   </dd>
                 </div>
-                <div id="option-allow-unqualified">
+                <div id="option-default-unit">
                   <dt>
-                    <a class="name" href="#option-allow-unqualified">allowUnqualified?</a
-                    ><span class="type">boolean</span>
+                    <a class="name" href="#option-default-unit">defaultUnit?</a
+                    ><span class="type"><a href="#unit-type">Unit</a></span>
                   </dt>
                   <dd>
                     <dl class="option-facts">
                       <div>
                         <dt>Purpose</dt>
                         <dd>
-                          Read a number that has no unit. See
+                          Source unit for one complete unwrapped number, including supported
+                          fractions and number words. See
                           <a href="#ex-unqualified">Numbers without a unit</a>.
                         </dd>
                       </div>
                       <div>
-                        <dt>Default</dt>
-                        <dd><code>false</code> — bare-number inference is off.</dd>
-                      </div>
-                      <div>
-                        <dt>Constraints</dt>
-                        <dd>
-                          Requires an explicit <code>type</code> when enabled. Without it,
-                          <code>parseMeasurement</code> throws an error for almost any input.
-                        </dd>
-                      </div>
-                    </dl>
-                  </dd>
-                </div>
-                <div id="option-infer-unit">
-                  <dt>
-                    <a class="name" href="#option-infer-unit">inferUnit?</a
-                    ><span class="type"
-                      ><span class="str">'metric'</span> | <span class="str">'imperial'</span></span
-                    >
-                  </dt>
-                  <dd>
-                    <dl class="option-facts">
-                      <div>
-                        <dt>Purpose</dt>
-                        <dd>
-                          The unit system for a number that has no unit, when
-                          <code>allowUnqualified</code> and <code>type</code> are set.
-                        </dd>
-                      </div>
-                      <div>
                         <dt>When omitted</dt>
-                        <dd>
-                          Same as <code>'imperial'</code>: a height is in inches and a weight in
-                          pounds.
-                        </dd>
+                        <dd>Bare numbers return null.</dd>
                       </div>
                       <div>
                         <dt>Constraints</dt>
                         <dd>
-                          With <code>'metric'</code>, a weight is in kilograms, a height below 3 in
-                          meters, and any other height in centimeters.
+                          One of the six canonical units. Written units win. Must agree with the
+                          dimension selected by <code>type</code> or <code>normalizedUnit</code>, if
+                          supplied. No magnitude guessing or discarded wrappers or text.
                         </dd>
                       </div>
                     </dl>
@@ -1975,9 +1951,9 @@ const strict = parseMeasurement(
                     >.
                   </li>
                   <li>
-                    A number has no unit. Set <code>type</code>,
-                    <a href="#ex-unqualified"><code>allowUnqualified</code></a> and
-                    <code>inferUnit</code>.
+                    A number has no unit. Set
+                    <a href="#ex-unqualified"><code>defaultUnit</code></a> to the source unit shown
+                    by the field.
                   </li>
                   <li>
                     A unit name has a spelling error. Set

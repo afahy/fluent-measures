@@ -43,13 +43,12 @@ const UNITS: ReadonlySet<unknown> = new Set(Object.keys(UNIT_TYPES));
 const ENTRY_FIELDS = ['id', 'input', 'options', 'expected', 'category', 'source', 'note'];
 const OPTION_CHECKS: Readonly<Record<keyof ParseOptions, (value: unknown) => boolean>> = {
   maxLength: value => typeof value === 'number' && value >= 1,
-  type: value => value === 'height' || value === 'weight',
+  type: value => value === null || value === 'height' || value === 'weight',
   // The AFA-189 entries need Infinity, written as 1e999. NaN and -Infinity still fail ">= 0", so
   // Infinity is the only value that the check accepts and Number.isFinite rejected.
   fuzziness: value => typeof value === 'number' && value >= 0,
-  allowUnqualified: value => typeof value === 'boolean',
-  inferUnit: value => value === 'metric' || value === 'imperial',
-  normalizedUnit: value => UNITS.has(value),
+  defaultUnit: value => UNITS.has(value),
+  normalizedUnit: value => value === null || UNITS.has(value),
 };
 const OPTION_CHECK_BY_NAME = new Map(Object.entries(OPTION_CHECKS));
 const ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -305,6 +304,15 @@ describe('corpus line checks', () => {
       },
     ]);
   });
+
+  it.each(['maxLength', 'fuzziness', 'defaultUnit'] as const)(
+    'rejects null for the non-sentinel option %s',
+    name => {
+      const text = valid.replace('"expected"', `"options":{"${name}":null},"expected"`);
+      expect(() => parseCorpus(text)).toThrow(Error);
+      expect(() => parseCorpus(text)).toThrow(new RegExp(name));
+    }
+  );
 
   it.each([
     ['a line that is not JSON', '{"id":', 'corpus line 1: is not valid JSON'],

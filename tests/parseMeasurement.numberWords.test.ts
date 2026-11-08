@@ -76,7 +76,7 @@ describe('measurement number phrases', () => {
     ['.5 hundred', 50],
     ['one hundred thousand two hundred fifty', 100250],
   ])('parses complete unqualified phrases in %s', (raw, value) => {
-    expect(parseMeasurement(raw, { type: 'weight', allowUnqualified: true })?.value).toBe(value);
+    expect(parseMeasurement(raw, { type: 'weight', defaultUnit: 'lb' })?.value).toBe(value);
   });
 
   it.each(['1 ', 'and '])('bounds phrase parsing work for a long run of %s', prefix => {

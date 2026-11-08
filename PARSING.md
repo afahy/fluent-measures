@@ -43,7 +43,7 @@ parseMeasurement('Top 10 in the class'); // null: ranking prose is not a support
 One balanced pair of parentheses, square brackets or recognized quotation marks may surround
 an entry or a number. Existing Unicode feet/inch marks remain units, and a genuine closing
 quote before an explicit unit does not become a different unit. Quoting arbitrary prose does
-not make it a supported number. A bare number with `allowUnqualified` must still occupy the
+not make it a supported number. A bare number with `defaultUnit` must still occupy the
 whole entry without surrounding words.
 
 ## Unsupported Units
@@ -268,30 +268,35 @@ unit, such as `2180 cm` or `180 cm`, without the phase label.
 
 ### Numbers With No Unit
 
-With `allowUnqualified`, a number that has no unit gets its unit from `type` and `inferUnit`. With
-`inferUnit: 'imperial'`, or without `inferUnit`, a height is in inches and a weight is in pounds.
-With `inferUnit: 'metric'`, a weight is in kilograms. A metric height below 3 is in meters,
-because a person's height in meters is always below 3. Any other metric height is in centimeters:
+`defaultUnit` supplies the source unit for one complete unwrapped number, including supported
+fractions and number words. A bare number without this option returns `null`, even when `type`
+or `normalizedUnit` is supplied. Written units always win. The source unit never depends on
+magnitude: with `defaultUnit: 'cm'`, 1.8 means 1.8 cm; with `'m'`, 3 means 3 m.
 
 ```typescript
-parseMeasurement('72', { type: 'height', allowUnqualified: true }); // { value: 72, unit: 'in', ... }
-parseMeasurement('150', { type: 'weight', allowUnqualified: true }); // { value: 150, unit: 'lb', ... }
-parseMeasurement('1.8', { type: 'height', allowUnqualified: true, inferUnit: 'metric' }); // { value: 1.8, unit: 'm', ... }
-parseMeasurement('180', { type: 'height', allowUnqualified: true, inferUnit: 'metric' }); // { value: 180, unit: 'cm', ... }
-parseMeasurement('70', { type: 'weight', allowUnqualified: true, inferUnit: 'metric' }); // { value: 70, unit: 'kg', ... }
+parseMeasurement('72', { defaultUnit: 'in' }); // { value: 72, unit: 'in', ... }
+parseMeasurement('150', { defaultUnit: 'lb' }); // { value: 150, unit: 'lb', ... }
+parseMeasurement('1.8', { defaultUnit: 'm' }); // { value: 1.8, unit: 'm', ... }
+parseMeasurement('180', { defaultUnit: 'cm' }); // { value: 180, unit: 'cm', ... }
+parseMeasurement('70', { defaultUnit: 'kg' }); // { value: 70, unit: 'kg', ... }
 ```
 
-`normalizedUnit` also converts a number that has no unit:
+`normalizedUnit` converts from the explicit source default; it never supplies one:
 
 ```typescript
 parseMeasurement('72', {
-  type: 'height',
-  allowUnqualified: true,
-  inferUnit: 'imperial',
+  defaultUnit: 'in',
   normalizedUnit: 'cm',
 });
 // { value: 182.88, unit: 'cm', type: 'height', matches: [{ value: 72, unit: 'in' }], raw: '72' }
 ```
+
+If `type` or `normalizedUnit` selects a dimension, `defaultUnit` must agree with it, even for
+input with a written unit. A default alone does not select a dimension for qualified input or
+authorize `5-11` shorthand. Extra words, wrappers, punctuation or a second number cannot be
+discarded to apply a default: `about 80`, `(80)`, `80;` and `80 90` return `null` with a kilogram
+default. `allowUnqualified` and `inferUnit` are removed; passing a defined value throws a
+migration error. See the README for validation order and migration.
 
 ## Fuzzy Matching
 
