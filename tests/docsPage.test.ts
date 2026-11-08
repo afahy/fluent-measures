@@ -565,3 +565,115 @@ describe('static docs examples before initialization', () => {
     expect(page).toMatch(new RegExp(`<p[^>]*id="${labelId}"[^>]*>\\s*${label}\\s*</p>`));
   });
 });
+
+// AFA-270: "Docs for your version" opened README.md, which Pages serves as raw Markdown. The
+// link now opens a section of this page, which lists each verified version's HTML docs.
+describe('the docs for your version section', () => {
+  const site = 'https://afahy.github.io/fluent-measures/';
+  const script = page.slice(
+    page.indexOf('// Docs for each verified version'),
+    page.indexOf('// End of docs for each verified version.')
+  );
+
+  class Element {
+    hidden = false;
+    href = '';
+    textContent = '';
+    children: (Element | string)[] = [];
+    append(...nodes: (Element | string)[]): void {
+      this.children.push(...nodes);
+    }
+    replaceChildren(...nodes: Element[]): void {
+      this.children = nodes;
+    }
+  }
+
+  // Runs the page's script with a fake ledger response, and reads the list as text.
+  async function render(response: Promise<unknown>): Promise<{
+    list: Element;
+    fallback: Element;
+    requests: string[];
+  }> {
+    const list = Object.assign(new Element(), { hidden: true });
+    const fallback = new Element();
+    const requests: string[] = [];
+    let settled: Promise<unknown> = Promise.resolve();
+    runInNewContext(script, {
+      window: { fetch: true },
+      AbortSignal,
+      document: {
+        querySelector: (selector: string): Element | null =>
+          ({ '[data-doc-versions]': list, '[data-doc-versions-fallback]': fallback })[selector] ??
+          null,
+        createElement: (): Element => new Element(),
+      },
+      fetch: (url: string): Promise<unknown> => {
+        requests.push(url);
+        settled = response.then(
+          () => undefined,
+          () => undefined
+        );
+        return response;
+      },
+    });
+    await settled;
+    // Two .then steps and the catch run after the response settles.
+    for (let i = 0; i < 5; i++) await Promise.resolve();
+    return { list, fallback, requests };
+  }
+  const ledger = (body: unknown): Promise<unknown> =>
+    Promise.resolve({ ok: true, json: () => Promise.resolve(body) });
+  const items = (list: Element): string[] =>
+    list.children.map(item => {
+      const [link, note = ''] = (item as Element).children as [Element, string?];
+      return `${link.textContent} ${link.href}${note}`;
+    });
+
+  it('links the hero to the section on this page, not to the Markdown README', () => {
+    expect(page).toContain('<a href="#versions">Docs for your version</a>');
+    expect(page).toContain('<h3 id="versions">Docs for your version</h3>');
+    expect(page).not.toContain('README.md#documentation-for-your-version');
+  });
+
+  it('starts with a static link to the version list and no empty list', () => {
+    expect(page).toContain('<ul data-doc-versions hidden></ul>');
+    expect(page).toContain(`<a href="${site}versions.json"`);
+    expect(page).toContain('<code>npm ls @afahy/<wbr />fluent-measures</code>');
+  });
+
+  it('lists each verified version newest first, with a link to its HTML docs', async () => {
+    const { list, fallback, requests } = await render(
+      ledger({
+        current: '0.10.0',
+        releases: { '0.2.0': {}, '0.10.0': {}, '0.9.1': {}, '1.0.0-beta.1': {}, '01.2.3': {} },
+      })
+    );
+    expect(requests).toEqual([`${site}versions.json`]);
+    // 0.10.0 is newer than 0.9.1: the order is numeric, not alphabetical.
+    expect(items(list)).toEqual([
+      `0.10.0 ${site}versions/0.10.0/ (latest)`,
+      `0.9.1 ${site}versions/0.9.1/`,
+      `0.2.0 ${site}versions/0.2.0/`,
+    ]);
+    expect(list.hidden).toBe(false);
+    expect(fallback.hidden).toBe(true);
+  });
+
+  it.each([
+    ['a failed request', (): Promise<unknown> => Promise.reject(new Error('offline'))],
+    [
+      'an HTTP error',
+      (): Promise<unknown> => Promise.resolve({ ok: false, json: () => Promise.resolve({}) }),
+    ],
+    ['a ledger with no releases', (): Promise<unknown> => ledger({ current: '0.2.0' })],
+    ['a null ledger', (): Promise<unknown> => ledger(null)],
+    ['releases that are null', (): Promise<unknown> => ledger({ releases: null })],
+    ['releases that are a string', (): Promise<unknown> => ledger({ releases: '012' })],
+    ['no stable version', (): Promise<unknown> => ledger({ releases: { latest: {}, '1.0': {} } })],
+  ])('keeps the static link after %s', async (_name, response) => {
+    const { list, fallback } = await render(response());
+    expect(list.hidden).toBe(true);
+    expect(list.children).toEqual([]);
+    expect(fallback.hidden).toBe(false);
+  });
+});

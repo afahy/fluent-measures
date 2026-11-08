@@ -9,6 +9,16 @@ import { pathToFileURL } from 'node:url';
 const site = 'https://afahy.github.io/fluent-measures/';
 const files = ['index.html', 'README.md', 'PARSING.md', 'llms.txt'];
 
+// The page links to its own "Docs for your version" section. The archived 0.2.0 page keeps
+// its older link to the README section, because its digests are fixed.
+function hasVersionLink(html, legacyReadme) {
+  const target = /<a\s[^>]*\bhref="([^"]+)"[^>]*>\s*Docs for your version\s*<\/a>/.exec(html)?.[1];
+  return (
+    (target === '#versions' && /\sid="versions"/.test(html)) ||
+    (legacyReadme !== undefined && target === `${legacyReadme}#documentation-for-your-version`)
+  );
+}
+
 export function readDocsArtifact(directory) {
   const documents = Object.fromEntries(
     files.map(file => [file, readFileSync(join(directory, file), 'utf8')])
@@ -35,13 +45,7 @@ export function readDocsArtifact(directory) {
     const packageLabel = `@afahy/fluent-measures@${version}`;
     for (const [file, body] of Object.entries(documents)) {
       for (const marker of file === 'index.html'
-        ? [
-            packageLabel,
-            source,
-            `href="${base}README.md"`,
-            `href="${base}llms.txt"`,
-            `href="${base}README.md#documentation-for-your-version"`,
-          ]
+        ? [packageLabel, source, `href="${base}README.md"`, `href="${base}llms.txt"`]
         : [metadata, packageLabel, `](${base}README.md`, `](${base}PARSING.md`]) {
         if (!body.includes(marker))
           throw new Error(`Pages artifact ${file} is missing ${JSON.stringify(marker)}`);
@@ -59,6 +63,8 @@ export function readDocsArtifact(directory) {
         throw new Error(`Pages artifact ${file} has the wrong heading`);
     }
     const html = documents['index.html'];
+    if (!hasVersionLink(html, version === '0.2.0' ? `${base}README.md` : undefined))
+      throw new Error('Pages artifact index.html is missing the docs for your version link');
     const ids = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(([, id]) => id));
     for (const [, href] of html.matchAll(/\b(?:href|src)="([^"]+)"/g)) {
       if (href.startsWith('#')) {
@@ -131,13 +137,7 @@ export function readDocsArtifact(directory) {
   if (existsSync(join(directory, 'release.json')))
     throw new Error('Pages artifact has no package version');
   const required = {
-    'index.html': [
-      'fluent-measures',
-      'href="README.md"',
-      'href="llms.txt"',
-      'href="README.md#documentation-for-your-version"',
-      source,
-    ],
+    'index.html': ['fluent-measures', 'href="README.md"', 'href="llms.txt"', source],
     'README.md': [
       '# fluent-measures',
       metadata,
@@ -148,6 +148,8 @@ export function readDocsArtifact(directory) {
     'PARSING.md': ['# Parsing rules', metadata, `](${site}README.md)`],
     'llms.txt': ['# fluent-measures', metadata, `](${site}README.md)`, `](${site}PARSING.md)`],
   };
+  if (!hasVersionLink(documents['index.html']))
+    throw new Error('Pages artifact index.html is missing the docs for your version link');
   for (const [file, markers] of Object.entries(required)) {
     for (const marker of markers) {
       if (!documents[file].includes(marker)) {

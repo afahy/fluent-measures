@@ -495,7 +495,7 @@
               <div class="docs-resources">
                 <a href="README.md">View Markdown</a>
                 <a href="llms.txt">Agent index (llms.txt)</a>
-                <a href="README.md#documentation-for-your-version">Docs for your version</a>
+                <a href="#versions">Docs for your version</a>
               </div>
             </div>
 
@@ -1986,6 +1986,34 @@ const strict = parseMeasurement(
                 </p>
               </div>
             </div>
+
+            <div class="hd hd-3">
+              <h3 id="versions">Docs for your version</h3>
+              <a class="anchor" href="#versions" aria-label="Link to Docs for your version"
+                ><svg class="icon" aria-hidden="true"><use href="#i-link" /></svg
+              ></a>
+            </div>
+            <div class="stack">
+              <div class="body-text">
+                <p>
+                  Results can change between versions. To find the version that your app uses, run
+                  <code>npm ls @afahy/<wbr />fluent-measures</code>. Each verified npm release has
+                  its own docs page:
+                </p>
+                <ul data-doc-versions hidden></ul>
+                <p data-doc-versions-fallback>
+                  See the
+                  <a href="https://afahy.github.io/fluent-measures/versions.json"
+                    >list of verified versions</a
+                  >. The docs for a version are at <code>versions/&lt;version&gt;/</code> on this
+                  site.
+                </p>
+                <p>
+                  Versions 0.1.0 and 0.1.1 have no docs page. Use the README in your installed
+                  package.
+                </p>
+              </div>
+            </div>
           </section>
 
           <p class="edit-page">
@@ -2528,6 +2556,43 @@ const strict = parseMeasurement(
               // Offline or blocked: the header simply shows no version.
             });
         }
+
+        // Docs for each verified version, read from the site's version ledger. If the
+        // ledger can't load, the static link to it stays.
+        const docVersions = document.querySelector('[data-doc-versions]');
+        if (docVersions && window.fetch) {
+          const site = 'https://afahy.github.io/fluent-measures/';
+          const stable = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
+          const parts = version => version.split('.').map(Number);
+          fetch(site + 'versions.json', { signal: AbortSignal.timeout?.(5000) })
+            .then(response => (response.ok ? response.json() : null))
+            .then(index => {
+              const versions = Object.keys(index?.releases ?? {})
+                .filter(version => stable.test(version))
+                .sort((a, b) => {
+                  const [x, y] = [parts(a), parts(b)];
+                  return y[0] - x[0] || y[1] - x[1] || y[2] - x[2];
+                });
+              if (!versions.length) return;
+              docVersions.replaceChildren(
+                ...versions.map(version => {
+                  const item = document.createElement('li');
+                  const link = document.createElement('a');
+                  link.href = `${site}versions/${version}/`;
+                  link.textContent = version;
+                  item.append(link);
+                  if (version === index.current) item.append(' (latest)');
+                  return item;
+                })
+              );
+              docVersions.hidden = false;
+              document.querySelector('[data-doc-versions-fallback]').hidden = true;
+            })
+            .catch(() => {
+              // Offline or blocked: the link to the version list stays.
+            });
+        }
+        // End of docs for each verified version.
 
         // A tab stop can be inside the viewport but covered by the sticky header. Scroll
         // spacing alone doesn't make browsers reveal it. Wait for native focus scrolling,
