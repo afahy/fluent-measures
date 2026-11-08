@@ -107,6 +107,16 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   }
   const onlyType = options.type || unitType;
   const text = (at: number): string => tokens[at]?.text;
+  // Inside an ASCII quotation, an inch mark can precede the close and a feet mark can
+  // precede its smaller number. The bounded inner expression must still consume each unit.
+  const unitInsideQuote = (at: number, close: string): boolean =>
+    text(at) === close &&
+    ((close === '"' && text(at + 1) === '"') ||
+      (close === "'" &&
+        (text(at + 1) === "'" ||
+          text(at + 1) === '′' ||
+          (text(at + 1) !== '.' && numeric(text(at + 1))) ||
+          (text(at + 1) === '-' && adjacent(at, at + 1) && numeric(text(at + 2))))));
   const adjacent = (left: number, right: number): boolean =>
     tokens[left]?.end === tokens[right]?.start;
   const digitToken = (word: string): boolean => /^[\d.]+$/.test(word);
@@ -117,6 +127,8 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     digitToken(word);
   const unitAt = (at: number): Unit | null => {
     const word = text(at)?.replace(/\.$/, '');
+    if (word === '′') return 'ft';
+    if (word === '″') return 'in';
     return word
       ? matchUnit(word, 'height', options.fuzziness) || matchUnit(word, 'weight', options.fuzziness)
       : null;
@@ -154,7 +166,8 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         return { value: inner.value, end: inner.end + 1 };
       // normalizeForms distinguishes ‘5’ 11” from a numeric quotation by converting the
       // closing feet mark. Keep that interpretation only if a complete ft/in compound follows.
-      if (text(start) === '‘' && text(inner.end) === "'") return { ...inner, quotedFeet: true };
+      if (text(start) === '‘' && (text(inner.end) === "'" || text(inner.end) === '′'))
+        return { ...inner, quotedFeet: true };
       // Stryker disable next-line ObjectLiteral: {} cannot supply a numeric value/end; every part or final result still rejects it (329deb9 mutant 376).
       return { value: null, end: start };
     }
@@ -188,19 +201,41 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     return { value: reading.value, end, invalidAt: positions[boundary] ?? end };
   }
 
-  function readUnit(start: number, prefix: boolean): { unit: Unit; end: number } | null {
+  function readUnit(
+    start: number,
+    prefix: boolean,
+    limit: number
+  ): { unit: Unit; end: number } | null {
     let at = start;
     const close = text(at) === '(' ? ')' : text(at) === '[' ? ']' : undefined;
     if (close) at++;
-    const unit = !prefix && text(at) === '#' && adjacent(at - 1, at) ? 'lb' : unitAt(at);
+    // A mixed pair keeps the existing immediately-after-a-digit inch spelling, but neither
+    // mark may be the excluded entry close. This is fixed-size unit lookahead, not a scan.
+    const mixedInch =
+      !prefix &&
+      at + 1 < limit &&
+      adjacent(at - 1, at) &&
+      adjacent(at, at + 1) &&
+      /\d$/.test(text(at - 1)) &&
+      ((text(at) === '′' && text(at + 1) === "'") || (text(at) === "'" && text(at + 1) === '′'));
+    const unit = mixedInch
+      ? 'in'
+      : !prefix && text(at) === '#' && adjacent(at - 1, at)
+        ? 'lb'
+        : unitAt(at);
     if (!unit) return null;
     const alias = text(at++);
+    if (mixedInch) at++;
     if (close && text(at++) !== close) return null;
     const assignment = text(at) === ':' || text(at) === '=';
     if (prefix && assignment) at++;
     if (
       prefix &&
-      (LABEL_ALIASES.has(alias) || alias === "'" || alias === '"') &&
+      (LABEL_ALIASES.has(alias) ||
+        alias === "'" ||
+        alias === '"' ||
+        alias === '′' ||
+        alias === '″') &&
       !close &&
       !assignment
     )
@@ -210,7 +245,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
 
   function readPart(start: number, limit: number, bareUnit?: Unit): Part | null {
     const quotedNumber = CLOSE[text(start)] ? readNumber(start, limit) : null;
-    const prefix = quotedNumber?.value != null ? null : readUnit(start, true);
+    const prefix = quotedNumber?.value != null ? null : readUnit(start, true, limit);
     if (prefix) {
       const number = readNumber(prefix.end, limit);
       if (number.value !== null) {
@@ -218,7 +253,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
         // "m: one and eighty kg" as a selected pair. The expression/root validate both parts.
         // Unit lookahead has fixed size and consumes nothing. Its successful end > start,
         // so end <= limit also ensures that no excluded close can become an owned unit.
-        const following = readUnit(number.end, false);
+        const following = readUnit(number.end, false, limit);
         if (following && following.end <= limit) {
           // A successful number has prefix.end <= number.end. This fixed span advances
           // only by one and returns at the first conjunction; it never retries another split.
@@ -254,7 +289,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     )
       at++;
     // A closing entry wrapper at limit is not a suffix unit of its final bare number.
-    const suffix = at < limit ? readUnit(at, false) : null;
+    const suffix = at < limit ? readUnit(at, false, limit) : null;
     if (suffix)
       return {
         value: number.value,
@@ -309,6 +344,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       // Unwrapped calls retain the full token limit; a present opener gives start + 1 <= limit.
       // Bounded recursive calls are wrapped and skip this loop. The cursor advances only by 1.
       for (let at = start + 1; at !== limit; at++) {
+        if (unitInsideQuote(at, close)) continue;
         if (text(at) === close && --depth === 0) {
           const inner = expression(start + 1, at, true, decorate);
           if (inner && inner.end === at) {
@@ -426,6 +462,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     let depth = 1;
     // A present opener gives 1 <= limit. The only limit change is immediately before break.
     for (let at = 1; at !== limit; at++) {
+      if (unitInsideQuote(at, outerClose)) continue;
       if (text(at) === outerClose && --depth === 0) {
         const finalPeriod = at === limit - 2 && text(at + 1) === '.' && !text(at - 1).endsWith('.');
         if (at === limit - 1 || finalPeriod) {

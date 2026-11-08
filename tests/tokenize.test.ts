@@ -7,6 +7,14 @@ const tokenTexts = (input: string): string[] => tokenize(input).map(({ text }) =
 // every boundary for the complete-entry reader. Original label/field/erasure expectations are
 // in design/afa-250/tokenize.test.ts.before.txt; no exported package type changed.
 describe('complete-entry tokens', () => {
+  it('retains explicit inch-unit identity separately from an ASCII entry close', () => {
+    expect(tokenTexts('"5′11″"')).toEqual(['"', '5', '′', '11', '″', '"']);
+    expect(tokenTexts('"5ʹ11ʺ')).toEqual(['"', '5', '′', '11', '″']);
+    expect(tokenTexts('"5\'11"')).toEqual(['"', '5', "'", '11', '"']);
+    expect(tokenTexts('″:72')).toEqual(['″', ':', '72']);
+    expect(tokenTexts('72″1/2')).toEqual(['72', '″', '1', '/', '2']);
+    expect(tokenTexts('‘5’ 11″')).toEqual(['‘', '5', "'", '11', '″']);
+  });
   // These existing form rules retain quotation boundaries before the strict parser sees
   // them. A rejected prose quotation must not become unit marks during normalization.
   it.each([

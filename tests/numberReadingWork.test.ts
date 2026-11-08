@@ -105,6 +105,33 @@ describe('complete prefix scalar reader work', () => {
   });
 });
 
+describe('quoted compound reader work', () => {
+  it.each(['"5′11″"', '"5\'11""', 'about "5′11″"', "'5′11″'", '"5\'11"'])(
+    'reads each complete numeric part once in %s',
+    raw => {
+      const reader = vi.spyOn(numbers, 'readNumberTokens');
+      try {
+        expect(parseMeasurement(raw)).toEqual({
+          value: 71,
+          unit: 'in',
+          type: 'height',
+          raw,
+          matches: [
+            { value: 5, unit: 'ft' },
+            { value: 11, unit: 'in' },
+          ],
+        });
+        // Closing-mark inspection uses fixed token work, without retrying numeric phrases.
+        const calls = reader.mock.calls.filter(([tokens]) => tokens.length > 0);
+        expect(calls).toHaveLength(2);
+        expect(calls.reduce((sum, [tokens]) => sum + tokens.join(' ').length, 0)).toBe(3);
+      } finally {
+        reader.mockRestore();
+      }
+    }
+  );
+});
+
 describe('earlier prefix numeric failure reader work', () => {
   it.each([
     ['ft five eleven and (70 kg)', 71, 'in', 5, 11, 1],

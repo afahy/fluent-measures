@@ -3124,3 +3124,67 @@ Exact run, report, coverage, package/build/size identities and process proofs ar
 `final-validation/review-round-3-validation/` in the external evidence archive. Normal final
 push and parent-owned hosted review remain separate from local qualification. PR #247 is not
 declared merge-ready here, and F6/F9 publication remains pending until the qualifying main merge.
+
+### AFA-250 fourth PR review — quote and unit identity correction
+
+The published checkpoint is `5bae01e4c35dff52947fcd43cb12405145c77df0`. Root review
+4504447325 reported three ASCII-quoted compound spellings across three option paths: all nine
+returned null instead of 71 inches or 180.34 cm with both written matches. Exact main `70f3169`
+returns those full expected objects. Two missing ASCII closes with Unicode inch marks returned
+71 inches on both published and main; their approved null outcomes are preserved-main policy
+gaps, not introduced regressions. The modifier-prime counterpart has the same missing-close gap.
+
+The existing normalization path now retains explicit feet and inch identity as canonical prime
+and double-prime tokens. The existing curly-mark lookahead, preceding-mark context and slash
+fraction exclusions use that alphabet. Private normalization strings intentionally change; that
+alone is not a public result change. ASCII quotation delimiters remain distinct. The existing
+token rewrite still handles immediate-digit paired inch marks and preserves its ASCII quoted
+number exception. Mixed prime/apostrophe pairs stay separate until the existing unit reader
+can prove both marks belong inside the current expression, are adjacent to each other and to
+the preceding digit, and occur in suffix position. All three callers supply the same exclusive
+limit; ordinary suffix and following/next-part end guards remain in force.
+
+Both existing wrapper loops use one local token predicate to distinguish an internal unit from
+a closing quote. The predicate inspects a fixed number of token positions per existing cursor
+step, with no numeric-reader call or parsed-candidate retry. Its numeric token check can inspect
+token characters; the reader spies do not measure that predicate. The loops still advance only
+by one within their existing span. Complete inner and root consumption reject missing, extra,
+nested or mismatched closes. A standalone period cannot masquerade as a following number.
+No additional normalization pass, recovery scan, public API, stone support or shared number
+reader change is included. Prefix label punctuation and unsupported-option error order remain.
+
+The independent 261-path full-object ledger contains 180 positives and 81 null controls:
+88 changes/173 controls versus published, and 96 changes/165 controls versus exact main.
+The nine reported regressions and three missing-close gaps are classified separately. Single
+quoted feet scalars with prime, acute and modifier-prime marks restore 6 feet from published
+null; exact main agrees. The double-quoted prime scalar control stays 6 feet here, while main
+returns 6 inches. Curly quoted feet followed by paired prime/acute/mixed inch marks preserve
+published/main 71-inch results. The earlier 228-path candidate ledger remains immutable; its
+missing curly-pair consumer produced 19 failed assertions in the expanded dirty-candidate run,
+then all 261 pass after the existing paired-mark class includes canonical prime.
+
+Candidate-only feet-close, scalar-close and period regressions remain separately archived;
+they are not attributed to published main. The attached-hyphen trial's null oracle was wrong:
+the documented attached mark join gives 71 inches. Its original assertion and failure remain
+separate from independently corrected expectations. Preparation failures and temporary observer
+report mismatches are also retained rather than represented as successful validation commands.
+
+The final 23 named source suites pass 2,196 tests. Another 48 selected normalization spelling
+cases pass; the two unchanged long timing tests were not selected in this focused phase.
+All 29 captured real-reader work records retain positive calls: 12 scalar controls have one
+nonempty read, five quoted compounds have two reads over three numeric characters, and the
+existing repeated-input/article/half controls retain their character bounds and token indices.
+These are work-count checks, not speed measurements or mutation-kill claims.
+
+All 3,298 earlier fixture entries and full objects remain identical: 2,747 corpus rows,
+302 frozen probes, 243 authored cases and six auxiliary work controls. Their exact-main
+observations reproduce too. All 3,559 candidate observer rows meet independent expectations.
+The corpus is 3,008 rows with its old byte prefix intact and report counts derived from labels;
+the approved generated result snapshot is unchanged. Exact failing-first, published/main,
+private spelling, work and restoration evidence is in the external archive under
+`final-validation/review-round-4-corrections/`.
+
+The previous bf256545/fa48a77d full qualification is historical for these changed sources.
+Only focused preparation is complete here; fresh committed-source full/report/package/size
+validation and normal hooks/push require a separate coordinated grant. The review finding and
+PR #247 remain pending, and the distinct F6/F9 historical publication status remains pending.

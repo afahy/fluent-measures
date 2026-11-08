@@ -20,7 +20,7 @@ const FRACTION_NUMBER = String.raw`(\d+(?:\.\d+)?|\.\d+)`;
 // retain their ordinary meaning. Both slash characters block partial matches in dates/codes.
 // The lookahead keeps the lookbehind from running at every space.
 const SLASH_FRACTION = new RegExp(
-  String.raw`(?<![\d/⁄.])(?:${FRACTION_NUMBER}\s+|(?=[\d.])(?<![\p{L}'"]\s*))${FRACTION_NUMBER}[/⁄]${FRACTION_NUMBER}(?![\d/⁄])`,
+  String.raw`(?<![\d/⁄.])(?:${FRACTION_NUMBER}\s+|(?=[\d.])(?<![\p{L}'"′″]\s*))${FRACTION_NUMBER}[/⁄]${FRACTION_NUMBER}(?![\d/⁄])`,
   'gu'
 );
 
@@ -75,11 +75,11 @@ const SINGLE_QUOTATION = String.raw`(?:[^’]|(?<=[a-z])’(?=[a-z]))*`;
 // the existing adjacent-digit rule. Match the mark before any backward scan across spaces.
 function curlyMark(open: string, close: string): RegExp {
   const numberPart = String.raw`(?:[\d.,/⁄${FRACTIONS}]+|(?:${NUMBER_WORD}|and|a|half)\b)`;
-  const inches = String.raw`${numberPart}(?:[\s-]+${numberPart})*\s*(?:["”]|['’]{2}|in(?:ch(?:es)?)?\b)`;
+  const inches = String.raw`${numberPart}(?:[\s-]+${numberPart})*\s*(?:["”″]|['’′]{2}|in(?:ch(?:es)?)?\b)`;
   const nextNumber = String.raw`(?=${close}(?:\d${close === '’' ? String.raw`|\s*${inches}` : ''}))`;
   const quotation = close === '’' ? SINGLE_QUOTATION : '[^”]*';
   return new RegExp(
-    String.raw`(?=${close})(?:(?<=[\d${FRACTIONS}]['’]?\s*)(?:(?<!${open}${quotation})|${nextNumber})|(?<=${WORD_END}\s*)(?!${close}[a-z])(?:(?<!${open}${quotation})|${nextNumber}))${close}`,
+    String.raw`(?=${close})(?:(?<=[\d${FRACTIONS}]['’′]?\s*)(?:(?<!${open}${quotation})|${nextNumber})|(?<=${WORD_END}\s*)(?!${close}[a-z])(?:(?<!${open}${quotation})|${nextNumber}))${close}`,
     'gi'
   );
 }
@@ -97,8 +97,9 @@ const MINUS_SIGN = new RegExp(
 );
 
 /**
- * Write feet and inch marks as ASCII, so "5’11”", "5′11″" and "5´11´´" read like 5'11". Primes
- * and acute accents are always marks. A curly quote can follow digits, fractions or number
+ * Normalize feet and inch marks, so "5’11”", "5′11″" and "5´11´´" read like 5'11". Primes and
+ * acute accents retain their unit identity as ′ and ″, distinct from ASCII entry closes.
+ * A curly quote can follow digits, fractions or number
  * words, with optional spaces. A following unit word keeps the number in that unit; otherwise
  * a matching entry or numeric quotation stays a quotation unless an inch component follows a feet mark
  * or a digit immediately follows the mark, as in the existing compact-height syntax.
@@ -110,8 +111,8 @@ export function normalizeForms(input: string): string {
   return input
     .replace(/[！-～㎝㎏]/g, character => character.normalize('NFKC'))
     .replace(MINUS_SIGN, '-')
-    .replace(/[′´ʹ]/g, "'")
-    .replace(/[″ʺ]/g, '"')
+    .replace(/[′´ʹ]/g, '′')
+    .replace(/[″ʺ]/g, '″')
     .replace(CURLY_SINGLE, (mark, offset, text) =>
       FOLLOWING_UNIT.test(text.slice(offset + 1)) ? mark : "'"
     )
@@ -163,8 +164,11 @@ export function tokenize(input: string): Token[] {
  */
 export function tokenizeNormalized(input: string): Token[] {
   const text = input
-    // Two apostrophes after a digit are the established inch mark, except inside paired quotes.
-    .replace(/(?<=\d)(?='')(?<!(?:^|[^\w'"’])['’]{2}[^'’]*)''(?!['’])/g, '"')
+    // Two explicit primes cannot be quotation delimiters. Mixed prime/apostrophe pairs stay
+    // separate until the bounded unit reader can distinguish a genuine ASCII entry close.
+    .replace(/(?<=\d)(?:′′|(?='')(?<!(?:^|[^\w'"’])['’]{2}[^'’]*)''(?!['’]))/g, marks =>
+      marks.includes('′') ? '″' : '"'
+    )
     .toLowerCase();
   return [...text.matchAll(/i['’]m\b|[\p{L}\p{M}_][\p{L}\p{M}\p{N}_]*\.?|[\d.]+|[^\s]/gu)].flatMap(
     match => {

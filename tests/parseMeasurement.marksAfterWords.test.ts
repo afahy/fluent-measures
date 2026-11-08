@@ -13,7 +13,7 @@ describe('a mark right after a word', () => {
     [`5'10 and a half"`, 70.5, 'in'],
     [`5 ft 10 and a half"`, 70.5, 'in'],
     [`six and a half'`, 6.5, 'ft'],
-    // A prime becomes `"` before the tokenizer runs, so it reads the same.
+    // An explicit double prime retains its unit identity and still means inches.
     [`5′ 10 and a half″`, 70.5, 'in'],
     // Number words: 5 × 12 + 10 = 70, 6 × 12 + 2 = 74, and 70 + 0.5 = 70.5.
     [`5' ten"`, 70, 'in'],

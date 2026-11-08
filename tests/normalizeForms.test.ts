@@ -4,8 +4,16 @@ import { normalizeForms } from '../src/tokenize';
 describe('normalizeForms', () => {
   it.each([
     ['5’11”', '5\'11"'],
-    ['5′11″', '5\'11"'],
-    ['5´11´´', "5'11''"],
+    // Explicit inch primes retain their unit identity; they cannot close an ASCII entry.
+    ['5′11″', '5′11″'],
+    ['5ʹ11ʺ', '5′11″'],
+    // The quoted-feet lookahead sees canonical primes before paired inch tokens are joined.
+    ['‘5’ 11′′', "‘5' 11′′"],
+    ['‘5’ 11´´', "‘5' 11′′"],
+    ['‘5’ 11ʹʹ', "‘5' 11′′"],
+    ["‘5’ 11′'", "‘5' 11′'"],
+    ["‘5’ 11'′", "‘5' 11'′"],
+    ['5´11´´', '5′11′′'],
     ['１８０ｃｍ', '180cm'],
     ['180 ㎝', '180 cm'],
     ['70 ㎏', '70 kg'],
