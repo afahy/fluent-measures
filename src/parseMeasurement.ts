@@ -107,16 +107,16 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   }
   const onlyType = options.type || unitType;
   const text = (at: number): string => tokens[at]?.text;
-  // Inside an ASCII quotation, an inch mark can precede the close and a feet mark can
-  // precede its smaller number. The bounded inner expression must still consume each unit.
+  // Called only at a matching close in the two existing wrapper loops. An ASCII unit
+  // can precede that close; the bounded inner expression must still consume each unit.
   const unitInsideQuote = (at: number, close: string): boolean =>
-    text(at) === close &&
-    ((close === '"' && text(at + 1) === '"') ||
-      (close === "'" &&
+    close === '"'
+      ? text(at + 1) === '"'
+      : close === "'" &&
         (text(at + 1) === "'" ||
           text(at + 1) === '′' ||
           (text(at + 1) !== '.' && numeric(text(at + 1))) ||
-          (text(at + 1) === '-' && adjacent(at, at + 1) && numeric(text(at + 2))))));
+          (text(at + 1) === '-' && adjacent(at, at + 1) && numeric(text(at + 2))));
   const adjacent = (left: number, right: number): boolean =>
     tokens[left]?.end === tokens[right]?.start;
   const digitToken = (word: string): boolean => /^[\d.]+$/.test(word);
@@ -344,33 +344,35 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       // Unwrapped calls retain the full token limit; a present opener gives start + 1 <= limit.
       // Bounded recursive calls are wrapped and skip this loop. The cursor advances only by 1.
       for (let at = start + 1; at !== limit; at++) {
-        if (unitInsideQuote(at, close)) continue;
-        if (text(at) === close && --depth === 0) {
-          const inner = expression(start + 1, at, true, decorate);
-          if (inner && inner.end === at) {
-            let end = at + 1;
-            const innerLast = text(at - 1);
-            const tall = text(end) === 'tall' || text(end) === 'tall.';
-            if (tall) {
-              // The close does not hide a previous height suffix or terminator.
+        if (text(at) === close) {
+          if (unitInsideQuote(at, close)) continue;
+          if (--depth === 0) {
+            const inner = expression(start + 1, at, true, decorate);
+            if (inner && inner.end === at) {
+              let end = at + 1;
+              const innerLast = text(at - 1);
+              const tall = text(end) === 'tall' || text(end) === 'tall.';
+              if (tall) {
+                // The close does not hide a previous height suffix or terminator.
+                if (
+                  inner.parsed.type !== 'height' ||
+                  innerLast === '.' ||
+                  innerLast === 'tall' ||
+                  innerLast === 'tall.'
+                )
+                  return null;
+                end++;
+              }
               if (
-                inner.parsed.type !== 'height' ||
-                innerLast === '.' ||
-                innerLast === 'tall' ||
-                innerLast === 'tall.'
+                text(end) === '.' &&
+                (tall || !innerLast.endsWith('.')) &&
+                !text(end - 1).endsWith('.')
               )
-                return null;
-              end++;
+                end++;
+              return { ...inner, end };
             }
-            if (
-              text(end) === '.' &&
-              (tall || !innerLast.endsWith('.')) &&
-              !text(end - 1).endsWith('.')
-            )
-              end++;
-            return { ...inner, end };
+            break;
           }
-          break;
         }
         if (text(at) === text(start)) depth++;
       }
@@ -462,14 +464,17 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     let depth = 1;
     // A present opener gives 1 <= limit. The only limit change is immediately before break.
     for (let at = 1; at !== limit; at++) {
-      if (unitInsideQuote(at, outerClose)) continue;
-      if (text(at) === outerClose && --depth === 0) {
-        const finalPeriod = at === limit - 2 && text(at + 1) === '.' && !text(at - 1).endsWith('.');
-        if (at === limit - 1 || finalPeriod) {
-          begin++;
-          limit = at;
+      if (text(at) === outerClose) {
+        if (unitInsideQuote(at, outerClose)) continue;
+        if (--depth === 0) {
+          const finalPeriod =
+            at === limit - 2 && text(at + 1) === '.' && !text(at - 1).endsWith('.');
+          if (at === limit - 1 || finalPeriod) {
+            begin++;
+            limit = at;
+          }
+          break;
         }
-        break;
       }
       if (text(at) === text(0)) depth++;
     }

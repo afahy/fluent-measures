@@ -164,11 +164,9 @@ export function tokenize(input: string): Token[] {
  */
 export function tokenizeNormalized(input: string): Token[] {
   const text = input
-    // Two explicit primes cannot be quotation delimiters. Mixed prime/apostrophe pairs stay
-    // separate until the bounded unit reader can distinguish a genuine ASCII entry close.
-    .replace(/(?<=\d)(?:′′|(?='')(?<!(?:^|[^\w'"’])['’]{2}[^'’]*)''(?!['’]))/g, marks =>
-      marks.includes('′') ? '″' : '"'
-    )
+    // Eligible paired marks are explicit inch units, not entry closes. Mixed prime/apostrophe
+    // pairs stay separate until the bounded unit reader can own both marks.
+    .replace(/(?<=\d)(?:′′|(?='')(?<!(?:^|[^\w'"’])['’]{2}[^'’]*)''(?!['’]))/g, '″')
     .toLowerCase();
   return [...text.matchAll(/i['’]m\b|[\p{L}\p{M}_][\p{L}\p{M}\p{N}_]*\.?|[\d.]+|[^\s]/gu)].flatMap(
     match => {

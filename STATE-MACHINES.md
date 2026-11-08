@@ -3188,3 +3188,55 @@ The previous bf256545/fa48a77d full qualification is historical for these change
 Only focused preparation is complete here; fresh committed-source full/report/package/size
 validation and normal hooks/push require a separate coordinated grant. The review finding and
 PR #247 remain pending, and the distinct F6/F9 historical publication status remains pending.
+
+### AFA-250 fourth review — actual mutation follow-up
+
+The normal correction commit `7d2c715c9ae87454278206a9c52a16cfae6bb6ca` preserved the reviewed
+candidate exactly. Its fresh full check passed 6,169 source tests, TypeScript, build, public API
+and 8,708 ESM/CJS package tests. Coverage was 100%: 475 statements, 544 branches, 57 functions
+and 391 lines. The actual non-incremental report
+`0bb628a3a521ffa135eee05f007efaf4762fbbcb099d4faee6ec56b21bc9c680` has 1,608 killed, 49 timeouts,
+six survivors and the same four individually reviewed ignores. All eight selected source files
+and six report bodies match live, committed and archived bytes. The command passed, but the
+official changed-line gate failed on five survivors; that run is not final qualification.
+
+Exact replacements from that report were tested against 33 independently frozen public cases,
+with source restored after each experiment. Survivor 1071 adds four failures for selection
+from a whole single-quoted pair with an internal feet mark. Survivor 1167 adds six failures
+for quoted or bracketed unqualified inference: the approved bare-number alternative does not
+expand to wrappers. These assertions expose actual alternatives; fresh mutation outcomes
+remain necessary. The unchanged higher-fuzziness matcher survivor 40 retains its prior limit.
+
+Survivors 262 and 268 led to bounded control-flow cleanup, without new ignores. Both wrapper
+loops now invoke the helper inside their existing matching-close branch, so the helper's
+second equality test is redundant and removed. Double versus single ASCII quote handling
+uses a mutually exclusive conditional, retaining the single-quote guard for other closers.
+Continue still occurs before depth decrement; break, inner consumption, and opener depth
+handling retain their original order. Focused observations alone are not an equivalence proof.
+
+Survivor 1349 exposed a real boundary error: eligible paired ASCII apostrophes became an ASCII
+entry close. Three missing-close inputs across nine options incorrectly returned a height.
+The existing same-pass replacement now writes canonical inch identity for every eligible
+pair; its existing eligibility and quoted-number exclusions remain. Private token spelling
+for `72''` changes from ASCII double quote to double prime. A paired unit cannot supply an
+absent entry close. No extra pass, scanner, reader/API/stone change or comma rule is introduced.
+
+Two trial-oracle errors remain archived separately. Approximation around an entire selected
+pair is outside the approved grammar; approximation on one qualified measurement within a
+pair remains valid. An immediately adjacent `,70` is a decimal number, not a pair separator;
+the intended positive counterparts use comma-space. The original positive trials, 13-failure
+and eight-failure logs, and corrected independent dispositions remain intact.
+
+The 58 new full-result controls have 24 positives. They change nine checkpoint results,
+24 published results and 33 exact-main results. The earlier 261-path inventory is unchanged;
+the two sets have 318 distinct raw/options paths, with 112 published and 129 main differences.
+All 3,559 earlier fixture/full objects and their published/main observations remain identical.
+All 3,617 candidate observer objects agree with independent expectations. Corpus counts derive
+from 3,066 labels, retaining its old byte prefix; the approved generated snapshot is unchanged.
+The 18 focused suites pass 1,742 tests, and all 29 real-reader work records retain positive calls,
+indices and bounds. Exact source/experiment/result evidence is under
+`final-validation/review-round-4-validation/actual-survivors/` in the external archive.
+
+This uncommitted follow-up still needs fresh committed-source full/report qualification.
+No new ignore, threshold reduction or claimed mutant kill substitutes for that report.
+PR #247 and the distinct F6/F9 main-publication status remain pending.
