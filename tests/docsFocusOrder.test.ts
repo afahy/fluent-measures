@@ -49,6 +49,25 @@ describe('docs keyboard focus order', () => {
     expect(page).toMatch(/<nav\b[^>]*id="page-navigation"[^>]*tabindex="-1"/);
   });
 
+  // AFA-269: the ticket sets this source order. The links that leave the page come first,
+  // and the theme button comes last.
+  it('orders the header controls: version, GitHub, page menu, theme', () => {
+    const actions = page.slice(
+      page.indexOf('<div class="header-actions">'),
+      page.indexOf('</header>')
+    );
+    // Leave out the menu panel, so only the controls in the header bar remain.
+    const panelStart = actions.indexOf('<div class="page-menu-panel">');
+    const panelEnd = actions.lastIndexOf('</details>');
+    expect(panelStart).toBeGreaterThan(-1);
+    expect(panelEnd).toBeGreaterThan(panelStart);
+    const bar = actions.slice(0, panelStart) + actions.slice(panelEnd);
+    const controls = [...bar.matchAll(/<(?:a|details|button)\b[^>]*class="([^"]*)"/g)].map(match =>
+      match[1].split(/\s+/).find(name => name !== 'icon-link')
+    );
+    expect(controls).toEqual(['version-pill', 'header-github', 'page-menu', 'theme-toggle']);
+  });
+
   it('removes an ordinary example that fits from sequential focus', () => {
     const el = snippet();
     update(el);
