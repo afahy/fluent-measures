@@ -3343,3 +3343,58 @@ Only focused correction is authorized here. Fresh committed-source full/report/p
 validation, normal hooks and push require a separate grant. No reader, public API, stone support,
 extra normalization pass or recovery scan is introduced. Both review findings remain pending
 parent publication and hosted review. The distinct F6/F9 historical publication remains pending.
+
+### AFA-250 fifth review — local qualification and corpus disclosure
+
+Under the exclusive grant, production commit `2936db536294dd45d03968a9251dda5e8c3b8cd2` passed:
+6,480 source tests in 132 files, TypeScript, build, public API and 9,290 ESM/CJS package tests
+in 148 files passed. Coverage is 100%: 477 statements, 544 branches, 56 functions and 394 lines.
+The unchanged timing fixtures ran in that full check; reader work counts still do not measure
+regex timing. Its first actual report `4183fa6f` had 1,612 killed, 49 timeouts, three survivors
+and four ignored mutants. The full command passed but the changed-line gate failed. This
+report and its complete logs, sources, coverage and build remain immutable historical evidence.
+
+Two exact tokenizer alternatives, 1278 and 1279, changed the existing following-unit check's
+substring. Frozen experiments showed private curly-mark spelling differences, while all eight
+public full objects remained identical. Commit `091285220ea5a21d7abd81c5392264d206ede986` adds
+only six test lines: two private spelling assertions and two public null counterparts. There
+is no production correction, new ignore or runtime result change in that test commit. Its
+source tree remains `15aa1a89c2bb722b4e7a5298aba39650bf48654d`; its test tree is `e83178a9`.
+The necessary fresh default non-incremental mutation report is
+`96283e8d31c8bf23438b7c9ab30668f4ba7751ac961de652a571b81ed6add978`:
+1,619 killed, 44 timeouts, one survivor and four exact previously reviewed ignores. Both 1278
+and 1279 are killed by test 4909, the private spelling assertion for `72’ kg`. All eight selected
+source paths and six report source bodies equal committed, live and archived bytes. The
+unchanged threshold is 98 and the official changed-line gate against exact main `70f3169`
+passes. The sole survivor, matcher 40, remains byte-identical to main; its higher-fuzziness
+anchor-removal limitation is not called globally equivalent or fixed.
+
+The two public counterparts also expose approved-contract differences from exact main:
+`72’ kg` changes from 72 kg with matches `[72 kg]` to null, and `5½’ ft` changes from 5.5 ft
+with matches `[5.5 ft]` to null. These are preserved mark/duplicate-unit policy differences,
+not new runtime changes from the spelling assertions. Exact main source capture, full raw
+objects and the independent complete-entry basis are archived separately. Corpus commit
+`7461e95630d76df757dacd5332185f40b0337d76` adds only rows `afa250-r5-234` and `afa250-r5-235`
+and two report count lines. The prior 3,299 rows are a byte-exact prefix; the new total is
+3,301. Both rows are Unicode cases because U+2019 mark identity controls the second unit
+rejection. Hand-derived total/agree counts change from 3,299 to 3,301 and Unicode counts
+from 394 to 396. Every other report byte, including seven multiple-outcome dispositions,
+remains unchanged. The approved generated snapshot `ebae8b38` remains unchanged. Whole
+corpus/entry checks pass 61 source tests, and both package formats pass 64 corpus tests.
+The added public counterpart file also passed 470 package tests. Normal hooks ran; their
+configured file globs do not select JSON Lines or snapshot files, so no formatting or spelling
+coverage of those excluded files is claimed. Corpus schema and explicit byte proofs cover them.
+
+The measured unchanged production build is 4,863 bytes ESM and 4,906 bytes CJS, against
+5,736 and 5,795 bytes for preserved exact main. All six current outputs equal the full-check
+build, with identical toolchain/package/lock/build configuration and unchanged 6,000-byte
+limits. This is a size comparison, not a speed or accuracy claim. No redundant full check,
+coverage or mutation run follows the corpus-only assertion additions.
+
+All fifth-review ledgers, original failures, private spellings, 3,850 full objects, 35 real-reader
+records and 3,617 prior preserved objects remain in the external evidence archive under
+`final-validation/review-round-5-corrections/` and `review-round-5-validation/`. The 233-path
+ledger and two supplementary corpus controls remain separately identified. This section
+records local qualification before normal feature push. Parent-owned hosted review findings
+4504713300 and 4504713301 remain pending verified publication and review. The distinct F6/F9
+historical closeout publication remains pending the eventual PR #247 merge and exact-main CI.
