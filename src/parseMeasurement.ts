@@ -87,7 +87,8 @@ function result(parts: QualifiedMatch[], input: string, normalizedUnit?: Unit): 
 
 /** Read a canonical option unit without coercing an invalid runtime value. */
 function unitOption(value: unknown, name: 'defaultUnit' | 'normalizedUnit'): Unit | undefined {
-  if (value === undefined || (name === 'normalizedUnit' && value === '')) return undefined;
+  if (value === undefined || (name === 'normalizedUnit' && (value === null || value === '')))
+    return undefined;
   if (typeof value !== 'string' || !UNIT_TYPES[value as Unit]) {
     throw new TypeError(`${name} must be ft, in, cm, m, lb or kg`);
   }
@@ -105,8 +106,8 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     throw new Error('maxLength must be a number of at least 1');
   }
   // Validate before string content or length, but never inspect options for non-string input.
-  // Empty runtime type/output values remain absent, as approved in AFA-178.
-  const rawType: unknown = options.type;
+  // Empty strings and null type/output values remain absent; source defaults still reject null.
+  const rawType: unknown = options.type ?? undefined;
   if (rawType !== undefined && rawType !== '' && rawType !== 'height' && rawType !== 'weight') {
     throw new TypeError('type must be height or weight');
   }

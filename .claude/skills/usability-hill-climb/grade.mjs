@@ -117,7 +117,7 @@ if (mode === 'selfcheck') {
     check(`T4 prediction ${input}`, got, sameValue(got, want));
   }
   const p18 = call(lib, '1.8', t.T5.reference.options).result;
-  check('T5 1.8', p18, sameValue(p18, t.T5.predict1_8.withAllowUnqualified));
+  check('T5 1.8', p18, sameValue(p18, t.T5.predict1_8.withDefaultUnit));
   for (const [unit, want] of Object.entries(t.T5.predict1_8.byNormalizedUnit ?? {})) {
     const got = call(lib, '1.8', { ...t.T5.reference.options, normalizedUnit: unit }).result;
     check(`T5 1.8 in ${unit}`, got, near(got?.value, want.value, 1e-9) && got?.unit === want.unit);
@@ -258,11 +258,11 @@ if (mode === 'reviewer') {
         correct &&= checks.partsField && checks.parts;
       }
       if (id === 'T5') {
-        const unqualified = Boolean(a.options?.allowUnqualified);
-        // With normalizedUnit, the prediction is the converted value (1.8 m is 180 cm).
+        const defaulted = a.options?.defaultUnit !== undefined;
+        // With normalizedUnit, convert the field's cm source (1.8 cm is 0.018 m).
         const converted = spec.predict1_8.byNormalizedUnit?.[a.options?.normalizedUnit];
-        const want18 = unqualified
-          ? (converted ?? spec.predict1_8.withAllowUnqualified)
+        const want18 = defaulted
+          ? (converted ?? spec.predict1_8.withDefaultUnit)
           : spec.predict1_8.withCmAppended;
         comprehension.predict1_8Right = sameValue(a.predict1_8, want18);
         comprehension.predict1_8Confidence = a.predict1_8Confidence ?? null;

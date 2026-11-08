@@ -176,11 +176,12 @@ interface ParseOptions {
 }
 ```
 
-For string input, options are validated before raw length or text: the options object,
+For string input, these checks run before raw length or text: the options object shape,
 `maxLength`, `type`, `normalizedUnit`, `defaultUnit`, retired options, then dimension conflicts.
-Invalid options throw, even for empty or overlong strings. Non-string runtime input still returns
-`null` before reading options. Empty runtime `type` and `normalizedUnit` strings remain absent;
-`defaultUnit` must be one of the six canonical units when defined.
+Invalid values for those checks throw, even for empty or overlong strings. `fuzziness` retains
+its existing numeric interpretation. Non-string runtime input returns `null` before reading
+options. Empty strings and null values for `type` or `normalizedUnit` count as absent;
+`defaultUnit` must be one of the six canonical units when defined, so null remains invalid.
 
 Migration: remove `allowUnqualified` and `inferUnit`. Either retired option throws when its value
 is defined, including `false`; an explicitly `undefined` property is absent. Replace imperial

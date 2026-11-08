@@ -15,7 +15,7 @@ input length limit. The public TypeScript input parameter stays `string`.
   disable the limit. Each string above the limit returns `null` after options are validated.
 - Invalid `maxLength` values throw an error whose message doesn't contain the supplied value.
   Options validation also runs for empty and overlong strings. Null options throw for all string
-  input. Runtime empty `type` and `normalizedUnit` strings remain absent. The order is options
+  input. Runtime empty strings and null `type`/`normalizedUnit` values remain absent. The order is options
   shape, maxLength, type, normalizedUnit, defaultUnit, retired options, dimension conflicts, then
   raw length and lexical parsing (approved AFA-178/AFA-251 revision).
 - `import` and `require`.
@@ -28,7 +28,7 @@ input length limit. The public TypeScript input parameter stays `string`.
 ## How to verify it
 
 - Source: `src/parseMeasurement.ts`, `src/types.ts`
-- Tests: `tests/parseMeasurement.defaultUnit.test.ts`, `tests/parseMeasurement.compactUnits.test.ts`, `tests/parseMeasurement.calculator.test.ts`,
+- Tests: `tests/parseMeasurement.nullOptionSentinels.test.ts`, `tests/parseMeasurement.defaultUnit.test.ts`, `tests/parseMeasurement.compactUnits.test.ts`, `tests/parseMeasurement.calculator.test.ts`,
   `tests/parseMeasurement.inputLimits.test.ts`, `tests/timing.test.ts`
 - The existing long-input tests use `maxLength: Infinity` to continue exercising parsing and
   performance with their original inputs, expected results and time limits.
