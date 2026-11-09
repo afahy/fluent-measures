@@ -3451,12 +3451,16 @@ labels and bracketed smaller parts are unchanged.
 
 ## One tokenizer scan (AFA-88)
 
-M1 and M2 are now one scan from left to right in `src/tokenize.ts`. `normalizeForms`,
-`normalizeNumericCommas`, `normalizeFractions`, `normalize` and `tokenizeNormalized` are gone,
-and so is the parser's string path for whole-entry shorthand such as `5-11`, which now reads
-the three tokens. No result changes. The scan writes the same tokens, with the same places, as
-the passes wrote. One exception has no effect on a result: each token is lowercased alone, so a
-Greek capital sigma at the end of a token is always the final form `ς`.
+M1 and M2 are now one scan from left to right in `src/tokenize.ts`. Before the scan, one
+replace applies the character table to the whole input, because `㎝` and `㎏` become two
+characters and the scan's rules read the converted text. In the scan, `readNumber` converts
+each run of number characters with three patterns, for comma groups, Unicode fractions and
+slash fractions. `normalizeForms`, `normalizeNumericCommas`, `normalizeFractions`, `normalize`
+and `tokenizeNormalized` are gone, and so is the parser's string path for whole-entry shorthand
+such as `5-11`, which now reads the three tokens. No result changes. The scan writes the same tokens, with the same places, as
+the passes wrote, with one exception that changes no result. Each token is lowercased alone,
+not as part of the whole text, so a Greek capital sigma can take the other lowercase form, `σ`
+or `ς`, than it took on main. No unit, alias or number word has a sigma.
 
 The scan carries this state:
 
@@ -3469,8 +3473,7 @@ The scan carries this state:
 | `first`        | Where the first number of the input starts, found once for a minus sign      |
 | `unitEnd`      | Where a unit ends that digits right after don't join, as in `5ft11` (AFA-62) |
 
-A table converts full-width forms, `㎝`, `㎏`, primes and acute accents. A minus sign is a sign
-when no number comes before it. A curly closing quote after a number or a number word is a mark.
-`readNumber` converts each run of number characters: comma groups, then Unicode fractions,
-then slash fractions, with the letter or quote mark before the run as context. A comma group of
-the wrong size still rejects the whole input.
+The table converts full-width forms, `㎝`, `㎏`, primes and acute accents. A minus sign is a
+sign when no number comes before it. A curly closing quote after a number or a number word is a
+mark. `readNumber` takes the letter or quote mark before a run as context. A comma group of the
+wrong size still rejects the whole input.

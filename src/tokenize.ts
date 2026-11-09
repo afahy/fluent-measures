@@ -206,7 +206,8 @@ function put(character: string): void {
   if (character === 'x') {
     kind = 1;
     token = character;
-  } else push(character);
+    // A few characters that aren't letters have a lowercase form, as "Ⅻ" and "Ⓜ" do.
+  } else push(character.toLowerCase());
 }
 
 function space(count: number): void {
@@ -365,7 +366,7 @@ function piece(at: number): number {
     let end = at + 1;
     while (asciiLetter(text.charCodeAt(end))) end++;
     const isUnit = unit(at, end);
-    // Stryker disable next-line ConditionalExpression: without this, the next pieces read the same digits and letters, and add them to the same word.
+    // Stryker disable next-line ConditionalExpression,BlockStatement: without this, the next pieces read the same digits and letters, and add them to the same word.
     if (!isUnit && digit(text.charCodeAt(end))) {
       DIGITS_AND_LETTERS.lastIndex = end;
       // Stryker disable next-line CallExpression: without the match, the next pieces read the same digits and letters, and add them to the same word.
@@ -425,14 +426,13 @@ function piece(at: number): number {
 export function tokenize(input: string): Token[] {
   // A line end after the text keeps each scan inside it, and changes no token.
   text = `${input.replace(FORM, form => FORMS[form] ?? form.normalize('NFKC'))}\n`;
+  tokens = [];
   place = kind = 0;
   token = solid = '';
   label = false;
   first = undefined;
   unitEnd = -1;
   for (let at = 0; at < text.length; ) at = piece(at);
-  const result = tokens;
   text = '';
-  tokens = [];
-  return result;
+  return tokens;
 }

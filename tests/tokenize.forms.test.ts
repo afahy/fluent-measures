@@ -94,18 +94,27 @@ describe('tokenize: character forms', () => {
   });
 
   // A mark must not make the code search back through the whole input. A search like that took
-  // about 460 ms for this input. Stryker's instrumented scan runs many times slower, so the test
-  // skips itself there, as tests/timing.ts says for a test with a large input.
+  // about 460 ms for this input. The check for an earlier digit stops at the nearest one, so it
+  // stays fast for many signs. On main these tests timed normalizeForms, which was only patterns.
+  // Stryker instruments the scan, which then runs 6 to 9 times slower, so the time limits skip
+  // themselves there, as tests/timing.ts says for a test with a large input. The tokens of the same
+  // inputs are checked there too.
+  it('reads a long run of marks and many minus signs', () => {
+    expect(tokenize('1’'.repeat(100_000))).toHaveLength(200_000);
+    expect(tokenTexts(`${'a'.repeat(100_000)}−5`)).toEqual(['a'.repeat(100_000), '-', '5']);
+    expect(tokenize('−1 '.repeat(50_000))).toHaveLength(100_000);
+    expect(tokenize('−a'.repeat(100_000))).toHaveLength(200_000);
+  });
+
   it.skipIf(underStryker)('handles a long run of marks quickly', () => {
     const start = Date.now();
-    expect(tokenize('1’'.repeat(100_000))).toHaveLength(200_000);
+    tokenize('1’'.repeat(100_000));
     expect(Date.now() - start).toBeLessThan(400);
   });
 
-  // The check for an earlier digit stops at the nearest one, so it stays fast for many signs.
   it.skipIf(underStryker)('handles many minus signs quickly', () => {
     const start = Date.now();
-    expect(tokenTexts(`${'a'.repeat(100_000)}−5`)).toEqual(['a'.repeat(100_000), '-', '5']);
+    tokenize(`${'a'.repeat(100_000)}−5`);
     tokenize('−1 '.repeat(50_000));
     tokenize('−a'.repeat(100_000));
     expect(Date.now() - start).toBeLessThan(400);

@@ -93,7 +93,7 @@ function shorthand(
     dash.end !== inches.start
   )
     return undefined;
-  const words = NUMBER_WORDS.get(feet.text)!;
+  const words = NUMBER_WORDS.get(feet.text) ?? 0;
   if (words > 2 && words < 9) {
     const value = NUMBER_WORDS.get(inches.text);
     return value === undefined ? undefined : [words, value];

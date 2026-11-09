@@ -4,9 +4,11 @@ import { tokenize } from '../src/tokenize';
 const tokens = (input: string): [string, number, number][] =>
   tokenize(input).map(({ text, start, end }) => [text, start, end]);
 
-// AFA-88: cases for each rule that the single scan decides. The scan replaced passes that wrote
-// the converted text. A refactor keeps every result, as the ticket asks, so each case keeps the
-// tokens and places that main's tokenizer at f85a98d gave.
+// AFA-88: cases for each rule that the single scan decides. Tokens have no public specification,
+// and the ticket asks this refactor to keep every result. So each row is what main's tokenizer at
+// f85a98d gave for its input, as a characterization of the passes that the scan replaced. A
+// differential comparison of main and the branch over millions of inputs, in the PR, checks the
+// rest.
 describe('tokenize: the single scan', () => {
   // A unit right before digits ends its word, but only after a number that starts a word (AFA-62).
   it.each([
@@ -792,7 +794,7 @@ describe('tokenize: the single scan', () => {
     expect(tokens(input)).toEqual(expected);
   });
 
-  // Other characters, the character table, two fractions in a run, and a comma group that rejects the input.
+  // Other characters, the character table, lowercase forms, two fractions in a run, and a comma group that rejects the input.
   it.each([
     [
       '70kg😀',
@@ -840,6 +842,22 @@ describe('tokenize: the single scan', () => {
         ['0.25', 4, 8],
       ],
     ],
+    ['Ⓜ', [['ⓜ', 0, 1]]],
+    [
+      'Ⅻ 5',
+      [
+        ['ⅻ', 0, 1],
+        ['5', 2, 3],
+      ],
+    ],
+    [
+      '5Ⓐ',
+      [
+        ['5', 0, 1],
+        ['ⓐ', 1, 2],
+      ],
+    ],
+    ['aⅫ', [['aⅻ', 0, 2]]],
   ] as [string, [string, number, number][]][])('others: reads %j', (input, expected) => {
     expect(tokens(input)).toEqual(expected);
   });
