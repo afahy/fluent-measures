@@ -1,7 +1,6 @@
 // The one-edit spellings that `fuzzy: true` reads, built from the documented rules alone, not from
 // matchUnit (AGENTS.md rule 10). The unit names come from README.md, "Supported units", and the
 // rules from PARSING.md, "Fuzzy Matching" (AFA-253).
-import { readFileSync } from 'node:fs';
 import type { MeasurementType, Unit } from '../src';
 
 /** README "Supported units", in PARSING.md's tie order: ft, in, cm, m, then lb, kg. */
@@ -46,26 +45,22 @@ export function oneEdits(name: string): Set<string> {
   return words;
 }
 
-export interface TypoTable {
-  wordList: string;
-  filter: Record<string, [shortest: number, longest: number]>;
-  words: { word: string; unit: Unit; decision: 'allow' | 'block'; reason: string }[];
-}
-
-export const TABLE: TypoTable = JSON.parse(
-  readFileSync(new URL('fixtures/unitTypos/englishWords.json', import.meta.url), 'utf8')
-);
-
-export const BLOCKED = new Set(
-  TABLE.words.filter(({ decision }) => decision === 'block').map(({ word }) => word)
-);
+/**
+ * PARSING.md, "Fuzzy Matching": the fuzzy typo list, which only fuzzy reads (AFA-280 fills it).
+ * "kilgrm" is two edits from "kilogram"; main read it as kg with fuzziness 2 (AFA-253 comment
+ * d5897102).
+ */
+export const FUZZY_TYPOS: Readonly<Record<MeasurementType, Readonly<Record<string, Unit>>>> = {
+  height: {},
+  weight: { kilgrm: 'kg' },
+};
 
 const SPELLINGS = new Map<MeasurementType, Map<string, Unit>>();
 
 /**
- * The spellings one edit from a unit name, before the reviewed block list, with the unit that
- * PARSING.md gives each one: the word starts with the name's first letter, the name has four or
- * more letters and isn't a British spelling, and the first unit in tie order wins.
+ * The spellings one edit from a unit name, with the unit that PARSING.md gives each one: the word
+ * starts with the name's first letter, the name has four or more letters and isn't a British
+ * spelling, and the first unit in tie order wins.
  */
 export function oneEditSpellings(type: MeasurementType): Map<string, Unit> {
   const cached = SPELLINGS.get(type);
@@ -90,6 +85,6 @@ export function oneEditSpellings(type: MeasurementType): Map<string, Unit> {
 export function expectedUnit(word: string, type: MeasurementType, fuzzy: boolean): Unit | null {
   const exact = UNIT_NAMES[type].find(([, names]) => names.includes(word));
   if (exact) return exact[0];
-  if (!fuzzy || BLOCKED.has(word)) return null;
-  return oneEditSpellings(type).get(word) ?? null;
+  if (!fuzzy) return null;
+  return FUZZY_TYPOS[type][word] ?? oneEditSpellings(type).get(word) ?? null;
 }

@@ -190,8 +190,8 @@ applies only to an entire unwrapped number, including supported fractions or num
 
 `fuzziness` is retired too. Any defined value throws, including `0` and `Infinity`; an explicitly
 `undefined` property is absent. Replace `fuzziness: 1` or `2` with `fuzzy: true`, and remove
-`fuzziness: 0`. `fuzzy` reads one spelling error, so a unit name with two errors, such as
-`kilgrm`, returns `null`.
+`fuzziness: 0`. `fuzzy` reads one spelling error, so most unit names with two errors return
+`null`. PARSING.md lists the few reviewed typos that `fuzzy` reads beyond that, such as `kilgrm`.
 
 #### `ParsedValue`
 
@@ -269,9 +269,9 @@ application metadata outside that value. To display an alternate unit, convert t
 measurement instead of submitting both representations.
 
 [PARSING.md](https://github.com/afahy/fluent-measures/blob/main/PARSING.md) gives the complete
-entry grammar, the words that can surround a measurement, and examples. With `fuzzy: true`, its
-Fuzzy Matching section lists the English words that never match a unit. Fuzzy matching can
-still read another ordinary word as a unit; it applies only within that grammar.
+entry grammar, the words that can surround a measurement, and examples. With `fuzzy: true`, an
+ordinary word one letter from a unit name reads as that unit, such as `5 feat` as 5 ft; fuzzy
+matching applies only within that grammar.
 
 ## Troubleshooting
 

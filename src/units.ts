@@ -14,6 +14,12 @@ export const UNIT_ALIASES: Record<MeasurementType, [Unit, ...string[]][]> = {
   ],
 };
 
+// The fuzzy typo list: reviewed typos that only `fuzzy: true` reads, beyond the one-edit rule in
+// matchUnit. Without fuzzy, no typo reads. PARSING.md, "Fuzzy Matching", lists each entry with its
+// reason; AFA-280 fills the list. Number words can join it there (word -> number) once the
+// tokenizer's number reader takes the fuzzy option; today only unit names are read.
+export const FUZZY_TYPOS: ReadonlyMap<string, Unit> = new Map([['kilgrm', 'kg']]);
+
 // The measurement type of each unit. The type checks that each unit has one.
 const TYPES: Record<Unit, MeasurementType> = {
   ft: 'height',

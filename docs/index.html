@@ -1294,9 +1294,10 @@ const rejected = parseMeasurement(
                 <p>
                   Set <a href="#parse-options"><code>fuzzy: true</code></a> to read a unit name that
                   has one spelling error. Without it, a unit name must be exact, so the same text
-                  returns <code>null</code>. One letter added, removed or changed is one error, and
-                  a word with two errors matches nothing. <a href="#limits">Limits</a> says what
-                  fuzzy matching can get wrong.
+                  returns <code>null</code>. One letter added, removed or changed is one error. An
+                  ordinary word one letter from a unit name, such as <code>feat</code>, reads as
+                  that unit too. <a href="#limits">Limits</a> says what fuzzy matching can get
+                  wrong.
                 </p>
                 <div class="code on-code">
                   <div class="code-head">

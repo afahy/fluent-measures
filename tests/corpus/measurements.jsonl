@@ -226,18 +226,18 @@
 {"id": "typos-was", "input": "i was 180", "options": {"fuzzy": true}, "expected": null, "category": "typos", "source": "AFA-16"}
 {"id": "typos-food", "input": "I ate 5 food", "options": {"fuzzy": true}, "expected": null, "category": "typos", "source": "AFA-16"}
 {"id": "typos-abs", "input": "6 abs", "options": {"fuzzy": true}, "expected": null, "category": "typos", "source": "AFA-16"}
-{"id": "typos-feel", "input": "5 feel", "options": {"fuzzy": true}, "expected": null, "category": "typos", "source": "AFA-16"}
-{"id": "typos-kill", "input": "kill 5", "options": {"fuzzy": true}, "expected": null, "category": "typos", "source": "AFA-16"}
-{"id": "typos-kills", "input": "5 kills", "options": {"fuzzy": true}, "expected": null, "category": "typos", "source": "AFA-16"}
+{"id": "typos-feel", "input": "5 feel", "options": {"fuzzy": true}, "expected": {"value": 5, "unit": "ft", "type": "height"}, "category": "typos", "source": "AFA-16", "note": "AFA-253 comment d5897102: \"feel\" is one edit from \"feet\", and fuzzy has no blocked words. AFA-16 had blocked it at any fuzziness."}
+{"id": "typos-kill", "input": "kill 5", "options": {"fuzzy": true}, "expected": {"value": 5, "unit": "kg", "type": "weight"}, "category": "typos", "source": "AFA-16", "note": "AFA-253 comment d5897102: \"kill\" is one edit from \"kilo\", and fuzzy has no blocked words. AFA-16 had blocked it at any fuzziness."}
+{"id": "typos-kills", "input": "5 kills", "options": {"fuzzy": true}, "expected": {"value": 5, "unit": "kg", "type": "weight"}, "category": "typos", "source": "AFA-16", "note": "AFA-253 comment d5897102: \"kills\" is one edit from \"kilos\", and fuzzy has no blocked words. AFA-16 had blocked it at any fuzziness."}
 {"id": "typos-feed", "input": "feed 3 cats", "options": {"fuzzy": true}, "expected": null, "category": "typos", "source": "AFA-16"}
-{"id": "typos-fool", "input": "5 fool", "options": {"fuzzy": true}, "expected": null, "category": "typos", "source": "AFA-16"}
+{"id": "typos-fool", "input": "5 fool", "options": {"fuzzy": true}, "expected": {"value": 5, "unit": "ft", "type": "height"}, "category": "typos", "source": "AFA-16", "note": "AFA-253 comment d5897102: \"fool\" is one edit from \"foot\", and fuzzy has no blocked words. AFA-16 had blocked it at any fuzziness."}
 {"id": "typos-food-then-kilo", "input": "I ate 5 food; weight 80 kilo", "options": {"fuzzy": true}, "expected": null, "category": "typos", "source": "AFA-16", "note": " AFA-250 approved policy revision: Complete entry required: unrelated prose, malformed fragments, unsupported components, and unknown field labels are not skipped."}
 {"id": "typos-inchs", "input": "5 feet 11 inchs", "options": {"fuzzy": true}, "expected": {"value": 71, "unit": "in", "type": "height"}, "category": "typos", "source": "handwritten"}
 {"id": "typos-poonds", "input": "160 poonds", "options": {"fuzzy": true}, "expected": {"value": 160, "unit": "lb", "type": "weight"}, "category": "typos", "source": "handwritten"}
 {"id": "typos-meterz", "input": "1.8 meterz", "options": {"fuzzy": true}, "expected": {"value": 1.8, "unit": "m", "type": "height"}, "category": "typos", "source": "handwritten"}
 {"id": "typos-kilogrammes", "input": "95 kilogrammes", "options": {"fuzzy": true}, "expected": {"value": 95, "unit": "kg", "type": "weight"}, "category": "typos", "source": "handwritten"}
 {"id": "typos-inces", "input": "72 inces", "options": {"fuzzy": true}, "expected": {"value": 72, "unit": "in", "type": "height"}, "category": "typos", "source": "handwritten"}
-{"id": "typos-feat", "input": "6 feat", "options": {"fuzzy": true}, "expected": null, "category": "typos", "source": "handwritten", "note": "AFA-253: feat is an English word that the reviewed table blocks, so fuzzy reads no unit."}
+{"id": "typos-feat", "input": "6 feat", "options": {"fuzzy": true}, "expected": {"value": 6, "unit": "ft", "type": "height"}, "category": "typos", "source": "handwritten"}
 {"id": "typos-exact-with-fuzziness", "input": "185 lbs", "options": {"fuzzy": true}, "expected": {"value": 185, "unit": "lb", "type": "weight"}, "category": "typos", "source": "handwritten"}
 {"id": "typos-kilgrm-infinite-fuzziness", "input": "70 kilgrm", "options": {"fuzzy": false}, "expected": null, "category": "typos", "source": "AFA-189", "note": "AFA-189 turned fuzzy matching off for a fuzziness of Infinity. AFA-253 retired fuzziness; this entry keeps the case with fuzzy: false."}
 {"id": "typos-foots-inc-infinite-fuzziness", "input": "5 foots 10 inc", "options": {"fuzzy": false}, "expected": null, "category": "typos", "source": "AFA-189", "note": "AFA-189 turned fuzzy matching off for a fuzziness of Infinity. AFA-253 retired fuzziness; this entry keeps the case with fuzzy: false."}
@@ -399,7 +399,7 @@
 {"id": "prose-shoe-size", "input": "size 10 shoes", "expected": null, "category": "prose", "source": "handwritten"}
 {"id": "prose-stars", "input": "5 stars, would buy again", "expected": null, "category": "prose", "source": "handwritten"}
 {"id": "prose-fees-fuzzy", "input": "I paid 5 fees", "options": {"fuzzy": true}, "expected": null, "category": "prose", "source": "handwritten", "note": "\"fees\" is one edit from \"feet\"."}
-{"id": "prose-ponds-fuzzy", "input": "we visited 2 ponds", "options": {"fuzzy": true}, "expected": null, "category": "prose", "source": "handwritten", "note": "\"ponds\" is one edit from \"pounds\", and the reviewed table allows it (AFA-253), so \"2 ponds\" alone reads as 2 lb. The words around it make the whole entry null."}
+{"id": "prose-ponds-fuzzy", "input": "we visited 2 ponds", "options": {"fuzzy": true}, "expected": null, "category": "prose", "source": "handwritten", "note": "\"ponds\" is one edit from \"pounds\", so with fuzzy \"2 ponds\" alone reads as 2 lb (AFA-253). The words around it make the whole entry null."}
 {"id": "prose-kilns-fuzzy", "input": "the studio has 2 kilns", "options": {"fuzzy": true}, "expected": null, "category": "prose", "source": "handwritten", "note": "\"kilns\" is one edit from \"kilos\"."}
 {"id": "prose-unknown", "input": "unknown", "expected": null, "category": "prose", "source": "handwritten"}
 {"id": "prose-question-mark", "input": "?", "expected": null, "category": "prose", "source": "handwritten"}

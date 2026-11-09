@@ -6,7 +6,7 @@ use, see the [README](https://github.com/afahy/fluent-measures/blob/main/README.
 The examples in this file and in the README are the public specification. A test checks each
 result that they show.
 
-<!-- cspell:ignore centimetre centimetres kilogramme kilogrammes kilgrm -->
+<!-- cspell:ignore centimetre centimetres kilogramme kilogrammes kilgrm kilgrom -->
 
 ## Complete Entries
 
@@ -319,18 +319,17 @@ removed or changed. These rules apply:
   `cms` and `lbs`, match only when they are exact.
 - The British spellings `centimetre`, `centimetres`, `metre`, `metres`, `kilogramme` and
   `kilogrammes` match only when they are exact.
-- The words `feat`, `fee`, `feed`, `feel`, `fees`, `felt`, `fleet`, `font`, `food`, `fool`, `footy`,
-  `fort`, `fret`, `inca`, `inched`, `incl`, `incr`, `itch`, `itches`, `kill`, `kills`, `kiln`,
-  `kilns`, `kilt`, `kilts`, `meteor`, `meteors`, `miter` and `miters` never match. They are English
-  words one error from a unit name that often come near a number.
-  `tests/fixtures/unitTypos/englishWords.json` lists every English word one error from a unit name,
-  with the reason each one is blocked or allowed. `ponds`, for example, is allowed and reads as
-  `lb`.
+- A short list of reviewed typos also reads with `fuzzy: true`, beyond the one-error rule. Today
+  it holds one entry: `kilgrm` reads as `kg`, although it has two errors, as it did with
+  `fuzziness: 2`. Without `fuzzy`, no typo on the list reads. Each new entry needs a reason and a
+  test with and without `fuzzy`.
 - If a word is one error from two unit names, the first unit in this order wins: `ft`, `in`, `cm`
   and `m` for height, and `lb` and `kg` for weight.
 
-A word with two errors, such as `kilgrm`, matches nothing. These rules prevent many wrong matches.
-But fuzzy matching can still read an ordinary word as a unit.
+Any other word with two errors, such as `kilgrom`, matches nothing. No word is blocked: with
+`fuzzy: true`, an ordinary English word one letter from a unit name reads as that unit. `5 feat`,
+`6 food` and `5 feel` read as feet, `70 kiln` and `5 kills` as kilograms, and `150 ponds` as pounds.
+Without `fuzzy`, they return `null`.
 
 ```typescript
 parseMeasurement('5 foots 10 inc', { fuzzy: true }); // { value: 70, unit: 'in', ... }

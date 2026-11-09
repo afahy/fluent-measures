@@ -3491,8 +3491,9 @@ stay as historical evidence.
 `matchUnit` keeps its order: an exact alias returns at once. With `fuzzy`, the first alias in
 `UNIT_ALIASES` order that is one edit away wins, among aliases of four or more letters that start
 with the word's first letter and aren't British spellings. The regular expression that blocked
-`food`, `feel`, `feed`, `fool`, `kill` and `kills` became a set of 29 words from a reviewed table
-of the 57 English words one edit from a unit name. `kilogramme` and `kilogrammes` are new exact
+`food`, `feel`, `feed`, `fool`, `kill` and `kills` is gone (AFA-253 comment d5897102): with
+`fuzzy`, every word that the rule accepts reads as its unit, English words included. One reviewed
+typo that the rule doesn't accept, `kilgrm`, reads as `kg` with `fuzzy`. `kilogramme` and `kilogrammes` are new exact
 aliases of `kg` and, like the other British spellings, match only exactly. One edit accepts 3,941
 spellings, 2,288 for height and 1,653 for weight, and `tests/matchUnit.oneEdit.test.ts` checks
 each one.

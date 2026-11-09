@@ -5,15 +5,24 @@ import { describe, expect, it } from 'vitest';
 import { parseMeasurement, type ParseOptions } from '../src';
 
 describe('conservative fuzzy unit matching', () => {
-  it.each(['i was 180', 'I ate 5 food', '6 abs', '5 feel'])(
+  // The words around the measurement still make these entries null with fuzzy.
+  it.each(['i was 180', 'I ate 5 food', '6 abs'])(
     'does not interpret ordinary prose as a unit in %s',
     raw => {
       expect(parseMeasurement(raw, { fuzzy: true })).toBeNull();
     }
   );
 
-  it.each(['kill 5', '5 kills'])('does not interpret %s as kilograms', raw => {
-    expect(parseMeasurement(raw, { fuzzy: true })).toBeNull();
+  // AFA-253 comment d5897102: there is no blocked list. With fuzzy, an English word one edit from a
+  // unit name reads as that unit: "feel" is one from "feet", and "kill" and "kills" one from
+  // "kilo" and "kilos". Main blocked these words at any fuzziness.
+  it.each([
+    ['5 feel', 5, 'ft'],
+    ['kill 5', 5, 'kg'],
+    ['5 kills', 5, 'kg'],
+  ] as const)('reads the English word in %s with fuzzy only', (raw, value, unit) => {
+    expect(parseMeasurement(raw, { fuzzy: true })).toMatchObject({ value, unit });
+    expect(parseMeasurement(raw)).toBeNull();
   });
 
   it.each(['80 kilo', '80 kilos', '80 KILO'])('recognizes %s without fuzzy', raw => {
@@ -47,14 +56,21 @@ describe('conservative fuzzy unit matching', () => {
     expect(parseMeasurement('5 foots 10 inc', { fuzzy })).toBeNull();
   });
 
-  // AFA-253: fuzzy reads one edit only. "kilgrm" is two edits from "kilogram" (insert o and a),
-  // so it is null; with fuzziness 2 it was 70 kg before AFA-253.
-  it('does not read 70 kilgrm, two edits away', () => {
-    expect(parseMeasurement('70 kilgrm', { fuzzy: true })).toBeNull();
+  // AFA-253: fuzzy reads one edit, and the reviewed typos in PARSING.md. "kilgrm" is two edits
+  // from "kilogram" (insert o and a), and it is on that list, so it reads as kg, as main's
+  // fuzziness 2 did. "kilgrom" is two edits too and isn't on the list.
+  it('reads 70 kilgrm from the typo list, but not another two-edit typo', () => {
+    expect(parseMeasurement('70 kilgrm', { fuzzy: true })).toEqual({
+      value: 70,
+      unit: 'kg',
+      type: 'weight',
+      raw: '70 kilgrm',
+      matches: [{ value: 70, unit: 'kg' }],
+    });
+    expect(parseMeasurement('70 kilgrom', { fuzzy: true })).toBeNull();
   });
 
-  // AFA-253: the maintainer's example. "ponds" is one edit from "pounds", and the reviewed table
-  // allows it.
+  // AFA-253: the maintainer's example. "ponds" is one edit from "pounds".
   it('reads 150 ponds as 150 lb', () => {
     expect(parseMeasurement('150 ponds', { fuzzy: true })).toEqual({
       value: 150,

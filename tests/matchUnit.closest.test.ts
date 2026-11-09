@@ -10,6 +10,8 @@ vi.mock('../src/units', () => ({
       ['m', 'measuxex'],
     ],
   },
+  FUZZY_TYPOS: new Map(),
+  UNIT_TYPES: { ft: 'height', in: 'height', cm: 'height', m: 'height' },
 }));
 
 import { matchUnit } from '../src/matchUnit';

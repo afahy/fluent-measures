@@ -39,9 +39,15 @@ describe('matchUnit', () => {
   });
 
   describe('fuzzy matching', () => {
-    it.each(['food', 'feel', 'feed', 'fool'])('rejects the short prose word %s', word => {
-      expect(matchUnit(word, 'height', true)).toBeNull();
-    });
+    // AFA-253 comment d5897102: there is no blocked list, so with fuzzy these English words, one
+    // edit from "foot" or "feet", read as feet. Main blocked them at any fuzziness.
+    it.each(['food', 'feel', 'feed', 'fool'])(
+      'reads the English word %s as feet with fuzzy',
+      word => {
+        expect(matchUnit(word, 'height', true)).toBe('ft');
+        expect(matchUnit(word, 'height', false)).toBeNull();
+      }
+    );
 
     // The British spellings match only exactly (AFA-64). Each word here is one edit from one of
     // them, and more than one from any other alias, so it matches nothing.
@@ -89,11 +95,13 @@ describe('matchUnit', () => {
       }
     });
 
-    // "fett" is one edit from "feet". "kilgrm" is two edits from "kilogram", so fuzzy doesn't read
-    // it; with fuzziness 2 it was kg before AFA-253.
-    it('reads one edit but not two', () => {
+    // "fett" is one edit from "feet". "kilgrm" is two edits from "kilogram", but it is on the reviewed fuzzy typo list
+    // (PARSING.md), so fuzzy reads it, as main's fuzziness 2 did. "kilgrom" is two edits too, and
+    // isn't on the list.
+    it('reads one edit, and two only for a listed typo', () => {
       expect(matchUnit('fett', 'height', true)).toBe('ft');
-      expect(matchUnit('kilgrm', 'weight', true)).toBeNull();
+      expect(matchUnit('kilgrm', 'weight', true)).toBe('kg');
+      expect(matchUnit('kilgrom', 'weight', true)).toBeNull();
     });
 
     it('handles small typos', () => {
@@ -102,10 +110,10 @@ describe('matchUnit', () => {
       expect(matchUnit('metter', 'height', true)).toBe('m');
     });
 
-    // "inchez" is one edit from "inches", and "killo" one from "kilo". "feat" is an English word
-    // that the reviewed table blocks (AFA-253); with fuzziness 2 it was ft before.
-    it('reads one-edit typos and blocks the reviewed word feat', () => {
-      expect(matchUnit('feat', 'height', true)).toBeNull();
+    // "inchez" is one edit from "inches", "killo" one from "kilo", and the English word "feat" one
+    // from "feet".
+    it('reads one-edit typos, English words included', () => {
+      expect(matchUnit('feat', 'height', true)).toBe('ft');
       expect(matchUnit('inchez', 'height', true)).toBe('in');
       expect(matchUnit('killo', 'weight', true)).toBe('kg');
     });
