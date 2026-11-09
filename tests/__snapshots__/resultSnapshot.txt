@@ -1208,7 +1208,7 @@ weight=-½fet 1/2"	hu	null
 6centimeters70	h	null
 6centimeters70	w	null
 6centimeters70	cm	null
-6centimeters70	f2	6 cm height
+6centimeters70	f2	null
 6centimeters70	hu	null
 1,234.5 lb1,234.5 kiloslbs:	-	null
 1,234.5 lb1,234.5 kiloslbs:	h	null

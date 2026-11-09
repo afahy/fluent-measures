@@ -68,7 +68,7 @@ describe('complete prefix ownership controls', () => {
         matches: [{ value: weight, unit: weightUnit }],
       });
       expect(parseMeasurement(raw)).toBeNull();
-      expect(parseMeasurement(raw, { fuzziness: 2 })).toBeNull();
+      expect(parseMeasurement(raw, { fuzzy: true })).toBeNull();
     }
   );
 

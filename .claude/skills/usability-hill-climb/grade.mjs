@@ -67,6 +67,18 @@ if (
     'answer key needs the AFA-279 T7 change (key v5); missing T7.predictNoOptions.expect. ' +
       'AFA-279 has the backup path and the hashes.'
   );
+// AFA-253 retired fuzziness for fuzzy: true, which throws on the old T6 reference call.
+const t6Spec = key.tasks?.T6;
+if (
+  t6Spec &&
+  (t6Spec.reference?.options?.fuzziness !== undefined ||
+    t6Spec.expect?.fuzziness !== undefined ||
+    t6Spec.expect?.fuzzy !== true)
+)
+  fail(
+    'answer key needs the AFA-253 T6 migration (key v6); T6 must use fuzzy: true, not fuzziness. ' +
+      'See T6-key-migration.json in the validation-artifacts packet; its path and SHA are in the AFA-253 PR description.'
+  );
 
 const near = (a, b, tolerance) => typeof a === 'number' && Math.abs(a - b) <= tolerance;
 const sameParts = (a, b) =>
@@ -129,7 +141,7 @@ if (mode === 'selfcheck') {
     check(id, got, ok);
   }
   check(
-    'T6 without fuzziness',
+    'T6 without fuzzy',
     call(lib, t.T6.reference.input).result,
     call(lib, t.T6.reference.input).result === null
   );
@@ -313,7 +325,7 @@ if (mode === 'reviewer') {
           !comprehension.predict1_8Right && (a.predict1_8Confidence ?? 0) >= 4;
       }
       if (id === 'T6') {
-        checks.smallest = a.options?.fuzziness === want.fuzziness;
+        checks.smallest = a.options?.fuzzy === want.fuzzy;
         checks.withoutSetting = sameValue(a.withoutSetting, want.withoutSetting);
         partial = correct && !checks.smallest;
         correct &&= checks.smallest && checks.withoutSetting;

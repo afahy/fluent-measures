@@ -179,7 +179,7 @@ describe('the short results on the docs page', () => {
         shown: { value: 180.34, unit: 'cm' },
       },
       { input: 'eighty kilograms', options: { type: 'weight' }, shown: { value: 80, unit: 'kg' } },
-      { input: '5 foots 10 inc', options: { fuzziness: 2 }, shown: { value: 70, unit: 'in' } },
+      { input: '5 foots 10 inc', options: { fuzzy: true }, shown: { value: 70, unit: 'in' } },
       { input: 'not a measurement', options: undefined, shown: null },
       {
         input: '150 lbs',

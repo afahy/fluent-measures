@@ -10,9 +10,15 @@ export const UNIT_ALIASES: Record<MeasurementType, [Unit, ...string[]][]> = {
   ],
   weight: [
     ['lb', 'lbs', 'pound', 'pounds'],
-    ['kg', 'kgs', 'kilo', 'kilos', 'kilogram', 'kilograms'],
+    ['kg', 'kgs', 'kilo', 'kilos', 'kilogram', 'kilograms', 'kilogramme', 'kilogrammes'],
   ],
 };
+
+// The fuzzy typo list: reviewed typos that only `fuzzy: true` reads, beyond the one-edit rule in
+// matchUnit. Without fuzzy, no typo reads. PARSING.md, "Fuzzy Matching", lists each entry with its
+// reason; AFA-280 fills the list. It holds unit names only. For number-word typos, AFA-280 would
+// widen the value type to Unit | number and pass fuzzy to the tokenizer's number reader.
+export const FUZZY_TYPOS: ReadonlyMap<string, Unit> = new Map([['kilgrm', 'kg']]);
 
 // The measurement type of each unit. The type checks that each unit has one.
 const TYPES: Record<Unit, MeasurementType> = {

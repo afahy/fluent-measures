@@ -132,7 +132,7 @@ const cases: ReadmeCase[] = [
   {
     section: 'Usage',
     input: '5 foots 10 inc',
-    options: { fuzziness: 2 },
+    options: { fuzzy: true },
     expected: {
       value: 70,
       unit: 'in',
@@ -354,14 +354,14 @@ const cases: ReadmeCase[] = [
   {
     section: 'Fuzzy Matching',
     input: '5 foots 10 inc',
-    options: { fuzziness: 2 },
+    options: { fuzzy: true },
     expected: { value: 70, unit: 'in' },
   },
   { section: 'Fuzzy Matching', input: '5 foots 10 inc', expected: null },
   {
     section: 'Fuzzy Matching',
     input: '5 foot 10 inches',
-    options: { fuzziness: 1 },
+    options: { fuzzy: true },
     expected: { value: 70, unit: 'in' },
   },
 ];

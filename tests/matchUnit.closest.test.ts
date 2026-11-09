@@ -10,17 +10,19 @@ vi.mock('../src/units', () => ({
       ['m', 'measuxex'],
     ],
   },
+  FUZZY_TYPOS: new Map(),
+  UNIT_TYPES: { ft: 'height', in: 'height', cm: 'height', m: 'height' },
 }));
 
 import { matchUnit } from '../src/matchUnit';
 
 describe('closest fuzzy unit', () => {
   it('prefers an exact alias over earlier fuzzy candidates', () => {
-    expect(matchUnit('measurex', 'height', 2)).toBe('cm');
+    expect(matchUnit('measurex', 'height', true)).toBe('cm');
   });
 
-  it('chooses the closest alias across all units', () => {
-    // Distances are 2, 1, 1, 2: retain the first closest unit when distances tie.
-    expect(matchUnit('measured', 'height', 2)).toBe('in');
+  it('takes the first unit in tie order among aliases one edit away', () => {
+    // Distances are 2, 1, 1, 2: "in" and "cm" are one edit away, and "in" comes first.
+    expect(matchUnit('measured', 'height', true)).toBe('in');
   });
 });

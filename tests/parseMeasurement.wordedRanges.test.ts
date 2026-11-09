@@ -84,7 +84,7 @@ describe('shared-unit ranges with word connectors', () => {
   });
 
   it('rejects a range even when its unit is fuzzy', () => {
-    expect(parseMeasurement('150 to 180 poundz, 70 kg', { fuzziness: 1 })).toBeNull();
+    expect(parseMeasurement('150 to 180 poundz, 70 kg', { fuzzy: true })).toBeNull();
   });
 
   it.each([

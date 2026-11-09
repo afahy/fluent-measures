@@ -1,6 +1,6 @@
 # Library state machines
 
-<!-- cspell:ignore NFKC apfahy meterrs -->
+<!-- cspell:ignore NFKC apfahy meterrs kilogramme kilogrammes -->
 
 Audit baseline: `b79eae0` (`main`), 2026-11-06. Tracking: [AFA-235][audit].
 Scope: every runtime module in `src/`, reached through `parseMeasurement`. The docs website,
@@ -3477,3 +3477,23 @@ The table converts full-width forms, `㎝`, `㎏`, primes and acute accents. A m
 sign when no number comes before it. A curly closing quote after a number or a number word is a
 mark. `readNumber` takes the letter or quote mark before a run as context. A comma group of the
 wrong size still rejects the whole input.
+
+## Approved policy revision: one-edit fuzzy matching (AFA-253)
+
+The maintainer decided on 2026-11-09 (AFA-253 comments 9bf0c672, 3e80ce01 and 226d15f6) to bound
+fuzzy matching so that every match can be tested. The numeric `fuzziness` option is retired: any
+defined value throws `fuzziness was removed; use fuzzy: true or remove it`, like the other options
+that AFA-251 retired. The new `fuzzy?: boolean` option reads a unit name with one spelling error. An
+invalid `fuzzy` throws a TypeError after `defaultUnit` and before the retired options. The earlier
+findings above about edit budgets, fractions and Infinity (AFA-189) describe the numeric option and
+stay as historical evidence.
+
+`matchUnit` keeps its order: an exact alias returns at once. With `fuzzy`, the first alias in
+`UNIT_ALIASES` order that is one edit away wins, among aliases of four or more letters that start
+with the word's first letter and aren't British spellings. The regular expression that blocked
+`food`, `feel`, `feed`, `fool`, `kill` and `kills` is gone (AFA-253 comment d5897102): with
+`fuzzy`, every word that the rule accepts reads as its unit, English words included. One reviewed
+typo that the rule doesn't accept, `kilgrm`, reads as `kg` with `fuzzy`. `kilogramme` and `kilogrammes` are new exact
+aliases of `kg` and, like the other British spellings, match only exactly. One edit accepts 3,941
+spellings, 2,288 for height and 1,653 for weight, and `tests/matchUnit.oneEdit.test.ts` checks
+each one.

@@ -27,7 +27,7 @@ describe('the ParseOptions reference', () => {
     expect(options.map(([, id]) => id)).toEqual([
       'type',
       'normalized-unit',
-      'fuzziness',
+      'fuzzy',
       'default-unit',
       'max-length',
     ]);
@@ -40,7 +40,7 @@ describe('the ParseOptions reference', () => {
       'Selected by normalizedUnit when set; otherwise by written units or defaultUnit for a bare number.',
     ],
     ['normalized-unit', 'When omitted', 'Uses the written or default source unit.'],
-    ['fuzziness', 'Default', '0 — unit names must be exact.'],
+    ['fuzzy', 'Default', 'false — unit names must be exact.'],
     ['default-unit', 'When omitted', 'Bare numbers return null.'],
     ['max-length', 'Default', '1000.'],
   ])(

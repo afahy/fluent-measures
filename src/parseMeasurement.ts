@@ -132,9 +132,17 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   const requestedType = rawType === '' ? undefined : rawType;
   const normalizedUnit = unitOption(options.normalizedUnit, 'normalizedUnit');
   const defaultUnit = unitOption(options.defaultUnit, 'defaultUnit');
-  for (const name of ['allowUnqualified', 'inferUnit'] as const) {
+  const { fuzzy } = options;
+  if (fuzzy !== undefined && typeof fuzzy !== 'boolean') {
+    throw new TypeError('fuzzy must be true or false');
+  }
+  for (const [name, use] of [
+    ['allowUnqualified', 'defaultUnit'],
+    ['inferUnit', 'defaultUnit'],
+    ['fuzziness', 'fuzzy: true or remove it'],
+  ] as const) {
     if ((options as Record<string, unknown>)[name] !== undefined) {
-      throw new Error(`${name} was removed; use defaultUnit`);
+      throw new Error(`${name} was removed; use ${use}`);
     }
   }
   const unitType = normalizedUnit && UNIT_TYPES[normalizedUnit];
@@ -162,9 +170,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     const word = text(at)?.replace(/\.$/, '');
     if (word === '′') return 'ft';
     if (word === '″') return 'in';
-    return word
-      ? matchUnit(word, 'height', options.fuzziness) || matchUnit(word, 'weight', options.fuzziness)
-      : null;
+    return word ? matchUnit(word, 'height', fuzzy) || matchUnit(word, 'weight', fuzzy) : null;
   };
 
   const bare = shorthand(tokens);

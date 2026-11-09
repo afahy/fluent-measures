@@ -3,7 +3,7 @@ type MeasurementType = 'height' | 'weight';
 interface ParseOptions {
   maxLength?: number;
   type?: MeasurementType;
-  fuzziness?: number;
+  fuzzy?: boolean;
   defaultUnit?: Unit;
   normalizedUnit?: Unit;
 }

@@ -272,3 +272,109 @@ describe('T7 no-options prediction', () => {
     );
   });
 });
+
+// Expected values come from AFA-253 comment 226d15f6: the setting that reads `5 fet 11 inchs` is
+// now `fuzzy: true`, and `fuzziness` throws. README: 5 ft 11 in = 5 x 12 + 11 = 71 in.
+describe('T6 fuzzy setting', () => {
+  const t6 = {
+    reference: { input: '5 fet 11 inchs', options: { fuzzy: true } },
+    expect: { fuzzy: true, value: 71, unit: 'in', withoutSetting: null },
+    path: [],
+    benchmarkViews: 4,
+  };
+  // The v5 key's T6, from before AFA-253.
+  const oldT6 = {
+    reference: { input: '5 fet 11 inchs', options: { fuzziness: 1 } },
+    expect: { fuzziness: 1, value: 71, unit: 'in', withoutSetting: null },
+    path: [],
+    benchmarkViews: 4,
+  };
+  const writeT6Key = (spec: unknown): void =>
+    writeFileSync(
+      join(dir, 'key.json'),
+      JSON.stringify({
+        tasks: {
+          T5: { expect: { value: 180, unit: 'cm' }, predict1_8: prediction, path: [] },
+          T6: spec,
+        },
+      })
+    );
+  type T6Grade = { correct: boolean; partial: boolean; checks: Record<string, unknown> };
+  const gradeT6 = (answer: Record<string, unknown>): T6Grade => {
+    writeFileSync(join(dir, 'answers.json'), JSON.stringify({ tasks: { T6: answer } }));
+    const result = run();
+    expect(result.status).toBe(0);
+    return JSON.parse(readFileSync(join(dir, 'grade.json'), 'utf8')).tasks.T6;
+  };
+  const right = {
+    input: '5 fet 11 inchs',
+    options: { fuzzy: true },
+    value: 71,
+    unit: 'in',
+    withoutSetting: null,
+  };
+
+  beforeEach(() => {
+    // A literal stand-in for the AFA-253 library: 71 in with fuzzy: true, null without it, and the
+    // migration error for fuzziness.
+    writeFileSync(
+      join(dir, 'sandbox/node_modules/@afahy/fluent-measures/index.cjs'),
+      `exports.parseMeasurement = (input, options) => {
+    if (options?.fuzziness !== undefined) throw new Error('fuzziness was removed; use fuzzy: true or remove it');
+    return input === '5 fet 11 inchs' && options?.fuzzy === true ? { value: 71, unit: 'in' } : null;
+  };`
+    );
+    writeT6Key(t6);
+  });
+
+  it.each(['selfcheck', 'reviewer'])('stops %s clearly for the old key', mode => {
+    writeT6Key(oldT6);
+    const result = run(mode);
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('AFA-253 T6 migration');
+    expect(result.stderr).toContain('T6-key-migration.json');
+    expect(result.stderr).not.toContain('TypeError');
+  });
+
+  it.each([
+    { why: 'fuzziness in the reference', spec: { ...t6, reference: oldT6.reference } },
+    {
+      why: 'fuzziness in the expected answer',
+      spec: { ...t6, expect: { ...t6.expect, fuzziness: 1 } },
+    },
+    {
+      why: 'no fuzzy in the expected answer',
+      spec: { ...t6, expect: { ...t6.expect, fuzzy: undefined } },
+    },
+  ])('stops for a key with $why', ({ spec }) => {
+    writeT6Key(spec);
+    const result = run();
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('AFA-253 T6 migration');
+  });
+
+  it('marks fuzzy: true with 71 in and a null withoutSetting correct', () => {
+    const grade = gradeT6(right);
+    expect(grade.checks).toMatchObject({
+      callOk: true,
+      reportedOk: true,
+      smallest: true,
+      withoutSetting: true,
+    });
+    expect(grade.correct).toBe(true);
+  });
+
+  it('marks the retired fuzziness wrong', () => {
+    const grade = gradeT6({ ...right, options: { fuzziness: 1 } });
+    expect(grade.checks.call).toMatch(/^THROWS .*fuzzy: true/);
+    expect(grade.correct).toBe(false);
+    expect(grade.partial).toBe(false);
+  });
+
+  it('marks a wrong withoutSetting partial', () => {
+    const grade = gradeT6({ ...right, withoutSetting: { value: 71, unit: 'in' } });
+    expect(grade.checks.withoutSetting).toBe(false);
+    expect(grade.correct).toBe(false);
+    expect(grade.partial).toBe(true);
+  });
+});

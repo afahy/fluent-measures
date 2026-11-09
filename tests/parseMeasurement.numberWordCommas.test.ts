@@ -33,7 +33,7 @@ describe('a comma after a number word before digits', () => {
 
   it('rejects unrelated comma fields with fuzzy units and normalization', () => {
     const raw = 'phase twenty, 5 kilogams';
-    expect(parseMeasurement(raw, { fuzziness: 1 })).toBeNull();
+    expect(parseMeasurement(raw, { fuzzy: true })).toBeNull();
     expect(parseMeasurement('phase twenty, 5 cm', { normalizedUnit: 'm' })).toBeNull();
   });
 

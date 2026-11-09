@@ -1,5 +1,4 @@
 import fc from 'fast-check';
-import { readFileSync } from 'node:fs';
 import { env } from 'node:process';
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement, type ParseOptions, type Unit } from '../src';
@@ -253,16 +252,11 @@ describe('generated single measurements', () => {
     );
   });
 
-  it('reads a unit name with one spelling error only with fuzziness', () => {
+  it('reads a unit name with one spelling error only with fuzzy', () => {
     expect.hasAssertions();
-    // PARSING.md, "Fuzzy Matching": the word starts with the unit name's letter. The errors are
-    // fewer than a third of the name's length. Names of three characters or fewer and the British
-    // spellings match only when exact. Some words never match.
-    // The words that never match come from PARSING.md, the specification. A fix that stops
-    // another word from matching adds it to that list, and this test follows the list.
-    const never = /The words ([^.]*) never match/.exec(readFileSync('PARSING.md', 'utf8'))?.[1];
-    const NEVER = new Set([...(never ?? '').matchAll(/`([a-z]+)`/g)].map(([, word]) => word));
-    expect([...NEVER]).toContain('food');
+    // PARSING.md, "Fuzzy Matching": the word is one error from the unit name and starts with its
+    // letter. Names of three characters or fewer and the British spellings match only when exact.
+    // No word is blocked, so English words such as "food" read too (AFA-253 comment d5897102).
     const LONG_NAMES = UNITS.flatMap(unit =>
       NAMES[unit]
         .filter(name => name.length > 3 && !name.includes('tre'))
@@ -287,13 +281,13 @@ describe('generated single measurements', () => {
             : before + (edit === 'change' ? letter : '') + after.slice(1);
         return { ...found, word };
       })
-      .filter(({ word }) => !EXACT.has(word) && !NEVER.has(word));
+      .filter(({ word }) => !EXACT.has(word));
     fc.assert(
       fc.property(fc.integer({ min: 1, max: 300 }), misspelled, (value, { unit, word }) => {
         const raw = `${value} ${word}`;
         const options: ParseOptions = { type: TYPES[unit] };
         expect(parseMeasurement(raw, options)).toBeNull();
-        const result = parseMeasurement(raw, { ...options, fuzziness: 1 });
+        const result = parseMeasurement(raw, { ...options, fuzzy: true });
         expect(result?.unit).toBe(unit);
         expect(result?.value).toBe(value);
       }),
@@ -667,38 +661,30 @@ describe('generated normalized type selection', () => {
   });
 });
 
-describe('generated numeric fuzziness boundaries', () => {
+describe('generated fuzzy boundaries', () => {
   // fuzzyUnits.test.ts and features/fuzzy-matching.md. The second column is the allowed number
-  // of edits, independently specified here, not calculated by production option handling.
+  // of edits, independently specified here (AFA-253: fuzzy reads one edit), not calculated by
+  // production option handling.
   it.each([
-    [Infinity, 0],
-    [-Infinity, 0],
-    [NaN, 0],
-    [0, 0],
-    [-0, 0],
-    [-1, 0],
-    [-0.5, 0],
-    [Number.MIN_VALUE, 0],
-    [0.5, 0],
-    [1 - Number.EPSILON, 0],
-    [1, 1],
-    [1.5, 1],
-    [2 - Number.EPSILON, 1],
-    [2, 2],
-  ])('allows the specified edits with fuzziness %s', (fuzziness, edits) => {
+    [false, 0],
+    [undefined, 0],
+    [true, 1],
+  ])('allows the specified edits with fuzzy %s', (fuzzy, edits) => {
     expect.hasAssertions();
     fc.assert(
       fc.property(amount, measurement, (value, { unit, name }) => {
-        expectQuantity(`${value} ${name}`, { value, unit }, { fuzziness });
-        // "foots" adds s to foot; "kilgrm" deletes o and a from kilogram. Each is unambiguous
-        // and satisfies the name-length and first-letter rules in PARSING.md.
-        for (const [word, typoUnit, distance] of [
+        expectQuantity(`${value} ${name}`, { value, unit }, { fuzzy });
+        // "foots" adds s to foot. "kilgrm" deletes o and a from kilogram, and PARSING.md lists it
+        // as a reviewed fuzzy typo. "kilgrom" is two edits from kilogram too and isn't listed.
+        // needs: the edits that fuzzy must allow to read the word under PARSING.md's rules.
+        for (const [word, typoUnit, needs] of [
           ['foots', 'ft', 1],
-          ['kilgrm', 'kg', 2],
+          ['kilgrm', 'kg', 1],
+          ['kilgrom', 'kg', 2],
         ] as const) {
           const raw = `${value} ${word}`;
           const expected =
-            edits >= distance
+            edits >= needs
               ? {
                   value,
                   unit: typoUnit,
@@ -707,7 +693,7 @@ describe('generated numeric fuzziness boundaries', () => {
                   matches: [{ value, unit: typoUnit }],
                 }
               : null;
-          expect(parseMeasurement(raw, { fuzziness })).toEqual(expected);
+          expect(parseMeasurement(raw, { fuzzy })).toEqual(expected);
         }
       }),
       SEMANTIC_RUNS
