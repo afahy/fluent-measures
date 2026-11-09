@@ -1,5 +1,7 @@
 # Numbers
 
+<!-- cspell:ignore fourty ninty -->
+
 ## What it does
 
 The user gets the value of a number in digits, in words, or in words and digits, with decimals,
@@ -17,6 +19,8 @@ fractions, decimal commas and thousands groups.
 - Spoken decimals after compact units or bare meters: `5ft11 point five` and `one meter eighty point five`.
 - Incomplete comma-separated phrases reject: `my son is two, thirty pounds` gives `null`.
 - Arbitrary metadata rejects: `phase twenty, 5 cm` gives `null`.
+- Number-word typos on the fuzzy typo list, only with `fuzzy: true`: `fourty kg` and
+  `ninty five pounds`.
 - Signs, which give `null` for a negative value: `-70 kg`, Unicode minus signs.
 - A standalone zero invalidates the entry: `0 kg, 80 lb` gives `null`; `1 m 0 cm` gives 100 cm with both parts.
 - `import` and `require`.
@@ -26,6 +30,7 @@ fractions, decimal commas and thousands groups.
 - README.md, "Usage"
 - PARSING.md, "Numbers"
 - PARSING.md, "Commas"
+- PARSING.md, "The Fuzzy Typo List"
 
 ## How to verify it
 
@@ -39,7 +44,7 @@ fractions, decimal commas and thousands groups.
   `tests/parseMeasurement.signedParts.test.ts`, `tests/parseMeasurement.spokenNumbers.test.ts`,
   `tests/parseMeasurement.unicodeMinus.test.ts`, `tests/parseMeasurement.zeroBeforeUnit.test.ts`,
   `tests/wordsToNumber.test.ts`, `tests/wordsToNumberTable.test.ts`, `tests/tokenize.forms.test.ts`,
-  `tests/tokenize.fractions.test.ts`
+  `tests/tokenize.fractions.test.ts`, `tests/parseMeasurement.fuzzyTypos.test.ts`
 - Properties: "generated single measurements" in `tests/properties.test.ts`
 - Properties: "generated number phrases" in `tests/properties.test.ts`
 - Corpus categories: `words`, `mixed-numbers`, `decimals`, `commas`

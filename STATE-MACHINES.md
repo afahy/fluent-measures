@@ -1,6 +1,6 @@
 # Library state machines
 
-<!-- cspell:ignore NFKC apfahy meterrs kilogramme kilogrammes -->
+<!-- cspell:ignore NFKC apfahy meterrs kilogramme kilogrammes lbss cenitmeters fourty ninty -->
 
 Audit baseline: `b79eae0` (`main`), 2026-11-06. Tracking: [AFA-235][audit].
 Scope: every runtime module in `src/`, reached through `parseMeasurement`. The docs website,
@@ -3493,7 +3493,10 @@ stay as historical evidence.
 with the word's first letter and aren't British spellings. The regular expression that blocked
 `food`, `feel`, `feed`, `fool`, `kill` and `kills` is gone (AFA-253 comment d5897102): with
 `fuzzy`, every word that the rule accepts reads as its unit, English words included. One reviewed
-typo that the rule doesn't accept, `kilgrm`, reads as `kg` with `fuzzy`. `kilogramme` and `kilogrammes` are new exact
+typo that the rule doesn't accept, `kilgrm`, reads as `kg` with `fuzzy`. AFA-280 adds `lbss`,
+`ibs` and `cenitmeters` to that list, and the number-word typos `fourty` and `ninty`. With `fuzzy`,
+the tokenizer writes each number-word typo as its word before the scan, so it reads wherever the
+word does. `kilogramme` and `kilogrammes` are new exact
 aliases of `kg` and, like the other British spellings, match only exactly. One edit accepts 3,941
 spellings, 2,288 for height and 1,653 for weight, and `tests/matchUnit.oneEdit.test.ts` checks
 each one.

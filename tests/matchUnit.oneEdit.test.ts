@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement, type MeasurementType, type Unit } from '../src';
 import { matchUnit } from '../src/matchUnit';
-import { FUZZY_TYPOS, UNIT_NAMES, expectedUnit, oneEditSpellings, oneEdits } from './unitTypos';
+import { FUZZY_TYPOS as SOURCE_TYPOS } from '../src/units';
+import {
+  FUZZY_TYPOS,
+  NUMBER_TYPOS,
+  NUMBER_WORD_NAMES,
+  UNIT_NAMES,
+  expectedUnit,
+  oneEditSpellings,
+  oneEdits,
+} from './unitTypos';
 
 // AFA-253: fuzzy reads one edit, so it accepts a finite set of spellings. This test checks every
 // word one edit from every unit name, against the rules in PARSING.md, "Fuzzy Matching", as
@@ -62,17 +71,45 @@ describe('the fuzzy typo list', () => {
   const entries = TYPES.flatMap(type =>
     Object.entries(FUZZY_TYPOS[type]).map(([word, unit]) => ({ type, word, unit: unit as Unit }))
   );
+  const words = [...entries.map(({ word }) => word), ...Object.keys(NUMBER_TYPOS)];
 
+  // AFA-280: an entry earns its place only when no other rule reads it already.
   it('lists only words that no other rule reads', () => {
     expect.hasAssertions();
-    expect(entries.length).toBeGreaterThan(0);
-    for (const { word } of entries) {
+    expect(entries.length).toBe(4);
+    expect(Object.keys(NUMBER_TYPOS)).toHaveLength(2);
+    for (const word of words) {
+      expect(NUMBER_WORD_NAMES.has(word)).toBe(false);
       for (const type of TYPES) {
         expect(UNIT_NAMES[type].some(([, names]) => names.includes(word))).toBe(false);
         expect(oneEditSpellings(type).has(word)).toBe(false);
       }
     }
+    for (const { word } of Object.values(NUMBER_TYPOS))
+      expect(NUMBER_WORD_NAMES.has(word)).toBe(true);
   });
+
+  // The list in src/units.ts holds exactly the entries that PARSING.md documents.
+  it('has the documented entries in the source', () => {
+    expect(Object.fromEntries(SOURCE_TYPOS)).toEqual({
+      ...FUZZY_TYPOS.height,
+      ...FUZZY_TYPOS.weight,
+      ...Object.fromEntries(Object.entries(NUMBER_TYPOS).map(([typo, { word }]) => [typo, word])),
+    });
+  });
+
+  it.each(Object.entries(NUMBER_TYPOS))(
+    'reads the number-word typo %s as its number with fuzzy only, and never as a unit',
+    (typo, { value }) => {
+      expect.assertions(6);
+      for (const type of TYPES) {
+        expect(matchUnit(typo, type, true)).toBeNull();
+        expect(matchUnit(typo, type)).toBeNull();
+      }
+      expect(parseMeasurement(`${typo} kg`, { fuzzy: true })).toMatchObject({ value, unit: 'kg' });
+      expect(parseMeasurement(`${typo} kg`)).toBeNull();
+    }
+  );
 
   it.each(entries)('reads $word as $unit with fuzzy only', ({ type, word, unit }) => {
     expect(matchUnit(word, type, true)).toBe(unit);

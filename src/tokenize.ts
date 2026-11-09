@@ -1,3 +1,4 @@
+import { FUZZY_TYPOS } from './units';
 import { MULTIPLIERS, NUMBER_WORDS } from './wordsToNumber';
 
 /**
@@ -39,6 +40,14 @@ const WORD_PART = /[\p{L}\p{M}\p{N}_]/u;
 const FORM = /[！-～㎝㎏´ʹʺ]/g;
 const FORMS: Record<string, string> = { '´': '′', ʹ: '′', ʺ: '″' };
 
+// The number-word typos on the fuzzy typo list, as whole words, as in "fourty" for "forty".
+const NUMBER_TYPOS = new RegExp(
+  String.raw`\b(?:${[...FUZZY_TYPOS]
+    .filter(([, word]) => NUMBER_WORDS.has(word))
+    .map(([typo]) => typo)
+    .join('|')})\b`,
+  'gi'
+);
 // The first number of the text: a digit, a Unicode fraction or a number word.
 const NUMBER = new RegExp(String.raw`\d|[${FRACTIONS}]|\b(?:${NUMBER_WORD})\b`, 'i');
 // A number right after a minus sign: digits, a Unicode fraction or a number word, also after "a"
@@ -426,11 +435,13 @@ function piece(at: number): number {
  * word is a feet or inch mark, as in "5’11”" and "five’ ten”". Two marks right after a number are
  * an inch mark, as in "72''", but a third keeps them. A unit right before digits ends a word, as
  * in "5ft11" (AFA-62). readNumber writes each run of number characters. A comma group of the
- * wrong size rejects the whole input, so the result is no tokens.
+ * wrong size rejects the whole input, so the result is no tokens. With `fuzzy`, a number-word typo
+ * on the fuzzy typo list becomes its number word first, so "fourty-two" reads like "forty-two".
  */
-export function tokenize(input: string): Token[] {
+export function tokenize(input: string, fuzzy?: boolean): Token[] {
   // A line end after the text keeps each scan inside it, and changes no token.
   text = `${input.replace(FORM, form => FORMS[form] ?? form.normalize('NFKC'))}\n`;
+  if (fuzzy) text = text.replace(NUMBER_TYPOS, typo => FUZZY_TYPOS.get(typo.toLowerCase())!);
   tokens = [];
   place = kind = 0;
   token = solid = '';

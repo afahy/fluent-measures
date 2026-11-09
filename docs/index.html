@@ -1296,8 +1296,10 @@ const rejected = parseMeasurement(
                   has one spelling error. Without it, a unit name must be exact, so the same text
                   returns <code>null</code>. One letter added, removed or changed is one error. An
                   ordinary word one letter from a unit name, such as <code>feat</code>, reads as
-                  that unit too. <a href="#limits">Limits</a> says what fuzzy matching can get
-                  wrong.
+                  that unit too. It also reads a few common typos that this rule skips, such as the
+                  number word <code>fourty</code>, which PARSING.md lists.
+                  <!-- cspell:ignore fourty -->
+                  <a href="#limits">Limits</a> says what fuzzy matching can get wrong.
                 </p>
                 <div class="code on-code">
                   <div class="code-head">
