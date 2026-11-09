@@ -82,6 +82,11 @@ describe('conservative fuzzy unit matching', () => {
     expect(parseMeasurement('150 ponds')).toBeNull();
   });
 
+  // PARSING.md, "Fuzzy Matching": compact forms need exact unit names, even with fuzzy.
+  it.each(['5fet11', '5foots11'])('returns null for the compact typo %s with fuzzy', raw => {
+    expect(parseMeasurement(raw, { fuzzy: true })).toBeNull();
+  });
+
   it('rejects unrelated prose even with fuzzy matching', () => {
     const raw = 'I ate 5 food; weight 80 kilo';
     expect(parseMeasurement(raw, { fuzzy: true })).toBeNull();

@@ -15,6 +15,7 @@ Without it, a unit name must be exact.
 - The reviewed typo `kilgrm`, which reads as kg only with `fuzzy: true`: `70 kilgrm`.
 - An exact name with `fuzzy: true`, which still matches.
 - A British spelling, which matches only when exact: `95 kilogrammez` is `null`.
+- A typo inside a compact form, which never matches: `5fet11` is `null` even with `fuzzy: true`.
 - English words one letter from a unit name, which read as that unit with `fuzzy: true`: `5 feat`,
   `6 food`, `70 kiln`.
 - An invalid `fuzzy`, such as `1`, which throws, and the retired `fuzziness`, which throws a
