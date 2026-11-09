@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { tokenize } from '../src/tokenize';
-import { underStryker } from './timing';
+import { parseWithin, underStryker } from './timing';
 
 const tokenTexts = (input: string): string[] => tokenize(input).map(({ text }) => text);
 
@@ -95,10 +95,10 @@ describe('tokenize: character forms', () => {
 
   // A mark must not make the code search back through the whole input. A search like that took
   // about 460 ms for this input. The check for an earlier digit stops at the nearest one, so it
-  // stays fast for many signs. On main these tests timed normalizeForms, which was only patterns.
-  // Stryker instruments the scan, which then runs 6 to 9 times slower, so the time limits skip
-  // themselves there, as tests/timing.ts says for a test with a large input. The tokens of the same
-  // inputs are checked there too.
+  // stays fast for many signs. On main these tests timed normalizeForms with the clock. Stryker
+  // instruments the scan, which then runs 6 to 9 times slower, so the timing tests skip
+  // themselves there, as tests/timing.ts says for a test with a large input. The test below checks
+  // the tokens of the same inputs, also under Stryker.
   it('reads a long run of marks and many minus signs', () => {
     expect(tokenize('1’'.repeat(100_000))).toHaveLength(200_000);
     expect(tokenTexts(`${'a'.repeat(100_000)}−5`)).toEqual(['a'.repeat(100_000), '-', '5']);
@@ -106,17 +106,18 @@ describe('tokenize: character forms', () => {
     expect(tokenize('−a'.repeat(100_000))).toHaveLength(200_000);
   });
 
+  // Each input is no measurement, so the result is null. The limits are CPU time through
+  // parseWithin (AGENTS.md rule 6).
   it.skipIf(underStryker)('handles a long run of marks quickly', () => {
-    const start = Date.now();
-    tokenize('1’'.repeat(100_000));
-    expect(Date.now() - start).toBeLessThan(400);
+    expect(parseWithin('1’'.repeat(100_000), 400, { maxLength: Infinity })).toBeNull();
   });
 
-  it.skipIf(underStryker)('handles many minus signs quickly', () => {
-    const start = Date.now();
-    tokenize(`${'a'.repeat(100_000)}−5`);
-    tokenize('−1 '.repeat(50_000));
-    tokenize('−a'.repeat(100_000));
-    expect(Date.now() - start).toBeLessThan(400);
-  });
+  it
+    .skipIf(underStryker)
+    .each([`${'a'.repeat(100_000)}−5`, '−1 '.repeat(50_000), '−a'.repeat(100_000)])(
+    'handles many minus signs quickly in input %#',
+    raw => {
+      expect(parseWithin(raw, 400, { maxLength: Infinity })).toBeNull();
+    }
+  );
 });
