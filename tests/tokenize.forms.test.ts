@@ -107,17 +107,17 @@ describe('tokenize: character forms', () => {
   });
 
   // Each input is no measurement, so the result is null. The limits are CPU time through
-  // parseWithin (AGENTS.md rule 6).
+  // parseWithin (AGENTS.md rule 6), at least twice the slowest time in the logs of CI's two test
+  // jobs on 7a7b1be: 145 ms for the marks, and 10, 57 and 210 ms for the minus signs.
   it.skipIf(underStryker)('handles a long run of marks quickly', () => {
-    expect(parseWithin('1’'.repeat(100_000), 400, { maxLength: Infinity })).toBeNull();
+    expect(parseWithin('1’'.repeat(100_000), 300, { maxLength: Infinity })).toBeNull();
   });
 
-  it
-    .skipIf(underStryker)
-    .each([`${'a'.repeat(100_000)}−5`, '−1 '.repeat(50_000), '−a'.repeat(100_000)])(
-    'handles many minus signs quickly in input %#',
-    raw => {
-      expect(parseWithin(raw, 400, { maxLength: Infinity })).toBeNull();
-    }
-  );
+  it.skipIf(underStryker).each([
+    [`${'a'.repeat(100_000)}−5`, 50],
+    ['−1 '.repeat(50_000), 150],
+    ['−a'.repeat(100_000), 450],
+  ] as const)('handles many minus signs quickly in input %#', (raw, limit) => {
+    expect(parseWithin(raw, limit, { maxLength: Infinity })).toBeNull();
+  });
 });
