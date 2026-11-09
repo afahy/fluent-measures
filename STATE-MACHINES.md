@@ -3480,13 +3480,13 @@ wrong size still rejects the whole input.
 
 ## Approved policy revision: one-edit fuzzy matching (AFA-253)
 
-The maintainer decided on 2026-11-09 (AFA-253 comments 9bf0c672, 3e80ce01 and 226d15f6) to
-bound fuzzy matching so that every match can be tested. The numeric `fuzziness` option is
-retired: any defined value throws `fuzziness was removed; use fuzzy: true`, after the other
-retired options' rule from AFA-251. The new `fuzzy?: boolean` option reads a unit name with one
-spelling error. An invalid `fuzzy` throws a TypeError after `defaultUnit` and before the retired
-options. The earlier findings above about edit budgets, fractions and Infinity (AFA-189) describe
-the numeric option and stay as historical evidence.
+The maintainer decided on 2026-11-09 (AFA-253 comments 9bf0c672, 3e80ce01 and 226d15f6) to bound
+fuzzy matching so that every match can be tested. The numeric `fuzziness` option is retired: any
+defined value throws `fuzziness was removed; use fuzzy: true or remove it`, like the other options
+that AFA-251 retired. The new `fuzzy?: boolean` option reads a unit name with one spelling error. An
+invalid `fuzzy` throws a TypeError after `defaultUnit` and before the retired options. The earlier
+findings above about edit budgets, fractions and Infinity (AFA-189) describe the numeric option and
+stay as historical evidence.
 
 `matchUnit` keeps its order: an exact alias returns at once. With `fuzzy`, the first alias in
 `UNIT_ALIASES` order that is one edit away wins, among aliases of four or more letters that start

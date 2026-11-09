@@ -139,7 +139,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   for (const [name, use] of [
     ['allowUnqualified', 'defaultUnit'],
     ['inferUnit', 'defaultUnit'],
-    ['fuzziness', 'fuzzy: true'],
+    ['fuzziness', 'fuzzy: true or remove it'],
   ] as const) {
     if ((options as Record<string, unknown>)[name] !== undefined) {
       throw new Error(`${name} was removed; use ${use}`);

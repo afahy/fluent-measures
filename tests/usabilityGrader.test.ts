@@ -320,7 +320,7 @@ describe('T6 fuzzy setting', () => {
     writeFileSync(
       join(dir, 'sandbox/node_modules/@afahy/fluent-measures/index.cjs'),
       `exports.parseMeasurement = (input, options) => {
-    if (options?.fuzziness !== undefined) throw new Error('fuzziness was removed; use fuzzy: true');
+    if (options?.fuzziness !== undefined) throw new Error('fuzziness was removed; use fuzzy: true or remove it');
     return input === '5 fet 11 inchs' && options?.fuzzy === true ? { value: 71, unit: 'in' } : null;
   };`
     );

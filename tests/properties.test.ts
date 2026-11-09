@@ -255,9 +255,9 @@ describe('generated single measurements', () => {
 
   it('reads a unit name with one spelling error only with fuzzy', () => {
     expect.hasAssertions();
-    // PARSING.md, "Fuzzy Matching": the word starts with the unit name's letter. The errors are
-    // fewer than a third of the name's length. Names of three characters or fewer and the British
-    // spellings match only when exact. Some words never match.
+    // PARSING.md, "Fuzzy Matching": the word is one error from the unit name and starts with its
+    // letter. Names of three characters or fewer and the British spellings match only when exact.
+    // Some words never match.
     // The words that never match come from PARSING.md, the specification. A fix that stops
     // another word from matching adds it to that list, and this test follows the list.
     const never = /The words ([^.]*) never match/.exec(readFileSync('PARSING.md', 'utf8'))?.[1];

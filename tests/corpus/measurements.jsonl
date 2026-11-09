@@ -399,7 +399,7 @@
 {"id": "prose-shoe-size", "input": "size 10 shoes", "expected": null, "category": "prose", "source": "handwritten"}
 {"id": "prose-stars", "input": "5 stars, would buy again", "expected": null, "category": "prose", "source": "handwritten"}
 {"id": "prose-fees-fuzzy", "input": "I paid 5 fees", "options": {"fuzzy": true}, "expected": null, "category": "prose", "source": "handwritten", "note": "\"fees\" is one edit from \"feet\"."}
-{"id": "prose-ponds-fuzzy", "input": "we visited 2 ponds", "options": {"fuzzy": true}, "expected": null, "category": "prose", "source": "handwritten", "note": "\"ponds\" is one edit from \"pounds\"."}
+{"id": "prose-ponds-fuzzy", "input": "we visited 2 ponds", "options": {"fuzzy": true}, "expected": null, "category": "prose", "source": "handwritten", "note": "\"ponds\" is one edit from \"pounds\", and the reviewed table allows it (AFA-253), so \"2 ponds\" alone reads as 2 lb. The words around it make the whole entry null."}
 {"id": "prose-kilns-fuzzy", "input": "the studio has 2 kilns", "options": {"fuzzy": true}, "expected": null, "category": "prose", "source": "handwritten", "note": "\"kilns\" is one edit from \"kilos\"."}
 {"id": "prose-unknown", "input": "unknown", "expected": null, "category": "prose", "source": "handwritten"}
 {"id": "prose-question-mark", "input": "?", "expected": null, "category": "prose", "source": "handwritten"}

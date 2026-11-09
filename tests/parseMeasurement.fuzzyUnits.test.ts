@@ -92,7 +92,10 @@ describe('the fuzzy option and the retired fuzziness', () => {
       const options = { fuzziness } as unknown as ParseOptions;
       for (const raw of ['', '70 kg', '5 foots 10 inc', 'x'.repeat(1001)]) {
         expect(() => parseMeasurement(raw, options)).toThrow(Error);
-        expect(() => parseMeasurement(raw, options)).toThrow(/fuzziness.*fuzzy: true/);
+        // A fuzziness of 0 turned matching off, so the message also says to remove it.
+        expect(() => parseMeasurement(raw, options)).toThrow(
+          'fuzziness was removed; use fuzzy: true or remove it'
+        );
       }
     }
   );
