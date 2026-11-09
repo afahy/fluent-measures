@@ -3497,3 +3497,18 @@ typo that the rule doesn't accept, `kilgrm`, reads as `kg` with `fuzzy`. `kilogr
 aliases of `kg` and, like the other British spellings, match only exactly. One edit accepts 3,941
 spellings, 2,288 for height and 1,653 for weight, and `tests/matchUnit.oneEdit.test.ts` checks
 each one.
+
+## Compound-boundary integration with complete entries (AFA-51, 2026-11-09)
+
+PR #240 integrates main through `8d286f3` with normal merges and changes no file under `src/`.
+The complete-entry grammar on main already keeps height parts apart: semicolons and ordinary
+words other than `and` between parts, in any script, reject the entry, and letters attached to
+a number or unit stay part of that word. An earlier AFA-51 design added a match-span map, a gap
+guard in M9 and a range-recovery exception to the extraction parser. That design never reached
+main, and restoring it would undo the approved complete-entry policy.
+
+The PR adds 62 compound-boundary regression cases and 26 ticket-sourced corpus entries. Their
+expectations follow PARSING.md's Complete Entries, Semicolons, Ranges and More Than One
+Measurement sections. In particular, `0 m; actual 80 cm`, an attached unknown word beside a
+valid part, a range inside a height, and an independent zero measurement all reject the whole
+entry. Valid complete compounds keep their hand-calculated totals.
