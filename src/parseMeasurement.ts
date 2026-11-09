@@ -1,5 +1,5 @@
 import { matchUnit } from './matchUnit';
-import { normalize, tokenizeNormalized } from './tokenize';
+import { tokenize } from './tokenize';
 import { MULTIPLIERS, NUMBER_WORDS, readNumberTokens, type NumberReading } from './wordsToNumber';
 import { LABEL_ALIASES, NEXT_PART, UNIT_TYPES, unitConversions } from './units';
 import { ParseOptions, ParsedValue, Match, MeasurementType, Unit } from './types';
@@ -77,6 +77,32 @@ function result(parts: QualifiedMatch[], input: string, normalizedUnit?: Unit): 
     : null;
 }
 
+/**
+ * The feet and inches of whole-entry shorthand, the explicit exception to numeric range
+ * rejection: whole feet, a hyphen and the inches, as in "5-11", or two number words, as in
+ * "five-eleven".
+ */
+function shorthand(
+  tokens: ReturnType<typeof tokenize>
+): [feet: number, inches: number] | undefined {
+  const [feet, dash, inches] = tokens;
+  if (
+    tokens.length !== 3 ||
+    dash.text !== '-' ||
+    feet.end !== dash.start ||
+    dash.end !== inches.start
+  )
+    return undefined;
+  const words = NUMBER_WORDS.get(feet.text) ?? 0;
+  if (words > 2 && words < 9) {
+    const value = NUMBER_WORDS.get(inches.text);
+    return value === undefined ? undefined : [words, value];
+  }
+  return /^\d+$/.test(feet.text) && /^(?:\d*\.)?\d+$/.test(inches.text)
+    ? [+feet.text, +inches.text]
+    : undefined;
+}
+
 /** Read a canonical option unit without coercing an invalid runtime value. */
 function unitOption(value: unknown, name: 'defaultUnit' | 'normalizedUnit'): Unit | undefined {
   if (value === undefined || (name === 'normalizedUnit' && (value === null || value === '')))
@@ -121,9 +147,8 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   }
   if (input.length > maxLength) return null;
 
-  const trimmed = normalize(input.trim());
-  if (!trimmed) return null;
-  const tokens = tokenizeNormalized(trimmed);
+  const tokens = tokenize(input.trim());
+  if (!tokens.length) return null;
   const text = (at: number): string => tokens[at]?.text;
   const adjacent = (left: number, right: number): boolean =>
     tokens[left]?.end === tokens[right]?.start;
@@ -142,20 +167,13 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       : null;
   };
 
-  /** Retain whole-entry shorthand as the explicit exception to numeric range rejection. */
-  const pieces = trimmed
-    .toLowerCase()
-    .split('-')
-    .map(word => NUMBER_WORDS.get(word));
-  const shorthand = (pieces[0]! > 2 && pieces[0]! < 9 ? pieces.join('-') : trimmed).match(
-    /^(\d+)-((?:\d*\.)?\d+)$/
-  );
-  if (shorthand) {
-    if (requestedType !== 'height' || +shorthand[2] >= 12) return null;
+  const bare = shorthand(tokens);
+  if (bare) {
+    if (requestedType !== 'height' || bare[1] >= 12) return null;
     return result(
       [
-        { value: +shorthand[1], unit: 'ft' },
-        { value: +shorthand[2], unit: 'in' },
+        { value: bare[0], unit: 'ft' },
+        { value: bare[1], unit: 'in' },
       ],
       input,
       normalizedUnit

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeForms, tokenize, tokenizeNormalized } from '../src/tokenize';
+import { tokenize } from '../src/tokenize';
 
 const tokenTexts = (input: string): string[] => tokenize(input).map(({ text }) => text);
 
@@ -18,20 +18,22 @@ describe('complete-entry tokens', () => {
     expect(tokenTexts(`"5'11''`)).toEqual(['"', '5', "'", '11', '″']);
   });
   // AFA-277: quotation marks don't wrap an entry, so a curly closing quote after a number is a
-  // feet or inch mark. An apostrophe in a word, as in "it’s", and an opening quote stay.
+  // feet or inch mark. An apostrophe in a word, as in "it’s", and an opening quote stay. AFA-88:
+  // each input gives the tokens of the text that normalizeForms wrote for it, as main's tokenizer
+  // at f85a98d splits that text.
   it.each([
-    ['‘5’', "‘5'"],
-    ['“72”', '“72"'],
-    ['‘it’s five’', "‘it’s five'"],
-    ['“it’s five”', '“it’s five"'],
-    ['‘a” five’', "‘a” five'"],
-    ['“a’ five”', '“a’ five"'],
-    ['70” KG', '70" KG'],
-    ['‘5’ eleven inches', "‘5' eleven inches"],
-    ['“72” 60 inches', '“72" 60 inches'],
-    ['“72”60 cm', '“72"60 cm'],
+    ['‘5’', ['‘', '5', "'"]],
+    ['“72”', ['“', '72', '"']],
+    ['‘it’s five’', ['‘', 'it', '’', 's', 'five', "'"]],
+    ['“it’s five”', ['“', 'it', '’', 's', 'five', '"']],
+    ['‘a” five’', ['‘', 'a', '”', 'five', "'"]],
+    ['“a’ five”', ['“', 'a', '’', 'five', '"']],
+    ['70” KG', ['70', '"', 'kg']],
+    ['‘5’ eleven inches', ['‘', '5', "'", 'eleven', 'inches']],
+    ['“72” 60 inches', ['“', '72', '"', '60', 'inches']],
+    ['“72”60 cm', ['“', '72', '"', '60', 'cm']],
   ])('writes the closing quote in %s as a mark', (raw, expected) => {
-    expect(normalizeForms(raw)).toBe(expected);
+    expect(tokenTexts(raw)).toEqual(expected);
   });
 
   it.each([
@@ -99,14 +101,16 @@ describe('complete-entry tokens', () => {
     expect(tokenTexts(raw as string)).toEqual(expected);
   });
 
+  // AFA-88: tokenize reads these inputs as tokenizeNormalized read them, because nothing in them
+  // converts.
   it('retains adjacency and spacing in normalized coordinates', () => {
-    expect(tokenizeNormalized('5 ft-11')).toEqual([
+    expect(tokenize('5 ft-11')).toEqual([
       { text: '5', start: 0, end: 1 },
       { text: 'ft', start: 2, end: 4 },
       { text: '-', start: 4, end: 5 },
       { text: '11', start: 5, end: 7 },
     ]);
-    expect(tokenizeNormalized('5 ft -11')).toEqual([
+    expect(tokenize('5 ft -11')).toEqual([
       { text: '5', start: 0, end: 1 },
       { text: 'ft', start: 2, end: 4 },
       { text: '-', start: 5, end: 6 },
@@ -115,7 +119,7 @@ describe('complete-entry tokens', () => {
   });
 
   it('retains a number word period as punctuation without changing unit labels', () => {
-    expect(tokenizeNormalized('in: seventy three.')).toEqual([
+    expect(tokenize('in: seventy three.')).toEqual([
       { text: 'in', start: 0, end: 2 },
       { text: ':', start: 2, end: 3 },
       { text: 'seventy', start: 4, end: 11 },
@@ -137,7 +141,7 @@ describe('complete-entry tokens', () => {
   });
 
   it('retains one period after a complete decimal without splitting malformed dot runs', () => {
-    expect(tokenizeNormalized('kg 72.5.')).toEqual([
+    expect(tokenize('kg 72.5.')).toEqual([
       { text: 'kg', start: 0, end: 2 },
       { text: '72.5', start: 3, end: 7 },
       { text: '.', start: 7, end: 8 },

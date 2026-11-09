@@ -87,6 +87,15 @@ describe('hyphenated heights', () => {
     }
   );
 
+  // AFA-88: the parser reads the shorthand from three tokens that touch, so a space beside the
+  // hyphen, or a period after the inches, makes the input something other than bare shorthand.
+  it.each(['5 -11', '5- 11', '5-11.', 'five - eleven', 'five-eleven.'])(
+    'requires the hyphen to join the feet and the inches with nothing after them: %s',
+    raw => {
+      expect(parseMeasurement(raw, { type: 'height' })).toBeNull();
+    }
+  );
+
   // A number can end with a period, as in "5." for 5, so 5 ft 11 in is 5 × 12 + 11 = 71 in and
   // 1 m 80 cm is 180 cm.
   it.each([

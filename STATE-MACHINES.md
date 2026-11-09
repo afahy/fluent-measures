@@ -3448,3 +3448,32 @@ any mix of `'` and `′`, as `″`, with no check for an earlier opening pair. T
 no longer has a whole-entry wrapper cursor, quoted numbers or quoted feet. Its bracket cursor
 remains only for the second measurement of a pair, as in `5'11" (180 lbs)`. Bracketed unit
 labels and bracketed smaller parts are unchanged.
+
+## One tokenizer scan (AFA-88)
+
+M1 and M2 are now one scan from left to right in `src/tokenize.ts`. Before the scan, one
+replace applies the character table to the whole input, because `㎝` and `㎏` become two
+characters and the scan's rules read the converted text. In the scan, `readNumber` converts
+each run of number characters with three patterns, for comma groups, Unicode fractions and
+slash fractions. `normalizeForms`, `normalizeNumericCommas`, `normalizeFractions`, `normalize`
+and `tokenizeNormalized` are gone, and so is the parser's string path for whole-entry shorthand
+such as `5-11`, which now reads the three tokens. No result changes. The scan writes the same tokens, with the same places, as
+the passes wrote, with one exception that changes no result. Each token is lowercased alone,
+not as part of the whole text, so a Greek capital sigma can take the other lowercase form, `σ`
+or `ς`, than it took on main. No unit, alias or number word has a sigma.
+
+The scan carries this state:
+
+| State          | Meaning                                                                      |
+| -------------- | ---------------------------------------------------------------------------- |
+| `token`/`kind` | The word or number being read                                                |
+| `place`        | The place in the converted text, so token boundaries and adjacency stay      |
+| `solid`        | The last character that isn't a space, for the fraction rule after a letter  |
+| `label`        | Whether a letter and only numerals come right before, as in `phase2,180`     |
+| `first`        | Where the first number of the input starts, found once for a minus sign      |
+| `unitEnd`      | Where a unit ends that digits right after don't join, as in `5ft11` (AFA-62) |
+
+The table converts full-width forms, `㎝`, `㎏`, primes and acute accents. A minus sign is a
+sign when no number comes before it. A curly closing quote after a number or a number word is a
+mark. `readNumber` takes the letter or quote mark before a run as context. A comma group of the
+wrong size still rejects the whole input.
