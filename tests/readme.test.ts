@@ -537,6 +537,13 @@ const proseCases: ProseCase[] = [
     statement:
       '`phase 2,180 cm`, `phase-2,180 cm`, `phase-2, 180 cm` and `phase2,180 cm` all return `null`',
   },
+  {
+    section: 'The Fuzzy Typo List',
+    input: 'Ibs: 180',
+    options: { fuzzy: true },
+    expected: { value: 180, unit: 'lb' },
+    statement: '`Ibs: 180` reads as 180 lb',
+  },
   // AFA-280: 40 + 2 = 42 and 100 + 40 = 140.
   {
     section: 'The Fuzzy Typo List',

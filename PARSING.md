@@ -340,7 +340,8 @@ parseMeasurement('5 foot 10 inches', { fuzzy: true }); // { value: 70, unit: 'in
 ### The Fuzzy Typo List
 
 These common typos read with `fuzzy: true`, although the one-error rule doesn't accept them. They
-live in `FUZZY_TYPOS` in `src/units.ts`. Without `fuzzy`, none of them reads.
+live in `FUZZY_TYPOS` in `src/units.ts`. Without `fuzzy`, none of them reads. A unit typo reads
+wherever its unit can stand, so `Ibs: 180` reads as 180 lb.
 
 | Typo          | Reads as | Reason                                                      |
 | ------------- | -------- | ----------------------------------------------------------- |
@@ -370,7 +371,7 @@ To add an entry, it must meet all of these rules:
 - No other rule reads it already. It isn't a unit name or a number word, and it isn't one error
   from a unit name under the rules above.
 - It doesn't change a result that `fuzzy: true` gives today, other than a `null` that becomes the
-  typo's value.
+  result of the intended spelling.
 
 Add a test with and without `fuzzy`, and corpus entries for both.
 
