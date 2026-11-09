@@ -46,6 +46,10 @@ describe('every one-edit spelling of a unit name', () => {
     ['70 kiln', 70, 'kg'],
     ['5 kills', 5, 'kg'],
     ['150 ponds', 150, 'lb'],
+    // PARSING.md: wherever a unit can stand, before a number and in a compound (5 x 12 + 11 = 71).
+    ['food: 180', 180, 'ft'],
+    ['kill 5', 5, 'kg'],
+    ['5 feel 11', 71, 'in'],
   ] as const)('reads the English word in %s with fuzzy only', (raw, value, unit) => {
     expect(parseMeasurement(raw, { fuzzy: true })).toMatchObject({ value, unit });
     expect(parseMeasurement(raw)).toBeNull();

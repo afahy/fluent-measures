@@ -21,8 +21,8 @@ describe('closest fuzzy unit', () => {
     expect(matchUnit('measurex', 'height', true)).toBe('cm');
   });
 
-  it('chooses the closest alias across all units', () => {
-    // Distances are 2, 1, 1, 2: retain the first closest unit when distances tie.
+  it('takes the first unit in tie order among aliases one edit away', () => {
+    // Distances are 2, 1, 1, 2: "in" and "cm" are one edit away, and "in" comes first.
     expect(matchUnit('measured', 'height', true)).toBe('in');
   });
 });

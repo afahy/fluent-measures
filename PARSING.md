@@ -327,9 +327,10 @@ removed or changed. These rules apply:
   and `m` for height, and `lb` and `kg` for weight.
 
 Any other word with two errors, such as `kilgrom`, matches nothing. No word is blocked: with
-`fuzzy: true`, an ordinary English word one letter from a unit name reads as that unit. `5 feat`,
-`6 food` and `5 feel` read as feet, `70 kiln` and `5 kills` as kilograms, and `150 ponds` as pounds.
-Without `fuzzy`, they return `null`.
+`fuzzy: true`, an ordinary English word one letter from a unit name reads as that unit, wherever a
+unit can stand. `5 feat`, `6 food` and `5 feel` read as feet, `70 kiln` and `5 kills` as kilograms,
+and `150 ponds` as pounds. Before a number, `food: 180` reads as 180 ft and `kill 5` as 5 kg, and in
+a compound `5 feel 11` reads as 71 in. Without `fuzzy`, they return `null`.
 
 ```typescript
 parseMeasurement('5 foots 10 inc', { fuzzy: true }); // { value: 70, unit: 'in', ... }
