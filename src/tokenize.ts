@@ -206,11 +206,12 @@ function put(character: string): void {
   if (character === 'x') {
     kind = 1;
     token = character;
+    return;
   }
   // A few characters that aren't letters have a lowercase form, as "Ⅻ" and "Ⓜ" do. None comes
   // before "Ⅰ", the first of them.
-  // Stryker disable next-line ConditionalExpression: toLowerCase leaves each character before "Ⅰ" that isn't a letter as it is, so the test only saves the call, which is slow.
-  else push(character < 'Ⅰ' ? character : character.toLowerCase());
+  // Stryker disable next-line ConditionalExpression,StringLiteral: toLowerCase leaves each character before "Ⅰ" that isn't a letter as it is, so the test only saves the call, which is slow.
+  push(character < 'Ⅰ' ? character : character.toLowerCase());
 }
 
 function space(count: number): void {
