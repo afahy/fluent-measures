@@ -44,6 +44,12 @@ For each input, decide the expected output before you run it. Take it from the R
 1 ft = 12 in. When the specification leaves the choice between a value and `null` open, accept
 both. When it doesn't cover the input at all, leave the input out.
 
+Take each expected value from one rule or example, or from a hand calculation on one. Don't
+combine the rules of two sections, such as compact heights and fuzzy matching, unless the README
+or `PARSING.md` shows that combination. When only a combination would give the value, leave the
+input out. If you think the combination should work, list it in your report as a question, not
+as a failing input.
+
 Write each input as a corpus line, as "Measurement corpus" in `CONTRIBUTING.md` says. Give each
 one an `id` that starts with `probe-`, the category that fits, and `"source": "handwritten"`.
 Write the lines in a file in your scratchpad.
@@ -96,6 +102,8 @@ Report only these facts. Don't fix code, commit or post comments.
   **on main** when it disagrees on both.
 - Mark each one **plausible** or **not plausible**, as AGENTS.md "Handle findings and CI" says.
 - The number of inputs that agree on the branch.
+- Apart from the findings, each combination that you left out but think should work, as a
+  question.
 
 The agent that started you judges each finding as AGENTS.md "Handle findings and CI" says. It
 adds each confirmed input to the corpus in the PR, with the outcome that it has there. It fixes
