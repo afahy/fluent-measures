@@ -30,6 +30,12 @@ describe('boundaries between compound height parts', () => {
   });
 
   it('applies the same boundary to fuzzy unit names', () => {
+    // PARSING.md, Fuzzy Matching: `foots` and `inc` are one edit from `foot` and `inch`,
+    // so the parts join without a word between them: 5 × 12 + 2 = 62 in.
+    expect(parseMeasurement('5 foots 2 inc', { fuzzy: true })).toMatchObject({
+      value: 62,
+      unit: 'in',
+    });
     expect(parseMeasurement('5 foots tall, 2 inc', { fuzzy: true })).toBeNull();
   });
 

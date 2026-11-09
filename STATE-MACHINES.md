@@ -218,11 +218,6 @@ successful at 2026-11-07 14:27:00 UTC. Root main was pulled and only the merged 
 branch removed. The source-validation baseline remains `4428859`; the five deferred rows
 above remain unfixed and assigned to AFA-250.
 
-Under AFA-51's approved word-boundary policy, M2 retains Unicode letters in its existing
-punctuation class. Ordinary words in any script therefore reach M9 rather than disappearing
-between height parts. Attached letters also remain attached: `5µm` cannot expose `5 m`.
-This changes no normalization pass or F3 numeric-label/sign transition.
-
 ### M3 — range ownership and shorthand
 
 Source: `parseMeasurement.ts:361–453`.
@@ -567,10 +562,10 @@ F5 correction at `488bced`, F7 correction at `1eb0a1b`.
 | From                 | Event / guard                                                                 | Action                                                                       | To                              |
 | -------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------- |
 | Token indexing       | Semicolon                                                                     | Increment field number                                                       | New field                       |
-| Type pass begins     | Any input                                                                     | Allocate empty signed-field set and match-span map                           | Clean pass                      |
+| Type pass begins     | Any input                                                                     | Allocate empty signed-field set and match-field map                          | Clean pass                      |
 | Backward signed part | Signed first word and unit may span semicolon                                 | Mark first-word and unit fields invalid                                      | Rejected fields                 |
 | Forward signed part  | Prefix owns signed value                                                      | Mark unit and following-value fields invalid                                 | Rejected fields                 |
-| Unsigned match       | Accepted interval                                                             | Record endpoint positions; recover their fields when filtering               | Pending match                   |
+| Unsigned match       | Accepted interval                                                             | Record its endpoint fields (bare inches record their starting field)         | Pending match                   |
 | Backward adjacency   | Checking a supported unit-first weight before an unsupported part             | Read the signed phrase; cross internal semicolons to find its supported unit | Supported owner found or absent |
 | Weight scan          | Stone/ounce/gram has separately numbered adjacent supported part              | Return `null`, using original text to find already consumed supported units  | Whole parse rejected            |
 | Weight scan          | Unsupported unit is unrelated, ordinal `st`, or excluded bare prefix `st`/`g` | Continue                                                                     | Scan                            |
@@ -592,11 +587,6 @@ its field valid only when the signed value has its own unit of the other type; t
 still rejects the signed value's field in its type pass. Unsigned, same-type and unsupported-part
 ownership keep their earlier behavior. F10 prefix ownership remains separate.
 
-AFA-51 reuses the match map for endpoint token positions, allowing M9 to inspect the gap.
-Signed-field filtering still checks both endpoint fields. For implicit inches, the number and
-its optional unit share a field; inches never precede a smaller compound part. This preserves
-the signed-field behavior while avoiding separate position bookkeeping.
-
 ### M9 — grouping, conversion, agreement and terminal result
 
 Source: `parseMeasurement.ts`, `total` and `combineParts`, after the F8 correction at
@@ -605,7 +595,6 @@ Source: `parseMeasurement.ts`, `total` and `combineParts`, after the F8 correcti
 | From                 | Event / guard                                                                          | Action                                                                   | To                   |
 | -------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | -------------------- |
 | No group             | First match                                                                            | Start group                                                              | Group open           |
-| Group open           | Ineligible gap: ordinary word or semicolon, except retained range recovery             | Start independent measurement                                            | New group            |
 | Group open           | Previous value integral, unit step in `NEXT_PART`, smaller value below one larger unit | Append part                                                              | Compound group       |
 | Group open           | Any other match                                                                        | Start independent measurement                                            | New group            |
 | Groups complete      | Group contains only zero parts                                                         | Exclude from counted groups                                              | Counted groups ready |
@@ -630,13 +619,6 @@ A truly infinite target still returns `null`. After F8, every zero total returns
 `undefined`. Explicit zero fragments can still fall through to another measurement type.
 Inference requires an explicit type, so an inferred zero exhausts its only pass and returns
 `null`. Positive subnormal totals continue to comparison and success without a minimum cutoff.
-
-AFA-51 adds the approved gap guard: semicolons and ordinary words other than `and` separate
-height parts. Thus `5 ft tall, with 2 in heels` has disagreeing independent heights and returns
-`null`; `5 ft and 11 in` still gives 71 in. Number words and supported/unsupported weight units
-retain the existing joins around other amounts. The recorded M3 recovery pair also preserves
-`6 1-2 ft; 3 in` as 75 in. These policy changes are covered by
-`tests/parseMeasurement.compoundBoundaries.test.ts`; the historical findings remain intact.
 
 ### M10 — complete-input unqualified inference
 
@@ -3516,19 +3498,17 @@ aliases of `kg` and, like the other British spellings, match only exactly. One e
 spellings, 2,288 for height and 1,653 for weight, and `tests/matchUnit.oneEdit.test.ts` checks
 each one.
 
-## Compound-boundary integration with complete entries (AFA-51, 2026-11-08)
+## Compound-boundary integration with complete entries (AFA-51, 2026-11-09)
 
-PR #240 integrates main (`dd22c33`, then `8d286f3`) with normal merges. Its parser and tokenizer match
-that main revision: the complete-entry grammar already implements the approved boundary
-intent through local joins and retained Unicode text. The earlier AFA-51 span map, gap
-callback and range-recovery exception above describe the historical extraction parser;
-restoring them would undo the approved complete-entry policy.
+PR #240 integrates main through `8d286f3` with normal merges and changes no file under `src/`.
+The complete-entry grammar on main already keeps height parts apart: semicolons and ordinary
+words other than `and` between parts, in any script, reject the entry, and letters attached to
+a number or unit stay part of that word. An earlier AFA-51 design added a match-span map, a gap
+guard in M9 and a range-recovery exception to the extraction parser. That design never reached
+main, and restoring it would undo the approved complete-entry policy.
 
-All 62 compound-boundary regression cases and all 26 ticket-sourced corpus entries remain.
-Their legacy recovery expectations now follow PARSING.md's Complete Entries, Semicolons,
-Ranges and More Than One Measurement sections. In particular, `0 m; actual 80 cm`, an
-attached unknown word beside a valid part, a range inside a height, and an independent zero
-measurement all reject the whole entry. Valid complete compounds keep their hand-calculated
-totals. The retired unqualified option is replaced with an explicit inch source default,
-as required by the source-default migration. No public example or runtime implementation is
-changed beyond main by this integration.
+The PR adds 62 compound-boundary regression cases and 26 ticket-sourced corpus entries. Their
+expectations follow PARSING.md's Complete Entries, Semicolons, Ranges and More Than One
+Measurement sections. In particular, `0 m; actual 80 cm`, an attached unknown word beside a
+valid part, a range inside a height, and an independent zero measurement all reject the whole
+entry. Valid complete compounds keep their hand-calculated totals.

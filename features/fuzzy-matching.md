@@ -31,7 +31,7 @@ Without it, a unit name must be exact.
 ## How to verify it
 
 - Source: `src/matchUnit.ts`, `src/levenshtein.ts`, `src/units.ts` (the aliases and the fuzzy typo list)
-- Tests: `tests/matchUnit.oneEdit.test.ts`,
+- Tests: `tests/matchUnit.oneEdit.test.ts`, `tests/parseMeasurement.compoundBoundaries.test.ts`,
   `tests/matchUnit.test.ts`, `tests/parseMeasurement.britishUnits.test.ts`,
   `tests/parseMeasurement.completeEntry.test.ts`, `tests/parseMeasurement.completeEntryWork.test.ts`, `tests/numberReading.test.ts`, `tests/parseMeasurement.signedOtherTypeOwnership.test.ts`, `tests/parseMeasurement.signedWeightOwnership.test.ts`, `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.fuzzyUnits.test.ts`, `tests/matchUnit.closest.test.ts`, `tests/parseMeasurement.calculator.test.ts`, `tests/parseMeasurement.wordedRanges.test.ts`,
   `tests/parseMeasurement.numberWordCommas.test.ts`, `tests/parseMeasurement.commaBetweenWords.test.ts`,
