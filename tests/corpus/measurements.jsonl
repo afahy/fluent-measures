@@ -3525,6 +3525,32 @@
 {"id": "afa253-kilogrammes-label", "input": "weight: 95 kilogrammes", "expected": {"value": 95, "unit": "kg", "type": "weight"}, "category": "words", "source": "AFA-253", "note": "British spelling of kilograms."}
 {"id": "afa253-kilogrammes-decimal", "input": "70.50 kilogrammes", "expected": {"value": 70.5, "unit": "kg", "type": "weight"}, "category": "words", "source": "AFA-253", "note": "British spelling of kilograms."}
 {"id": "afa253-kilogrammes-exact-only", "input": "95 kilogrammez", "options": {"fuzzy": true}, "expected": null, "category": "words", "source": "AFA-253", "note": "British spelling; matches only exactly (PARSING.md Fuzzy Matching)."}
+{"id":"afa-51-zero-actual","input":"0 m; actual 80 cm","options":{},"expected":null,"category":"multiple-measurements","source":"AFA-51","note":"PARSING.md Complete Entries and Semicolons: unknown text or an independent zero measurement rejects the whole entry; no valid prefix or suffix is recovered."}
+{"id":"afa-51-actual","input":"5 ft; actual 11 in","options":{},"expected":null,"category":"multiple-measurements","source":"AFA-51"}
+{"id":"afa-51-note","input":"height 5 ft; note 11 in","options":{},"expected":null,"category":"multiple-measurements","source":"AFA-51"}
+{"id":"afa-51-semicolon","input":"5 ft; 11 in","options":{},"expected":null,"category":"multiple-measurements","source":"AFA-51"}
+{"id":"afa-51-shorter","input":"5 ft tall, 2 in shorter than last year","options":{"type":"height","normalizedUnit":"cm"},"expected":null,"category":"multiple-measurements","source":"AFA-51"}
+{"id":"afa-51-heels","input":"5 ft tall, with 2 in heels","options":{"type":"height","normalizedUnit":"cm"},"expected":null,"category":"multiple-measurements","source":"AFA-51"}
+{"id":"afa-51-metric","input":"1 m tall, 80 cm","options":{},"expected":null,"category":"multiple-measurements","source":"AFA-51"}
+{"id":"afa-51-prefix","input":"m: 1; cm: 80","options":{},"expected":null,"category":"multiple-measurements","source":"AFA-51"}
+{"id":"afa-51-word-greek","input":"5 ft τώρα 11 in","expected":null,"category":"multiple-measurements","source":"AFA-51"}
+{"id":"afa-51-word-cyrillic","input":"5 ft сейчас 11 in","expected":null,"category":"multiple-measurements","source":"AFA-51"}
+{"id":"afa-51-word-han","input":"5 ft 实际 11 in","expected":null,"category":"multiple-measurements","source":"AFA-51"}
+{"id":"afa-51-word-accent","input":"5 ft à 11 in","expected":null,"category":"multiple-measurements","source":"AFA-51"}
+{"id":"afa-51-word-ranked","input":"6 ft and ranked 3 in the state","expected":null,"category":"multiple-measurements","source":"AFA-51"}
+{"id":"afa-51-word-top","input":"6 ft, top 10 in the class","expected":null,"category":"multiple-measurements","source":"AFA-51"}
+{"id":"afa-51-attached-1","input":"5µm","expected":null,"category":"unicode","source":"AFA-51","note":"Unicode letters remain part of the word; deleting them must not expose a number or supported unit."}
+{"id":"afa-51-attached-2","input":"5éft","expected":null,"category":"unicode","source":"AFA-51","note":"Unicode letters remain part of the word; deleting them must not expose a number or supported unit."}
+{"id":"afa-51-attached-3","input":"é5 ft","expected":null,"category":"unicode","source":"AFA-51","note":"Unicode letters remain part of the word; deleting them must not expose a number or supported unit."}
+{"id":"afa-51-attached-4","input":"5 fté","expected":null,"category":"unicode","source":"AFA-51","note":"Unicode letters remain part of the word; deleting them must not expose a number or supported unit."}
+{"id":"afa-51-attached-5","input":"µ5 kg","expected":null,"category":"unicode","source":"AFA-51","note":"Unicode letters remain part of the word; deleting them must not expose a number or supported unit."}
+{"id":"afa-51-attached-6","input":"70kgé","expected":null,"category":"unicode","source":"AFA-51","note":"Unicode letters remain part of the word; deleting them must not expose a number or supported unit."}
+{"id":"afa-51-attached-7","input":"5 µft","expected":null,"category":"unicode","source":"AFA-51","note":"Unicode letters remain part of the word; deleting them must not expose a number or supported unit."}
+{"id":"afa-51-attached-8","input":"é5ft","expected":null,"category":"unicode","source":"AFA-51","note":"Unicode letters remain part of the word; deleting them must not expose a number or supported unit."}
+{"id":"afa-51-attached-9","input":"fiveé ft","expected":null,"category":"unicode","source":"AFA-51","note":"Unicode letters remain part of the word; deleting them must not expose a number or supported unit."}
+{"id":"afa-51-attached-part-1","input":"5 fté 11 in","expected":null,"category":"unicode","source":"AFA-51","note":"PARSING.md Complete Entries: letters attached to a number or unit make an unknown word, which rejects the whole entry; no valid prefix or suffix is recovered."}
+{"id":"afa-51-attached-part-2","input":"5éft 11 in","expected":null,"category":"unicode","source":"AFA-51","note":"PARSING.md Complete Entries: letters attached to a number or unit make an unknown word, which rejects the whole entry; no valid prefix or suffix is recovered."}
+{"id":"afa-51-attached-part-3","input":"5 ft 11éin","expected":null,"category":"unicode","source":"AFA-51","note":"PARSING.md Complete Entries: letters attached to a number or unit make an unknown word, which rejects the whole entry; no valid prefix or suffix is recovered."}
 {"id": "afa280-lbss", "input": "180 lbss", "options": {"fuzzy": true}, "expected": {"value": 180, "unit": "lb", "type": "weight"}, "category": "typos", "source": "AFA-280", "note": "\"lbss\" doubles the s of \"lbs\". Read with fuzzy: true only (PARSING.md, Fuzzy Matching)."}
 {"id": "afa280-lbss-exact", "input": "180 lbss", "expected": null, "category": "typos", "source": "AFA-280", "note": "Without fuzzy, no typo on the fuzzy typo list reads."}
 {"id": "afa280-ibs", "input": "180 Ibs", "options": {"fuzzy": true}, "expected": {"value": 180, "unit": "lb", "type": "weight"}, "category": "typos", "source": "AFA-280", "note": "\"Ibs\" has a capital I for the l of \"lbs\". Read with fuzzy: true only (PARSING.md, Fuzzy Matching)."}
