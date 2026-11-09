@@ -6,7 +6,7 @@ use, see the [README](https://github.com/afahy/fluent-measures/blob/main/README.
 The examples in this file and in the README are the public specification. A test checks each
 result that they show.
 
-<!-- cspell:ignore centimetre centimetres kilogramme kilogrammes kilgrm kilgrom -->
+<!-- cspell:ignore centimetre centimetres kilogramme kilogrammes kilgrm kilgrom lbss cenitmeters fourty fourtyfive fortyfive ninty -->
 
 ## Complete Entries
 
@@ -319,10 +319,8 @@ removed or changed. These rules apply:
   `cms` and `lbs`, match only when they are exact.
 - The British spellings `centimetre`, `centimetres`, `metre`, `metres`, `kilogramme` and
   `kilogrammes` match only when they are exact.
-- A short list of reviewed typos also reads with `fuzzy: true`, beyond the one-error rule. Today
-  it holds one entry: `kilgrm` reads as `kg`, although it has two errors, as it did with
-  `fuzziness: 2`. Without `fuzzy`, no typo on the list reads. Each new entry needs a reason and a
-  test with and without `fuzzy`.
+- A short list of reviewed typos, the fuzzy typo list below, also reads with `fuzzy: true`,
+  beyond the one-error rule.
 - If a word is one error from two unit names, the first unit in this order wins: `ft`, `in`, `cm`
   and `m` for height, and `lb` and `kg` for weight.
 
@@ -338,5 +336,42 @@ parseMeasurement('5 foots 10 inc', { fuzzy: true }); // { value: 70, unit: 'in',
 parseMeasurement('5 foots 10 inc'); // null: without fuzzy, unit names must be exact
 parseMeasurement('5 foot 10 inches', { fuzzy: true }); // { value: 70, unit: 'in', ... }: exact names still match
 ```
+
+### The Fuzzy Typo List
+
+These common typos read with `fuzzy: true`, although the one-error rule doesn't accept them. They
+live in `FUZZY_TYPOS` in `src/units.ts`. Without `fuzzy`, none of them reads.
+
+| Typo          | Reads as | Reason                                                      |
+| ------------- | -------- | ----------------------------------------------------------- |
+| `kilgrm`      | `kg`     | Two letters dropped from `kilogram`; `fuzziness: 2` read it |
+| `lbss`        | `lb`     | A doubled letter; `lbs` is too short for the one-error rule |
+| `ibs`         | `lb`     | A capital I for the l of `lbs`, as in `Ibs`                 |
+| `cenitmeters` | `cm`     | Two adjacent letters swapped, which counts as two errors    |
+| `fourty`      | `forty`  | A number word, spelled after `four`                         |
+| `ninty`       | `ninety` | A number word with a dropped letter                         |
+
+The one-error rule doesn't apply to number words: a misspelled number word reads only when it is
+on this list. A number-word typo stands for its word wherever the word can stand, so
+`fourty-two kg` reads as 42 kg and `one hundred and fourty pounds` as 140 lb. It must be a whole
+word: `fourtyfive kg` returns `null`, as `fortyfive kg` does.
+
+```typescript
+parseMeasurement('180 Ibs', { fuzzy: true }); // { value: 180, unit: 'lb', ... }
+parseMeasurement('fourty kg', { fuzzy: true }); // { value: 40, unit: 'kg', ... }
+parseMeasurement('fourty kg'); // null: without fuzzy, number words must be exact
+```
+
+To add an entry, it must meet all of these rules:
+
+- People type it. Cite the source: a corpus entry, a usability trace, a ticket, or a common
+  keyboard slip, such as a doubled letter, a dropped letter, two adjacent letters swapped or a
+  capital I for an l.
+- No other rule reads it already. It isn't a unit name or a number word, and it isn't one error
+  from a unit name under the rules above.
+- It doesn't change a result that `fuzzy: true` gives today, other than a `null` that becomes the
+  typo's value.
+
+Add a test with and without `fuzzy`, and corpus entries for both.
 
 `fuzziness` is retired. Any defined value throws a migration error that names `fuzzy: true`.

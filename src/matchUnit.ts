@@ -18,7 +18,8 @@ const EXACT_ALIASES = new Set([
  * wins a tie.
  */
 export function matchUnit(word: string, type: MeasurementType, fuzzy?: boolean): Unit | null {
-  const typo = fuzzy && FUZZY_TYPOS.get(word);
+  // A number-word entry has no unit type, so it never reads here.
+  const typo = fuzzy && (FUZZY_TYPOS.get(word) as Unit | undefined);
   if (typo && UNIT_TYPES[typo] === type) return typo;
   let closestUnit: Unit | null = null;
   for (const aliases of UNIT_ALIASES[type]) {

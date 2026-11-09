@@ -191,7 +191,8 @@ applies only to an entire unwrapped number, including supported fractions or num
 `fuzziness` is retired too. Any defined value throws, including `0` and `Infinity`; an explicitly
 `undefined` property is absent. Replace `fuzziness: 1` or `2` with `fuzzy: true`, and remove
 `fuzziness: 0`. `fuzzy` reads one spelling error, so most unit names with two errors return
-`null`. PARSING.md lists the few reviewed typos that `fuzzy` reads beyond that, such as `kilgrm`.
+`null`. PARSING.md lists the few reviewed typos that `fuzzy` reads beyond that, such as `kilgrm`
+and the number word `fourty`.
 
 #### `ParsedValue`
 
@@ -219,7 +220,7 @@ interface ParsedValue {
 
 ## Supported units
 
-<!-- cspell:ignore centimetre centimetres kilogramme kilogrammes kilgrm -->
+<!-- cspell:ignore centimetre centimetres kilogramme kilogrammes kilgrm fourty -->
 
 ### Height
 

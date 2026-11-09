@@ -155,7 +155,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
   }
   if (input.length > maxLength) return null;
 
-  const tokens = tokenize(input.trim());
+  const tokens = tokenize(input.trim(), fuzzy);
   if (!tokens.length) return null;
   const text = (at: number): string => tokens[at]?.text;
   const adjacent = (left: number, right: number): boolean =>

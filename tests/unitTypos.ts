@@ -46,14 +46,35 @@ export function oneEdits(name: string): Set<string> {
 }
 
 /**
- * PARSING.md, "Fuzzy Matching": the fuzzy typo list, which only fuzzy reads (AFA-280 fills it).
- * "kilgrm" is two edits from "kilogram"; main read it as kg with fuzziness 2 (AFA-253 comment
- * d5897102).
+ * PARSING.md, "Fuzzy Matching": the unit typos on the fuzzy typo list, which only fuzzy reads.
+ * - "kilgrm" is two edits from "kilogram"; main read it as kg with fuzziness 2 (AFA-253 comment
+ *   d5897102).
+ * - "lbss" doubles the s of "lbs" (AFA-280).
+ * - "ibs" has a capital I for the l of "lbs", as in "Ibs" (AFA-280).
+ * - "cenitmeters" swaps the adjacent t and i of "centimeters" (AFA-280).
  */
 export const FUZZY_TYPOS: Readonly<Record<MeasurementType, Readonly<Record<string, Unit>>>> = {
-  height: {},
-  weight: { kilgrm: 'kg' },
+  height: { cenitmeters: 'cm' },
+  weight: { kilgrm: 'kg', lbss: 'lb', ibs: 'lb' },
 };
+
+/**
+ * PARSING.md, "Fuzzy Matching": the number-word typos on the fuzzy typo list (AFA-280). The
+ * one-edit rule doesn't apply to number words; only these entries read.
+ * - "fourty" adds a u to "forty", after "four".
+ * - "ninty" drops the e of "ninety".
+ */
+export const NUMBER_TYPOS: Readonly<Record<string, { word: string; value: number }>> = {
+  fourty: { word: 'forty', value: 40 },
+  ninty: { word: 'ninety', value: 90 },
+};
+
+/** The English number words, written by hand: zero to nineteen, the tens, hundred and thousand. */
+export const NUMBER_WORD_NAMES = new Set(
+  'zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty thirty forty fifty sixty seventy eighty ninety hundred thousand'.split(
+    ' '
+  )
+);
 
 const SPELLINGS = new Map<MeasurementType, Map<string, Unit>>();
 

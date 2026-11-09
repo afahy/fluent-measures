@@ -1,6 +1,6 @@
 # Unit names with spelling errors
 
-<!-- cspell:ignore kilgrm kilgrom kilogrammez -->
+<!-- cspell:ignore kilgrm kilgrom kilogrammez fourty -->
 
 ## What it does
 
@@ -12,7 +12,8 @@ Without it, a unit name must be exact.
 - `fuzzy: true`: `5 foots 10 inc` and `150 ponds`.
 - `fuzzy: false` or no `fuzzy`, which turns fuzzy matching off: `5 foots 10 inc` is `null`.
 - A word with two spelling errors, which never matches: `70 kilgrom`.
-- The reviewed typo `kilgrm`, which reads as kg only with `fuzzy: true`: `70 kilgrm`.
+- The fuzzy typo list, which reads only with `fuzzy: true`: the unit typos `70 kilgrm` and
+  `180 Ibs`, and the number-word typos `fourty kg` and `fourty-two kg`.
 - An exact name with `fuzzy: true`, which still matches.
 - A British spelling, which matches only when exact: `95 kilogrammez` is `null`.
 - A typo inside a compact form, which never matches: `5fet11` is `null` even with `fuzzy: true`.
@@ -27,11 +28,13 @@ Without it, a unit name must be exact.
 - README.md, "Usage"
 - README.md, "API reference"
 - PARSING.md, "Fuzzy Matching"
+- PARSING.md, "The Fuzzy Typo List"
 
 ## How to verify it
 
-- Source: `src/matchUnit.ts`, `src/levenshtein.ts`, `src/units.ts` (the aliases and the fuzzy typo list)
-- Tests: `tests/matchUnit.oneEdit.test.ts`,
+- Source: `src/matchUnit.ts`, `src/levenshtein.ts`, `src/units.ts` (the aliases and the fuzzy typo list),
+  `src/tokenize.ts` (the number-word typos)
+- Tests: `tests/matchUnit.oneEdit.test.ts`, `tests/parseMeasurement.fuzzyTypos.test.ts`,
   `tests/matchUnit.test.ts`, `tests/parseMeasurement.britishUnits.test.ts`,
   `tests/parseMeasurement.completeEntry.test.ts`, `tests/parseMeasurement.completeEntryWork.test.ts`, `tests/numberReading.test.ts`, `tests/parseMeasurement.signedOtherTypeOwnership.test.ts`, `tests/parseMeasurement.signedWeightOwnership.test.ts`, `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.fuzzyUnits.test.ts`, `tests/matchUnit.closest.test.ts`, `tests/parseMeasurement.calculator.test.ts`, `tests/parseMeasurement.wordedRanges.test.ts`,
   `tests/parseMeasurement.numberWordCommas.test.ts`, `tests/parseMeasurement.commaBetweenWords.test.ts`,

@@ -364,6 +364,19 @@ const cases: ReadmeCase[] = [
     options: { fuzzy: true },
     expected: { value: 70, unit: 'in' },
   },
+  {
+    section: 'The Fuzzy Typo List',
+    input: '180 Ibs',
+    options: { fuzzy: true },
+    expected: { value: 180, unit: 'lb' },
+  },
+  {
+    section: 'The Fuzzy Typo List',
+    input: 'fourty kg',
+    options: { fuzzy: true },
+    expected: { value: 40, unit: 'kg' },
+  },
+  { section: 'The Fuzzy Typo List', input: 'fourty kg', expected: null },
 ];
 
 // Results that the README and PARSING.md state in their prose. A test can't find prose examples
@@ -523,6 +536,35 @@ const proseCases: ProseCase[] = [
     expected: null,
     statement:
       '`phase 2,180 cm`, `phase-2,180 cm`, `phase-2, 180 cm` and `phase2,180 cm` all return `null`',
+  },
+  // AFA-280: 40 + 2 = 42 and 100 + 40 = 140.
+  {
+    section: 'The Fuzzy Typo List',
+    input: 'fourty-two kg',
+    options: { fuzzy: true },
+    expected: { value: 42, unit: 'kg' },
+    statement: '`fourty-two kg` reads as 42 kg',
+  },
+  {
+    section: 'The Fuzzy Typo List',
+    input: 'one hundred and fourty pounds',
+    options: { fuzzy: true },
+    expected: { value: 140, unit: 'lb' },
+    statement: '`one hundred and fourty pounds` as 140 lb',
+  },
+  {
+    section: 'The Fuzzy Typo List',
+    input: 'fourtyfive kg',
+    options: { fuzzy: true },
+    expected: null,
+    statement: '`fourtyfive kg` returns `null`, as `fortyfive kg` does',
+  },
+  {
+    section: 'The Fuzzy Typo List',
+    input: 'fortyfive kg',
+    options: { fuzzy: true },
+    expected: null,
+    statement: '`fourtyfive kg` returns `null`, as `fortyfive kg` does',
   },
 ];
 
