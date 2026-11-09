@@ -858,6 +858,8 @@ describe('tokenize: the single scan', () => {
       ],
     ],
     ['aⅫ', [['aⅻ', 0, 2]]],
+    ['Ⅰ', [['ⅰ', 0, 1]]],
+    ['5/2kg', [['xkg', 0, 3]]],
   ] as [string, [string, number, number][]][])('others: reads %j', (input, expected) => {
     expect(tokens(input)).toEqual(expected);
   });

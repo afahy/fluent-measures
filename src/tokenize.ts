@@ -133,7 +133,7 @@ function readNumber(run: string, label: boolean, quoted: boolean): string | unde
 // The state of the scan. tokenize calls no code outside this module, so one scan runs at a time.
 // The helpers live here, not inside tokenize, so each call reuses the same compiled functions.
 let text: string;
-let tokens: Token[] = [];
+let tokens: Token[];
 // The place in the converted text.
 let place: number;
 // The word or number being read, and its kind: 1 for a word, 2 for a number.
@@ -198,7 +198,7 @@ function number(digits: string): void {
  * isn't a space, a letter or part of a number run, which can be a numeral such as "²".
  */
 function put(character: string): void {
-  if (kind === 1 && (character === 'x' || (character > '~' && WORD_PART.test(character)))) {
+  if (kind === 1 && WORD_PART.test(character)) {
     token += character;
     return;
   }
@@ -206,8 +206,11 @@ function put(character: string): void {
   if (character === 'x') {
     kind = 1;
     token = character;
-    // A few characters that aren't letters have a lowercase form, as "Ⅻ" and "Ⓜ" do.
-  } else push(character.toLowerCase());
+  }
+  // A few characters that aren't letters have a lowercase form, as "Ⅻ" and "Ⓜ" do. None comes
+  // before "Ⅰ", the first of them.
+  // Stryker disable next-line ConditionalExpression: toLowerCase leaves each character before "Ⅰ" that isn't a letter as it is, so the test only saves the call, which is slow.
+  else push(character < 'Ⅰ' ? character : character.toLowerCase());
 }
 
 function space(count: number): void {
@@ -393,7 +396,8 @@ function piece(at: number): number {
   // One ASCII punctuation character: the other ASCII characters are spaces, and letters before a
   // letter that isn't ASCII.
   if (code < 128 && !asciiLetter(code) && (code < 9 || code > 13)) {
-    put(text[at]);
+    close();
+    push(text[at]);
     solid = text[at];
     label = false;
     return at + 1;
