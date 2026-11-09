@@ -1,5 +1,121 @@
 # @afahy/fluent-measures
 
+## 0.3.0
+
+### Upgrading from 0.2.0
+
+**Upgrading from 0.2.0.** These changes are the most likely to need a code change:
+
+- `allowUnqualified` and `inferUnit` are removed, and each throws when defined. Set
+  `defaultUnit` to the field's source unit. `parseMeasurement('72', { allowUnqualified: true, type: 'height' })`
+  returned 72 in and now throws; `parseMeasurement('72', { defaultUnit: 'in' })` returns 72 in.
+- `fuzziness` is removed, and any defined value throws. Replace `fuzziness: 1` or `2` with
+  `fuzzy: true`, and remove `fuzziness: 0`. `parseMeasurement('5 foots 10 inc', { fuzzy: true })`
+  returns 70 in.
+- The whole entry must be one measurement. A range, a second reading or unrelated text makes it
+  return `null` instead of one part: `150 to 180 lbs` returned 180 lb and now returns `null`. A
+  height and a weight together need `type` or `normalizedUnit`: `5'11", 180 lbs` returned 71 in
+  and now returns `null`, and with `{ type: 'height' }` it still returns 71 in.
+- Quotation marks and brackets around an entry or a number make it return `null`. `(180 cm)`
+  returned 180 cm and `"180 lbs"` returned 180 in; both now return `null`. Brackets still mark a
+  unit label, as in `Height (in): 72`, and `5’11”` is still 71 in.
+
+### Minor Changes
+
+- fa73fd5: A comma now ends a number in words. `my son is two, thirty pounds` returned 230 lb, and
+  `phase twenty, “5” cm` returned 25 cm. Both now return `null`, because neither entry is one
+  complete measurement. Commas between digits keep their meaning: `1,500 lbs` is 1500 lb and
+  `180,5 kg` is 180.5 kg. A weight with a stone, ounce or gram part still returns `null`.
+- 70f3169: Read compact heights such as `5ft11` and `1m80`, and accept `kgs` and `cms`.
+  Compact parts also preserve decimal commas and reject malformed comma groups.
+  Include bare centimeters after meters: `1 m 80` and `one meter eighty` now return
+  180 cm instead of dropping the smaller part and returning 1 m.
+
+  A zero-meter larger part also uses centimeters for its bare smaller part. Such a part
+  must be below 100; `0 meter 100` now returns `null` instead of treating 100 as meters.
+
+- f85a98d: Quotation marks, parentheses and square brackets around an entry, around one measurement of a
+  pair, or around a number no longer make a measurement. `(180 cm)`, `"180 lbs"`, `“5’11””` and
+  `(180) lbs` now return `null`. Curly quotes and primes after a number are always feet and inch
+  marks, so `5’11”`, `5′11″` and `5´11´´` still give 71 inches. Brackets keep their other uses: unit
+  labels such as `Height (in): 72`, a smaller part such as `5 ft (11 in)`, and the second
+  measurement of a pair, as in `5'11" (180 lbs)`. The bundle is about 0.8 kB smaller.
+- 8d286f3: Replace the `fuzziness` option with `fuzzy: true`, which reads a unit name with one spelling
+  error, as in `parseMeasurement('5 foots 10 inc', { fuzzy: true })` → 70 in. With `fuzzy: true`,
+  an ordinary word one letter from a unit name also reads as that unit, as in `5 feat` → 5 ft and
+  `70 kiln` → 70 kg. A unit name with two errors returns `null`, except for the reviewed typos in
+  PARSING.md, such as `kilgrm`. `fuzzy` must be `true` or `false`.
+
+  `fuzziness` is retired: any defined value throws a migration error. Replace `fuzziness: 1` or
+  `2` with `fuzzy: true`, and remove `fuzziness: 0`.
+
+  `kilogramme` and `kilogrammes` are new exact aliases for kilograms.
+
+- dd22c33: Replace `allowUnqualified` and `inferUnit` with `defaultUnit`, the explicit source unit for a
+  complete bare number. Written units take precedence; `normalizedUnit` only selects the result
+  unit and dimension. Remove implicit imperial defaults and metric-height magnitude guessing.
+
+  Migrate imperial height/weight fields to `defaultUnit: 'in'`/`'lb'`, metric weight to `'kg'`, and
+  choose `'m'` or `'cm'` explicitly for metric height. Defined retired options now throw a migration
+  error. Options are validated before string length/content, including empty or overlong strings;
+  non-string runtime input still returns `null` without inspecting options.
+
+- bfac12a: A range written with fractions, such as `5/2-180 lbs`, now returns `null` instead of 180 lb, also
+  when a period follows it, as in `5/2-180. lbs`. A Unicode fraction after a decimal number or
+  before more digits no longer reads: `1.5½ ft` and `5½2 ft` return `null` instead of 1.5 ft and
+  5.52 ft. Two different slash characters in one number no longer make part of a fraction. A
+  fraction after a comma or bracket keeps its value, as in `5 ft (1/2 lbs)` with
+  `{ type: 'weight' }` (0.5 lb).
+- 0426248: A range joined by "to", "between ... and ..." or "from ... to ...", such as `150 to 180 lbs` or
+  `between 70 and 80 kg`, now returns `null` instead of its last number (180 lb or 80 kg). An entry
+  with such a range and another measurement, such as `150 to 180 lbs, 6 ft`, also returns `null`,
+  even with `{ type: 'height' }`.
+- ef39a7b: A closing quotation mark after a number no longer reads as feet or inches. `"180" lbs` returned
+  180 in and now returns `null`, because quotation marks cannot surround a number. Curly feet and
+  inch marks now read with spaces around them, after number words and as modifier-letter primes:
+  `5 ’ 11 ”`, `five’ eleven”` and `5ʹ11ʺ` give 71 in, where they returned `null`.
+- ae985e1: An entry must now be one complete height or weight. A few ordinary words and a label may
+  surround it, as in `about 180 lbs` and `Height (in): 72`. A range, a second reading, unrelated
+  text, a signed or malformed part, or a part that the parser can't read makes the whole entry
+  return `null`, where earlier versions returned one part. `70 kg (154 lbs)` returned 70 kg,
+  `Top 10 in the class` returned 10 in, and `age=28, kg=72` returned 72 kg. All three now return
+  `null`.
+
+  A height and a weight together need `type` or `normalizedUnit` to choose one, and both must be
+  valid: `5'11", 180 lbs` returns `null`, and 71 in with `{ type: 'height' }`. A number in words
+  can come before or after its unit, as in `kg seventy two.` (72 kg). A zero part that you write
+  stays in `matches`, as in `ft five 0 in` (60 in, with a 0 in match). No option restores the
+  earlier parsing: pass one field's value, or a complete pair with `type` or `normalizedUnit`.
+
+  With contradictory options such as `{ type: 'weight', normalizedUnit: 'cm' }`, the input `,` now
+  throws the same error as other input, where it returned `null`.
+
+- b76070d: Return null when unit conversion reduces an inferred measurement to zero through underflow.
+  Positive subnormal results and explicit-unit behavior are preserved.
+- b90ea36: An entry with a signed value in another unit, such as `70 kg; kg -6 ft, 80 kg`, now returns
+  `null` instead of 70 kg.
+- 77bd5ce: Reject incomplete weights when a signed unit-first supported part is followed by a separately
+  numbered stone, ounce or gram part, including across spaces and semicolons. These inputs now
+  return `null` instead of a later independent weight.
+- 4413548: Read English decimal phrases such as "seventy point five kilograms" as complete numbers,
+  including unit prefixes and labels. Reject malformed decimal number phrases instead of
+  returning only part of the number.
+- e1d3a45: Preserve Unicode minus signs after numeric labels separated by commas or semicolons, so negative measurements no longer become positive values. Keep that sign check fast for long punctuation prefixes when the input length limit is raised.
+
+### Patch Changes
+
+- d874ded: Curly feet and inch marks after a number read as feet and inches, as in `5’11”` (71 in). An
+  entry inside curly quotation marks, such as `“5’11””` or `‘5’11’’’`, now returns `null` instead
+  of 71 in, as the entry about quotation marks and brackets says.
+- 5b9673f: Set the package homepage to the documentation site and add README links to the Markdown
+  reference, agent index and release-specific documentation. The npm listing receives these
+  metadata updates with the normal next release.
+- b74d185: Accept large height conversions whose target value is finite even when an intermediate
+  centimeter value overflows. Preserve rounding for existing finite conversions.
+- daf8dbf: The tokenizer reads the input in one scan from left to right, in place of separate passes for
+  character forms, comma groups and fractions. Every result stays the same. The bundle is about
+  1.2 kB larger.
+
 ## 0.2.0
 
 ### Upgrading from 0.1.1
