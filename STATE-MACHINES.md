@@ -3448,3 +3448,29 @@ any mix of `'` and `′`, as `″`, with no check for an earlier opening pair. T
 no longer has a whole-entry wrapper cursor, quoted numbers or quoted feet. Its bracket cursor
 remains only for the second measurement of a pair, as in `5'11" (180 lbs)`. Bracketed unit
 labels and bracketed smaller parts are unchanged.
+
+## One tokenizer scan (AFA-88)
+
+M1 and M2 are now one scan from left to right in `src/tokenize.ts`. `normalizeForms`,
+`normalizeNumericCommas`, `normalizeFractions`, `normalize` and `tokenizeNormalized` are gone,
+and so is the parser's string path for whole-entry shorthand such as `5-11`, which now reads
+the three tokens. No result changes. The scan writes the same tokens, with the same places, as
+the passes wrote. One exception has no effect on a result: each token is lowercased alone, so a
+Greek capital sigma at the end of a token is always the final form `ς`.
+
+The scan carries this state:
+
+| State          | Meaning                                                                      |
+| -------------- | ---------------------------------------------------------------------------- |
+| `token`/`kind` | The word or number being read                                                |
+| `place`        | The place in the converted text, so token boundaries and adjacency stay      |
+| `solid`        | The last character that isn't a space, for the fraction rule after a letter  |
+| `label`        | Whether a letter and only numerals come right before, as in `phase2,180`     |
+| `first`        | Where the first number of the input starts, found once for a minus sign      |
+| `unitEnd`      | Where a unit ends that digits right after don't join, as in `5ft11` (AFA-62) |
+
+A table converts full-width forms, `㎝`, `㎏`, primes and acute accents. A minus sign is a sign
+when no number comes before it. A curly closing quote after a number or a number word is a mark.
+`readNumber` converts each run of number characters: comma groups, then Unicode fractions,
+then slash fractions, with the letter or quote mark before the run as context. A comma group of
+the wrong size still rejects the whole input.
