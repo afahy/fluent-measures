@@ -2,11 +2,13 @@
 '@afahy/fluent-measures': minor
 ---
 
-Remove fuzzy unit matching and the `fuzziness` option. Unit names must now be exact:
-`5 foots 10 inc` returns `null`, and `5 foot 10 inches` returns 70 in. `kilogramme` and
-`kilogrammes` are new aliases for kilograms.
+Replace the `fuzziness` option with `fuzzy: true`, which reads a unit name with one spelling
+error, as in `parseMeasurement('5 foots 10 inc', { fuzzy: true })` → 70 in. A unit name with
+two errors, such as `70 kilgrm`, now returns `null`. Common English words that are one error from
+a unit name, such as `fees`, `kiln` and `meteor`, never match; PARSING.md lists them. `fuzzy`
+must be `true` or `false`.
 
-Remove `fuzziness` from your options. Any defined value now throws, including `0`, `false` and
-`Infinity`. An `undefined` value is treated as absent. The parser doesn't suggest corrections or
-change numbers, so ask the user to fix the entry and submit it again. The result shape is
-unchanged.
+`fuzziness` is retired: any defined value throws a migration error. Replace `fuzziness: 1` or
+`2` with `fuzzy: true`, and remove `fuzziness: 0`.
+
+`kilogramme` and `kilogrammes` are new exact aliases for kilograms.

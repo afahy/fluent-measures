@@ -38,7 +38,7 @@ describe('Unicode minus signs after numeric labels', () => {
       ['phase 20, kg: SIGN70', { type: 'weight' }],
       ['phase 20, SIGN185#', { type: 'weight' }],
       ['phase twenty, SIGN5′11″', { type: 'height' }],
-      ['phase twenty, SIGN5 foots', {}],
+      ['phase twenty, SIGN5 foots', { fuzzy: true }],
     ] as const)('rejects the signed field in %s with %o', (input, options) => {
       const raw = input.replace('SIGN', sign);
       expect(parseMeasurement(raw, options)).toBeNull();

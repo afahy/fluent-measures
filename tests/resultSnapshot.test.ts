@@ -61,8 +61,9 @@ const OPTION_SETS: readonly (readonly [name: string, options: ParseOptions])[] =
   ['h', { type: 'height' }],
   ['w', { type: 'weight' }],
   ['cm', { normalizedUnit: 'cm' }],
-  // Retain the historical calls so changed-result evidence exposes the retired option.
-  ['f2', { fuzziness: 2 } as unknown as ParseOptions],
+  // f2 was { fuzziness: 2 } before AFA-253 retired fuzziness. It keeps its name, so the evidence
+  // lists only the results that changed.
+  ['f2', { fuzzy: true }],
   ['hu', { type: 'height', defaultUnit: 'cm' }],
 ];
 
@@ -125,8 +126,7 @@ function describeResult(raw: string, options: ParseOptions): string {
     const parts = result.matches.map(({ value, unit }) => `${value} ${unit}`).join(' + ');
     return `${total} ${result.type}${parts === total ? '' : ` = ${parts}`}`;
   } catch (error) {
-    // Error wording is not a specified result. Public regressions check the class and option name.
-    return `throws: ${error instanceof Error ? error.name : typeof error}`;
+    return `throws: ${error instanceof Error ? error.message : String(error)}`;
   }
 }
 

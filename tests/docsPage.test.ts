@@ -27,6 +27,7 @@ describe('the ParseOptions reference', () => {
     expect(options.map(([, id]) => id)).toEqual([
       'type',
       'normalized-unit',
+      'fuzzy',
       'default-unit',
       'max-length',
     ]);
@@ -39,6 +40,7 @@ describe('the ParseOptions reference', () => {
       'Selected by normalizedUnit when set; otherwise by written units or defaultUnit for a bare number.',
     ],
     ['normalized-unit', 'When omitted', 'Uses the written or default source unit.'],
+    ['fuzzy', 'Default', 'false — unit names must be exact.'],
     ['default-unit', 'When omitted', 'Bare numbers return null.'],
     ['max-length', 'Default', '1000.'],
   ])(
@@ -71,7 +73,14 @@ describe('the ParseOptions reference', () => {
     expect(optionText('max-length')).toContain(
       'A number of at least 1, or Infinity for no limit. Other values throw'
     );
-    for (const id of ['ex-type', 'ex-convert', 'ex-unqualified', 'unit-type', 'measurement-type']) {
+    for (const id of [
+      'ex-type',
+      'ex-convert',
+      'ex-fuzzy',
+      'ex-unqualified',
+      'unit-type',
+      'measurement-type',
+    ]) {
       expect(reference).toContain(`href="#${id}"`);
       expect(page).toContain(`id="${id}"`);
     }

@@ -56,13 +56,10 @@ A metric form has a height field labeled "Height (cm)". Users type only the numb
 Then predict, from the docs alone, what the same call gives for `1.8`, and write down how sure
 you are.
 
-## T6. Handle typing mistakes in unit names
+## T6. Accept typing mistakes in unit names
 
-Users type things like `5 fet 11 inchs`. Find out from the docs whether a setting makes the
-library read this text as it is. Write `t6.mjs`, which passes the text unchanged with the options
-that you chose, or with none. Report the options, the result's value and unit, and what the
-library returns for this text with no options. Write `null` for a value or unit that the library
-doesn't return.
+Users type things like `5 fet 11 inchs`. Find the setting that makes the library read it. Write `t6.mjs`, and report the setting, the result, and what the library returns for this
+text without the setting.
 
 ## T7. Get the weight from a message that also has a height
 

@@ -170,7 +170,7 @@ describe('the short results on the docs page', () => {
   });
 
   // The disclosure changes only visibility. The accepted design preserves these exact eight
-  // triples from the settled page, including the unrounded conversion; AFA-253 intentionally adds the typo null case.
+  // triples from the settled page, including the unrounded conversion and both null cases.
   it('preserves the eight hero input/options/result triples in their curated order', () => {
     expect(rows.map(({ input, options, shown }) => ({ input, options, shown }))).toEqual([
       {
@@ -179,7 +179,7 @@ describe('the short results on the docs page', () => {
         shown: { value: 180.34, unit: 'cm' },
       },
       { input: 'eighty kilograms', options: { type: 'weight' }, shown: { value: 80, unit: 'kg' } },
-      { input: '5 foots 10 inc', options: undefined, shown: null },
+      { input: '5 foots 10 inc', options: { fuzzy: true }, shown: { value: 70, unit: 'in' } },
       { input: 'not a measurement', options: undefined, shown: null },
       {
         input: '150 lbs',

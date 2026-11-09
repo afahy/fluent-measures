@@ -51,8 +51,7 @@ do not treat the current parsing rules as their specification.
 - Reads numbers in digits or in words, as in `5' 11"`, `five feet eleven inches` and
   `one hundred fifty pounds`
 - Reads thousands separators and decimal commas, as in `1,000 lbs` and `72,5 kg`
-- Reads exact unit names and aliases, such as `lbs`, `kilos` and `metres`. A misspelled unit
-  name returns `null`
+- Reads unit names with one spelling error when you set `fuzzy: true`, as in `5 foot 11 inc`
 - Converts the result to the unit that you set in `normalizedUnit`
 - Has no dependencies
 - Is at most 6.0 kB for ESM and 6.0 kB for CommonJS, minified and compressed with Brotli; CI
@@ -125,12 +124,11 @@ parseMeasurement('72', { defaultUnit: 'in' });
 // { value: 72, unit: 'in', type: 'height', matches: [{ value: 72, unit: 'in' }], raw: '72' }
 ```
 
-Unit names must be exact. A misspelled unit name returns `null`, so ask the user to fix the entry
-and submit it again. The parser doesn't suggest corrections or change numbers:
+Set `fuzzy: true` to read unit names that have one spelling error:
 
 ```typescript
-parseMeasurement('5 foots 10 inc');
-// null
+parseMeasurement('5 foots 10 inc', { fuzzy: true });
+// { value: 70, unit: 'in', type: 'height', matches: [{ value: 5, unit: 'ft' }, { value: 10, unit: 'in' }], raw: '5 foots 10 inc' }
 ```
 
 Text with no measurement returns `null`, so check the result before you use it:
@@ -162,6 +160,10 @@ interface ParseOptions {
   // The measurement type to return from a valid complete entry
   type?: 'height' | 'weight';
 
+  // Read a unit name with one spelling error, such as foots or ponds. Without it, a unit name
+  // must be exact. Must be true or false when supplied.
+  fuzzy?: boolean;
+
   // Source unit for one complete number with no unit. Without it, a bare number returns null.
   // Written units win. No magnitude guessing: 1.8 with defaultUnit: 'cm' means 1.8 cm.
   // Must agree with the dimension selected by type or normalizedUnit, when supplied.
@@ -175,11 +177,10 @@ interface ParseOptions {
 ```
 
 For string input, these checks run before raw length or text: the options object shape,
-`maxLength`, `type`, `normalizedUnit`, `defaultUnit`, retired options, then dimension conflicts.
-Invalid values for those checks throw, even for empty or overlong strings. Non-string runtime
-input returns `null` before reading options. Empty strings and null values for `type` or
-`normalizedUnit` count as absent; `defaultUnit` must be one of the six canonical units when
-defined, so null remains invalid.
+`maxLength`, `type`, `normalizedUnit`, `defaultUnit`, `fuzzy`, retired options, then dimension
+conflicts. Invalid values for those checks throw, even for empty or overlong strings. Non-string
+runtime input returns `null` before reading options. Empty strings and null values for `type` or `normalizedUnit` count as absent;
+`defaultUnit` must be one of the six canonical units when defined, so null remains invalid.
 
 Migration: remove `allowUnqualified` and `inferUnit`. Either retired option throws when its value
 is defined, including `false`; an explicitly `undefined` property is absent. Replace imperial
@@ -187,9 +188,10 @@ height/weight inference with `defaultUnit: 'in'`/`'lb'`, metric weight with `'kg
 `'m'` or `'cm'` explicitly for height. The parser no longer guesses meters below 3. A default
 applies only to an entire unwrapped number, including supported fractions or number words.
 
-`fuzziness` is removed too. Any defined value throws a migration error, including `0`, `false`,
-`NaN` and `Infinity`; an `undefined` value is absent. It is one of the retired options in the
-order above. Remove it, and use the unit names in [Supported units](#supported-units).
+`fuzziness` is retired too. Any defined value throws, including `0` and `Infinity`; an explicitly
+`undefined` property is absent. Replace `fuzziness: 1` or `2` with `fuzzy: true`, and remove
+`fuzziness: 0`. `fuzzy` reads one spelling error, so a unit name with two errors, such as
+`kilgrm`, returns `null`.
 
 #### `ParsedValue`
 
@@ -217,7 +219,7 @@ interface ParsedValue {
 
 ## Supported units
 
-<!-- cspell:ignore centimetre centimetres -->
+<!-- cspell:ignore centimetre centimetres kilogramme kilogrammes kilgrm -->
 
 ### Height
 
@@ -267,7 +269,9 @@ application metadata outside that value. To display an alternate unit, convert t
 measurement instead of submitting both representations.
 
 [PARSING.md](https://github.com/afahy/fluent-measures/blob/main/PARSING.md) gives the complete
-entry grammar, the words that can surround a measurement, and examples. Unit names must be exact.
+entry grammar, the words that can surround a measurement, and examples. With `fuzzy: true`, its
+Fuzzy Matching section lists the English words that never match a unit. Fuzzy matching can
+still read another ordinary word as a unit; it applies only within that grammar.
 
 ## Troubleshooting
 
@@ -276,7 +280,7 @@ If `parseMeasurement` returns `null`, look for these causes:
 1. The unit isn't supported. See [Supported units](#supported-units).
 2. The text doesn't say whether it is a height or a weight. Set `type`.
 3. A number has no unit. Set `defaultUnit` to the source unit shown by the field.
-4. A unit name has a spelling error. Use a supported exact alias and submit the input again.
+4. A unit name has a spelling error. Set `fuzzy: true` to read one error.
 5. The entry has a range, duplicate measurement, unsupported fragment or extra text. See
    [Limits](#limits).
 6. The input isn't a string. Non-string input returns `null` at runtime; the TypeScript parameter

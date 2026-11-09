@@ -83,8 +83,8 @@ describe('shared-unit ranges with word connectors', () => {
     expect(parseMeasurement('6 ft 1/2 to 3/4 11 in', { type: 'height' })).toBeNull();
   });
 
-  it('rejects a range even when its unit is misspelled', () => {
-    expect(parseMeasurement('150 to 180 poundz, 70 kg', {})).toBeNull();
+  it('rejects a range even when its unit is fuzzy', () => {
+    expect(parseMeasurement('150 to 180 poundz, 70 kg', { fuzzy: true })).toBeNull();
   });
 
   it.each([

@@ -94,8 +94,8 @@ it('rejects the incomplete weight when normalization selects weight', () => {
   expect(parseMeasurement('kg -20 5 grams; actual 70 kg', { normalizedUnit: 'lb' })).toBeNull();
 });
 
-it('rejects signed fragments with misspelled aliases', () => {
-  expect(parseMeasurement('kilogramm -20 5 grams; actual 70 kg', {})).toBeNull();
+it('rejects signed fragments with fuzzy supported aliases', () => {
+  expect(parseMeasurement('kilogramm -20 5 grams; actual 70 kg', { fuzzy: true })).toBeNull();
 });
 
 it('rejects an unsupported other expression with a height selector', () => {

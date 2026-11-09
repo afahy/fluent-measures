@@ -79,12 +79,12 @@ describe('signed other-type ownership controls', () => {
     expect(parseMeasurement('kg -6 ft, 70 kg', { type: 'height' })).toBeNull();
   });
 
-  it('rejects signed fragments with misspelled units', () => {
-    expect(parseMeasurement('kg -6 foots, 70 kg', {})).toBeNull();
+  it('rejects signed fragments even with fuzzy units', () => {
+    expect(parseMeasurement('kg -6 foots, 70 kg', { fuzzy: true })).toBeNull();
   });
 
-  it('rejects an owned signed value without a following unit with an exact unit', () => {
-    expect(parseMeasurement('pound-0.75', {})).toBeNull();
+  it('rejects an owned signed value without a following unit with fuzzy on', () => {
+    expect(parseMeasurement('pound-0.75', { fuzzy: true })).toBeNull();
   });
 
   it('rejects signed other-type fragments before conversion', () => {
@@ -97,6 +97,7 @@ describe('signed other-type ownership controls', () => {
     [{}, 1000, 'ft'],
     [{ type: 'height' }, 1000, 'ft'],
     [{ normalizedUnit: 'cm' }, 30480, 'cm'],
+    [{ fuzzy: true }, 1000, 'ft'],
     [{ type: 'height', defaultUnit: 'cm' }, 1000, 'ft'],
   ] as const)('rejects the signed fragment with %o', (options, _value, _unit) => {
     expect(parseMeasurement("1000,' ′-11pound", options)).toBeNull();

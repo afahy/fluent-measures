@@ -1,6 +1,6 @@
 # Library state machines
 
-<!-- cspell:ignore NFKC apfahy meterrs -->
+<!-- cspell:ignore NFKC apfahy meterrs kilogramme kilogrammes -->
 
 Audit baseline: `b79eae0` (`main`), 2026-11-06. Tracking: [AFA-235][audit].
 Scope: every runtime module in `src/`, reached through `parseMeasurement`. The docs website,
@@ -3478,26 +3478,21 @@ sign when no number comes before it. A curly closing quote after a number or a n
 mark. `readNumber` takes the letter or quote mark before a run as context. A comma group of the
 wrong size still rejects the whole input.
 
-## AFA-253: exact unit aliases replace fuzzy acceptance
+## Approved policy revision: one-edit fuzzy matching (AFA-253)
 
-Base: `daf8dbffac4d101c6f9be4f5ba2910eb587d51d0`, after AFA-250/265 complete-entry parsing,
-AFA-251 explicit defaults, AFA-277 wrapper removal and the AFA-88 tokenizer scan. Approval: AFA-253 comment
-`445fe6bc-5ea3-4efb-915d-e4f389dd6f8c`. This is a deliberate policy revision, including
-the AFA-216 fuzzy-success preservation override, not a reclassification of historical bugs.
-All earlier edit-distance, prose-exclusion and budget findings above retain their historical meaning.
+The maintainer decided on 2026-11-09 (AFA-253 comments 9bf0c672, 3e80ce01 and 226d15f6) to
+bound fuzzy matching so that every match can be tested. The numeric `fuzziness` option is
+retired: any defined value throws `fuzziness was removed; use fuzzy: true`, after the other
+retired options' rule from AFA-251. The new `fuzzy?: boolean` option reads a unit name with one
+spelling error. An invalid `fuzzy` throws a TypeError after `defaultUnit` and before the retired
+options. The earlier findings above about edit budgets, fractions and Infinity (AFA-189) describe
+the numeric option and stay as historical evidence.
 
-The unit slot accepts listed aliases exactly. `kilogramme` and `kilogrammes` are explicit
-`kg` aliases; unknown spellings provide no unit. The shared complete-entry grammar still
-validates the entire entry. `5 foots 10 inc` without options returns `null`; after an explicit
-user edit, `5 foot 10 inches` returns 70 in (5 × 12 + 10). No suggestions, numeric alteration
-or second parsing pass is introduced.
-
-A defined `fuzziness` raises a migration error after the older retired options and before
-dimension conflicts, length or text parsing. Undefined remains absent. This intentionally
-changes unmodified legacy calls even when their unit names are exact. The simple result
-shape and the AFA-251 source-default and output-unit policies remain unchanged.
-
-The edit-distance function, closest-alias ranking, distance budgets, first-letter/length
-heuristics and prose exclusions are removed. Direct tests of those retired algorithms
-retire with them; their real spellings remain exact-acceptance or rejection cases. Public
-regressions retain the former numeric budgets as migration-error cases.
+`matchUnit` keeps its order: an exact alias returns at once. With `fuzzy`, the first alias in
+`UNIT_ALIASES` order that is one edit away wins, among aliases of four or more letters that start
+with the word's first letter and aren't British spellings. The regular expression that blocked
+`food`, `feel`, `feed`, `fool`, `kill` and `kills` became a set of 29 words from a reviewed table
+of the 57 English words one edit from a unit name. `kilogramme` and `kilogrammes` are new exact
+aliases of `kg` and, like the other British spellings, match only exactly. One edit accepts 3,941
+spellings, 2,288 for height and 1,653 for weight, and `tests/matchUnit.oneEdit.test.ts` checks
+each one.

@@ -36,7 +36,7 @@
     <meta property="og:image:height" content="630" />
     <meta
       property="og:image:alt"
-      content="fluent-measures parses height and weight text into structured data: 5 feet 11 inches converted to 180.34 cm, five foot ten read as 70 in, eighty kilograms read as 80 kg, a unit typo returning null, and text with no measurement returning null."
+      content="fluent-measures parses height and weight text into structured data: 5 feet 11 inches converted to 180.34 cm, five foot ten read as 70 in, eighty kilograms read as 80 kg, a unit typo read with fuzzy matching, and text with no measurement returning null."
     />
     <meta name="twitter:card" content="summary_large_image" />
 
@@ -530,11 +530,11 @@
                 <div>
                   <dt>
                     <span class="demo-input">5 foots 10 inc</span>
-                    <span class="demo-opts is-none">no options</span>
+                    <span class="demo-opts">fuzzy: true</span>
                   </dt>
-                  <dd class="is-null">
+                  <dd>
                     <svg class="icon demo-arrow" aria-hidden="true"><use href="#i-arrow" /></svg>
-                    <span>null</span>
+                    <span><b>70</b> in</span>
                   </dd>
                 </div>
                 <div>
@@ -638,7 +638,8 @@
               ></span>
               <p>
                 <strong class="feature-title">Flexible input:</strong>
-                Digits or words, thousands separators and decimal commas. Unit names must be exact.
+                Digits or words, thousands separators and decimal commas; allow a unit typo with
+                <code>fuzzy</code>.
               </p>
             </li>
           </ul>
@@ -929,7 +930,7 @@ if (result) {
 
             <p class="measure">
               Adapt the parser to your field: restrict its type, convert the result, accept a number
-              without a unit, or handle a misspelled unit name.
+              without a unit, or allow spelling errors.
             </p>
             <nav class="local-index" aria-label="Usage tasks">
               <p class="local-index-label" aria-hidden="true">Tasks</p>
@@ -1291,9 +1292,11 @@ const rejected = parseMeasurement(
                   ></a>
                 </div>
                 <p>
-                  Unit names must be exact. A misspelled unit name returns <code>null</code>, so ask
-                  the user to fix the entry and submit it again. The parser doesn't suggest
-                  corrections or change numbers.
+                  Set <a href="#parse-options"><code>fuzzy: true</code></a> to read a unit name that
+                  has one spelling error. Without it, a unit name must be exact, so the same text
+                  returns <code>null</code>. One letter added, removed or changed is one error, and
+                  a word with two errors matches nothing. <a href="#limits">Limits</a> says what
+                  fuzzy matching can get wrong.
                 </p>
                 <div class="code on-code">
                   <div class="code-head">
@@ -1319,11 +1322,8 @@ const rejected = parseMeasurement(
                     class="code-wide"
                     tabindex="0"
                     data-returns
-                  ><code class="language-typescript">const result = parseMeasurement('5 foots 10 inc');
-/* ✓ Returns: null */
-
-// After the user fixes the entry
-const strict = parseMeasurement('5 foot 10 inches');
+                  ><code class="language-typescript">// With fuzzy matching
+const result = parseMeasurement('5 foots 10 inc', { fuzzy: true });
 /* ✓ Returns:
 {
   value: 70,
@@ -1333,19 +1333,25 @@ const strict = parseMeasurement('5 foot 10 inches');
     { value: 5, unit: 'ft' },
     { value: 10, unit: 'in' }
   ],
-  raw: '5 foot 10 inches'
+  raw: '5 foots 10 inc'
 }
-*/</code></pre>
+*/
+
+// Without it
+const strict = parseMeasurement('5 foots 10 inc');
+/* ✓ Returns: null */</code></pre>
                   <pre
                     class="code-narrow"
                     tabindex="0"
-                  ><code class="language-typescript">const result = parseMeasurement(
+                  ><code class="language-typescript">// With fuzzy matching
+const result = parseMeasurement(
   '5 foots 10 inc',
+  { fuzzy: true },
 );
 
-// After the user fixes the entry
+// Without it
 const strict = parseMeasurement(
-  '5 foot 10 inches',
+  '5 foots 10 inc',
 );</code></pre>
                   <div class="returns">
                     <div class="returns-label">
@@ -1354,12 +1360,12 @@ const strict = parseMeasurement(
                     </div>
                     <div class="summary-grid">
                       <p class="summary">
-                        <span class="summary-key">result</span><span class="is-null">null</span
-                        ><span class="summary-note">misspelled unit name</span>
+                        <span class="summary-key">result</span><span><b>70</b> in</span
+                        ><span class="summary-note">unit names read with errors</span>
                       </p>
                       <p class="summary">
-                        <span class="summary-key">strict</span><span><b>70</b> in</span
-                        ><span class="summary-note">after the user fixes it</span>
+                        <span class="summary-key">strict</span><span class="is-null">null</span
+                        ><span class="summary-note">unit names must be exact</span>
                       </p>
                     </div>
                   </div>
@@ -1407,10 +1413,10 @@ const strict = parseMeasurement(
                 throws when defined, including <code>false</code>. An explicitly
                 <code>undefined</code> property is absent. Use <code>defaultUnit: 'in'</code> or
                 <code>'lb'</code> for imperial fields, <code>'kg'</code> for metric weight, and
-                choose <code>'m'</code> or <code>'cm'</code> explicitly for metric height. The
-                removed <code>fuzziness</code> option throws too, for any defined value including
-                <code>0</code> and <code>false</code>; an <code>undefined</code> value is absent.
-                Remove it, and use exact unit names.
+                choose <code>'m'</code> or <code>'cm'</code> explicitly for metric height.
+                <code>fuzziness</code> is retired too: any defined value throws. Replace
+                <code>fuzziness: 1</code> or <code>2</code> with <code>fuzzy: true</code>, which
+                reads one spelling error.
               </p>
               <div class="api-card">
                 <p class="decl">
@@ -1517,6 +1523,30 @@ const strict = parseMeasurement(
                           <code>5-11</code> still needs <code>type</code>. This option never
                           supplies a source unit for a bare number.
                         </dd>
+                      </div>
+                    </dl>
+                  </dd>
+                </div>
+                <div id="option-fuzzy">
+                  <dt>
+                    <a class="name" href="#option-fuzzy">fuzzy?</a><span class="type">boolean</span>
+                  </dt>
+                  <dd>
+                    <dl class="option-facts">
+                      <div>
+                        <dt>Purpose</dt>
+                        <dd>
+                          Read a unit name with one spelling error. See
+                          <a href="#ex-fuzzy">Spelling errors in units</a>.
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Default</dt>
+                        <dd><code>false</code> — unit names must be exact.</dd>
+                      </div>
+                      <div>
+                        <dt>Constraints</dt>
+                        <dd><code>true</code> or <code>false</code>. Other values throw.</dd>
                       </div>
                     </dl>
                   </dd>
@@ -1699,7 +1729,7 @@ const strict = parseMeasurement(
             <p class="measure">
               Input can use any spelling listed here. Results always use the short unit name.
             </p>
-            <!-- cspell:ignore centimetre centimetres -->
+            <!-- cspell:ignore centimetre centimetres kilogramme kilogrammes -->
             <div class="table-wrap mt-md">
               <table class="units">
                 <thead>
@@ -1892,8 +1922,8 @@ const strict = parseMeasurement(
                     <code>I'm five foot eleven tall</code> and <code>about 180 cm</code> are
                     supported. Unrelated prose is not: <code>Top 10 in the class</code> returns
                     <code>null</code>. Quotation marks and brackets around the entry or a number are
-                    not supported either: <code>(180 cm)</code> returns <code>null</code>. Unit
-                    names must be exact.
+                    not supported either: <code>(180 cm)</code> returns <code>null</code>. Fuzzy
+                    matching does not discard leftover text.
                   </p>
                 </div>
               </div>
@@ -1932,8 +1962,8 @@ const strict = parseMeasurement(
                     by the field.
                   </li>
                   <li>
-                    A unit name has a spelling error. Ask the user to fix it and submit the entry
-                    again. See <a href="#ex-fuzzy">Spelling errors in units</a>.
+                    A unit name has a spelling error. Set
+                    <a href="#ex-fuzzy"><code>fuzzy: true</code></a> to read one error.
                   </li>
                   <li>
                     The text has a range, duplicate measurements, an incomplete fragment or

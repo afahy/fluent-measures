@@ -235,11 +235,11 @@ describe('compact units and metric height shorthand', () => {
     expect(parseMeasurement(raw)).toMatchObject({ value: 71, unit: 'in' });
   });
 
-  it('keeps short plurals exact without typo acceptance', () => {
-    expect(parseMeasurement('kgs seventy')).toMatchObject({ value: 70, unit: 'kg' });
-    expect(parseMeasurement('cms 175')).toMatchObject({ value: 175, unit: 'cm' });
-    expect(parseMeasurement('70 kgsx')).toBeNull();
-    expect(parseMeasurement('175 cmsx')).toBeNull();
+  it.each([false, true])('keeps short plurals exact with fuzzy %s', fuzzy => {
+    expect(parseMeasurement('kgs seventy', { fuzzy })).toMatchObject({ value: 70, unit: 'kg' });
+    expect(parseMeasurement('cms 175', { fuzzy })).toMatchObject({ value: 175, unit: 'cm' });
+    expect(parseMeasurement('70 kgsx', { fuzzy })).toBeNull();
+    expect(parseMeasurement('175 cmsx', { fuzzy })).toBeNull();
   });
 
   // Composition with the merged spoken-decimal and numeric-range rules. Expectations use

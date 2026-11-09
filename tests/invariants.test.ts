@@ -88,13 +88,15 @@ const options: fc.Arbitrary<ParseOptions> = fc
     withUnit: fc.boolean(),
     withDefault: fc.boolean(),
     defaultAt: fc.nat(3),
+    fuzzy: fc.option(fc.boolean(), { nil: undefined }),
   })
-  .map(({ type, unitType, unitAt, withUnit, withDefault, defaultAt }) => {
+  .map(({ type, unitType, unitAt, withUnit, withDefault, defaultAt, fuzzy }) => {
     const units = UNITS[type ?? unitType];
     return {
       type,
       normalizedUnit: withUnit ? units[unitAt % units.length] : undefined,
       defaultUnit: withDefault ? units[defaultAt % units.length] : undefined,
+      fuzzy,
     };
   });
 

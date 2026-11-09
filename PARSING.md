@@ -6,7 +6,7 @@ use, see the [README](https://github.com/afahy/fluent-measures/blob/main/README.
 The examples in this file and in the README are the public specification. A test checks each
 result that they show.
 
-<!-- cspell:ignore centimetre centimetres -->
+<!-- cspell:ignore centimetre centimetres kilogramme kilogrammes kilgrm -->
 
 ## Complete Entries
 
@@ -308,21 +308,34 @@ number cannot be discarded to apply a default: `about 80`, `(80)`, `80;` and `80
 `null` with a kilogram default. `allowUnqualified` and `inferUnit` are removed; passing a defined
 value throws a migration error. See the README for validation order and migration.
 
-## Exact Unit Names
+## Fuzzy Matching
 
-A unit name must be one of the units or aliases in the README's Supported units, in any letter
-case, or a feet or inch mark. `kilogramme` and `kilogrammes` are kilogram aliases, like `kg`,
-`kgs`, `kilo`, `kilos`, `kilogram` and `kilograms`. Near spellings such as `kilgrm`, `foots`,
-`inc`, `fees`, `ponds` and `kilns` are not aliases. A misspelled unit name makes the whole entry
-`null`, even when another part of the entry has an exact unit name.
+Set `fuzzy: true` to read a unit name that has one spelling error. One error is one letter added,
+removed or changed. These rules apply:
+
+- An exact unit name always wins.
+- A word must start with the same letter as the unit name.
+- A unit name must have four or more letters to match with an error. Shorter names, such as `ft`,
+  `cms` and `lbs`, match only when they are exact.
+- The British spellings `centimetre`, `centimetres`, `metre`, `metres`, `kilogramme` and
+  `kilogrammes` match only when they are exact.
+- The words `feat`, `fee`, `feed`, `feel`, `fees`, `felt`, `fleet`, `font`, `food`, `fool`, `footy`,
+  `fort`, `fret`, `inca`, `inched`, `incl`, `incr`, `itch`, `itches`, `kill`, `kills`, `kiln`,
+  `kilns`, `kilt`, `kilts`, `meteor`, `meteors`, `miter` and `miters` never match. They are English
+  words one error from a unit name that often come near a number.
+  `tests/fixtures/unitTypos/englishWords.json` lists every English word one error from a unit name,
+  with the reason each one is blocked or allowed. `ponds`, for example, is allowed and reads as
+  `lb`.
+- If a word is one error from two unit names, the first unit in this order wins: `ft`, `in`, `cm`
+  and `m` for height, and `lb` and `kg` for weight.
+
+A word with two errors, such as `kilgrm`, matches nothing. These rules prevent many wrong matches.
+But fuzzy matching can still read an ordinary word as a unit.
 
 ```typescript
-parseMeasurement('5 foots 10 inc'); // null
-parseMeasurement('5 foot 10 inches'); // { value: 70, unit: 'in', ... }
-parseMeasurement('95 kilogrammes'); // { value: 95, unit: 'kg', ... }
+parseMeasurement('5 foots 10 inc', { fuzzy: true }); // { value: 70, unit: 'in', ... }
+parseMeasurement('5 foots 10 inc'); // null: without fuzzy, unit names must be exact
+parseMeasurement('5 foot 10 inches', { fuzzy: true }); // { value: 70, unit: 'in', ... }: exact names still match
 ```
 
-The parser doesn't suggest corrections or change a number to fix the text. After a `null`
-result, the user fixes the entry and submits all of it again. The `fuzziness` option is removed:
-any defined value throws a migration error, including the values that used to turn fuzzy
-matching off. An `undefined` value is absent. The README gives the order of the option checks.
+`fuzziness` is retired. Any defined value throws a migration error that names `fuzzy: true`.

@@ -10,6 +10,11 @@ export interface ParseOptions {
   maxLength?: number;
   type?: MeasurementType;
   /**
+   * Read a unit name with one spelling error, such as "foots" or "ponds". Unit names of four or
+   * more letters only. Without it, unit names must be exact. Must be true or false when supplied.
+   */
+  fuzzy?: boolean;
+  /**
    * Source unit for one complete unwrapped number. Without it, a bare number is rejected.
    * Explicit units win. This unit never depends on the number's magnitude or normalizedUnit.
    * Must match the dimension selected by type or normalizedUnit, if either is supplied.

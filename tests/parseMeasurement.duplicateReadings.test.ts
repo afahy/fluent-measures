@@ -10,7 +10,7 @@ describe('duplicate reading policy', () => {
     ['70 kg (154 lbs)', { normalizedUnit: 'lb' }],
     ['70 kg; 70 kg', {}],
     ['kg: 70, lb: 154', {}],
-    ['70 kilogams (154 pounds)', {}],
+    ['70 kilogams (154 pounds)', { fuzzy: true }],
     ['100 cm (101 cm)', { normalizedUnit: 'm' }],
     ['6 ft (72 in)', { type: 'height' }],
     ['0.5 m (50 cm)', {}],

@@ -129,7 +129,21 @@ const cases: ReadmeCase[] = [
       raw: '72',
     },
   },
-  { section: 'Usage', input: '5 foots 10 inc', expected: null },
+  {
+    section: 'Usage',
+    input: '5 foots 10 inc',
+    options: { fuzzy: true },
+    expected: {
+      value: 70,
+      unit: 'in',
+      type: 'height',
+      matches: [
+        { value: 5, unit: 'ft' },
+        { value: 10, unit: 'in' },
+      ],
+      raw: '5 foots 10 inc',
+    },
+  },
   { section: 'Usage', input: 'not a measurement', expected: null },
   { section: 'Limits', input: '12st 4lb', expected: null },
   { section: 'Limits', input: '150-180 lbs', expected: null },
@@ -337,9 +351,19 @@ const cases: ReadmeCase[] = [
       raw: '72',
     },
   },
-  { section: 'Exact Unit Names', input: '5 foots 10 inc', expected: null },
-  { section: 'Exact Unit Names', input: '5 foot 10 inches', expected: { value: 70, unit: 'in' } },
-  { section: 'Exact Unit Names', input: '95 kilogrammes', expected: { value: 95, unit: 'kg' } },
+  {
+    section: 'Fuzzy Matching',
+    input: '5 foots 10 inc',
+    options: { fuzzy: true },
+    expected: { value: 70, unit: 'in' },
+  },
+  { section: 'Fuzzy Matching', input: '5 foots 10 inc', expected: null },
+  {
+    section: 'Fuzzy Matching',
+    input: '5 foot 10 inches',
+    options: { fuzzy: true },
+    expected: { value: 70, unit: 'in' },
+  },
 ];
 
 // Results that the README and PARSING.md state in their prose. A test can't find prose examples

@@ -35,5 +35,5 @@ These tests check every feature, so no feature file lists them: `tests/corpus.te
 - [More than one measurement](multiple-measurements.md)
 - [Conversion to one unit](conversion.md)
 - [Numbers with no unit](unqualified.md)
-- [Exact unit names](fuzzy-matching.md)
+- [Unit names with spelling errors](fuzzy-matching.md)
 - [Input type and length limits](input-limits.md)
