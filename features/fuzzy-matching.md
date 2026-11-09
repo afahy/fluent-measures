@@ -1,32 +1,36 @@
-# Unit names with spelling errors
+# Exact unit names
 
 ## What it does
 
-With `fuzziness`, the user gets a measurement from a unit name that has spelling errors. Without
-it, a unit name must be exact.
+The user gets a measurement only when each unit name is a listed unit or alias. A misspelled unit
+name returns `null`, and the user fixes the entry and submits it again. The parser doesn't
+suggest corrections or change numbers.
 
 ## How a user reaches it
 
-- `fuzziness: 1` or `fuzziness: 2`: `5 foots 10 inc`.
-- A fraction between 0 and 2, such as `fuzziness: 1.5`, which allows as many errors as its whole
-  part.
-- A `fuzziness` that isn't a finite number above 0, such as `0`, `NaN`, a negative value or
-  `Infinity`, which turns fuzzy matching off: `5 foots 10 inc`.
-- An exact name with `fuzziness`, which still matches.
-- Words that are near a unit name and never match: `food`, `kill`.
+- An exact alias in any letter case, including `kilogramme` and `kilogrammes`: `95 kilogrammes`.
+- A misspelled unit name: `5 foots 10 inc`, `70.50 kilgrm` and `6 feat` return `null`.
+- An ordinary word near a unit name: `I paid 5 fees`, `we visited 2 ponds` and
+  `the studio has 2 kilns` return `null`.
+- A misspelled unit name beside a valid measurement, as in `5 ft; 70 kilgrm` with
+  `type: 'height'`: `null`.
+- The entry that the user fixed: `5 foot 10 inches` is 70 in.
+- A defined `fuzziness`, even `0`, `false` or `Infinity`, throws. An `undefined` value is absent.
 - `import` and `require`.
 
 ## Where the rules are
 
 - README.md, "Usage"
-- PARSING.md, "Fuzzy Matching"
+- README.md, "API reference"
+- PARSING.md, "Exact Unit Names"
 
 ## How to verify it
 
-- Source: `src/matchUnit.ts`, `src/levenshtein.ts`
-- Tests: `tests/parseMeasurement.completeEntry.test.ts`, `tests/parseMeasurement.completeEntryWork.test.ts`, `tests/numberReading.test.ts`, `tests/parseMeasurement.signedOtherTypeOwnership.test.ts`, `tests/parseMeasurement.signedWeightOwnership.test.ts`, `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.fuzzyUnits.test.ts`, `tests/matchUnit.closest.test.ts`, `tests/parseMeasurement.calculator.test.ts`, `tests/parseMeasurement.wordedRanges.test.ts`,
-  `tests/parseMeasurement.numberWordCommas.test.ts`, `tests/parseMeasurement.commaBetweenWords.test.ts`,
-  `tests/levenshtein.test.ts`
+- Source: `src/matchUnit.ts`, `src/units.ts`, `src/parseMeasurement.ts`
+- Tests: `tests/parseMeasurement.completeEntry.test.ts`, `tests/parseMeasurement.completeEntryWork.test.ts`, `tests/numberReading.test.ts`, `tests/parseMeasurement.signedOtherTypeOwnership.test.ts`, `tests/parseMeasurement.signedWeightOwnership.test.ts`, `tests/parseMeasurement.rangeUnits.test.ts`, `tests/parseMeasurement.fuzzyUnits.test.ts`, `tests/matchUnit.test.ts`, `tests/parseMeasurement.calculator.test.ts`, `tests/parseMeasurement.wordedRanges.test.ts`,
+  `tests/parseMeasurement.numberWordCommas.test.ts`, `tests/parseMeasurement.commaBetweenWords.test.ts`
 - Properties: "generated single measurements" in `tests/properties.test.ts`
-- Properties: "generated numeric fuzziness boundaries" in `tests/properties.test.ts`
 - Corpus categories: `typos`
+
+AFA-253 replaced fuzzy matching with exact unit names, by the maintainer's decision. This
+overrides AFA-216, which kept the fuzzy example `5 foots 10 inc` with `fuzziness: 2` as 70 in.

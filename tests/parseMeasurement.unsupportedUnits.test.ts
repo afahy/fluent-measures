@@ -49,8 +49,8 @@ describe('unsupported weight units', () => {
     expect(parseMeasurement('12 st 4lb', { type: 'weight' })).toBeNull();
   });
 
-  it('returns null with fuzziness too', () => {
-    expect(parseMeasurement('7 lb 8 oz', { fuzziness: 2 })).toBeNull();
+  it('returns null without accepting unsupported parts', () => {
+    expect(parseMeasurement('7 lb 8 oz', {})).toBeNull();
   });
 
   it('still returns null for an unsupported unit on its own', () => {

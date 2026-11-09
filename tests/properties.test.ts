@@ -1,5 +1,4 @@
 import fc from 'fast-check';
-import { readFileSync } from 'node:fs';
 import { env } from 'node:process';
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement, type ParseOptions, type Unit } from '../src';
@@ -253,49 +252,33 @@ describe('generated single measurements', () => {
     );
   });
 
-  it('reads a unit name with one spelling error only with fuzziness', () => {
+  it('rejects a generated spelling that is not an exact alias', () => {
     expect.hasAssertions();
-    // PARSING.md, "Fuzzy Matching": the word starts with the unit name's letter. The errors are
-    // fewer than a third of the name's length. Names of three characters or fewer and the British
-    // spellings match only when exact. Some words never match.
-    // The words that never match come from PARSING.md, the specification. A fix that stops
-    // another word from matching adds it to that list, and this test follows the list.
-    const never = /The words ([^.]*) never match/.exec(readFileSync('PARSING.md', 'utf8'))?.[1];
-    const NEVER = new Set([...(never ?? '').matchAll(/`([a-z]+)`/g)].map(([, word]) => word));
-    expect([...NEVER]).toContain('food');
-    const LONG_NAMES = UNITS.flatMap(unit =>
-      NAMES[unit]
-        .filter(name => name.length > 3 && !name.includes('tre'))
-        .map(name => ({ unit, name }))
-    );
-    const EXACT = new Set(UNITS.flatMap(unit => NAMES[unit]));
+    // Test-owned public aliases, independent of the production lookup. A one-letter edit that
+    // happens to make another exact alias is not a misspelling under the approved policy.
+    const names = UNITS.flatMap(unit => NAMES[unit].map(name => ({ unit, name })));
+    const exact = new Set(UNITS.flatMap(unit => NAMES[unit]));
     const misspelled = fc
       .record({
-        found: fc.constantFrom(...LONG_NAMES),
+        found: fc.constantFrom(...names),
         edit: fc.constantFrom('change', 'add', 'remove'),
         at: fc.nat(),
         letter: fc.constantFrom(...'abcdefghijklmnopqrstuvwxyz'),
       })
       .map(({ found, edit, at, letter }) => {
-        // The first letter stays the same. An added letter can also go after the last one.
-        const position = 1 + (at % (found.name.length - (edit === 'add' ? 0 : 1)));
+        const position = at % (found.name.length + (edit === 'add' ? 1 : 0));
         const before = found.name.slice(0, position);
-        const after = found.name.slice(position);
+        const rest = found.name.slice(position);
         const word =
           edit === 'add'
-            ? before + letter + after
-            : before + (edit === 'change' ? letter : '') + after.slice(1);
+            ? before + letter + rest
+            : before + (edit === 'change' ? letter : '') + rest.slice(1);
         return { ...found, word };
       })
-      .filter(({ word }) => !EXACT.has(word) && !NEVER.has(word));
+      .filter(({ word }) => word.length > 0 && !exact.has(word));
     fc.assert(
       fc.property(fc.integer({ min: 1, max: 300 }), misspelled, (value, { unit, word }) => {
-        const raw = `${value} ${word}`;
-        const options: ParseOptions = { type: TYPES[unit] };
-        expect(parseMeasurement(raw, options)).toBeNull();
-        const result = parseMeasurement(raw, { ...options, fuzziness: 1 });
-        expect(result?.unit).toBe(unit);
-        expect(result?.value).toBe(value);
+        expect(parseMeasurement(`${value} ${word}`, { type: TYPES[unit] })).toBeNull();
       }),
       RUNS
     );
@@ -667,50 +650,5 @@ describe('generated normalized type selection', () => {
   });
 });
 
-describe('generated numeric fuzziness boundaries', () => {
-  // fuzzyUnits.test.ts and features/fuzzy-matching.md. The second column is the allowed number
-  // of edits, independently specified here, not calculated by production option handling.
-  it.each([
-    [Infinity, 0],
-    [-Infinity, 0],
-    [NaN, 0],
-    [0, 0],
-    [-0, 0],
-    [-1, 0],
-    [-0.5, 0],
-    [Number.MIN_VALUE, 0],
-    [0.5, 0],
-    [1 - Number.EPSILON, 0],
-    [1, 1],
-    [1.5, 1],
-    [2 - Number.EPSILON, 1],
-    [2, 2],
-  ])('allows the specified edits with fuzziness %s', (fuzziness, edits) => {
-    expect.hasAssertions();
-    fc.assert(
-      fc.property(amount, measurement, (value, { unit, name }) => {
-        expectQuantity(`${value} ${name}`, { value, unit }, { fuzziness });
-        // "foots" adds s to foot; "kilgrm" deletes o and a from kilogram. Each is unambiguous
-        // and satisfies the name-length and first-letter rules in PARSING.md.
-        for (const [word, typoUnit, distance] of [
-          ['foots', 'ft', 1],
-          ['kilgrm', 'kg', 2],
-        ] as const) {
-          const raw = `${value} ${word}`;
-          const expected =
-            edits >= distance
-              ? {
-                  value,
-                  unit: typoUnit,
-                  type: TYPES[typoUnit],
-                  raw,
-                  matches: [{ value, unit: typoUnit }],
-                }
-              : null;
-          expect(parseMeasurement(raw, { fuzziness })).toEqual(expected);
-        }
-      }),
-      SEMANTIC_RUNS
-    );
-  });
-});
+// AFA-253: all 14 former numeric budget values remain deterministic retirement controls
+// in parseMeasurement.fuzzyUnits.test.ts; exact generated quantities above still exercise aliases.

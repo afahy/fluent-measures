@@ -52,8 +52,8 @@ describe('commas between number words', () => {
     expect(parseMeasurement(raw)).toBeNull();
   });
 
-  it('rejects comma fragments with fuzzy units and normalization', () => {
-    expect(parseMeasurement('two, thirty poundz', { fuzziness: 1 })).toBeNull();
+  it('rejects comma fragments with unlisted units and normalization', () => {
+    expect(parseMeasurement('two, thirty poundz', {})).toBeNull();
     // 30 lb × 0.45359237 kg/lb = 13.6077711 kg.
     const converted = parseMeasurement('two, thirty pounds', { normalizedUnit: 'kg' });
     expect(converted).toBeNull();

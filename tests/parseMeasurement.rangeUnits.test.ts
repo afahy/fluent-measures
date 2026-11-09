@@ -132,7 +132,7 @@ describe('units next to an omitted numeric range', () => {
     ['50-70; kg, 180 lbs', {}],
     ['150-180;;; lbs 70 kg', {}],
     ['1-2; ft 6 in', { normalizedUnit: 'cm' }],
-    ['150-180; poundz 70 kg', { fuzziness: 1 }],
+    ['150-180; poundz 70 kg', {}],
     ['150-180; pounds seventy kilograms', {}],
     ['150–180; lbs 70 kg', {}],
   ] as const)('rejects the complete entry %s (AFA-250)', (raw, options) => {
@@ -170,7 +170,7 @@ describe('units next to an omitted numeric range', () => {
     ['record 0; kg 70 1-2 ft 6 in', {}],
     ['0 kg 6 1-2 ft 3 in', {}],
     ['kg 70 1-2; ft 6; in', {}],
-    ['poundz 70 1-2 ft 6 in', { fuzziness: 1 }],
+    ['poundz 70 1-2 ft 6 in', {}],
   ] as const)('rejects the complete entry %s (AFA-250)', (raw, options) => {
     expect(parseMeasurement(raw, options)).toBeNull();
   });
@@ -232,8 +232,8 @@ describe('units next to an omitted numeric range', () => {
   );
 
   it('rejects ranges even when their units match fuzzily', () => {
-    expect(parseMeasurement('150-180 poundz 70 kg', { fuzziness: 1 })).toBeNull();
-    expect(parseMeasurement('poundz 150-180 70 kg', { fuzziness: 1 })).toBeNull();
+    expect(parseMeasurement('150-180 poundz 70 kg', {})).toBeNull();
+    expect(parseMeasurement('poundz 150-180 70 kg', {})).toBeNull();
   });
 
   it('rejects range recovery even when normalization is requested', () => {

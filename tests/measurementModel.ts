@@ -30,10 +30,10 @@ export function convert(value: number, from: Unit, to: Unit): number {
 export const NAMES: Record<Unit, readonly string[]> = {
   ft: ['ft', 'feet', 'foot'],
   in: ['in', 'inch', 'inches'],
-  cm: ['cm', 'centimeter', 'centimeters', 'centimetre', 'centimetres'],
+  cm: ['cm', 'cms', 'centimeter', 'centimeters', 'centimetre', 'centimetres'],
   m: ['m', 'meter', 'meters', 'metre', 'metres'],
   lb: ['lb', 'lbs', 'pound', 'pounds'],
-  kg: ['kg', 'kilo', 'kilos', 'kilogram', 'kilograms'],
+  kg: ['kg', 'kgs', 'kilo', 'kilos', 'kilogram', 'kilograms', 'kilogramme', 'kilogrammes'],
 };
 
 const ONES = [

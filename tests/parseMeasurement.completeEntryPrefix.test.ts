@@ -68,7 +68,9 @@ describe('complete prefix ownership controls', () => {
         matches: [{ value: weight, unit: weightUnit }],
       });
       expect(parseMeasurement(raw)).toBeNull();
-      expect(parseMeasurement(raw, { fuzziness: 2 })).toBeNull();
+      const retired = { fuzziness: 2 } as unknown as ParseOptions;
+      expect(() => parseMeasurement(raw, retired)).toThrow(Error);
+      expect(() => parseMeasurement(raw, retired)).toThrow(/fuzziness/);
     }
   );
 

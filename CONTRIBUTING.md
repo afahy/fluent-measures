@@ -342,7 +342,7 @@ The main entry point for parsing measurements. It processes input strings to ext
 
 ### matchUnit.ts
 
-Responsible for identifying and matching unit strings in the input (e.g., "ft", "cm", "lbs", etc.) with support for fuzzy matching.
+Matches exact unit aliases in the input, such as "ft", "cm" and "lbs". Unknown spellings return null.
 
 ### tokenize.ts
 
@@ -355,10 +355,6 @@ Contains unit definitions, aliases, and conversion functions between different u
 ### wordsToNumber.ts
 
 Parses spelled-out numbers into their numeric form (e.g., "eighty-five" → 85).
-
-### levenshtein.ts
-
-Provides fuzzy string matching capabilities using Levenshtein distance algorithm.
 
 ## Testing
 

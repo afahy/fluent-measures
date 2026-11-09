@@ -61,7 +61,8 @@ const OPTION_SETS: readonly (readonly [name: string, options: ParseOptions])[] =
   ['h', { type: 'height' }],
   ['w', { type: 'weight' }],
   ['cm', { normalizedUnit: 'cm' }],
-  ['f2', { fuzziness: 2 }],
+  // Retain the historical calls so changed-result evidence exposes the retired option.
+  ['f2', { fuzziness: 2 } as unknown as ParseOptions],
   ['hu', { type: 'height', defaultUnit: 'cm' }],
 ];
 
@@ -124,7 +125,8 @@ function describeResult(raw: string, options: ParseOptions): string {
     const parts = result.matches.map(({ value, unit }) => `${value} ${unit}`).join(' + ');
     return `${total} ${result.type}${parts === total ? '' : ` = ${parts}`}`;
   } catch (error) {
-    return `throws: ${error instanceof Error ? error.message : String(error)}`;
+    // Error wording is not a specified result. Public regressions check the class and option name.
+    return `throws: ${error instanceof Error ? error.name : typeof error}`;
   }
 }
 

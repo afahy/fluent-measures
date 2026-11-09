@@ -308,28 +308,21 @@ number cannot be discarded to apply a default: `about 80`, `(80)`, `80;` and `80
 `null` with a kilogram default. `allowUnqualified` and `inferUnit` are removed; passing a defined
 value throws a migration error. See the README for validation order and migration.
 
-## Fuzzy Matching
+## Exact Unit Names
 
-Set `fuzziness` to 1 or 2 to read unit names that have spelling errors. The value is the largest
-number of spelling errors in a word. Each letter that is added, removed or changed is one error.
-These rules apply:
-
-- An exact unit name always wins.
-- A word must start with the same letter as the unit name.
-- The number of errors must be less than a third of the length of the unit name.
-- A unit name of three characters or fewer matches only when it is exact.
-- The British spellings `centimetre`, `centimetres`, `metre` and `metres` match only when they are
-  exact.
-- The words `food`, `feel`, `feed`, `fool`, `kill` and `kills` never match. They are too near to
-  `foot`, `feet`, `kilo` and `kilos`.
-- The nearest unit name wins. If two unit names are equally near, the first unit in this order
-  wins: `ft`, `in`, `cm` and `m` for height, and `lb` and `kg` for weight.
-
-These rules prevent many wrong matches. But fuzzy matching can still read an ordinary word as a
-unit.
+A unit name must be one of the units or aliases in the README's Supported units, in any letter
+case, or a feet or inch mark. `kilogramme` and `kilogrammes` are kilogram aliases, like `kg`,
+`kgs`, `kilo`, `kilos`, `kilogram` and `kilograms`. Near spellings such as `kilgrm`, `foots`,
+`inc`, `fees`, `ponds` and `kilns` are not aliases. A misspelled unit name makes the whole entry
+`null`, even when another part of the entry has an exact unit name.
 
 ```typescript
-parseMeasurement('5 foots 10 inc', { fuzziness: 2 }); // { value: 70, unit: 'in', ... }
-parseMeasurement('5 foots 10 inc'); // null: without fuzziness, unit names must be exact
-parseMeasurement('5 foot 10 inches', { fuzziness: 1 }); // { value: 70, unit: 'in', ... }: exact names still match
+parseMeasurement('5 foots 10 inc'); // null
+parseMeasurement('5 foot 10 inches'); // { value: 70, unit: 'in', ... }
+parseMeasurement('95 kilogrammes'); // { value: 95, unit: 'kg', ... }
 ```
+
+The parser doesn't suggest corrections or change a number to fix the text. After a `null`
+result, the user fixes the entry and submits all of it again. The `fuzziness` option is removed:
+any defined value throws a migration error, including the values that used to turn fuzzy
+matching off. An `undefined` value is absent. The README gives the order of the option checks.

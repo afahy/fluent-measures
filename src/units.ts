@@ -10,7 +10,7 @@ export const UNIT_ALIASES: Record<MeasurementType, [Unit, ...string[]][]> = {
   ],
   weight: [
     ['lb', 'lbs', 'pound', 'pounds'],
-    ['kg', 'kgs', 'kilo', 'kilos', 'kilogram', 'kilograms'],
+    ['kg', 'kgs', 'kilo', 'kilos', 'kilogram', 'kilograms', 'kilogramme', 'kilogrammes'],
   ],
 };
 

@@ -1,35 +1,10 @@
-import { levenshtein } from './levenshtein';
 import { UNIT_ALIASES } from './units';
 import { MeasurementType, Unit } from './types';
 
-// The British spellings, which match only exactly, not as typos.
-const EXACT_ALIASES = new Set(['centimetre', 'centimetres', 'metre', 'metres']);
-
-/** Prefer exact aliases, then the closest typo that retains enough of the unit's spelling. */
-export function matchUnit(word: string, type: MeasurementType, fuzziness?: number): Unit | null {
-  // NaN and numbers of 0 or less match no typo, but Infinity would let any typo within the length
-  // rule below match. So Infinity turns fuzzy matching off too (AFA-189). Values outside the
-  // number type, such as "2", keep their results from before; AFA-178 is about them.
-  if (fuzziness === Infinity) fuzziness = 0;
-  let closestUnit: Unit | null = null;
+/** Read an exact alias; unknown spellings do not supply a unit. */
+export function matchUnit(word: string, type: MeasurementType): Unit | null {
   for (const aliases of UNIT_ALIASES[type]) {
-    for (const alias of aliases) {
-      if (word === alias) return aliases[0];
-      // Exclude common prose near foot/feet and kilo/kilos. Without the ^, a word with letters
-      // before these, such as "centimetfeel", is excluded too. Only a fuzziness of 3 or more could
-      // match such a word to a unit. The README gives 1 or 2, and AFA-178 asks about more.
-      if (!fuzziness || /^(f(oo|ee)[dl]|kills?)$/.test(word)) continue;
-      // British spellings match only exactly, so they add no fuzzy matches for prose such as "mere".
-      if (EXACT_ALIASES.has(alias)) continue;
-      if (word[0] !== alias[0]) continue;
-      const distance = levenshtein(word, alias);
-      // Keep edits below a third of the alias length; short abbreviations stay exact-only.
-      if (distance <= fuzziness && distance * 3 < alias.length) {
-        closestUnit = aliases[0];
-        // Only a strictly closer alias can replace this match; exact aliases still win.
-        fuzziness = distance - 1;
-      }
-    }
+    if (aliases.includes(word)) return aliases[0];
   }
-  return closestUnit;
+  return null;
 }

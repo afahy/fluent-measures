@@ -3477,3 +3477,27 @@ The table converts full-width forms, `㎝`, `㎏`, primes and acute accents. A m
 sign when no number comes before it. A curly closing quote after a number or a number word is a
 mark. `readNumber` takes the letter or quote mark before a run as context. A comma group of the
 wrong size still rejects the whole input.
+
+## AFA-253: exact unit aliases replace fuzzy acceptance
+
+Base: `daf8dbffac4d101c6f9be4f5ba2910eb587d51d0`, after AFA-250/265 complete-entry parsing,
+AFA-251 explicit defaults, AFA-277 wrapper removal and the AFA-88 tokenizer scan. Approval: AFA-253 comment
+`445fe6bc-5ea3-4efb-915d-e4f389dd6f8c`. This is a deliberate policy revision, including
+the AFA-216 fuzzy-success preservation override, not a reclassification of historical bugs.
+All earlier edit-distance, prose-exclusion and budget findings above retain their historical meaning.
+
+The unit slot accepts listed aliases exactly. `kilogramme` and `kilogrammes` are explicit
+`kg` aliases; unknown spellings provide no unit. The shared complete-entry grammar still
+validates the entire entry. `5 foots 10 inc` without options returns `null`; after an explicit
+user edit, `5 foot 10 inches` returns 70 in (5 × 12 + 10). No suggestions, numeric alteration
+or second parsing pass is introduced.
+
+A defined `fuzziness` raises a migration error after the older retired options and before
+dimension conflicts, length or text parsing. Undefined remains absent. This intentionally
+changes unmodified legacy calls even when their unit names are exact. The simple result
+shape and the AFA-251 source-default and output-unit policies remain unchanged.
+
+The edit-distance function, closest-alias ranking, distance budgets, first-letter/length
+heuristics and prose exclusions are removed. Direct tests of those retired algorithms
+retire with them; their real spellings remain exact-acceptance or rejection cases. Public
+regressions retain the former numeric budgets as migration-error cases.

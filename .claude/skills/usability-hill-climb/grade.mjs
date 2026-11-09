@@ -67,6 +67,20 @@ if (
     'answer key needs the AFA-279 T7 change (key v5); missing T7.predictNoOptions.expect. ' +
       'AFA-279 has the backup path and the hashes.'
   );
+// AFA-253 removed fuzzy matching, so the old T6 answer (71 in with fuzziness 1) can't be right.
+const t6 = key.tasks?.T6;
+if (
+  t6 &&
+  (t6.expect?.value !== null ||
+    t6.expect?.unit !== null ||
+    t6.expect?.withoutSetting !== null ||
+    t6.reference?.options?.fuzziness !== undefined)
+)
+  fail(
+    'answer key needs the AFA-253 T6 migration (key v6); T6 must expect null value, unit and ' +
+      'withoutSetting, with no fuzziness. See T6-key-migration.json in the validation-artifacts ' +
+      'packet; its path and SHA are in the AFA-253 PR description.'
+  );
 
 const near = (a, b, tolerance) => typeof a === 'number' && Math.abs(a - b) <= tolerance;
 const sameParts = (a, b) =>
@@ -119,7 +133,7 @@ if (mode === 'selfcheck') {
       r1?.type === 'height' &&
       sameParts(r1?.matches, t.T1.expect.result.matches)
   );
-  for (const id of ['T2', 'T3', 'T5', 'T6', 'T7', 'H1', 'H2']) {
+  for (const id of ['T2', 'T3', 'T5', 'T7', 'H1', 'H2']) {
     const { input, options } = t[id].reference;
     const got = call(lib, input, options);
     const want = t[id].expect;
@@ -128,11 +142,17 @@ if (mode === 'selfcheck') {
     if (id === 'T3') ok &&= sameParts(got.result?.matches, want.parts);
     check(id, got, ok);
   }
+  const t6Call = call(lib, t.T6.reference.input, t.T6.reference.options);
+  check('T6', t6Call, !t6Call.threw && t6Call.result === null);
   check(
-    'T6 without fuzziness',
+    'T6 without options',
     call(lib, t.T6.reference.input).result,
     call(lib, t.T6.reference.input).result === null
   );
+  // A package from before AFA-253 also returns null above, but it reads fuzziness instead of
+  // throwing. This check tells the two packages apart.
+  const t6Fuzzy = call(lib, t.T6.reference.input, { fuzziness: 1 });
+  check('T6 fuzziness removed', t6Fuzzy, /fuzziness/.test(t6Fuzzy.threw ?? ''));
   const t7NoOptions = call(lib, t.T7.reference.input);
   check(
     'T7 without options',
@@ -279,6 +299,16 @@ if (mode === 'reviewer') {
         sameValue(a.predictions?.[input], want)
       );
       comprehension.predictionsRight = `${preds.filter(Boolean).length}/${preds.length}`;
+    } else if (id === 'T6') {
+      // No option reads a misspelled unit (AFA-253), so the unchanged text returns null.
+      const got = call(lib, a.input, a.options);
+      checks.input = a.input === spec.reference.input;
+      checks.call = got.threw ? `THROWS ${got.threw}` : (got.result ?? null);
+      checks.callOk = checks.input && !got.threw && got.result === null;
+      checks.reportedOk = a.value === null && a.unit === null;
+      checks.withoutSetting = a.withoutSetting === null;
+      correct = checks.callOk && checks.reportedOk && checks.withoutSetting;
+      partial = !correct && checks.callOk;
     } else {
       const got = call(lib, a.input, a.options);
       checks.call = got.threw
@@ -311,12 +341,6 @@ if (mode === 'reviewer') {
         comprehension.predict1_8Confidence = a.predict1_8Confidence ?? null;
         comprehension.confidentWrongPrediction =
           !comprehension.predict1_8Right && (a.predict1_8Confidence ?? 0) >= 4;
-      }
-      if (id === 'T6') {
-        checks.smallest = a.options?.fuzziness === want.fuzziness;
-        checks.withoutSetting = sameValue(a.withoutSetting, want.withoutSetting);
-        partial = correct && !checks.smallest;
-        correct &&= checks.smallest && checks.withoutSetting;
       }
       if (id === 'T7') {
         comprehension.predictNoOptions = a.predictNoOptions ?? null;

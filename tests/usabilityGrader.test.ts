@@ -272,3 +272,180 @@ describe('T7 no-options prediction', () => {
     );
   });
 });
+
+// Expected values come from the AFA-253 approval (comment 445fe6bc): unit names must be exact, so
+// `5 fet 11 inchs` returns null with no options, and a defined fuzziness throws. No setting reads
+// the text, so a correct answer passes it unchanged and reports null for value, unit and
+// withoutSetting.
+describe('T6 exact unit names', () => {
+  const t6 = {
+    reference: { input: '5 fet 11 inchs', options: {} },
+    expect: { value: null, unit: null, withoutSetting: null },
+    path: [],
+    benchmarkViews: 4,
+  };
+  // The v5 key's T6, from before AFA-253.
+  const oldT6 = {
+    reference: { input: '5 fet 11 inchs', options: { fuzziness: 1 } },
+    expect: { fuzziness: 1, value: 71, unit: 'in', withoutSetting: null },
+    path: [],
+    benchmarkViews: 4,
+  };
+  const t5 = {
+    reference: { input: '180', options: { defaultUnit: 'cm' } },
+    expect: { value: 180, unit: 'cm' },
+    predict1_8: prediction,
+    path: [],
+    benchmarkViews: 3,
+  };
+  const writeT6Key = (spec: unknown, extra: Record<string, unknown> = {}): void =>
+    writeFileSync(join(dir, 'key.json'), JSON.stringify({ tasks: { T5: t5, T6: spec, ...extra } }));
+  // A literal stand-in for the AFA-253 library. `5 feet 11 inches` is 5 * 12 + 11 = 71 in.
+  const exactLibrary = `exports.parseMeasurement = (input, options) => {
+    if (options?.fuzziness !== undefined) throw new Error('fuzziness was removed; use exact unit names');
+    return input === '5 feet 11 inches' ? { value: 71, unit: 'in' } : null;
+  };`;
+  const useLibrary = (source: string): void =>
+    writeFileSync(join(dir, 'sandbox/node_modules/@afahy/fluent-measures/index.cjs'), source);
+  type T6Grade = {
+    correct: boolean;
+    partial: boolean;
+    confidentWrong: boolean;
+    checks: Record<string, unknown>;
+  };
+  const gradeT6 = (answer: Record<string, unknown>): T6Grade => {
+    writeFileSync(join(dir, 'answers.json'), JSON.stringify({ tasks: { T6: answer } }));
+    const result = run();
+    expect(result.status).toBe(0);
+    return JSON.parse(readFileSync(join(dir, 'grade.json'), 'utf8')).tasks.T6;
+  };
+  const right = {
+    input: '5 fet 11 inchs',
+    options: {},
+    value: null,
+    unit: null,
+    withoutSetting: null,
+    confidence: 5,
+  };
+
+  beforeEach(() => {
+    useLibrary(exactLibrary);
+    writeT6Key(t6);
+  });
+
+  it.each(['selfcheck', 'reviewer'])('stops %s clearly for the old key', mode => {
+    writeT6Key(oldT6);
+    const result = run(mode);
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('AFA-253 T6 migration');
+    expect(result.stderr).toContain('T6-key-migration.json');
+    expect(result.stderr).not.toContain('TypeError');
+  });
+
+  it.each([
+    { field: 'value', spec: { ...t6, expect: { ...t6.expect, value: 71 } } },
+    { field: 'unit', spec: { ...t6, expect: { ...t6.expect, unit: 'in' } } },
+    { field: 'withoutSetting', spec: { ...t6, expect: { ...t6.expect, withoutSetting: 71 } } },
+    {
+      field: 'fuzziness',
+      spec: { ...t6, reference: { ...t6.reference, options: { fuzziness: 1 } } },
+    },
+  ])('stops for a key whose T6 $field is not migrated', ({ spec }) => {
+    writeT6Key(spec);
+    const result = run();
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('AFA-253 T6 migration');
+  });
+
+  it('accepts a key without T6', () => {
+    writeFileSync(join(dir, 'key.json'), JSON.stringify({ tasks: { T5: t5 } }));
+    writeFileSync(join(dir, 'answers.json'), JSON.stringify({ tasks: {} }));
+    expect(run().status).toBe(0);
+  });
+
+  it('marks the unchanged text with null results correct', () => {
+    const grade = gradeT6(right);
+    expect(grade.checks).toMatchObject({
+      input: true,
+      call: null,
+      callOk: true,
+      reportedOk: true,
+      withoutSetting: true,
+    });
+    expect(grade.correct).toBe(true);
+    expect(grade.partial).toBe(false);
+  });
+
+  it('marks a call with fuzziness wrong, and confident-wrong at confidence 5', () => {
+    const grade = gradeT6({ ...right, options: { fuzziness: 1 } });
+    expect(grade.checks.call).toMatch(/^THROWS .*fuzziness/);
+    expect(grade.checks.callOk).toBe(false);
+    expect(grade.correct).toBe(false);
+    expect(grade.partial).toBe(false);
+    expect(grade.confidentWrong).toBe(true);
+  });
+
+  it.each([
+    { input: '5 feet 11 inches', why: 'a corrected text that reads' },
+    { input: '5 fet 11 inches', why: 'a changed text that returns null too' },
+    { input: undefined, why: 'no input' },
+  ])('marks $why wrong', ({ input }) => {
+    const grade = gradeT6({ ...right, input });
+    expect(grade.checks.input).toBe(false);
+    expect(grade.checks.callOk).toBe(false);
+    expect(grade.correct).toBe(false);
+    expect(grade.partial).toBe(false);
+  });
+
+  it.each([
+    { value: 71, unit: 'in', withoutSetting: null, why: 'a corrected value' },
+    { value: 0, unit: '', withoutSetting: '', why: 'the template left blank' },
+    { value: null, unit: null, withoutSetting: '', why: 'a blank withoutSetting' },
+    { value: null, unit: null, withoutSetting: { value: 71, unit: 'in' }, why: 'a read text' },
+  ])('marks $why partial: the call works', ({ value, unit, withoutSetting }) => {
+    const grade = gradeT6({ ...right, value, unit, withoutSetting });
+    expect(grade.checks.callOk).toBe(true);
+    expect(grade.correct).toBe(false);
+    expect(grade.partial).toBe(true);
+    expect(grade.confidentWrong).toBe(false);
+  });
+
+  describe('selfcheck', () => {
+    // The rest of a full key, so that selfcheck reaches its T6 lines. Its other lines may fail.
+    const others = {
+      T1: { expect: { input: '6 ft', result: { matches: [] } } },
+      T2: { reference: { input: 'a' }, expect: { value: 1, unit: 'kg' } },
+      T3: { reference: { input: 'b' }, expect: { value: 1, unit: 'kg', parts: [] } },
+      T4: { reference: { options: {} }, functionCases: [], predictions: {} },
+      T7: {
+        reference: { input: 'c' },
+        expect: { value: 1, unit: 'kg' },
+        predictNoOptions: { expect: null },
+      },
+      H1: { reference: { input: 'd' }, expect: { value: 1, unit: 'kg' } },
+      H2: { reference: { input: 'e' }, expect: { value: 1, unit: 'kg' } },
+    };
+    const selfcheck = (): string => {
+      writeT6Key(t6, others);
+      return run('selfcheck').stdout;
+    };
+
+    it('passes its T6 lines for the AFA-253 package', () => {
+      const stdout = selfcheck();
+      expect(stdout).toMatch(/^ok {3}T6: \{"result":null\}$/m);
+      expect(stdout).toMatch(/^ok {3}T6 without options: null$/m);
+      expect(stdout).toMatch(/^ok {3}T6 fuzziness removed: .*fuzziness was removed/m);
+    });
+
+    it('fails only the fuzziness line for a package from before AFA-253', () => {
+      useLibrary(`exports.parseMeasurement = (input, options) =>
+        options?.fuzziness ? { value: 71, unit: 'in' } : null;`);
+      const stdout = selfcheck();
+      expect(stdout).toMatch(/^ok {3}T6: /m);
+      expect(stdout).toMatch(/^ok {3}T6 without options: null$/m);
+      expect(stdout).toMatch(
+        /^FAIL T6 fuzziness removed: \{"result":\{"value":71,"unit":"in"\}\}$/m
+      );
+    });
+  });
+});

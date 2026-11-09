@@ -612,6 +612,6 @@
     "input": "5 foots 10 inc",
     "options": {},
     "expected": null,
-    "basis": "PARSING Fuzzy Matching"
+    "basis": "PARSING Exact Unit Names"
   }
 ]

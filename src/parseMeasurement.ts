@@ -137,6 +137,9 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
       throw new Error(`${name} was removed; use defaultUnit`);
     }
   }
+  if ((options as Record<string, unknown>).fuzziness !== undefined) {
+    throw new Error('fuzziness was removed; use exact unit names');
+  }
   const unitType = normalizedUnit && UNIT_TYPES[normalizedUnit];
   if (requestedType && unitType && requestedType !== unitType) {
     throw new Error(`normalizedUnit ${normalizedUnit} is not a ${requestedType} unit`);
@@ -162,9 +165,7 @@ export function parseMeasurement(input: string, options: ParseOptions = {}): Par
     const word = text(at)?.replace(/\.$/, '');
     if (word === '′') return 'ft';
     if (word === '″') return 'in';
-    return word
-      ? matchUnit(word, 'height', options.fuzziness) || matchUnit(word, 'weight', options.fuzziness)
-      : null;
+    return word ? matchUnit(word, 'height') || matchUnit(word, 'weight') : null;
   };
 
   const bare = shorthand(tokens);

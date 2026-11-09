@@ -10,7 +10,10 @@
     "WCAG",
     "autoplay",
     "llms",
-    "multipoint"
+    "multipoint",
+    "kilogramme",
+    "kilogrammes",
+    "kilgrm"
   ],
   "flagWords": [],
   "useGitignore": true,

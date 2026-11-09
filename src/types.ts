@@ -9,7 +9,6 @@ export interface ParseOptions {
    */
   maxLength?: number;
   type?: MeasurementType;
-  fuzziness?: number;
   /**
    * Source unit for one complete unwrapped number. Without it, a bare number is rejected.
    * Explicit units win. This unit never depends on the number's magnitude or normalizedUnit.

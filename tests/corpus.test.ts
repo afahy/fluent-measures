@@ -44,9 +44,6 @@ const ENTRY_FIELDS = ['id', 'input', 'options', 'expected', 'category', 'source'
 const OPTION_CHECKS: Readonly<Record<keyof ParseOptions, (value: unknown) => boolean>> = {
   maxLength: value => typeof value === 'number' && value >= 1,
   type: value => value === null || value === 'height' || value === 'weight',
-  // The AFA-189 entries need Infinity, written as 1e999. NaN and -Infinity still fail ">= 0", so
-  // Infinity is the only value that the check accepts and Number.isFinite rejected.
-  fuzziness: value => typeof value === 'number' && value >= 0,
   defaultUnit: value => UNITS.has(value),
   normalizedUnit: value => value === null || UNITS.has(value),
 };
@@ -289,14 +286,14 @@ describe('corpus line checks', () => {
 
   it('reads a list of outcomes, options and a note', () => {
     const line =
-      '{"id":"multiple-1","input":"70 kg (154 lbs)","options":{"fuzziness":1},' +
+      '{"id":"multiple-1","input":"70 kg (154 lbs)","options":{"normalizedUnit":"kg"},' +
       '"expected":[{"value":70,"unit":"kg","type":"weight"},null],' +
       '"category":"multiple-measurements","source":"AFA-41","note":"conversion"}';
     expect(parseCorpus(line)).toEqual([
       {
         id: 'multiple-1',
         input: '70 kg (154 lbs)',
-        options: { fuzziness: 1 },
+        options: { normalizedUnit: 'kg' },
         expected: [{ value: 70, unit: 'kg', type: 'weight' }, null],
         category: 'multiple-measurements',
         source: 'AFA-41',
