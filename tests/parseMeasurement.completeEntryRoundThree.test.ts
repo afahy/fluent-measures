@@ -3,6 +3,8 @@ import { parseMeasurement, type ParseOptions, type MeasurementType, type Unit } 
 
 // AFA-250 third review: independently frozen PARSING expectations and hand arithmetic.
 // Preserve an earlier numeric failure boundary before a later conjunction; consume both parts.
+// AFA-277: quotation marks and brackets cannot surround an entry, a measurement of a pair or a
+// number. Each row with such a wrapper expects null.
 type Expected = [number, Unit, MeasurementType, Array<[number, Unit]>];
 const cases: Array<[string, ParseOptions, Expected | null]> = [
   [
@@ -10,44 +12,28 @@ const cases: Array<[string, ParseOptions, Expected | null]> = [
     {
       type: 'height',
     },
-    [
-      71,
-      'in',
-      'height',
-      [
-        [5, 'ft'],
-        [11, 'in'],
-      ],
-    ],
+    null,
   ],
   [
     'ft five eleven and (70 kg)',
     {
       type: 'weight',
     },
-    [70, 'kg', 'weight', [[70, 'kg']]],
+    null,
   ],
   [
     'ft five eleven and (70 kg)',
     {
       normalizedUnit: 'cm',
     },
-    [
-      180.34,
-      'cm',
-      'height',
-      [
-        [5, 'ft'],
-        [11, 'in'],
-      ],
-    ],
+    null,
   ],
   [
     'ft five eleven and (70 kg)',
     {
       normalizedUnit: 'kg',
     },
-    [70, 'kg', 'weight', [[70, 'kg']]],
+    null,
   ],
   [
     'ft five eleven and weight 70 kg',
@@ -133,7 +119,7 @@ const cases: Array<[string, ParseOptions, Expected | null]> = [
     {
       type: 'height',
     },
-    [5, 'ft', 'height', [[5, 'ft']]],
+    null,
   ],
   [
     'ft five and weight 70 kg',
@@ -149,44 +135,28 @@ const cases: Array<[string, ParseOptions, Expected | null]> = [
     {
       type: 'height',
     },
-    [
-      71,
-      'in',
-      'height',
-      [
-        [5, 'ft'],
-        [11, 'in'],
-      ],
-    ],
+    null,
   ],
   [
     'ft five eleven and [70 kg]',
     {
       type: 'weight',
     },
-    [70, 'kg', 'weight', [[70, 'kg']]],
+    null,
   ],
   [
     'ft five eleven and [70 kg]',
     {
       normalizedUnit: 'cm',
     },
-    [
-      180.34,
-      'cm',
-      'height',
-      [
-        [5, 'ft'],
-        [11, 'in'],
-      ],
-    ],
+    null,
   ],
   [
     'ft five eleven and [70 kg]',
     {
       normalizedUnit: 'kg',
     },
-    [70, 'kg', 'weight', [[70, 'kg']]],
+    null,
   ],
   [
     'ft five eleven and my weight is 70 kg',
@@ -281,44 +251,28 @@ const cases: Array<[string, ParseOptions, Expected | null]> = [
     {
       type: 'height',
     },
-    [
-      71,
-      'in',
-      'height',
-      [
-        [5, 'ft'],
-        [11, 'in'],
-      ],
-    ],
+    null,
   ],
   [
     'ft five eleven and (weight 70 kg)',
     {
       type: 'weight',
     },
-    [70, 'kg', 'weight', [[70, 'kg']]],
+    null,
   ],
   [
     'ft five eleven and (weight 70 kg)',
     {
       normalizedUnit: 'cm',
     },
-    [
-      180.34,
-      'cm',
-      'height',
-      [
-        [5, 'ft'],
-        [11, 'in'],
-      ],
-    ],
+    null,
   ],
   [
     'ft five eleven and (weight 70 kg)',
     {
       normalizedUnit: 'kg',
     },
-    [70, 'kg', 'weight', [[70, 'kg']]],
+    null,
   ],
   [
     'ft five eleven and kg seventy',
@@ -369,44 +323,28 @@ const cases: Array<[string, ParseOptions, Expected | null]> = [
     {
       type: 'height',
     },
-    [
-      71,
-      'in',
-      'height',
-      [
-        [5, 'ft'],
-        [11, 'in'],
-      ],
-    ],
+    null,
   ],
   [
     'ft five eleven and “70 kg”',
     {
       type: 'weight',
     },
-    [70, 'kg', 'weight', [[70, 'kg']]],
+    null,
   ],
   [
     'ft five eleven and “70 kg”',
     {
       normalizedUnit: 'cm',
     },
-    [
-      180.34,
-      'cm',
-      'height',
-      [
-        [5, 'ft'],
-        [11, 'in'],
-      ],
-    ],
+    null,
   ],
   [
     'ft five eleven and “70 kg”',
     {
       normalizedUnit: 'kg',
     },
-    [70, 'kg', 'weight', [[70, 'kg']]],
+    null,
   ],
   [
     'weight 70 kg and ft five eleven',
@@ -457,44 +395,28 @@ const cases: Array<[string, ParseOptions, Expected | null]> = [
     {
       type: 'height',
     },
-    [
-      71,
-      'in',
-      'height',
-      [
-        [5, 'ft'],
-        [11, 'in'],
-      ],
-    ],
+    null,
   ],
   [
     '(70 kg) and ft five eleven',
     {
       type: 'weight',
     },
-    [70, 'kg', 'weight', [[70, 'kg']]],
+    null,
   ],
   [
     '(70 kg) and ft five eleven',
     {
       normalizedUnit: 'cm',
     },
-    [
-      180.34,
-      'cm',
-      'height',
-      [
-        [5, 'ft'],
-        [11, 'in'],
-      ],
-    ],
+    null,
   ],
   [
     '(70 kg) and ft five eleven',
     {
       normalizedUnit: 'kg',
     },
-    [70, 'kg', 'weight', [[70, 'kg']]],
+    null,
   ],
   [
     'ft 5 11 and weight 70 kg',
@@ -545,44 +467,28 @@ const cases: Array<[string, ParseOptions, Expected | null]> = [
     {
       type: 'height',
     },
-    [
-      71,
-      'in',
-      'height',
-      [
-        [5, 'ft'],
-        [11, 'in'],
-      ],
-    ],
+    null,
   ],
   [
     'five ft eleven and (70 kg)',
     {
       type: 'weight',
     },
-    [70, 'kg', 'weight', [[70, 'kg']]],
+    null,
   ],
   [
     'five ft eleven and (70 kg)',
     {
       normalizedUnit: 'cm',
     },
-    [
-      180.34,
-      'cm',
-      'height',
-      [
-        [5, 'ft'],
-        [11, 'in'],
-      ],
-    ],
+    null,
   ],
   [
     'five ft eleven and (70 kg)',
     {
       normalizedUnit: 'kg',
     },
-    [70, 'kg', 'weight', [[70, 'kg']]],
+    null,
   ],
   [
     'ft five eleven point five and weight 70 kg',

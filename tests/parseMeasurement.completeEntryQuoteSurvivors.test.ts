@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { parseMeasurement, type ParseOptions, type ParsedValue } from '../src';
 
 // AFA-250: independently approved wrapper, pair, paired-inch and bare-inference rules.
+// AFA-277: quotation marks and brackets cannot surround an entry, a measurement of a pair or a
+// number. Each row with such a wrapper expects null.
 const cases: [string, ParseOptions, ParsedValue | null][] = [
   ["\"5'11''", {}, null],
   [
@@ -48,66 +50,9 @@ const cases: [string, ParseOptions, ParsedValue | null][] = [
     },
     null,
   ],
-  [
-    "\"5'11''\"",
-    {},
-    {
-      value: 71,
-      unit: 'in',
-      type: 'height',
-      raw: "\"5'11''\"",
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11,
-          unit: 'in',
-        },
-      ],
-    },
-  ],
-  [
-    "about \"5'11''\"",
-    {},
-    {
-      value: 71,
-      unit: 'in',
-      type: 'height',
-      raw: "about \"5'11''\"",
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11,
-          unit: 'in',
-        },
-      ],
-    },
-  ],
-  [
-    '"5 ft 11\'\'"',
-    {},
-    {
-      value: 71,
-      unit: 'in',
-      type: 'height',
-      raw: '"5 ft 11\'\'"',
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11,
-          unit: 'in',
-        },
-      ],
-    },
-  ],
+  ["\"5'11''\"", {}, null],
+  ["about \"5'11''\"", {}, null],
+  ['"5 ft 11\'\'"', {}, null],
   [
     "5'11''",
     {},
@@ -128,26 +73,7 @@ const cases: [string, ParseOptions, ParsedValue | null][] = [
       ],
     },
   ],
-  [
-    '"5\'11"',
-    {},
-    {
-      value: 71,
-      unit: 'in',
-      type: 'height',
-      raw: '"5\'11"',
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11,
-          unit: 'in',
-        },
-      ],
-    },
-  ],
+  ['"5\'11"', {}, null],
   [
     "5 ft 11''",
     {},
@@ -174,80 +100,28 @@ const cases: [string, ParseOptions, ParsedValue | null][] = [
     {
       type: 'height',
     },
-    {
-      value: 71,
-      unit: 'in',
-      type: 'height',
-      raw: "'5'11\", 70 kg'",
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11,
-          unit: 'in',
-        },
-      ],
-    },
+    null,
   ],
   [
     "'5'11\", 70 kg'",
     {
       type: 'weight',
     },
-    {
-      value: 70,
-      unit: 'kg',
-      type: 'weight',
-      raw: "'5'11\", 70 kg'",
-      matches: [
-        {
-          value: 70,
-          unit: 'kg',
-        },
-      ],
-    },
+    null,
   ],
   [
     "'5'11\", 70 kg'",
     {
       normalizedUnit: 'cm',
     },
-    {
-      value: 180.34,
-      unit: 'cm',
-      type: 'height',
-      raw: "'5'11\", 70 kg'",
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11,
-          unit: 'in',
-        },
-      ],
-    },
+    null,
   ],
   [
     "'5'11\", 70 kg'",
     {
       normalizedUnit: 'kg',
     },
-    {
-      value: 70,
-      unit: 'kg',
-      type: 'weight',
-      raw: "'5'11\", 70 kg'",
-      matches: [
-        {
-          value: 70,
-          unit: 'kg',
-        },
-      ],
-    },
+    null,
   ],
   ["'5′11″, 70 kg'", {}, null],
   [
@@ -255,80 +129,28 @@ const cases: [string, ParseOptions, ParsedValue | null][] = [
     {
       type: 'height',
     },
-    {
-      value: 71,
-      unit: 'in',
-      type: 'height',
-      raw: "'5′11″, 70 kg'",
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11,
-          unit: 'in',
-        },
-      ],
-    },
+    null,
   ],
   [
     "'5′11″, 70 kg'",
     {
       type: 'weight',
     },
-    {
-      value: 70,
-      unit: 'kg',
-      type: 'weight',
-      raw: "'5′11″, 70 kg'",
-      matches: [
-        {
-          value: 70,
-          unit: 'kg',
-        },
-      ],
-    },
+    null,
   ],
   [
     "'5′11″, 70 kg'",
     {
       normalizedUnit: 'cm',
     },
-    {
-      value: 180.34,
-      unit: 'cm',
-      type: 'height',
-      raw: "'5′11″, 70 kg'",
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11,
-          unit: 'in',
-        },
-      ],
-    },
+    null,
   ],
   [
     "'5′11″, 70 kg'",
     {
       normalizedUnit: 'kg',
     },
-    {
-      value: 70,
-      unit: 'kg',
-      type: 'weight',
-      raw: "'5′11″, 70 kg'",
-      matches: [
-        {
-          value: 70,
-          unit: 'kg',
-        },
-      ],
-    },
+    null,
   ],
   ["about '5'11\", 70 kg'", {}, null],
   [
@@ -509,80 +331,28 @@ const cases: [string, ParseOptions, ParsedValue | null][] = [
     {
       type: 'height',
     },
-    {
-      value: 71,
-      unit: 'in',
-      type: 'height',
-      raw: "about \"5'11''\", 70kg",
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11,
-          unit: 'in',
-        },
-      ],
-    },
+    null,
   ],
   [
     "about \"5'11''\", 70kg",
     {
       type: 'weight',
     },
-    {
-      value: 70,
-      unit: 'kg',
-      type: 'weight',
-      raw: "about \"5'11''\", 70kg",
-      matches: [
-        {
-          value: 70,
-          unit: 'kg',
-        },
-      ],
-    },
+    null,
   ],
   [
     "about \"5'11''\", 70kg",
     {
       normalizedUnit: 'cm',
     },
-    {
-      value: 180.34,
-      unit: 'cm',
-      type: 'height',
-      raw: "about \"5'11''\", 70kg",
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11,
-          unit: 'in',
-        },
-      ],
-    },
+    null,
   ],
   [
     "about \"5'11''\", 70kg",
     {
       normalizedUnit: 'kg',
     },
-    {
-      value: 70,
-      unit: 'kg',
-      type: 'weight',
-      raw: "about \"5'11''\", 70kg",
-      matches: [
-        {
-          value: 70,
-          unit: 'kg',
-        },
-      ],
-    },
+    null,
   ],
   ["about 5'11'', 70kg", {}, null],
   [

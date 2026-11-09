@@ -10,7 +10,8 @@ Unknown fields, arbitrary prose and fragments reject the whole entry.
 - Finite wrappers: `I weigh 150 lbs`, `I'm five foot eleven`, `about 180 cm`.
 - Directional labels: `Height (in): 72`, `kg=72`, `in. 5`, `m: 1.8`.
 - A unit before a complete number phrase: `kg seventy two`.
-- One balanced recognized wrapper around a number or entry, preserving all content.
+- Quotation marks and brackets cannot surround an entry, one measurement of a pair, or a
+  number: `(180 cm)`, `"180 lbs"`, `“5’11””` and `(180) lbs` reject (AFA-277).
 - Unrelated fields and interrupted expressions reject: `age=28, kg=72`, `180;lbs`,
   `phase twenty, 5 cm`, `weighed 70 kg in 2020`.
 - Explicit suffixes cannot be ignored for bare centimeters: `1 m 80;kg` and `1 m 80 (m)` reject.

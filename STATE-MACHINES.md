@@ -1,6 +1,6 @@
 # Library state machines
 
-<!-- cspell:ignore NFKC apfahy meterrs -->
+<!-- cspell:ignore NFKC apfahy meterrs kilogramme kilogrammes -->
 
 Audit baseline: `b79eae0` (`main`), 2026-11-06. Tracking: [AFA-235][audit].
 Scope: every runtime module in `src/`, reached through `parseMeasurement`. The docs website,
@@ -3452,9 +3452,73 @@ The forced 2.99 m / 3 cm property controls retain all targets, written-value cou
 no-default controls. The AFA-251 PR description records composition evidence and validation;
 historical findings and their original revision references above remain unchanged.
 
+## Approved policy revision: no quote or bracket wrappers (AFA-277)
+
+The maintainer decided on 2026-11-08 to stop reading wrappers, to reduce bundle size. Quotation
+marks, parentheses and square brackets around an entry, around one measurement of a pair, or
+around a number no longer make a measurement. The F2 and AFA-265 quotation rows above describe
+the earlier implementation and stay as historical evidence.
+
+M1 no longer carries quotation context. `normalizeForms` writes a curly `’` or `”` after a
+number as `'` or `"`, even at the end of the entry or before a unit name. Primes keep their unit
+identity, and an apostrophe in a word stays. M2 writes two feet marks right after a digit, in
+any mix of `'` and `′`, as `″`, with no check for an earlier opening pair. The parser
+no longer has a whole-entry wrapper cursor, quoted numbers or quoted feet. Its bracket cursor
+remains only for the second measurement of a pair, as in `5'11" (180 lbs)`. Bracketed unit
+labels and bracketed smaller parts are unchanged.
+
+## One tokenizer scan (AFA-88)
+
+M1 and M2 are now one scan from left to right in `src/tokenize.ts`. Before the scan, one
+replace applies the character table to the whole input, because `㎝` and `㎏` become two
+characters and the scan's rules read the converted text. In the scan, `readNumber` converts
+each run of number characters with three patterns, for comma groups, Unicode fractions and
+slash fractions. `normalizeForms`, `normalizeNumericCommas`, `normalizeFractions`, `normalize`
+and `tokenizeNormalized` are gone, and so is the parser's string path for whole-entry shorthand
+such as `5-11`, which now reads the three tokens. No result changes. The scan writes the same tokens, with the same places, as
+the passes wrote, with one exception that changes no result. Each token is lowercased alone,
+not as part of the whole text, so a Greek capital sigma can take the other lowercase form, `σ`
+or `ς`, than it took on main. No unit, alias or number word has a sigma.
+
+The scan carries this state:
+
+| State          | Meaning                                                                      |
+| -------------- | ---------------------------------------------------------------------------- |
+| `token`/`kind` | The word or number being read                                                |
+| `place`        | The place in the converted text, so token boundaries and adjacency stay      |
+| `solid`        | The last character that isn't a space, for the fraction rule after a letter  |
+| `label`        | Whether a letter and only numerals come right before, as in `phase2,180`     |
+| `first`        | Where the first number of the input starts, found once for a minus sign      |
+| `unitEnd`      | Where a unit ends that digits right after don't join, as in `5ft11` (AFA-62) |
+
+The table converts full-width forms, `㎝`, `㎏`, primes and acute accents. A minus sign is a
+sign when no number comes before it. A curly closing quote after a number or a number word is a
+mark. `readNumber` takes the letter or quote mark before a run as context. A comma group of the
+wrong size still rejects the whole input.
+
+## Approved policy revision: one-edit fuzzy matching (AFA-253)
+
+The maintainer decided on 2026-11-09 (AFA-253 comments 9bf0c672, 3e80ce01 and 226d15f6) to bound
+fuzzy matching so that every match can be tested. The numeric `fuzziness` option is retired: any
+defined value throws `fuzziness was removed; use fuzzy: true or remove it`, like the other options
+that AFA-251 retired. The new `fuzzy?: boolean` option reads a unit name with one spelling error. An
+invalid `fuzzy` throws a TypeError after `defaultUnit` and before the retired options. The earlier
+findings above about edit budgets, fractions and Infinity (AFA-189) describe the numeric option and
+stay as historical evidence.
+
+`matchUnit` keeps its order: an exact alias returns at once. With `fuzzy`, the first alias in
+`UNIT_ALIASES` order that is one edit away wins, among aliases of four or more letters that start
+with the word's first letter and aren't British spellings. The regular expression that blocked
+`food`, `feel`, `feed`, `fool`, `kill` and `kills` is gone (AFA-253 comment d5897102): with
+`fuzzy`, every word that the rule accepts reads as its unit, English words included. One reviewed
+typo that the rule doesn't accept, `kilgrm`, reads as `kg` with `fuzzy`. `kilogramme` and `kilogrammes` are new exact
+aliases of `kg` and, like the other British spellings, match only exactly. One edit accepts 3,941
+spellings, 2,288 for height and 1,653 for weight, and `tests/matchUnit.oneEdit.test.ts` checks
+each one.
+
 ## Compound-boundary integration with complete entries (AFA-51, 2026-11-08)
 
-PR #240 integrates main `dd22c33` with a normal merge. Its parser and tokenizer now match
+PR #240 integrates main (`dd22c33`, then `8d286f3`) with normal merges. Its parser and tokenizer match
 that main revision: the complete-entry grammar already implements the approved boundary
 intent through local joins and retained Unicode text. The earlier AFA-51 span map, gap
 callback and range-recovery exception above describe the historical extraction parser;

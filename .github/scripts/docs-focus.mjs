@@ -59,7 +59,7 @@ export async function checkFocus(browser, scheme) {
   const problems = [];
   const targets = [
     '#option-type a.name',
-    '#option-fuzziness a.name',
+    '#option-fuzzy a.name',
     '#tab-npm',
     '[aria-label="Copy quick start"]',
     '.full-object > summary',

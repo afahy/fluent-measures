@@ -3,78 +3,28 @@ import { parseMeasurement, type ParseOptions, type ParsedValue } from '../src';
 
 // AFA-250: PARSING finite wrappers/marks/periods and hand arithmetic. Independent full-result
 // oracles, including the approved dotted-unit correction, are retained in the external archive.
+// AFA-277: quotation marks and brackets cannot surround an entry, a measurement of a pair or a
+// number. Each row with such a wrapper expects null.
 const cases: Array<{ raw: string; options?: ParseOptions; expected: ParsedValue | null }> = [
   {
     raw: '(180 cm) tall',
     options: {},
-    expected: {
-      value: 180,
-      unit: 'cm',
-      type: 'height',
-      raw: '(180 cm) tall',
-      matches: [
-        {
-          value: 180,
-          unit: 'cm',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: 'height is (180 cm) tall',
     options: {},
-    expected: {
-      value: 180,
-      unit: 'cm',
-      type: 'height',
-      raw: 'height is (180 cm) tall',
-      matches: [
-        {
-          value: 180,
-          unit: 'cm',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: 'about (5 ft 11) tall',
     options: {},
-    expected: {
-      value: 71,
-      unit: 'in',
-      type: 'height',
-      raw: 'about (5 ft 11) tall',
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11,
-          unit: 'in',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '“5 ft 11”',
     options: {},
-    expected: {
-      value: 71,
-      unit: 'in',
-      type: 'height',
-      raw: '“5 ft 11”',
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11,
-          unit: 'in',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: 'kg 72.5.',
@@ -127,58 +77,17 @@ const cases: Array<{ raw: string; options?: ParseOptions; expected: ParsedValue 
   {
     raw: '(180 cm).',
     options: {},
-    expected: {
-      value: 180,
-      unit: 'cm',
-      type: 'height',
-      raw: '(180 cm).',
-      matches: [
-        {
-          value: 180,
-          unit: 'cm',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '“5 ft 11 in”',
     options: {},
-    expected: {
-      value: 71,
-      unit: 'in',
-      type: 'height',
-      raw: '“5 ft 11 in”',
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11,
-          unit: 'in',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '"5 ft 11"',
     options: {},
-    expected: {
-      value: 71,
-      unit: 'in',
-      type: 'height',
-      raw: '"5 ft 11"',
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11,
-          unit: 'in',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: 'kg 72.5 .',
@@ -215,266 +124,77 @@ const cases: Array<{ raw: string; options?: ParseOptions; expected: ParsedValue 
   {
     raw: '[180 cm] tall',
     options: {},
-    expected: {
-      value: 180,
-      unit: 'cm',
-      type: 'height',
-      raw: '[180 cm] tall',
-      matches: [
-        {
-          value: 180,
-          unit: 'cm',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: 'height is [180 cm] tall.',
     options: {},
-    expected: {
-      value: 180,
-      unit: 'cm',
-      type: 'height',
-      raw: 'height is [180 cm] tall.',
-      matches: [
-        {
-          value: 180,
-          unit: 'cm',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: 'about (180 cm) tall.',
     options: {},
-    expected: {
-      value: 180,
-      unit: 'cm',
-      type: 'height',
-      raw: 'about (180 cm) tall.',
-      matches: [
-        {
-          value: 180,
-          unit: 'cm',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '(180 cm tall)',
     options: {},
-    expected: {
-      value: 180,
-      unit: 'cm',
-      type: 'height',
-      raw: '(180 cm tall)',
-      matches: [
-        {
-          value: 180,
-          unit: 'cm',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '(180 cm tall).',
     options: {},
-    expected: {
-      value: 180,
-      unit: 'cm',
-      type: 'height',
-      raw: '(180 cm tall).',
-      matches: [
-        {
-          value: 180,
-          unit: 'cm',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '"180 cm" tall',
     options: {},
-    expected: {
-      value: 180,
-      unit: 'cm',
-      type: 'height',
-      raw: '"180 cm" tall',
-      matches: [
-        {
-          value: 180,
-          unit: 'cm',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '‘180 cm’ tall',
     options: {},
-    expected: {
-      value: 180,
-      unit: 'cm',
-      type: 'height',
-      raw: '‘180 cm’ tall',
-      matches: [
-        {
-          value: 180,
-          unit: 'cm',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: 'approximately [180 cm] tall',
     options: {},
-    expected: {
-      value: 180,
-      unit: 'cm',
-      type: 'height',
-      raw: 'approximately [180 cm] tall',
-      matches: [
-        {
-          value: 180,
-          unit: 'cm',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '(180 cm) tall.',
     options: {},
-    expected: {
-      value: 180,
-      unit: 'cm',
-      type: 'height',
-      raw: '(180 cm) tall.',
-      matches: [
-        {
-          value: 180,
-          unit: 'cm',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '“5 ft 11” tall',
     options: {},
-    expected: {
-      value: 71,
-      unit: 'in',
-      type: 'height',
-      raw: '“5 ft 11” tall',
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11,
-          unit: 'in',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: 'height “5 ft 11” tall',
     options: {},
-    expected: {
-      value: 71,
-      unit: 'in',
-      type: 'height',
-      raw: 'height “5 ft 11” tall',
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11,
-          unit: 'in',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '(5 ft (11 in)) tall',
     options: {},
-    expected: {
-      value: 71,
-      unit: 'in',
-      type: 'height',
-      raw: '(5 ft (11 in)) tall',
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11,
-          unit: 'in',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: 'about [5 ft 11] tall.',
     options: {},
-    expected: {
-      value: 71,
-      unit: 'in',
-      type: 'height',
-      raw: 'about [5 ft 11] tall.',
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11,
-          unit: 'in',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: "'1 m 80' tall",
     options: {},
-    expected: {
-      value: 180,
-      unit: 'cm',
-      type: 'height',
-      raw: "'1 m 80' tall",
-      matches: [
-        {
-          value: 1,
-          unit: 'm',
-        },
-        {
-          value: 80,
-          unit: 'cm',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: 'my height is around [1 m 80] tall',
     options: {},
-    expected: {
-      value: 180,
-      unit: 'cm',
-      type: 'height',
-      raw: 'my height is around [1 m 80] tall',
-      matches: [
-        {
-          value: 1,
-          unit: 'm',
-        },
-        {
-          value: 80,
-          unit: 'cm',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '(180 cm tall) tall',
@@ -489,18 +209,7 @@ const cases: Array<{ raw: string; options?: ParseOptions; expected: ParsedValue 
   {
     raw: '(180 cm.) tall',
     options: {},
-    expected: {
-      value: 180,
-      unit: 'cm',
-      type: 'height',
-      raw: '(180 cm.) tall',
-      matches: [
-        {
-          value: 180,
-          unit: 'cm',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '(180 cm) tall..',
@@ -580,230 +289,62 @@ const cases: Array<{ raw: string; options?: ParseOptions; expected: ParsedValue 
   {
     raw: '‘5 ft 11’',
     options: {},
-    expected: {
-      value: 71,
-      unit: 'in',
-      type: 'height',
-      raw: '‘5 ft 11’',
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11,
-          unit: 'in',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '“5 ft 11”.',
     options: {},
-    expected: {
-      value: 71,
-      unit: 'in',
-      type: 'height',
-      raw: '“5 ft 11”.',
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11,
-          unit: 'in',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '‘5 ft 11’.',
     options: {},
-    expected: {
-      value: 71,
-      unit: 'in',
-      type: 'height',
-      raw: '‘5 ft 11’.',
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11,
-          unit: 'in',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '“5 feet eleven”',
     options: {},
-    expected: {
-      value: 71,
-      unit: 'in',
-      type: 'height',
-      raw: '“5 feet eleven”',
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11,
-          unit: 'in',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '“5 ft 11.5”',
     options: {},
-    expected: {
-      value: 71.5,
-      unit: 'in',
-      type: 'height',
-      raw: '“5 ft 11.5”',
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11.5,
-          unit: 'in',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '“1 m 80”',
     options: {},
-    expected: {
-      value: 180,
-      unit: 'cm',
-      type: 'height',
-      raw: '“1 m 80”',
-      matches: [
-        {
-          value: 1,
-          unit: 'm',
-        },
-        {
-          value: 80,
-          unit: 'cm',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '‘1 m 80’',
     options: {},
-    expected: {
-      value: 180,
-      unit: 'cm',
-      type: 'height',
-      raw: '‘1 m 80’',
-      matches: [
-        {
-          value: 1,
-          unit: 'm',
-        },
-        {
-          value: 80,
-          unit: 'cm',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '“1 meter eighty”',
     options: {},
-    expected: {
-      value: 180,
-      unit: 'cm',
-      type: 'height',
-      raw: '“1 meter eighty”',
-      matches: [
-        {
-          value: 1,
-          unit: 'm',
-        },
-        {
-          value: 80,
-          unit: 'cm',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '“kg 72.5”',
     options: {},
-    expected: {
-      value: 72.5,
-      unit: 'kg',
-      type: 'weight',
-      raw: '“kg 72.5”',
-      matches: [
-        {
-          value: 72.5,
-          unit: 'kg',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '‘kg 72.5’',
     options: {},
-    expected: {
-      value: 72.5,
-      unit: 'kg',
-      type: 'weight',
-      raw: '‘kg 72.5’',
-      matches: [
-        {
-          value: 72.5,
-          unit: 'kg',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '“5” ft',
     options: {},
-    expected: {
-      value: 5,
-      unit: 'ft',
-      type: 'height',
-      raw: '“5” ft',
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '‘5’ 11”',
     options: {},
-    expected: {
-      value: 71,
-      unit: 'in',
-      type: 'height',
-      raw: '‘5’ 11”',
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11,
-          unit: 'in',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '5’11”',
@@ -848,22 +389,7 @@ const cases: Array<{ raw: string; options?: ParseOptions; expected: ParsedValue 
   {
     raw: '‘5’11”’',
     options: {},
-    expected: {
-      value: 71,
-      unit: 'in',
-      type: 'height',
-      raw: '‘5’11”’',
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11,
-          unit: 'in',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: "“5 ft 11'",
@@ -1259,80 +785,28 @@ const cases: Array<{ raw: string; options?: ParseOptions; expected: ParsedValue 
     options: {
       type: 'height',
     },
-    expected: {
-      value: 71,
-      unit: 'in',
-      type: 'height',
-      raw: '“5 ft 11” tall and kg 72.5.',
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11,
-          unit: 'in',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '“5 ft 11” tall and kg 72.5.',
     options: {
       normalizedUnit: 'cm',
     },
-    expected: {
-      value: 180.34,
-      unit: 'cm',
-      type: 'height',
-      raw: '“5 ft 11” tall and kg 72.5.',
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11,
-          unit: 'in',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '“5 ft 11” tall and kg 72.5.',
     options: {
       type: 'weight',
     },
-    expected: {
-      value: 72.5,
-      unit: 'kg',
-      type: 'weight',
-      raw: '“5 ft 11” tall and kg 72.5.',
-      matches: [
-        {
-          value: 72.5,
-          unit: 'kg',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '“5 ft 11” tall and kg 72.5.',
     options: {
       normalizedUnit: 'kg',
     },
-    expected: {
-      value: 72.5,
-      unit: 'kg',
-      type: 'weight',
-      raw: '“5 ft 11” tall and kg 72.5.',
-      matches: [
-        {
-          value: 72.5,
-          unit: 'kg',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '“5 ft 11” tall and kg 72.5.',
@@ -1344,80 +818,28 @@ const cases: Array<{ raw: string; options?: ParseOptions; expected: ParsedValue 
     options: {
       type: 'height',
     },
-    expected: {
-      value: 71,
-      unit: 'in',
-      type: 'height',
-      raw: 'kg 72.5. and “5 ft 11” tall',
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11,
-          unit: 'in',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: 'kg 72.5. and “5 ft 11” tall',
     options: {
       normalizedUnit: 'cm',
     },
-    expected: {
-      value: 180.34,
-      unit: 'cm',
-      type: 'height',
-      raw: 'kg 72.5. and “5 ft 11” tall',
-      matches: [
-        {
-          value: 5,
-          unit: 'ft',
-        },
-        {
-          value: 11,
-          unit: 'in',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: 'kg 72.5. and “5 ft 11” tall',
     options: {
       type: 'weight',
     },
-    expected: {
-      value: 72.5,
-      unit: 'kg',
-      type: 'weight',
-      raw: 'kg 72.5. and “5 ft 11” tall',
-      matches: [
-        {
-          value: 72.5,
-          unit: 'kg',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: 'kg 72.5. and “5 ft 11” tall',
     options: {
       normalizedUnit: 'kg',
     },
-    expected: {
-      value: 72.5,
-      unit: 'kg',
-      type: 'weight',
-      raw: 'kg 72.5. and “5 ft 11” tall',
-      matches: [
-        {
-          value: 72.5,
-          unit: 'kg',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: 'kg 72.5. and “5 ft 11” tall',
@@ -1429,72 +851,28 @@ const cases: Array<{ raw: string; options?: ParseOptions; expected: ParsedValue 
     options: {
       type: 'height',
     },
-    expected: {
-      value: 180,
-      unit: 'cm',
-      type: 'height',
-      raw: '(180 cm) tall; kg: ½.',
-      matches: [
-        {
-          value: 180,
-          unit: 'cm',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '(180 cm) tall; kg: ½.',
     options: {
       normalizedUnit: 'm',
     },
-    expected: {
-      value: 1.8,
-      unit: 'm',
-      type: 'height',
-      raw: '(180 cm) tall; kg: ½.',
-      matches: [
-        {
-          value: 180,
-          unit: 'cm',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '(180 cm) tall; kg: ½.',
     options: {
       type: 'weight',
     },
-    expected: {
-      value: 0.5,
-      unit: 'kg',
-      type: 'weight',
-      raw: '(180 cm) tall; kg: ½.',
-      matches: [
-        {
-          value: 0.5,
-          unit: 'kg',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '(180 cm) tall; kg: ½.',
     options: {
       normalizedUnit: 'kg',
     },
-    expected: {
-      value: 0.5,
-      unit: 'kg',
-      type: 'weight',
-      raw: '(180 cm) tall; kg: ½.',
-      matches: [
-        {
-          value: 0.5,
-          unit: 'kg',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '(180 cm) tall; kg: ½.',
@@ -1506,72 +884,28 @@ const cases: Array<{ raw: string; options?: ParseOptions; expected: ParsedValue 
     options: {
       type: 'height',
     },
-    expected: {
-      value: 180,
-      unit: 'cm',
-      type: 'height',
-      raw: 'kg: ½.; (180 cm) tall',
-      matches: [
-        {
-          value: 180,
-          unit: 'cm',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: 'kg: ½.; (180 cm) tall',
     options: {
       normalizedUnit: 'm',
     },
-    expected: {
-      value: 1.8,
-      unit: 'm',
-      type: 'height',
-      raw: 'kg: ½.; (180 cm) tall',
-      matches: [
-        {
-          value: 180,
-          unit: 'cm',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: 'kg: ½.; (180 cm) tall',
     options: {
       type: 'weight',
     },
-    expected: {
-      value: 0.5,
-      unit: 'kg',
-      type: 'weight',
-      raw: 'kg: ½.; (180 cm) tall',
-      matches: [
-        {
-          value: 0.5,
-          unit: 'kg',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: 'kg: ½.; (180 cm) tall',
     options: {
       normalizedUnit: 'kg',
     },
-    expected: {
-      value: 0.5,
-      unit: 'kg',
-      type: 'weight',
-      raw: 'kg: ½.; (180 cm) tall',
-      matches: [
-        {
-          value: 0.5,
-          unit: 'kg',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: 'kg: ½.; (180 cm) tall',
@@ -1723,34 +1057,12 @@ const cases: Array<{ raw: string; options?: ParseOptions; expected: ParsedValue 
   {
     raw: 'my height is (181 cm) tall',
     options: {},
-    expected: {
-      value: 181,
-      unit: 'cm',
-      type: 'height',
-      raw: 'my height is (181 cm) tall',
-      matches: [
-        {
-          value: 181,
-          unit: 'cm',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: 'I am “six feet” tall.',
     options: {},
-    expected: {
-      value: 6,
-      unit: 'ft',
-      type: 'height',
-      raw: 'I am “six feet” tall.',
-      matches: [
-        {
-          value: 6,
-          unit: 'ft',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '72 in. tall',
@@ -1771,18 +1083,7 @@ const cases: Array<{ raw: string; options?: ParseOptions; expected: ParsedValue 
   {
     raw: '(72 in.) tall',
     options: {},
-    expected: {
-      value: 72,
-      unit: 'in',
-      type: 'height',
-      raw: '(72 in.) tall',
-      matches: [
-        {
-          value: 72,
-          unit: 'in',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '(180 cm .) tall',
@@ -1797,18 +1098,7 @@ const cases: Array<{ raw: string; options?: ParseOptions; expected: ParsedValue 
   {
     raw: '(180 cm.) tall.',
     options: {},
-    expected: {
-      value: 180,
-      unit: 'cm',
-      type: 'height',
-      raw: '(180 cm.) tall.',
-      matches: [
-        {
-          value: 180,
-          unit: 'cm',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '72 in. tall.',
@@ -1844,18 +1134,7 @@ const cases: Array<{ raw: string; options?: ParseOptions; expected: ParsedValue 
   {
     raw: '(72 in.) tall .',
     options: {},
-    expected: {
-      value: 72,
-      unit: 'in',
-      type: 'height',
-      raw: '(72 in.) tall .',
-      matches: [
-        {
-          value: 72,
-          unit: 'in',
-        },
-      ],
-    },
+    expected: null,
   },
   {
     raw: '(72 in.) tall. .',

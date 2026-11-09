@@ -4,148 +4,148 @@ import { matchUnit } from '../src/matchUnit';
 describe('matchUnit', () => {
   describe('basic unit matching', () => {
     it('matches exact height units', () => {
-      expect(matchUnit('ft', 'height', 0)).toBe('ft');
-      expect(matchUnit('in', 'height', 0)).toBe('in');
-      expect(matchUnit('cm', 'height', 0)).toBe('cm');
-      expect(matchUnit('m', 'height', 0)).toBe('m');
+      expect(matchUnit('ft', 'height', false)).toBe('ft');
+      expect(matchUnit('in', 'height', false)).toBe('in');
+      expect(matchUnit('cm', 'height', false)).toBe('cm');
+      expect(matchUnit('m', 'height', false)).toBe('m');
     });
 
     it('matches exact weight units', () => {
-      expect(matchUnit('lb', 'weight', 0)).toBe('lb');
-      expect(matchUnit('kg', 'weight', 0)).toBe('kg');
+      expect(matchUnit('lb', 'weight', false)).toBe('lb');
+      expect(matchUnit('kg', 'weight', false)).toBe('kg');
     });
   });
 
   describe('unit aliases', () => {
     it('matches height unit aliases', () => {
-      expect(matchUnit('feet', 'height', 0)).toBe('ft');
-      expect(matchUnit('foot', 'height', 0)).toBe('ft');
-      expect(matchUnit("'", 'height', 0)).toBe('ft');
-      expect(matchUnit('inches', 'height', 0)).toBe('in');
-      expect(matchUnit('inch', 'height', 0)).toBe('in');
-      expect(matchUnit('"', 'height', 0)).toBe('in');
-      expect(matchUnit('centimeters', 'height', 0)).toBe('cm');
-      expect(matchUnit('meters', 'height', 0)).toBe('m');
+      expect(matchUnit('feet', 'height', false)).toBe('ft');
+      expect(matchUnit('foot', 'height', false)).toBe('ft');
+      expect(matchUnit("'", 'height', false)).toBe('ft');
+      expect(matchUnit('inches', 'height', false)).toBe('in');
+      expect(matchUnit('inch', 'height', false)).toBe('in');
+      expect(matchUnit('"', 'height', false)).toBe('in');
+      expect(matchUnit('centimeters', 'height', false)).toBe('cm');
+      expect(matchUnit('meters', 'height', false)).toBe('m');
     });
 
     it('matches weight unit aliases', () => {
-      expect(matchUnit('lbs', 'weight', 0)).toBe('lb');
-      expect(matchUnit('pounds', 'weight', 0)).toBe('lb');
-      expect(matchUnit('pound', 'weight', 0)).toBe('lb');
-      expect(matchUnit('kilos', 'weight', 0)).toBe('kg');
-      expect(matchUnit('kilogram', 'weight', 0)).toBe('kg');
-      expect(matchUnit('kilograms', 'weight', 0)).toBe('kg');
+      expect(matchUnit('lbs', 'weight', false)).toBe('lb');
+      expect(matchUnit('pounds', 'weight', false)).toBe('lb');
+      expect(matchUnit('pound', 'weight', false)).toBe('lb');
+      expect(matchUnit('kilos', 'weight', false)).toBe('kg');
+      expect(matchUnit('kilogram', 'weight', false)).toBe('kg');
+      expect(matchUnit('kilograms', 'weight', false)).toBe('kg');
     });
   });
 
   describe('fuzzy matching', () => {
-    it.each(['food', 'feel', 'feed', 'fool'])('rejects the short prose word %s', word => {
-      expect(matchUnit(word, 'height', 2)).toBeNull();
-    });
+    // AFA-253 comment d5897102: there is no blocked list, so with fuzzy these English words, one
+    // edit from "foot" or "feet", read as feet. Main blocked them at any fuzziness.
+    it.each(['food', 'feel', 'feed', 'fool'])(
+      'reads the English word %s as feet with fuzzy',
+      word => {
+        expect(matchUnit(word, 'height', true)).toBe('ft');
+        expect(matchUnit(word, 'height', false)).toBeNull();
+      }
+    );
 
     // The British spellings match only exactly (AFA-64). Each word here is one edit from one of
     // them, and more than one from any other alias, so it matches nothing.
     it.each(['mere', 'meres', 'centimetry', 'centimetros', 'metro'])(
       'rejects %s, a typo of a British spelling',
       word => {
-        expect(matchUnit(word, 'height', 1)).toBeNull();
+        expect(matchUnit(word, 'height', true)).toBeNull();
       }
     );
 
     it.each(['centimetre', 'centimetres', 'metre', 'metres'])('still matches %s exactly', word => {
-      expect(matchUnit(word, 'height', 1)).toBe(word.startsWith('c') ? 'cm' : 'm');
+      expect(matchUnit(word, 'height', true)).toBe(word.startsWith('c') ? 'cm' : 'm');
     });
 
     it('requires the first letter even for long aliases', () => {
-      expect(matchUnit('xilograms', 'weight', 2)).toBeNull();
-      expect(matchUnit('xentimeters', 'height', 2)).toBeNull();
+      expect(matchUnit('xilograms', 'weight', true)).toBeNull();
+      expect(matchUnit('xentimeters', 'height', true)).toBeNull();
     });
 
-    it('limits edits in proportion to alias length', () => {
-      expect(matchUnit('fxxt', 'height', 2)).toBeNull();
-      expect(matchUnit('kixxs', 'weight', 2)).toBeNull();
-      expect(matchUnit('kilogxxms', 'weight', 1)).toBeNull();
-      expect(matchUnit('kilogxxms', 'weight', 2)).toBe('kg');
+    // AFA-253: fuzzy reads one edit only, so two edits match nothing, even in a long alias.
+    it('reads no word two edits from a unit name', () => {
+      expect(matchUnit('fxxt', 'height', true)).toBeNull();
+      expect(matchUnit('kixxs', 'weight', true)).toBeNull();
+      expect(matchUnit('kilogxxms', 'weight', true)).toBeNull();
     });
 
     it('does not fuzzy-match one- or two-letter aliases', () => {
-      expect(matchUnit('fts', 'height', 2)).toBeNull();
-      expect(matchUnit('kgg', 'weight', 2)).toBeNull();
+      expect(matchUnit('fts', 'height', true)).toBeNull();
+      expect(matchUnit('kgg', 'weight', true)).toBeNull();
     });
 
-    it('keeps short abbreviations exact even with fuzziness enabled', () => {
-      expect(matchUnit('lbs', 'weight', 2)).toBe('lb');
-      expect(matchUnit('kgs', 'weight', 2)).toBe('kg');
-      expect(matchUnit('cms', 'height', 2)).toBe('cm');
-      expect(matchUnit('lxs', 'weight', 2)).toBeNull();
-      expect(matchUnit('ls', 'weight', 2)).toBeNull();
+    it('keeps short abbreviations exact even with fuzzy on', () => {
+      expect(matchUnit('lbs', 'weight', true)).toBe('lb');
+      expect(matchUnit('kgs', 'weight', true)).toBe('kg');
+      expect(matchUnit('cms', 'height', true)).toBe('cm');
+      expect(matchUnit('lxs', 'weight', true)).toBeNull();
+      expect(matchUnit('ls', 'weight', true)).toBeNull();
     });
 
-    it('matches exact aliases even when fuzziness is disabled or invalid', () => {
-      expect.assertions(6);
-      for (const fuzziness of [-1, 0, NaN]) {
-        expect(matchUnit('feet', 'height', fuzziness)).toBe('ft');
-        expect(matchUnit('fett', 'height', fuzziness)).toBeNull();
+    it('matches exact aliases with fuzzy off', () => {
+      expect.assertions(4);
+      for (const fuzzy of [false, undefined]) {
+        expect(matchUnit('feet', 'height', fuzzy)).toBe('ft');
+        expect(matchUnit('fett', 'height', fuzzy)).toBeNull();
       }
     });
 
-    // AFA-189: Infinity isn't finite, so it turns fuzzy matching off. "fett" is one edit from
-    // "feet", and "kilgrm" two edits from "kilogram", so both match with a fuzziness of 2.
-    it('matches only exact aliases when fuzziness is Infinity', () => {
-      expect(matchUnit('feet', 'height', Infinity)).toBe('ft');
-      expect(matchUnit('fett', 'height', Infinity)).toBeNull();
-      expect(matchUnit('kilgrm', 'weight', Infinity)).toBeNull();
-      expect(matchUnit('kilgrm', 'weight', 2)).toBe('kg');
+    // "fett" is one edit from "feet". "kilgrm" is two edits from "kilogram", but it is on the reviewed fuzzy typo list
+    // (PARSING.md), so fuzzy reads it, as main's fuzziness 2 did. "kilgrom" is two edits too, and
+    // isn't on the list.
+    it('reads one edit, and two only for a listed typo', () => {
+      expect(matchUnit('fett', 'height', true)).toBe('ft');
+      expect(matchUnit('kilgrm', 'weight', true)).toBe('kg');
+      expect(matchUnit('kilgrom', 'weight', true)).toBeNull();
     });
 
-    // A fraction is finite and above 0, so it keeps its result: "fett" is one edit from "feet".
-    it.each([
-      [0.5, null],
-      [1.5, 'ft'],
-    ])('reads fett with fuzziness %s as %s', (fuzziness, unit) => {
-      expect(matchUnit('fett', 'height', fuzziness)).toBe(unit);
+    it('handles small typos', () => {
+      expect(matchUnit('fett', 'height', true)).toBe('ft');
+      expect(matchUnit('inche', 'height', true)).toBe('in');
+      expect(matchUnit('metter', 'height', true)).toBe('m');
     });
 
-    it('handles small typos with fuzziness=1', () => {
-      expect(matchUnit('fett', 'height', 1)).toBe('ft');
-      expect(matchUnit('inche', 'height', 1)).toBe('in');
-      expect(matchUnit('metter', 'height', 1)).toBe('m');
+    // "inchez" is one edit from "inches", "killo" one from "kilo", and the English word "feat" one
+    // from "feet".
+    it('reads one-edit typos, English words included', () => {
+      expect(matchUnit('feat', 'height', true)).toBe('ft');
+      expect(matchUnit('inchez', 'height', true)).toBe('in');
+      expect(matchUnit('killo', 'weight', true)).toBe('kg');
     });
 
-    it('handles larger typos with fuzziness=2', () => {
-      expect(matchUnit('feat', 'height', 2)).toBe('ft');
-      expect(matchUnit('inchez', 'height', 2)).toBe('in');
-      expect(matchUnit('killo', 'weight', 2)).toBe('kg');
-    });
-
-    it('does not match with insufficient fuzziness', () => {
-      expect(matchUnit('feetxx', 'height', 1)).toBeNull();
-      expect(matchUnit('inchxy', 'height', 1)).toBeNull();
-      expect(matchUnit('kiloxx', 'weight', 1)).toBeNull();
+    it('does not match a word two edits away', () => {
+      expect(matchUnit('feetxx', 'height', true)).toBeNull();
+      expect(matchUnit('inchxy', 'height', true)).toBeNull();
+      expect(matchUnit('kiloxx', 'weight', true)).toBeNull();
     });
   });
 
   describe('edge cases', () => {
     it('returns null for non-matching units', () => {
-      expect(matchUnit('xyz', 'height', 0)).toBeNull();
-      expect(matchUnit('abc', 'weight', 0)).toBeNull();
+      expect(matchUnit('xyz', 'height', false)).toBeNull();
+      expect(matchUnit('abc', 'weight', false)).toBeNull();
     });
 
     it('does not match units from wrong measurement type', () => {
-      expect(matchUnit('kg', 'height', 0)).toBeNull();
-      expect(matchUnit('cm', 'weight', 0)).toBeNull();
+      expect(matchUnit('kg', 'height', false)).toBeNull();
+      expect(matchUnit('cm', 'weight', false)).toBeNull();
     });
 
-    it('handles short words with fuzziness correctly', () => {
-      expect(matchUnit('f', 'height', 1)).toBeNull();
-      expect(matchUnit('i', 'height', 1)).toBeNull();
-      expect(matchUnit('k', 'weight', 1)).toBeNull();
+    it('handles short words with fuzzy on', () => {
+      expect(matchUnit('f', 'height', true)).toBeNull();
+      expect(matchUnit('i', 'height', true)).toBeNull();
+      expect(matchUnit('k', 'weight', true)).toBeNull();
     });
 
     it('handles empty strings', () => {
-      expect(matchUnit('', 'height', 0)).toBeNull();
-      expect(matchUnit('', 'weight', 0)).toBeNull();
-      expect(matchUnit('', 'height', 1)).toBeNull();
+      expect(matchUnit('', 'height', false)).toBeNull();
+      expect(matchUnit('', 'weight', false)).toBeNull();
+      expect(matchUnit('', 'height', true)).toBeNull();
     });
   });
 });

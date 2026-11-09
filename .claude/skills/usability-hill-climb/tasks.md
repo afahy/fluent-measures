@@ -58,8 +58,7 @@ you are.
 
 ## T6. Accept typing mistakes in unit names
 
-Users type things like `5 fet 11 inchs`. Find the smallest setting that makes the library read
-it. Write `t6.mjs`, and report the setting, the result, and what the library returns for this
+Users type things like `5 fet 11 inchs`. Find the setting that makes the library read it. Write `t6.mjs`, and report the setting, the result, and what the library returns for this
 text without the setting.
 
 ## T7. Get the weight from a message that also has a height

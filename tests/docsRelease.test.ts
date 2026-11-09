@@ -265,10 +265,45 @@ describe('release verification before promotion', () => {
     ['release.json', '1.2.3', '2.0.0'],
     ['README.md', '#ranges', '#missing-anchor'],
     ['index.html', 'href="#usage"', 'href="#missing-section"'],
+    // AFA-270: each release page needs a link to its docs for your version section.
+    ['index.html', 'href="#versions"', 'href="#usage"'],
   ])('rejects mismatched release content in %s', (file, from, to) => {
     const path = candidate();
     writeFileSync(join(path, file), read(join(path, file)).split(from).join(to));
     expect(() => readDocsArtifact(path)).toThrow();
+  });
+  // AFA-270: the archived 0.2.0 page keeps its link to the README section. Its digests are
+  // fixed. A later release must link to the HTML section.
+  function withReadmeLink(version: string): string {
+    const path = candidate(version);
+    const html = read(join(path, 'index.html'));
+    expect(html).toContain('<a href="#versions">Docs for your version</a>');
+    writeFileSync(
+      join(path, 'index.html'),
+      html.replace(
+        'href="#versions"',
+        `href="${site}versions/${version}/README.md#documentation-for-your-version"`
+      )
+    );
+    return path;
+  }
+  it('accepts the README section link on the archived 0.2.0 page', () => {
+    expect(readDocsArtifact(withReadmeLink('0.2.0')).version).toBe('0.2.0');
+  });
+  it('rejects the README section link on a later release page', () => {
+    expect(() => readDocsArtifact(withReadmeLink('1.2.3'))).toThrow('docs for your version link');
+  });
+  it('accepts the link to the HTML section with other attributes and line breaks', () => {
+    const path = candidate();
+    const html = read(join(path, 'index.html'));
+    writeFileSync(
+      join(path, 'index.html'),
+      html.replace(
+        '<a href="#versions">Docs for your version</a>',
+        '<a class="resource" href="#versions">\n  Docs for your version\n</a>'
+      )
+    );
+    expect(readDocsArtifact(path).version).toBe('1.2.3');
   });
 });
 

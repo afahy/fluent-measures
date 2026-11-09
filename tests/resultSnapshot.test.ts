@@ -61,7 +61,9 @@ const OPTION_SETS: readonly (readonly [name: string, options: ParseOptions])[] =
   ['h', { type: 'height' }],
   ['w', { type: 'weight' }],
   ['cm', { normalizedUnit: 'cm' }],
-  ['f2', { fuzziness: 2 }],
+  // f2 was { fuzziness: 2 } before AFA-253 retired fuzziness. It keeps its name, so the evidence
+  // lists only the results that changed.
+  ['f2', { fuzzy: true }],
   ['hu', { type: 'height', defaultUnit: 'cm' }],
 ];
 

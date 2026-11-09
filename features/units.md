@@ -1,6 +1,6 @@
 # Units and unit names
 
-<!-- cspell:ignore centimetres -->
+<!-- cspell:ignore centimetres kilogrammes -->
 
 ## What it does
 
@@ -16,7 +16,7 @@ including `I drink 8 oz of water, weight 180 lbs`.
 - An unsupported unit before its own number, also in words before a comma: `stone twenty, 4 lb`
   gives `null`.
 - Short plurals: `70kgs` and `175cms`.
-- British spellings: `1.8 metres`, `180 centimetres`.
+- British spellings: `1.8 metres`, `180 centimetres`, `95 kilogrammes`.
 - `type: 'height'` or `type: 'weight'`, to select from a fully valid entry.
 - `import` and `require`.
 

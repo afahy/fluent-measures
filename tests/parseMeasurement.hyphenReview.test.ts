@@ -156,12 +156,12 @@ describe('hyphenated height review regressions', () => {
   it.each(['foots-5', 'poundz-150', 'meterz-1.5', 'and ft-5'])(
     'preserves signs after fuzzy unit prefixes in %s',
     raw => {
-      expect(parseMeasurement(raw, { fuzziness: 1 })).toBeNull();
+      expect(parseMeasurement(raw, { fuzzy: true })).toBeNull();
     }
   );
 
   it('retains fuzzy units inside a positive hyphenated height', () => {
-    expect(parseMeasurement('5-foots-11', { fuzziness: 1 })?.value).toBe(71);
+    expect(parseMeasurement('5-foots-11', { fuzzy: true })?.value).toBe(71);
   });
 
   it.each(['5-.5', '5-0.5'])('accepts equivalent decimal inch components in %s', raw => {
@@ -224,7 +224,7 @@ describe('hyphenated height review regressions', () => {
     ['5 footz-11', 5, 11],
     ['height:5 ft-11', 5, 11],
   ])('recognizes mixed spacing in %s', (raw, feet, inches) => {
-    expect(parseMeasurement(raw, { fuzziness: 1 })).toEqual({
+    expect(parseMeasurement(raw, { fuzzy: true })).toEqual({
       value: feet * 12 + inches,
       unit: 'in',
       type: 'height',

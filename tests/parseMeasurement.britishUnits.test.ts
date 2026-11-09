@@ -44,3 +44,41 @@ describe('British spellings and "#" for pounds', () => {
     expect(parseMeasurement(raw)).toBeNull();
   });
 });
+
+// AFA-253: "kilogramme" and "kilogrammes" are the British spellings of "kilogram" and "kilograms".
+// Like the other British spellings (PARSING.md, "Fuzzy Matching"), they match only exactly.
+describe('British spellings of kilograms', () => {
+  it.each([
+    ['95 kilogramme', {}],
+    ['95 kilogrammes', {}],
+    ['95 KILOGRAMMES', {}],
+    ['kilogrammes 95', {}],
+    ['weight: 95 kilogrammes', {}],
+    ['95 kilogrammes', { fuzzy: true }],
+    ['95 kilogrammes', { defaultUnit: 'lb' }],
+  ] as const)('reads %s with %o as 95 kg', (raw, options: ParseOptions) => {
+    expect(parseMeasurement(raw, options)).toMatchObject({
+      value: 95,
+      unit: 'kg',
+      type: 'weight',
+      matches: [{ value: 95, unit: 'kg' }],
+    });
+  });
+
+  // 70.50 = 70.5. Hand calculation: 95 / 0.45359237 = 209.43914907563368 lb.
+  it('reads 70.50 kilogrammes as 70.5 kg', () => {
+    expect(parseMeasurement('70.50 kilogrammes')).toMatchObject({ value: 70.5, unit: 'kg' });
+  });
+  it('converts 95 kilogrammes to pounds', () => {
+    expect(parseMeasurement('95 kilogrammes', { normalizedUnit: 'lb' })?.value).toBeCloseTo(
+      209.43914907563368,
+      9
+    );
+  });
+
+  // Exact only: "kilogrammez" and "kilogrammea" are one edit from a British alias, but three edits
+  // from "kilograms", so even fuzzy reads no unit.
+  it.each(['95 kilogrammez', '95 kilogrammea'])('returns null for %s with fuzzy', raw => {
+    expect(parseMeasurement(raw, { fuzzy: true })).toBeNull();
+  });
+});

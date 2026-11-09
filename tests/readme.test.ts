@@ -132,7 +132,7 @@ const cases: ReadmeCase[] = [
   {
     section: 'Usage',
     input: '5 foots 10 inc',
-    options: { fuzziness: 2 },
+    options: { fuzzy: true },
     expected: {
       value: 70,
       unit: 'in',
@@ -163,6 +163,11 @@ const cases: ReadmeCase[] = [
   { section: 'Surrounding Words', input: 'weighed 70 kg in 2020', expected: null },
   { section: 'Surrounding Words', input: 'I was 210 lbs, now 180 lbs', expected: null },
   { section: 'Surrounding Words', input: 'Top 10 in the class', expected: null },
+  { section: 'Surrounding Words', input: '5’11”', expected: { value: 71, unit: 'in' } },
+  { section: 'Surrounding Words', input: '(180 cm)', expected: null },
+  { section: 'Surrounding Words', input: '"180 lbs"', expected: null },
+  { section: 'Surrounding Words', input: '“5’11””', expected: null },
+  { section: 'Surrounding Words', input: '(180) lbs', expected: null },
   {
     section: 'Units Before a Number',
     input: 'Height (in): 72',
@@ -349,14 +354,14 @@ const cases: ReadmeCase[] = [
   {
     section: 'Fuzzy Matching',
     input: '5 foots 10 inc',
-    options: { fuzziness: 2 },
+    options: { fuzzy: true },
     expected: { value: 70, unit: 'in' },
   },
   { section: 'Fuzzy Matching', input: '5 foots 10 inc', expected: null },
   {
     section: 'Fuzzy Matching',
     input: '5 foot 10 inches',
-    options: { fuzziness: 1 },
+    options: { fuzzy: true },
     expected: { value: 70, unit: 'in' },
   },
 ];

@@ -30,7 +30,7 @@ describe('boundaries between compound height parts', () => {
   });
 
   it('applies the same boundary to fuzzy unit names', () => {
-    expect(parseMeasurement('5 foots tall, 2 inc', { fuzziness: 2 })).toBeNull();
+    expect(parseMeasurement('5 foots tall, 2 inc', { fuzzy: true })).toBeNull();
   });
 
   it.each(['5 ft τώρα 11 in', '5 ft сейчас 11 in', '5 ft 实际 11 in', '5 ft à 11 in'])(

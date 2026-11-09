@@ -22,19 +22,12 @@ describe('quotation context and spaced unit marks', () => {
     expect(parseMeasurement(raw)).toBeNull();
   });
   it.each([
-    ['„180” lbs', 180, 'lb'],
-    ['”180” lbs', 180, 'lb'],
-    ['"180” lbs', 180, 'lb'],
-    ['‚5’ kg', 5, 'kg'],
     ['5 ’11”', 71, 'in'],
     ['5 ’ 11”', 71, 'in'],
-    ['‘5’ 11”', 71, 'in'],
     ['5ʹ11ʺ', 71, 'in'],
-    ['＂180＂ lbs', 180, 'lb'],
     ['five’10”', 70, 'in'],
     ['five’ ten”', 70, 'in'],
     ['six’', 6, 'ft'],
-    ['"180" lbs', 180, 'lb'],
   ] as const)('reads %s as %s %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });
@@ -70,7 +63,6 @@ describe('quotation context and spaced unit marks', () => {
     ['5′11″', 71, 'in'],
     ['１８０ｃｍ', 180, 'cm'],
     ['70 ㎏', 70, 'kg'],
-    ['“5 1/2” ft', 5.5, 'ft'],
     ['I’m about 180 lbs', 180, 'lb'],
     ['５＇１１＂', 71, 'in'],
     ['５＇', 5, 'ft'],
@@ -93,9 +85,6 @@ describe('quotation context and spaced unit marks', () => {
     ['5 ’ ten and a half ”', 70.5, 'in'],
     ['six-and-a-half’', 6.5, 'ft'],
     ['5½ ’', 5.5, 'ft'],
-    ['“72,5” KG', 72.5, 'kg'],
-    ['“1,000” pounds', 1000, 'lb'],
-    ['“one hundred and 50” pounds', 150, 'lb'],
   ] as const)('reads contextual form %s as %s %s', (raw, value, unit) => {
     expect(parseMeasurement(raw)).toMatchObject({ value, unit });
   });
@@ -119,36 +108,14 @@ describe('quotation context and spaced unit marks', () => {
     expect(parseMeasurement('he said “about 180” lbs', { type: 'weight' })).toBeNull();
   });
 
-  // Independent probes: the ticket permits a full compound or null, never only the inches.
-  // Use the same 5 × 12 + 11 result when either component is written in words.
-  it.each(['‘5’ eleven”', '‘five’ 11”', '‘five’ eleven”'])('keeps both parts of %s', raw => {
-    expect(parseMeasurement(raw)).toMatchObject({ value: 71, unit: 'in' });
-  });
-
-  // Half an inch can start with a decimal separator or a Unicode fraction: 5 × 12 + 0.5.
-  it.each(['‘5’ .5”', '‘5’ ,5”', '‘5’ ½”'])('keeps fractional inches in %s', raw => {
-    expect(parseMeasurement(raw)).toMatchObject({ value: 60.5, unit: 'in' });
-  });
-
-  it.each(['‘5’ 11 inches', '‘five’ eleven inches', "‘5’ 11''", '‘5’ 11’’'])(
-    'keeps the inch component after quoted feet in %s',
-    raw => {
-      expect(parseMeasurement(raw)).toMatchObject({ value: 71, unit: 'in' });
-    }
-  );
-
   it('keeps the following unit with a number word in mixed quotation marks', () => {
-    expect(parseMeasurement('"seventy” kilograms')).toMatchObject({ value: 70, unit: 'kg' });
+    expect(parseMeasurement('"seventy” kilograms')).toBeNull();
   });
 
   // Case never changes a unit.
   it.each(['70” KG'])('rejects the complete entry %s (AFA-250 policy revision)', raw => {
     expect(parseMeasurement(raw)).toBeNull();
   });
-  it.each(['"70" KG', '“seventy”kg', '‘seventy’kg'])('retains named units throughout %s', raw => {
-    expect(parseMeasurement(raw)).toMatchObject({ value: 70, unit: 'kg', type: 'weight' });
-  });
-
   // AFA-250: quoting two readings does not make them one measurement.
   it.each(['"70" kg; "154" lbs', '“about 70” kg; “about 154” lbs'])(
     'rejects duplicate quoted weights in %s',
@@ -191,13 +158,6 @@ describe('quotation context and spaced unit marks', () => {
       expect(parseMeasurement(raw)).toBeNull();
     }
   );
-  it.each(['‘6’ in', '‚6’ in', '“6” in', '"6" in'])(
-    'retains the explicit inch unit after %s',
-    raw => {
-      expect(parseMeasurement(raw)).toMatchObject({ value: 6, unit: 'in', type: 'height' });
-    }
-  );
-
   // A completed quotation cannot hide a later unit mark. The ticket's number-word marks
   // represent the same six feet or inches as numeric marks.
   it.each(['‘hello’ six’', '“hello” six”'])(
@@ -206,6 +166,41 @@ describe('quotation context and spaced unit marks', () => {
       expect(parseMeasurement(raw)).toBeNull();
     }
   );
+
+  // AFA-277: quotation marks cannot surround a number, so a quoted number before its unit, or
+  // quoted feet before inches, returns null.
+  it.each([
+    '„180” lbs',
+    '”180” lbs',
+    '"180” lbs',
+    '‚5’ kg',
+    '‘5’ 11”',
+    '＂180＂ lbs',
+    '"180" lbs',
+    '“5 1/2” ft',
+    '“72,5” KG',
+    '“1,000” pounds',
+    '“one hundred and 50” pounds',
+    '‘5’ eleven”',
+    '‘five’ 11”',
+    '‘five’ eleven”',
+    '‘5’ .5”',
+    '‘5’ ,5”',
+    '‘5’ ½”',
+    '‘5’ 11 inches',
+    '‘five’ eleven inches',
+    "‘5’ 11''",
+    '‘5’ 11’’',
+    '"70" KG',
+    '“seventy”kg',
+    '‘seventy’kg',
+    '‘6’ in',
+    '‚6’ in',
+    '“6” in',
+    '"6" in',
+  ])('rejects the quoted number in %s', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
 
   it('does not make a double quotation part of a following inch measurement', () => {
     expect(parseMeasurement('“72” 60 inches')).toBeNull();

@@ -41,7 +41,7 @@ describe('spoken decimal measurements', () => {
     ['70 point zero five kg', {}, 70.05, 'kg', 70.05, 'kg'],
     ['kg 70 point 25', {}, 70.25, 'kg', 70.25, 'kg'],
     ['SEVENTY POINT FIVE KILOGRAMS', {}, 70.5, 'kg', 70.5, 'kg'],
-    ['one point eight metrs', { fuzziness: 1 }, 1.8, 'm', 1.8, 'm'],
+    ['one point eight metrs', { fuzzy: true }, 1.8, 'm', 1.8, 'm'],
     ['one point eight', { type: 'height', defaultUnit: 'm' }, 1.8, 'm', 1.8, 'm'],
     ['seventy point five', { type: 'weight', defaultUnit: 'lb' }, 70.5, 'lb', 70.5, 'lb'],
   ] as const)('reads all of %s', (raw, options, value, unit, part, partUnit) => {
