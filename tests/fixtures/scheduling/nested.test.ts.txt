@@ -1,0 +1,21 @@
+import { spawnSync } from 'node:child_process';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { expect, it } from 'vitest';
+
+// The fixture's deadline must leave room for its bounded ten-second child and teardown.
+it('holds the outer slot while the nested suites run', { timeout: 15_000 }, () => {
+  expect(() => mkdirSync('outer-active')).not.toThrow();
+  try {
+    const result = spawnSync(
+      process.execPath,
+      [resolve('node_modules/vitest/vitest.mjs'), 'run', 'tests/nested'],
+      { encoding: 'utf8', timeout: 10_000 }
+    );
+    expect(result.error, result.stdout + result.stderr).toBeUndefined();
+    expect(result.status, result.stdout + result.stderr).toBe(0);
+    writeFileSync('completed/outer-gitEnvironment.test.ts', 'finished');
+  } finally {
+    rmSync('outer-active', { recursive: true });
+  }
+});

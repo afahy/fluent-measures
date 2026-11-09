@@ -1,23 +1,41 @@
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
+
+// Vitest matches coverage excludes against absolute paths. Anchor dot paths inside this
+// repository so a .t3 or .codex ancestor cannot exclude all source files. Escape glob syntax
+// in the checkout path, and use the same forward slashes as Vitest's coverage matcher.
+const coverageRoot = fileURLToPath(new URL('.', import.meta.url))
+  .replace(/\\/g, '/')
+  .replace(/[\\*?{}()[\]]/g, '\\$&');
 
 export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
     include: ['tests/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
-    // A test that runs no expect fails (AGENTS.md rule 11), also when its expects are in a loop
-    // that runs zero times and that the lint doesn't see (AFA-70).
+    // Integration files start their own Node/Git processes, and gitEnvironment starts another
+    // Vitest run. Give each file the runner's resources, at both levels, instead of multiplying
+    // the default worker pools and competing with the five-second per-test deadlines.
+    fileParallelism: false,
+    // A test that runs no expect fails (AGENTS.md rule 10, AFA-70). This also catches a loop
+    // that runs zero times when the lint doesn't see it.
     expect: { requireAssertions: true },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
       include: ['src/**'],
-      exclude: ['coverage/**', 'dist/**', '**/[.]**', 'commitlint.config.js', 'tests/**'],
+      exclude: [
+        'coverage/**',
+        'dist/**',
+        `${coverageRoot}**/[.]**`,
+        'commitlint.config.js',
+        'tests/**',
+      ],
       thresholds: {
-        branches: 80,
-        functions: 80,
-        lines: 80,
-        statements: 80,
+        branches: 100,
+        functions: 100,
+        lines: 100,
+        statements: 100,
       },
     },
   },

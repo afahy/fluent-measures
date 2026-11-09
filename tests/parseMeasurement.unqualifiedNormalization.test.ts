@@ -5,26 +5,26 @@ describe('unqualified measurement normalization', () => {
   it.each([
     [
       '72',
-      { type: 'height', inferUnit: 'imperial', normalizedUnit: 'cm' } as const,
+      { type: 'height', normalizedUnit: 'cm', defaultUnit: 'in' } as const,
       { value: 182.88, unit: 'cm', sourceUnit: 'in' },
     ],
     [
       '180',
-      { type: 'height', inferUnit: 'metric', normalizedUnit: 'm' } as const,
+      { type: 'height', normalizedUnit: 'm', defaultUnit: 'cm' } as const,
       { value: 1.8, unit: 'm', sourceUnit: 'cm' },
     ],
     [
       '100',
-      { type: 'weight', inferUnit: 'metric', normalizedUnit: 'lb' } as const,
+      { type: 'weight', normalizedUnit: 'lb', defaultUnit: 'kg' } as const,
       { value: 100 / 0.45359237, unit: 'lb', sourceUnit: 'kg' },
     ],
     [
       '220',
-      { type: 'weight', inferUnit: 'imperial', normalizedUnit: 'kg' } as const,
+      { type: 'weight', normalizedUnit: 'kg', defaultUnit: 'lb' } as const,
       { value: 99.79032140000001, unit: 'kg', sourceUnit: 'lb' },
     ],
-  ])('normalizes inferred input %s', (raw, options, expected) => {
-    expect(parseMeasurement(raw, { ...options, allowUnqualified: true })).toEqual({
+  ])('normalizes default-unit input %s', (raw, options, expected) => {
+    expect(parseMeasurement(raw, options)).toEqual({
       matches: [{ value: Number(raw), unit: expected.sourceUnit }],
       value: expected.value,
       unit: expected.unit,
@@ -33,32 +33,24 @@ describe('unqualified measurement normalization', () => {
     });
   });
 
-  // Inches to feet divides by 12, so the smallest number underflows to zero. A metric height
-  // can't show this since AFA-66: a lone number below 3 is meters, and meters only multiply.
-  it('retains an inferred result when conversion underflows to zero', () => {
+  // Inches to feet divides by 12, so the smallest number underflows to zero.
+  it('rejects a default-unit result when conversion underflows to zero', () => {
     const raw = `0.${'0'.repeat(323)}5`;
     expect(
       parseMeasurement(raw, {
         type: 'height',
-        allowUnqualified: true,
-        inferUnit: 'imperial',
         normalizedUnit: 'ft',
+        defaultUnit: 'in',
       })
-    ).toEqual({
-      matches: [{ value: Number.MIN_VALUE, unit: 'in' }],
-      value: 0,
-      unit: 'ft',
-      type: 'height',
-      raw,
-    });
+    ).toBeNull();
   });
 
   it('rejects normalization to a unit of another measurement type', () => {
     expect(() =>
       parseMeasurement('72', {
         type: 'height',
-        allowUnqualified: true,
         normalizedUnit: 'kg',
+        defaultUnit: 'in',
       })
     ).toThrow('normalizedUnit kg is not a height unit');
   });

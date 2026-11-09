@@ -1,5 +1,9 @@
+// AFA-250: recovery expectations now follow the approved complete-entry contract in PARSING.md.
+// Earlier ticket rationales below describe their historical extraction contract; original
+// assertions are retained separately under design/afa-250.
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
+import { parseWithin, underStryker } from './timing';
 
 // Inputs and results from AFA-59, which come from the AFA-41 corpus.
 describe('fractions', () => {
@@ -53,20 +57,29 @@ describe('fractions', () => {
     expect(parseMeasurement(raw)).toBeNull();
   });
 
-  it.each([
-    ['blood pressure 120/80, weight 180 lbs', 180, 'lb'],
-    ['12/25/2020, 180 lbs', 180, 'lb'],
-    ['1,234,56 kg', 1234.56, 'kg'],
-  ] as const)('keeps reading %s as %s %s', (raw, value, unit) => {
-    expect(parseMeasurement(raw)).toMatchObject({ value, unit });
-  });
+  it.each(['blood pressure 120/80, weight 180 lbs', '12/25/2020, 180 lbs'])(
+    'rejects the complete entry %s (AFA-250)',
+    raw => {
+      expect(parseMeasurement(raw)).toBeNull();
+    }
+  );
+  it.each([['1,234,56 kg', 1234.56, 'kg']] as const)(
+    'keeps reading %s as %s %s',
+    (raw, value, unit) => {
+      expect(parseMeasurement(raw)).toMatchObject({ value, unit });
+    }
+  );
 
   // A slash after a number that follows a unit or quote mark separates two measurements.
   it.each([
-    ["5'10/180", {}, 70, 'in'],
+    ["5'10/180", {}],
+    ['5 ft 10/180 lbs', {}],
+  ] as const)('rejects the complete entry %s (AFA-250)', (raw, options) => {
+    expect(parseMeasurement(raw, options)).toBeNull();
+  });
+  it.each([
     ['5ft10/180lbs', { type: 'weight' }, 180, 'lb'],
     ['5ft10/72kg', { type: 'weight' }, 72, 'kg'],
-    ['5 ft 10/180 lbs', {}, 70, 'in'],
     ['5 ft 10/180 lbs', { type: 'weight' }, 180, 'lb'],
     ['5ft 10/180lbs', { type: 'weight' }, 180, 'lb'],
     ["6'1/200 lbs", { type: 'height' }, 73, 'in'],
@@ -81,14 +94,13 @@ describe('fractions', () => {
   });
 
   // 1 followed by 100,000 zeros is too large to represent, so the result is null. The fraction
-  // pattern must still fail on it quickly.
-  it('rejects a very long number in under a second', () => {
-    const start = Date.now();
-    expect(parseMeasurement(`1${'0'.repeat(100_000)} lbs`)).toBeNull();
-    expect(Date.now() - start).toBeLessThan(1000);
+  // pattern must still fail on it quickly. Keep the existing 1000 ms limit, measured as CPU
+  // time; parseWithin reports the time in CI. Large-input timing is excluded under Stryker.
+  it.skipIf(underStryker)('rejects a very long number in under a second', () => {
+    expect(parseWithin(`1${'0'.repeat(100_000)} lbs`, 1000, { maxLength: Infinity })).toBeNull();
   });
 
-  it('keeps the README shorthand and range rules', () => {
+  it('keeps the shorthand and range rules in PARSING.md', () => {
     expect(parseMeasurement('5-11', { type: 'height' })).toMatchObject({ value: 71, unit: 'in' });
     expect(parseMeasurement('150-180 lbs')).toBeNull();
   });

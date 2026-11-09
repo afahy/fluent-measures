@@ -2,6 +2,13 @@ import { describe, it, expect } from 'vitest';
 import { wordsToNumber } from '../src/wordsToNumber';
 
 describe('wordsToNumber', () => {
+  it.each(['one point oh five', 'one point five oh', 'one point five point two'])(
+    'rejects the complete malformed decimal %s',
+    input => {
+      expect(wordsToNumber(input)).toBeNull();
+    }
+  );
+
   it('converts basic number words to numbers', () => {
     expect(wordsToNumber('zero')).toEqual(0);
     expect(wordsToNumber('one')).toEqual(1);

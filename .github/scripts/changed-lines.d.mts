@@ -6,16 +6,12 @@ export function gitEnvironment(
 
 export function decodeNames(output: Uint8Array): { names: string[]; invalid: string[] };
 
-export function unmatchedFiles(log: string, files: string[]): string[];
-
 export function isSourceFile(file: string): boolean;
-export function mutatedFiles(files: string[], patterns: string[], root?: string): string[];
+export function isUnmutatedCode(file: string): boolean;
 
 export function controlPaths(files: string[]): string[];
 
 export function backslashPaths(files: string[]): string[];
-
-export function literalGlob(file: string): string;
 
 export function hunkRanges(diff: string): Array<[number, number]>;
 
@@ -28,7 +24,7 @@ export interface ReportMutant {
 }
 
 export interface Report {
-  files: Record<string, { mutants: ReportMutant[] }>;
+  files: Record<string, { source?: string; mutants: ReportMutant[] }>;
 }
 
 export interface UnkilledMutant {
@@ -51,3 +47,8 @@ export function unexplainedIgnores(
 ): Array<{ file: string; line: number; column: number; mutator: string }>;
 
 export function reasonlessDirectives(source: string, ranges: Array<[number, number]>): number[];
+
+export function directiveLines(
+  source: string,
+  ranges: Array<[number, number]>
+): { lines: number[]; parsed: boolean };

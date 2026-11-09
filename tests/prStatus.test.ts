@@ -24,11 +24,12 @@ type Failure = { status: number; headers?: Record<string, string> };
 
 /**
  * Serves a PR's responses the way GitHub's REST API does. `snapshots` gives the answer to each
- * poll in turn; the last one repeats. `failures` answers the first requests for the PR instead.
+ * poll in turn; the last one repeats. `failures` answers the first requests for the PR instead,
+ * except where it has no entry.
  */
 async function serve(
   snapshots: Snapshot[],
-  failures: Failure[] = []
+  failures: (Failure | undefined)[] = []
 ): Promise<{ url: string; polls: () => number; hits: (end: string) => number }> {
   let polls = 0;
   let requests = 0;
@@ -94,7 +95,7 @@ function run(
   });
 }
 
-/** #43 at 18:10 on 2026-10-05, with both bot threads answered, so only the merge is left. */
+/** #43 at 18:10 on 2026-10-05, with its two threads answered, so only the merge is left. */
 function answered(): Snapshot {
   const snapshot = fixture('pr-43-at-1810');
   for (const id of [4187121862, 4187191635]) {
@@ -117,7 +118,8 @@ describe('pr-status.mjs', () => {
     expect(result.stdout).toContain('#43 needs-agent: fix: read the number after any unit label');
     expect(result.stdout).toContain('  Head 333a541, pushed 2026-10-05T17:51:02Z');
     expect(result.stdout).toContain('  GitHub merge state: clean');
-    expect(result.stdout).toContain('  CI: 11 passed');
+    // 11 checks, and CodeRabbit's commit status.
+    expect(result.stdout).toContain('  CI: 12 passed');
     expect(result.stdout).toContain(
       `    - chatgpt-codex-connector[bot] left a thread with no reply: https://github.com/${repo}/pull/43#discussion_r4187121862`
     );
@@ -126,7 +128,7 @@ describe('pr-status.mjs', () => {
   it('prints JSON with --json', async () => {
     const api = await serve([answered()]);
     const result = await run(api.url, ['#43', '--json']);
-    // Both bots reviewed 333a541 and CI passed, so nothing is left for the agent.
+    // Codex reviewed 333a541 and CI passed, so nothing is left for the agent.
     expect(result.code).toBe(0);
     expect(JSON.parse(result.stdout)).toEqual([
       expect.objectContaining({
@@ -203,7 +205,6 @@ describe('pr-status.mjs', () => {
     }
   );
 
-  // AFA-147: when --timeout ends before a poll gets through, the call says what GitHub answered.
   it('with --wait, gives the last error when no poll gets through in time', async () => {
     const api = await serve([fixture('pr-43-at-1810')], Array(10).fill({ status: 503 }));
     const result = await run(api.url, ['43', '--wait', '--interval', '1', '--timeout', '0.02']);
@@ -265,6 +266,58 @@ describe('pr-status.mjs', () => {
       expect(api.polls()).toBe(0);
     }
   );
+
+  it('with --wait, prints the last result with its --timeout when nothing changes', async () => {
+    const blocked = answered();
+    blocked.pull.mergeable_state = 'blocked';
+    const api = await serve([blocked]);
+    const result = await run(api.url, ['43', '--wait', '--interval', '1', '--timeout', '0.03']);
+    expect(result.code).toBe(30);
+    expect(result.stdout.split('\n')[0]).toBe('Nothing changed in 0.03 min.');
+  });
+
+  it('with --wait, prints the last result when a later rate limit lasts past --timeout', async () => {
+    const blocked = answered();
+    blocked.pull.mergeable_state = 'blocked';
+    const limit = { status: 429, headers: { 'retry-after': '3600' } };
+    const api = await serve([blocked], [undefined, limit]);
+    const result = await run(api.url, ['43', '--wait', '--interval', '1', '--timeout', '0.05']);
+    expect(result.code).toBe(30);
+    expect(result.stdout.split('\n')[0]).toBe(
+      'Nothing changed in 0 min. The next try would come after --timeout: GitHub answered 429 for ' +
+        `${api.url}/repos/${repo}/pulls/43: {"message":"Failed"}`
+    );
+    expect(api.hits('/pulls/43')).toBe(2);
+  });
+
+  // AFA-148 item 2: after a rate limit ends, the next try still waits --interval. Here a try at
+  // 0 s and one at 2 s fail, and the next would come after the 3 s --timeout.
+  it('with --wait, waits at least --interval after a short rate limit', async () => {
+    const limit = { status: 429, headers: { 'retry-after': '1' } };
+    const api = await serve([fixture('pr-43-at-1810')], Array(10).fill(limit));
+    const result = await run(api.url, ['43', '--wait', '--interval', '2', '--timeout', '0.05']);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain('GitHub answered 429');
+    expect(api.hits('/pulls/43')).toBe(2);
+  });
+
+  // AFA-148 item 9: rate limits count toward the five errors in a row, so a limit that keeps
+  // coming back ends the call. Its four waits of --interval take 4 s.
+  it('with --wait, exits with 1 after five rate limits in a row', { timeout: 20_000 }, async () => {
+    const limit = { status: 429, headers: { 'retry-after': '1' } };
+    const api = await serve([fixture('pr-43-at-1810')], Array(10).fill(limit));
+    const result = await run(api.url, ['43', '--wait', '--interval', '1', '--timeout', '1']);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain('GitHub answered 429');
+    expect(api.hits('/pulls/43')).toBe(5);
+  });
+
+  // AFA-148 item 3: another try can't fix a bad URL, so the call ends before its first request.
+  it("with --wait, exits with 1 at once for an API URL that isn't a URL", async () => {
+    const result = await run('not-a-url', ['43', '--wait', '--interval', '1']);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain("The GitHub API URL isn't an http or https URL: not-a-url");
+  });
 
   it('exits with 2 and the usage for a bad argument, and 1 for an API error', async () => {
     const api = await serve([fixture('pr-43-at-1810')]);

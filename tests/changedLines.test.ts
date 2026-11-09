@@ -1,21 +1,21 @@
 import { Buffer } from 'node:buffer';
-import { readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
+import { execPath } from 'node:process';
 import { describe, expect, it } from 'vitest';
 import {
   backslashPaths,
   controlPaths,
   decodeNames,
+  directiveLines,
   gitEnvironment,
   hunkRanges,
   isSourceFile,
-  literalGlob,
-  mutatedFiles,
+  isUnmutatedCode,
   reasonlessDirectives,
   revisions,
   unexplainedIgnores,
   unkilledMutants,
-  unmatchedFiles,
 } from '../.github/scripts/changed-lines.mjs';
 
 // Output of `git diff --unified=0` for one file: an insertion, a one-line change, a deletion and
@@ -85,68 +85,25 @@ describe('isSourceFile', () => {
   });
 });
 
-// AFA-72: the check mutates only the changed files that stryker.config.json mutates.
-describe('mutatedFiles', () => {
-  const { mutate } = JSON.parse(
-    readFileSync(new URL('../stryker.config.json', import.meta.url), 'utf8')
-  ) as { mutate: string[] };
-
-  it('leaves out the test files that the project config leaves out', () => {
-    const files = [
-      'src/units.ts',
-      'src/parse/units.ts',
-      'src/units.test.ts',
-      'src/units.spec.ts',
-      'src/parse/units.test.ts',
-      'src/test.ts',
-    ];
-    expect(mutatedFiles(files, mutate)).toEqual([
-      'src/units.ts',
-      'src/parse/units.ts',
-      'src/test.ts',
-    ]);
-  });
-
-  // Codex, round 1 of #81: Stryker applies the patterns in order, and ignores a line range.
+// AFA-85: other code that tsc, Vitest and tsup read, outside the project's mutation scope.
+describe('isUnmutatedCode', () => {
   it.each([
-    [['src/**/*.ts', '!src/a.ts'], ['src/b.ts']],
-    [
-      ['!src/a.ts', 'src/**/*.ts'],
-      ['src/a.ts', 'src/b.ts'],
-    ],
-    [['src/a.ts:1-10'], ['src/a.ts']],
-    [
-      ['src/a.ts:1:2-10:4', 'src/b.ts'],
-      ['src/a.ts', 'src/b.ts'],
-    ],
-    // Codex, round 2 of #81: Stryker reads a pattern from the project folder.
-    [['./src/**/*.ts', '!./src/b.ts'], ['src/a.ts']],
-    // AFA-113: an absolute pattern too, as Stryker resolves each pattern.
-    [[resolve('src/**/*.ts'), `!${resolve('src/b.ts')}`], ['src/a.ts']],
-  ])('applies %j in order', (patterns, expected) => {
-    expect(mutatedFiles(['src/a.ts', 'src/b.ts'], patterns)).toEqual(expected);
-  });
-
-  // Stryker resolves each pattern from the project folder, so "../repo/" names the same files.
-  // The project folder's own path isn't a glob, even with "[" and "]" in it.
-  it('reads patterns in a project folder whose path has glob characters', () => {
-    expect(mutatedFiles(['src/a.ts'], ['src/**/*.ts'], '/tmp/a[1]/repo')).toEqual(['src/a.ts']);
-  });
-
-  it('reads a pattern that leaves the project folder and comes back', () => {
-    expect(
-      mutatedFiles(
-        ['src/a.ts', 'src/b.ts'],
-        ['../repo/src/**/*.ts', '!../repo/src/b.ts'],
-        '/x/repo'
-      )
-    ).toEqual(['src/a.ts']);
-  });
-
-  it('leaves out the files that a pattern with "!" matches, as Stryker does', () => {
-    expect(
-      mutatedFiles(['src/a.ts', 'src/b.ts', 'lib/c.ts'], ['src/**/*.ts', '!src/b.ts'])
-    ).toEqual(['src/a.ts']);
+    ['src/units.mts', true],
+    ['src/units.cts', true],
+    ['src/units.js', true],
+    ['src/units.mjs', true],
+    ['src/units.cjs', true],
+    ['src/units.jsx', true],
+    ['src/units.tsx', true],
+    ['src/units.ts', false],
+    ['src/types.d.ts', false],
+    ['src/types.d.mts', false],
+    ['src/types.d.cts', false],
+    ['src/template.mtsx', false],
+    ['src/template.cjsx', false],
+    ['src/data.json', false],
+  ])('returns %s → %s', (file, expected) => {
+    expect(isUnmutatedCode(file)).toBe(expected);
   });
 });
 
@@ -185,23 +142,6 @@ describe('decodeNames', () => {
   });
 });
 
-describe('unmatchedFiles', () => {
-  it('returns the files whose pattern Stryker says matched no file', () => {
-    const log = [
-      '10:00:00 (1) WARN ProjectReader Glob pattern "src/node_modules/x.ts" did not result in any files.',
-      '10:00:00 (1) WARN ProjectReader Glob pattern "src/[[]u[]]nits.ts" did not result in any files.',
-      '10:00:00 (1) WARN ProjectReader Glob pattern "!src/units.ts" did not exclude any files.',
-    ].join('\n');
-    expect(
-      unmatchedFiles(log, ['src/node_modules/x.ts', 'src/[u]nits.ts', 'src/units.ts'])
-    ).toEqual(['src/node_modules/x.ts', 'src/[u]nits.ts']);
-  });
-
-  it('returns no files for a log without warnings', () => {
-    expect(unmatchedFiles('', ['src/units.ts'])).toEqual([]);
-  });
-});
-
 describe('controlPaths', () => {
   it('returns the paths with a control character', () => {
     expect(
@@ -226,16 +166,6 @@ describe('backslashPaths', () => {
 
   it('returns no paths when none has a backslash', () => {
     expect(backslashPaths(['src/units.ts', 'src/a/b.ts'])).toEqual([]);
-  });
-});
-
-describe('literalGlob', () => {
-  it.each([
-    ['src/units.ts', 'src/units.ts'],
-    ['src/[u]nits.ts', 'src/[[]u[]]nits.ts'],
-    ['src/a(b){c}*?.ts', 'src/a[(]b[)][{]c[}][*][?].ts'],
-  ])('writes %s as %s', (file, pattern) => {
-    expect(literalGlob(file)).toBe(pattern);
   });
 });
 
@@ -307,6 +237,182 @@ describe('unkilledMutants', () => {
       ['src/a.ts', 20],
     ]);
   });
+});
+
+// AFA-131: Babel counts all JavaScript line terminators; git counts only LF. The
+// nullish expression starts at column 11 of Babel line 2, after 13 UTF-16 units on git line 1.
+describe('mutant git coordinates', () => {
+  it.each(['\r', '\u2028', '\u2029'])(
+    'finds changed mutants after %j and leaves the report untouched',
+    separator => {
+      const report = {
+        files: {
+          'src/a.ts': {
+            source: `const a = 1;${separator}const b = a ?? 2;\nexport const c = 3;\n`,
+            mutants: ['Survived', 'NoCoverage', 'Ignored'].map(status => ({
+              ...mutant(status, [2, 2]),
+              mutatorName: 'LogicalOperator',
+              replacement: 'a && 2',
+              location: { start: { line: 2, column: 11 }, end: { line: 2, column: 17 } },
+            })),
+          },
+        },
+      };
+      const original = structuredClone(report);
+      expect(
+        unkilledMutants(report, new Map([['src/a.ts', [[1, 1]]]])).map(
+          ({ line, column, status }) => ({ line, column, status })
+        )
+      ).toEqual([
+        { line: 1, column: 24, status: 'Survived' },
+        { line: 1, column: 24, status: 'NoCoverage' },
+      ]);
+      // Babel line 2 isn't git line 2: changing only the latter must not count these mutants.
+      expect(unkilledMutants(report, new Map([['src/a.ts', [[2, 2]]]]))).toEqual([]);
+      expect(unexplainedIgnores(report, new Map([['src/a.ts', [[1, 1]]]]))).toEqual([
+        { file: 'src/a.ts', line: 1, column: 24, mutator: 'LogicalOperator' },
+      ]);
+      expect(unexplainedIgnores(report, new Map([['src/a.ts', [[2, 2]]]]))).toEqual([]);
+      expect(report).toEqual(original);
+    }
+  );
+
+  // Babel's readEscapedChar keeps its line for escaped Unicode separators in literals.
+  // All these prefixes have no LF: the following nullish expression is git line 2, column 11.
+  for (const separator of ['\u2028', '\u2029']) {
+    it.each([
+      ['single quote', "const a = 'a\\<sep>b';", 2],
+      ['double quote', 'const a = "a\\<sep>b";', 2],
+      ['template', 'const a = `a\\<sep>b`;', 2],
+      ['template head', 'const a = `a\\<sep>${1}b`;', 2],
+      ['template middle', 'const a = `a${1}\\<sep>b${2}c`;', 2],
+      ['template tail', 'const a = `a${1}\\<sep>b`;', 2],
+      ['nested template', 'const a = `a${`b\\<sep>c`}d`;', 2],
+      ['even backslashes', "const a = 'a\\\\<sep>b';", 3],
+      ['odd backslashes', "const a = 'a\\\\\\<sep>b';", 2],
+      ['mixed escapes', "const a = 'a\\<sep>b<sep>c';", 3],
+      ['line comment', "// 'a\\<sep>const a = 1;", 3],
+      ['block comment', "/* 'a\\<sep> */const a = 1;", 3],
+      ['regex before string', "const r = /'/; const a = 'a\\<sep>b';", 2],
+    ] as const)(
+      `maps a %s containing U+${separator.charCodeAt(0).toString(16)}`,
+      (_, prefix, babelLine) => {
+        expect.hasAssertions();
+        const report = {
+          files: {
+            'src/a.ts': {
+              source: prefix.replace(/<sep>/g, separator) + '\nconst b = a ?? 2;\n',
+              mutants: ['Survived', 'NoCoverage', 'Ignored'].map(status => ({
+                ...mutant(status, [babelLine, babelLine]),
+                mutatorName: 'LogicalOperator',
+                replacement: 'a && 2',
+                location: {
+                  start: { line: babelLine, column: 11 },
+                  end: { line: babelLine, column: 17 },
+                },
+              })),
+            },
+          },
+        };
+        expect(unkilledMutants(report, new Map([['src/a.ts', [[2, 2]]]]))).toMatchObject([
+          { line: 2, column: 11, status: 'Survived' },
+          { line: 2, column: 11, status: 'NoCoverage' },
+        ]);
+        expect(unkilledMutants(report, new Map([['src/a.ts', [[1, 1]]]]))).toEqual([]);
+        expect(unexplainedIgnores(report, new Map([['src/a.ts', [[2, 2]]]]))).toEqual([
+          { file: 'src/a.ts', line: 2, column: 11, mutator: 'LogicalOperator' },
+        ]);
+      }
+    );
+  }
+
+  it('maps both ends of a spanning mutant across mixed terminators', () => {
+    // Babel lines 2 through 5 share git line 2. Babel line 6 is git line 3.
+    const report = {
+      files: {
+        'src/a.ts': {
+          source: 'a\r\nb\rc\u2028d\u2029e\nf\n',
+          mutants: [
+            {
+              ...mutant('Survived', [3, 6]),
+              location: { start: { line: 3, column: 1 }, end: { line: 6, column: 2 } },
+            },
+          ],
+        },
+      },
+    };
+    const found = [{ file: 'src/a.ts', line: 2, column: 3 }];
+    expect(
+      unkilledMutants(report, new Map([['src/a.ts', [[2, 2]]]])).map(({ file, line, column }) => ({
+        file,
+        line,
+        column,
+      }))
+    ).toEqual(found);
+    expect(
+      unkilledMutants(report, new Map([['src/a.ts', [[3, 3]]]])).map(({ file, line, column }) => ({
+        file,
+        line,
+        column,
+      }))
+    ).toEqual(found);
+    expect(unkilledMutants(report, new Map([['src/a.ts', [[4, 4]]]]))).toEqual([]);
+  });
+
+  it('resets columns after LF and counts a supplementary character as two UTF-16 units', () => {
+    const report = {
+      files: {
+        'src/a.ts': {
+          source: '// 😀\u2028a;\r\nb;\u2029c;',
+          mutants: [
+            {
+              ...mutant('Survived', [2, 2]),
+              location: { start: { line: 2, column: 1 }, end: { line: 2, column: 2 } },
+            },
+            {
+              ...mutant('Survived', [4, 4]),
+              location: { start: { line: 4, column: 1 }, end: { line: 4, column: 2 } },
+            },
+          ],
+        },
+      },
+    };
+    expect(
+      unkilledMutants(report, new Map([['src/a.ts', [[1, 2]]]])).map(({ line, column }) => [
+        line,
+        column,
+      ])
+    ).toEqual([
+      [1, 7],
+      [2, 4],
+    ]);
+  });
+
+  it.each(['\n', '\r\n'])(
+    'preserves ordinary %j line and column coordinates, including end-line overlap',
+    separator => {
+      const report = {
+        files: {
+          'src/a.ts': {
+            source: `first${separator}second${separator}third${separator}`,
+            mutants: [
+              {
+                ...mutant('Survived', [2, 3]),
+                location: { start: { line: 2, column: 2 }, end: { line: 3, column: 1 } },
+              },
+            ],
+          },
+        },
+      };
+      expect(
+        unkilledMutants(report, new Map([['src/a.ts', [[3, 3]]]])).map(({ line, column }) => [
+          line,
+          column,
+        ])
+      ).toEqual([[2, 2]]);
+      expect(unkilledMutants(report, new Map([['src/a.ts', [[1, 1]]]]))).toEqual([]);
+    }
+  );
 });
 
 describe('unexplainedIgnores', () => {
@@ -461,5 +567,55 @@ describe('reasonlessDirectives', () => {
     expect(reasonlessDirectives(`${code}\n// Stryker disable next-line all\nx;`, [[2, 2]])).toEqual(
       [2]
     );
+  });
+
+  // AFA-117: TypeScript gives the end of the file a JSDoc after it as a child, so the walk read no
+  // comment before that JSDoc. It read the same directive with no JSDoc after it.
+  it('reads a directive before a JSDoc at the end of the file', () => {
+    expect(reasonlessDirectives('x;\n// Stryker disable all\n/** doc */\n', [[2, 2]])).toEqual([2]);
+  });
+
+  it('reads a directive at the end of the file', () => {
+    expect(reasonlessDirectives('x;\n// Stryker disable all\n', [[2, 2]])).toEqual([2]);
+  });
+});
+
+// AFA-117: the check says whether it could parse the file, so its message can say why it flags a
+// line. A file it can't parse fails safe, as `reasonlessDirectives` does.
+describe('directiveLines', () => {
+  it.each([
+    ['x;', { lines: [], parsed: true }],
+    [`const x = ${'('.repeat(5000)}1${')'.repeat(5000)};`, { lines: [2], parsed: false }],
+  ])('says whether it parsed the file after %#', (code, expected) => {
+    const comment = '// Stryker disable next-line all: a reason';
+    expect(directiveLines(`${code}\n${comment}\nx;`, [[2, 2]])).toEqual(expected);
+  });
+});
+
+// AFA-117: no directive can be on a changed line that has no "Stryker", so the check reads such a
+// file without TypeScript, which is 9 MB. A process of its own shows whether directive parsing
+// loads it; coordinate mapping also loads it for escaped Unicode separators in literals.
+describe('loading TypeScript', () => {
+  const loads = (call: string): boolean => {
+    const script = `
+      import { createRequire } from 'node:module';
+      import { sep } from 'node:path';
+      const { reasonlessDirectives } = await import(${JSON.stringify(resolve('.github/scripts/changed-lines.mjs'))});
+      ${call};
+      const cache = Object.keys(createRequire(import.meta.url).cache);
+      console.log(cache.some(file => file.endsWith(['', 'typescript', 'lib', 'typescript.js'].join(sep))));
+    `;
+    return (
+      execFileSync(execPath, ['--input-type=module', '-e', script], { encoding: 'utf8' }).trim() ===
+      'true'
+    );
+  };
+
+  it('doesn\'t load TypeScript when no changed line holds "Stryker"', () => {
+    expect(loads("reasonlessDirectives('x;\\n// Stryker disable all\\ny;', [[3, 3]])")).toBe(false);
+  });
+
+  it('loads TypeScript to read a changed line with "Stryker"', () => {
+    expect(loads("reasonlessDirectives('x;\\n// Stryker disable all\\ny;', [[2, 2]])")).toBe(true);
   });
 });

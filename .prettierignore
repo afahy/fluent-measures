@@ -1,16 +1,15 @@
 # Build output
 dist/
 build/
+.docs-preview/
 *.tsbuildinfo
 
 # Dependencies
 node_modules/
 .pnpm-store/
 
-# Coverage directory
 coverage/
 
-# Changesets
 .changeset/
 
 # Package manager files

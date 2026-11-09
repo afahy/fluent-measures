@@ -9,6 +9,12 @@ build/
 # Bundle size reports from pnpm check:size:why
 esbuild-why*.html
 
+# Screenshots from pnpm docs:shot
+/docs-shots/
+
+# Opt-in local palette preview; never part of the Pages artifact
+/.docs-preview/
+
 # Test and coverage
 coverage/
 .nyc_output/

@@ -62,7 +62,7 @@ const OPTION_SETS: readonly (readonly [name: string, options: ParseOptions])[] =
   ['w', { type: 'weight' }],
   ['cm', { normalizedUnit: 'cm' }],
   ['f2', { fuzziness: 2 }],
-  ['hu', { type: 'height', allowUnqualified: true, inferUnit: 'metric' }],
+  ['hu', { type: 'height', defaultUnit: 'cm' }],
 ];
 
 const INPUT_COUNT = 1800;

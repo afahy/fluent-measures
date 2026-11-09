@@ -1,9 +1,12 @@
+// AFA-250: recovery expectations now follow the approved complete-entry contract in PARSING.md.
+// Earlier ticket rationales below describe their historical extraction contract; original
+// assertions are retained separately under design/afa-250.
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement } from '../src';
 
 // Inputs and results from AFA-65, which come from the AFA-41 corpus, and the ticket's comment.
 describe('Unicode minus signs', () => {
-  // A measurement can't be negative, so each of these returns null, as "-5 ft" does. The README
+  // A measurement can't be negative, so each of these returns null, as "-5 ft" does. PARSING.md
   // gives "kg-70.5" → null for a minus sign after a unit prefix.
   it.each([
     ['−5 ft', {}],
@@ -15,12 +18,12 @@ describe('Unicode minus signs', () => {
     ['kg−70.5', {}],
     ['Weight: −70 kg', {}],
     ['−5 ft 11 in', {}],
-    ['−180', { type: 'height', allowUnqualified: true }],
+    ['−180', { type: 'height', defaultUnit: 'in' }],
   ] as const)('returns null for %s with %o', (raw, options) => {
     expect(parseMeasurement(raw, options)).toBeNull();
   });
 
-  // After a number, a minus sign joins two parts or values. The README reads a dash between two
+  // After a number, a minus sign joins two parts or values. PARSING.md reads a dash between two
   // numbers as a range, and returns null for a range that repeats its unit.
   it.each([
     ['150 lbs−180 lbs', {}],
@@ -37,15 +40,19 @@ describe('Unicode minus signs', () => {
 
   // 5 ft and 11 in are one height: 5 × 12 + 11 = 71 in.
   it.each([
+    ['Height − 180 cm', {}],
+    ['180 cm−70 kg', { type: 'weight' }],
+  ] as const)('rejects the complete entry %s (AFA-250)', (raw, options) => {
+    expect(parseMeasurement(raw, options)).toBeNull();
+  });
+  it.each([
     ['5 ft −11 in', {}, 71, 'in'],
     ['5 ft−11', {}, 71, 'in'],
-    ['Height − 180 cm', {}, 180, 'cm'],
-    ['180 cm−70 kg', { type: 'weight' }, 70, 'kg'],
   ] as const)('keeps reading %s with %o as %s %s', (raw, options, value, unit) => {
     expect(parseMeasurement(raw, options)).toMatchObject({ value, unit });
   });
 
-  // The README's "1 m 80 cm" is one height with two parts, also when its number is a word.
+  // PARSING.md's "1 m 80 cm" is one height with two parts, also when its number is a word.
   it.each(['1 m−80 cm', 'one m−80 cm'])('keeps the parts of %s', raw => {
     expect(parseMeasurement(raw)?.matches).toEqual([
       { value: 1, unit: 'm' },

@@ -1,0 +1,300 @@
+{
+  "schemaVersion": "1.0",
+  "thresholds": {
+    "high": 99,
+    "low": 98,
+    "break": 98
+  },
+  "files": {
+    "src/cr.ts": {
+      "language": "typescript",
+      "mutants": [
+        {
+          "id": "0",
+          "mutatorName": "LogicalOperator",
+          "replacement": "a && 2",
+          "status": "NoCoverage",
+          "static": false,
+          "coveredBy": [],
+          "location": {
+            "end": {
+              "column": 17,
+              "line": 2
+            },
+            "start": {
+              "column": 11,
+              "line": 2
+            }
+          }
+        }
+      ],
+      "source": "const a = 1;\rconst b = a ?? 2;\n"
+    },
+    "src/crlf.ts": {
+      "language": "typescript",
+      "mutants": [
+        {
+          "id": "1",
+          "mutatorName": "LogicalOperator",
+          "replacement": "a && 2",
+          "status": "NoCoverage",
+          "static": false,
+          "coveredBy": [],
+          "location": {
+            "end": {
+              "column": 17,
+              "line": 2
+            },
+            "start": {
+              "column": 11,
+              "line": 2
+            }
+          }
+        }
+      ],
+      "source": "const a = 1;\r\nconst b = a ?? 2;\r\n"
+    },
+    "src/escaped-ls.ts": {
+      "language": "typescript",
+      "mutants": [
+        {
+          "id": "2",
+          "mutatorName": "StringLiteral",
+          "replacement": "\"\"",
+          "status": "NoCoverage",
+          "static": false,
+          "coveredBy": [],
+          "location": {
+            "end": {
+              "column": 17,
+              "line": 1
+            },
+            "start": {
+              "column": 11,
+              "line": 1
+            }
+          }
+        },
+        {
+          "id": "3",
+          "mutatorName": "LogicalOperator",
+          "replacement": "a && 2",
+          "status": "NoCoverage",
+          "static": false,
+          "coveredBy": [],
+          "location": {
+            "end": {
+              "column": 17,
+              "line": 2
+            },
+            "start": {
+              "column": 11,
+              "line": 2
+            }
+          }
+        }
+      ],
+      "source": "const a = 'a\\ b';\nconst b = a ?? 2;\n"
+    },
+    "src/escaped-ps.ts": {
+      "language": "typescript",
+      "mutants": [
+        {
+          "id": "4",
+          "mutatorName": "StringLiteral",
+          "replacement": "\"\"",
+          "status": "NoCoverage",
+          "static": false,
+          "coveredBy": [],
+          "location": {
+            "end": {
+              "column": 17,
+              "line": 1
+            },
+            "start": {
+              "column": 11,
+              "line": 1
+            }
+          }
+        },
+        {
+          "id": "5",
+          "mutatorName": "LogicalOperator",
+          "replacement": "a && 2",
+          "status": "NoCoverage",
+          "static": false,
+          "coveredBy": [],
+          "location": {
+            "end": {
+              "column": 17,
+              "line": 2
+            },
+            "start": {
+              "column": 11,
+              "line": 2
+            }
+          }
+        }
+      ],
+      "source": "const a = 'a\\ b';\nconst b = a ?? 2;\n"
+    },
+    "src/lf.ts": {
+      "language": "typescript",
+      "mutants": [
+        {
+          "id": "9",
+          "mutatorName": "LogicalOperator",
+          "replacement": "a && 2",
+          "status": "NoCoverage",
+          "static": false,
+          "coveredBy": [],
+          "location": {
+            "end": {
+              "column": 17,
+              "line": 2
+            },
+            "start": {
+              "column": 11,
+              "line": 2
+            }
+          }
+        }
+      ],
+      "source": "const a = 1;\nconst b = a ?? 2;\n"
+    },
+    "src/ls.ts": {
+      "language": "typescript",
+      "mutants": [
+        {
+          "id": "10",
+          "mutatorName": "LogicalOperator",
+          "replacement": "a && 2",
+          "status": "NoCoverage",
+          "static": false,
+          "coveredBy": [],
+          "location": {
+            "end": {
+              "column": 17,
+              "line": 2
+            },
+            "start": {
+              "column": 11,
+              "line": 2
+            }
+          }
+        }
+      ],
+      "source": "const a = 1; const b = a ?? 2;\n"
+    },
+    "src/ps.ts": {
+      "language": "typescript",
+      "mutants": [
+        {
+          "id": "11",
+          "mutatorName": "LogicalOperator",
+          "replacement": "a && 2",
+          "status": "NoCoverage",
+          "static": false,
+          "coveredBy": [],
+          "location": {
+            "end": {
+              "column": 17,
+              "line": 2
+            },
+            "start": {
+              "column": 11,
+              "line": 2
+            }
+          }
+        }
+      ],
+      "source": "const a = 1; const b = a ?? 2;\n"
+    },
+    "src/ignored.ts": {
+      "language": "typescript",
+      "mutants": [
+        {
+          "id": "7",
+          "mutatorName": "ArrowFunction",
+          "replacement": "() => undefined",
+          "statusReason": "Ignored using a comment",
+          "status": "Ignored",
+          "static": false,
+          "location": {
+            "end": {
+              "column": 40,
+              "line": 4
+            },
+            "start": {
+              "column": 18,
+              "line": 4
+            }
+          }
+        },
+        {
+          "id": "8",
+          "mutatorName": "LogicalOperator",
+          "replacement": "a && 2",
+          "statusReason": "Ignored using a comment",
+          "status": "Ignored",
+          "static": false,
+          "location": {
+            "end": {
+              "column": 40,
+              "line": 4
+            },
+            "start": {
+              "column": 34,
+              "line": 4
+            }
+          }
+        },
+        {
+          "id": "6",
+          "mutatorName": "StringLiteral",
+          "replacement": "\"\"",
+          "status": "Survived",
+          "static": true,
+          "testsCompleted": 1,
+          "coveredBy": [],
+          "location": {
+            "end": {
+              "column": 3,
+              "line": 2
+            },
+            "start": {
+              "column": 18,
+              "line": 1
+            }
+          }
+        }
+      ],
+      "source": "export const s = 'a b';\n// Stryker disable next-line all\nexport const f = (a?: number) => a ?? 2;\n"
+    }
+  },
+  "testFiles": {
+    "tests/ignored.test.ts": {
+      "tests": [
+        {
+          "id": "0",
+          "name": "uses the default"
+        }
+      ],
+      "source": "import { expect, it } from 'vitest';\nimport { f } from '../src/ignored';\nit('uses the default', () => { expect(f()).toBe(2); });\n"
+    }
+  },
+  "filesRead": {
+    "package.json": false,
+    "src/cr.ts": true,
+    "src/crlf.ts": true,
+    "src/escaped-ls.ts": true,
+    "src/escaped-ps.ts": true,
+    "src/ignored.ts": true,
+    "src/lf.ts": true,
+    "src/ls.ts": true,
+    "src/ps.ts": true,
+    "stryker.config.json": false,
+    "tests/ignored.test.ts": false,
+    "vitest.config.mjs": false
+  }
+}

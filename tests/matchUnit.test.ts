@@ -70,11 +70,13 @@ describe('matchUnit', () => {
 
     it('does not fuzzy-match one- or two-letter aliases', () => {
       expect(matchUnit('fts', 'height', 2)).toBeNull();
-      expect(matchUnit('kgs', 'weight', 2)).toBeNull();
+      expect(matchUnit('kgg', 'weight', 2)).toBeNull();
     });
 
     it('keeps short abbreviations exact even with fuzziness enabled', () => {
       expect(matchUnit('lbs', 'weight', 2)).toBe('lb');
+      expect(matchUnit('kgs', 'weight', 2)).toBe('kg');
+      expect(matchUnit('cms', 'height', 2)).toBe('cm');
       expect(matchUnit('lxs', 'weight', 2)).toBeNull();
       expect(matchUnit('ls', 'weight', 2)).toBeNull();
     });
@@ -85,6 +87,23 @@ describe('matchUnit', () => {
         expect(matchUnit('feet', 'height', fuzziness)).toBe('ft');
         expect(matchUnit('fett', 'height', fuzziness)).toBeNull();
       }
+    });
+
+    // AFA-189: Infinity isn't finite, so it turns fuzzy matching off. "fett" is one edit from
+    // "feet", and "kilgrm" two edits from "kilogram", so both match with a fuzziness of 2.
+    it('matches only exact aliases when fuzziness is Infinity', () => {
+      expect(matchUnit('feet', 'height', Infinity)).toBe('ft');
+      expect(matchUnit('fett', 'height', Infinity)).toBeNull();
+      expect(matchUnit('kilgrm', 'weight', Infinity)).toBeNull();
+      expect(matchUnit('kilgrm', 'weight', 2)).toBe('kg');
+    });
+
+    // A fraction is finite and above 0, so it keeps its result: "fett" is one edit from "feet".
+    it.each([
+      [0.5, null],
+      [1.5, 'ft'],
+    ])('reads fett with fuzziness %s as %s', (fuzziness, unit) => {
+      expect(matchUnit('fett', 'height', fuzziness)).toBe(unit);
     });
 
     it('handles small typos with fuzziness=1', () => {
@@ -118,7 +137,6 @@ describe('matchUnit', () => {
     });
 
     it('handles short words with fuzziness correctly', () => {
-      // Should not match words shorter than 3 chars with fuzziness
       expect(matchUnit('f', 'height', 1)).toBeNull();
       expect(matchUnit('i', 'height', 1)).toBeNull();
       expect(matchUnit('k', 'weight', 1)).toBeNull();

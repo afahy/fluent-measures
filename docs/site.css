@@ -1,0 +1,3150 @@
+/* Geist (SIL Open Font License, see fonts/OFL.txt), Latin subset, headings only */
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 500 800;
+  font-display: swap;
+  src: url('fonts/geist-latin.woff2') format('woff2');
+}
+
+:root {
+  --font-display:
+    'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+
+  /* Three monospace sizes: labels, code and values, results */
+  --mono-sm: 0.8125rem;
+  --mono-md: 0.875rem;
+  --mono-lg: 0.9375rem;
+
+  /* Atlas: production palette selected in AFA-246. */
+  --bg: #fafbfc;
+  --bg-tint: #f2f4f8;
+  --surface: #ffffff;
+  --surface-muted: #eceff3;
+  --border: #d0d4dd;
+  --border-strong: #a1a8b5;
+  /* Outlines that mark a control (install box, secondary button): 3:1 on white */
+  --border-control: #6d7780;
+  --heading: #202329;
+  --result-value: #202329;
+  --text: #353b43;
+  --text-muted: #59616b;
+  --accent: #2456b3;
+  --accent-hover: #1b448f;
+  --accent-soft: #e7ebf3;
+  --accent-line: #2456b388;
+  --on-accent: #ffffff;
+  --inline-code-bg: #eaecf1;
+  --inline-code-text: #282e36;
+  /* Opaque in light mode, so nothing shows through the sticky bar. */
+  --header-bg: #fafbfc;
+  --shadow-card: 0 1px 2px #00000008, 0 8px 24px -12px #00000018;
+  /* null is an expected result, not a warning: violet, kept apart from the amber callout */
+  --null: #67576d;
+  --null-soft: #67576d0b;
+  --error: #a92321;
+  --error-line: #a9232166;
+  --error-soft: #a923210c;
+
+  /*
+   * Code panels: light on the light page, dark on the dark page. Token colors come from
+   * the brand: blue keywords, plain semibold calls, green strings, warm numbers and quiet
+   * punctuation. Every token passes 4.5:1 on each code surface in both themes.
+   */
+  --code-bg: #f3f4f7;
+  --code-head: #eaecf1;
+  --code-border: #cdd2db;
+  --code-divider: #d6dae1;
+  --code-text: #282e36;
+  --code-muted: #56616b;
+  --code-accent: #2456b3;
+  --code-accent-line: #2456b388;
+  --code-null: #67576d;
+  --code-hover: #0000000a;
+  --code-shadow: 0 8px 20px -10px #00000026;
+  --tok-comment: #56616b;
+  --tok-keyword: #2456b3;
+  --tok-string: #2c665e;
+  --tok-number: #8b431a;
+  --tok-property: #35424a;
+  --tok-punctuation: #56616b;
+
+  /* Reading measure for prose: about 70-75 characters at 16px. */
+  --measure: 38rem;
+
+  color-scheme: light;
+
+  --radius: 10px;
+  --radius-sm: 6px;
+  --header-h: 64px;
+  --header-offset: var(--header-h);
+  --anchor-offset: 96px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+ul,
+ol,
+dl,
+dd,
+figure,
+pre {
+  margin: 0;
+}
+
+/*
+ * Code layout and syntax colors belong to this page, in both color themes.
+ * No external Prism stylesheet is needed before the browser can paint the docs.
+ */
+code[class*='language-'],
+pre[class*='language-'] {
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  background: none;
+  color: inherit;
+  line-height: inherit;
+  text-align: inherit;
+  tab-size: inherit;
+  hyphens: manual;
+}
+
+.token.block-comment,
+.token.cdata,
+.token.comment,
+.token.doctype,
+.token.prolog,
+.token.punctuation,
+.token.attr-name,
+.token.deleted,
+.token.namespace,
+.token.tag,
+.token.function-name,
+.token.boolean,
+.token.function,
+.token.number,
+.token.class-name,
+.token.constant,
+.token.property,
+.token.symbol,
+.token.atrule,
+.token.builtin,
+.token.important,
+.token.keyword,
+.token.selector,
+.token.attr-value,
+.token.char,
+.token.regex,
+.token.string,
+.token.variable,
+.token.entity,
+.token.operator,
+.token.url,
+.token.inserted {
+  color: inherit;
+}
+
+.token.bold,
+.token.important {
+  font-weight: inherit;
+}
+
+.token.italic {
+  font-style: inherit;
+}
+
+.token.entity {
+  cursor: inherit;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  color: var(--heading);
+  font-family: var(--font-display);
+}
+
+img,
+svg {
+  display: block;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: var(--accent);
+  text-decoration-line: underline;
+  text-decoration-color: var(--accent-line);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  transition:
+    color 0.15s ease,
+    text-decoration-color 0.15s ease;
+}
+
+a:hover {
+  color: var(--accent-hover);
+  text-decoration-color: currentColor;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.on-code :focus-visible,
+.code :focus-visible {
+  outline-color: var(--code-accent);
+}
+
+.icon {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.icon-sm {
+  width: 16px;
+  height: 16px;
+}
+
+/* Off-site link cue */
+.icon.ext {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  margin-left: 3px;
+  vertical-align: -0.02em;
+  stroke-width: 2.25;
+  opacity: 0.9;
+}
+
+.btn .icon.ext {
+  margin-left: -2px;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 100;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--heading);
+  color: var(--bg);
+  font-weight: 600;
+  text-decoration: none;
+  transform: translateY(-160%);
+}
+
+.skip-link:focus {
+  transform: none;
+  color: var(--bg);
+}
+
+.container {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+@media (min-width: 640px) {
+  .container {
+    padding: 0 32px;
+  }
+}
+
+@media (max-width: 419px) {
+  .container {
+    padding: 0 16px;
+  }
+}
+
+/* Inline code */
+:where(p, li, dd, td, figcaption) > code,
+:where(p, li, dd, td, figcaption) > a > code,
+.code-note code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  padding: 0.05em 0.3em;
+  border-radius: 4px;
+  background: var(--inline-code-bg);
+  color: var(--inline-code-text);
+  white-space: nowrap;
+}
+
+/* Code in headings carries the heading's weight, so API h3s read as headings. */
+:where(h2, h3, h4) code {
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.sprite {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+/* Header */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border);
+  transition: box-shadow 0.2s ease;
+}
+
+/* A soft edge once the page scrolls under the bar. */
+.site-header.is-scrolled {
+  box-shadow: 0 6px 16px -12px rgba(15, 23, 42, 0.3);
+}
+
+.header-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px;
+  row-gap: 0;
+  min-height: var(--header-h);
+}
+
+/* A native anchor jump must remain visible when a reader enlarges or spaces out text. */
+html:not([data-js]) .site-header {
+  position: relative;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  color: var(--heading);
+  font-family: var(--font-display);
+  font-weight: 650;
+  font-size: 1rem;
+  letter-spacing: -0.015em;
+  text-decoration: none;
+}
+
+.brand:hover {
+  color: var(--heading);
+}
+
+.brand-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: var(--accent);
+  color: var(--on-accent);
+  display: grid;
+  place-items: center;
+}
+
+.brand-mark .icon {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2;
+}
+
+.site-nav {
+  flex: 1;
+}
+
+.site-nav ul {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  gap: 2px;
+}
+
+.site-nav a {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.5;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.site-nav a:hover {
+  color: var(--heading);
+  background: var(--surface-muted);
+}
+
+/* The current section gets the underline only, like the rail's single bar. */
+.site-nav a[aria-current='true'] {
+  color: var(--heading);
+}
+
+.site-nav a[aria-current='true']::after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 3px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+/* The negative margin lines up the last control's icon, not its padding, with the container edge. */
+.header-actions {
+  margin-left: auto;
+  margin-right: -10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.icon-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  min-width: 40px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.icon-link:hover {
+  color: var(--heading);
+  background: var(--surface-muted);
+}
+
+/* Latest npm release, filled in by the script; hidden if the registry can't be reached. */
+.version-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 26px;
+  margin-right: 6px;
+  padding: 0 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.version-pill .icon {
+  width: 12px;
+  height: 12px;
+}
+
+.version-pill:hover {
+  color: var(--accent);
+  border-color: var(--accent-line);
+}
+
+/* Phones move the version into the "On this page" panel, next to the GitHub link. */
+.menu-foot {
+  display: none;
+}
+
+@media (max-width: 639px) {
+  .header-actions > .version-pill {
+    display: none;
+  }
+
+  .menu-foot:has(> :not([hidden], .menu-github)) {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 8px 20px 0;
+    padding: 8px 0 0 14px;
+    border-top: 1px solid var(--border);
+  }
+
+  .menu-version {
+    margin-right: 0;
+  }
+}
+
+/*
+ * One button cycles through light, system, and dark; its icon shows the preference.
+ * Its 20px icon sits 12px inside its 44px box, 2px more than the 10px padding of the other
+ * controls, so the extra margin lines it up with the edge when it is the last control.
+ */
+.theme-toggle {
+  min-width: 44px;
+  min-height: 44px;
+  margin-right: -2px;
+  padding: 0;
+}
+
+/* Compact "On this page" menu, shown when the side rail is hidden */
+.page-menu {
+  position: static;
+}
+
+.page-menu > summary {
+  list-style: none;
+}
+
+.page-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.page-menu[open] > summary {
+  color: var(--heading);
+  background: var(--surface-muted);
+}
+
+.page-menu .chevron {
+  transition: transform 0.15s ease;
+}
+
+.page-menu[open] .chevron {
+  transform: rotate(180deg);
+}
+
+.page-menu-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  max-height: min(70vh, 560px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px 0 16px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 16px 32px -16px rgba(15, 23, 42, 0.25);
+}
+
+/* While the menu is open, the page below the header dims; a tap on it closes the menu. */
+.page-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+  background: rgba(15, 23, 42, 0.25);
+}
+
+.page-menu-panel .toc {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+@media (min-width: 1024px) {
+  .page-menu {
+    display: none;
+  }
+}
+
+/* One header row below the desktop layout; "On this page" holds the section links. */
+@media (max-width: 1023px) {
+  .skip-navigation {
+    display: none;
+  }
+
+  :root {
+    --header-h: 55px;
+    --anchor-offset: 80px;
+  }
+
+  .header-bar .site-nav {
+    display: none;
+  }
+}
+
+.brand,
+.page-menu > summary {
+  white-space: nowrap;
+}
+
+/*
+ * Narrow headers, in steps so nothing ever overflows: the GitHub label goes first, then
+ * the GitHub link moves into the "On this page" panel (below 480px), then the chevron,
+ * then the menu label shortens to "Menu".
+ */
+.menu-github,
+.page-menu .label-short {
+  display: none;
+}
+
+@media (max-width: 559px) {
+  .header-github .github-label {
+    display: none;
+  }
+}
+
+@media (max-width: 479px) {
+  .header-bar {
+    gap: 12px;
+  }
+
+  .header-github {
+    display: none;
+  }
+
+  .menu-foot {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 8px 20px 0;
+    padding: 8px 0 0 14px;
+    border-top: 1px solid var(--border);
+  }
+
+  .menu-github {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    color: var(--heading);
+    font-size: 0.9375rem;
+    font-weight: 550;
+    text-decoration: none;
+  }
+
+  .menu-github:hover {
+    color: var(--accent);
+  }
+}
+
+@media (max-width: 419px) {
+  .page-menu > summary > .chevron {
+    display: none;
+  }
+
+  .page-menu > summary {
+    gap: 6px;
+    padding: 0 8px;
+  }
+}
+
+@media (max-width: 379px) {
+  .header-bar {
+    gap: 8px;
+  }
+
+  .brand {
+    gap: 8px;
+    font-size: 0.9375rem;
+  }
+
+  .page-menu .label-long {
+    display: none;
+  }
+
+  .page-menu .label-short {
+    display: inline;
+  }
+}
+
+@media (max-width: 419px) {
+  .copy-button [data-copy-label] {
+    display: none;
+  }
+}
+
+@media (min-width: 640px) {
+  .page-menu-panel .toc {
+    padding: 0 32px;
+  }
+}
+
+/* Hero */
+.hero {
+  position: relative;
+  border-bottom: 1px solid var(--border);
+  background:
+    radial-gradient(60rem 28rem at 12% -10%, var(--accent-soft), transparent 70%), var(--bg-tint);
+}
+
+.hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 48px;
+  padding: 64px 0 56px;
+}
+
+@media (max-width: 639px) {
+  .hero-grid {
+    gap: 24px;
+    padding: 28px 0 28px;
+  }
+}
+
+/* Desktop: copy and demo share a top edge, and Install starts inside a 900px viewport. */
+@media (min-width: 1024px) {
+  .hero-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 30rem);
+    align-items: start;
+    gap: 64px;
+    padding: 56px 0 40px;
+  }
+}
+
+.hero-title {
+  max-width: 20ch;
+  font-size: clamp(2.25rem, 1.5rem + 2.2vw, 3.125rem);
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  font-weight: 700;
+  text-wrap: balance;
+}
+
+.intro-short {
+  display: none;
+}
+
+/* Phones: a shorter headline and intro. */
+@media (max-width: 639px) {
+  .title-long,
+  .intro-long {
+    display: none;
+  }
+
+  .intro-short {
+    display: inline;
+  }
+
+  .hero-title {
+    line-height: 1.08;
+  }
+}
+
+.hero-intro {
+  margin-top: 20px;
+  max-width: 34rem;
+  font-size: 1.1875rem;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+@media (max-width: 639px) {
+  .hero-intro {
+    font-size: 1.0625rem;
+    line-height: 1.55;
+  }
+}
+
+.hero-intro strong {
+  color: var(--heading);
+  font-weight: 600;
+}
+
+.install-pill {
+  margin-top: 28px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 26rem;
+  padding: 5px 5px 5px 16px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--border-control);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+  color: var(--heading);
+  font-family: var(--font-mono);
+  font-size: var(--mono-md);
+}
+
+.install-pill code {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+}
+
+.install-pill .prompt {
+  color: var(--text-muted);
+  user-select: none;
+  margin-right: 6px;
+}
+
+@media (max-width: 419px) {
+  .install-pill {
+    padding-left: 12px;
+    font-size: var(--mono-sm);
+  }
+
+  .install-pill .prompt {
+    display: none;
+  }
+}
+
+/* The smallest phones: a touch smaller, and the command may wrap at its space. */
+@media (max-width: 379px) {
+  .install-pill {
+    font-size: 0.78125rem;
+  }
+
+  .install-pill code {
+    white-space: normal;
+    overflow-x: visible;
+  }
+}
+
+@media (max-width: 639px) {
+  .install-pill {
+    margin-top: 24px;
+  }
+}
+
+.hero-actions {
+  margin-top: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 18px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.btn-primary:hover {
+  background: var(--accent-hover);
+  color: var(--on-accent);
+}
+
+.btn-secondary {
+  background: var(--surface);
+  border-color: var(--border-control);
+  color: var(--heading);
+}
+
+.btn-secondary:hover {
+  border-color: var(--text-muted);
+  color: var(--heading);
+}
+
+/* Demo card */
+.demo {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.demo-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-muted);
+}
+
+.demo-head code {
+  font-family: var(--font-mono);
+  font-size: var(--mono-sm);
+  color: var(--heading);
+}
+
+/*
+ * Reserve the longest result (68.0388555 kg, 13 characters) plus the row's right padding,
+ * even while it is hidden. Expanding the examples must not resize the shared columns.
+ */
+.demo-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20px calc(13ch + 20px);
+  column-gap: 12px;
+  font-family: var(--font-mono);
+  font-size: var(--mono-lg);
+}
+
+.demo-list > div {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+  align-items: center;
+  min-height: 68px;
+  padding: 12px 20px;
+}
+
+.demo-list > div + div {
+  border-top: 1px solid var(--border);
+}
+
+/* The input column is a container, so options stack one per line when they can't share one. */
+.demo-list dt {
+  min-width: 0;
+  container-type: inline-size;
+}
+
+.demo-opts .opt-item {
+  white-space: nowrap;
+}
+
+@container (max-width: 310px) {
+  .demo-opts .opt-item {
+    display: block;
+  }
+
+  .demo-opts .opt-sep {
+    display: none;
+  }
+}
+
+.demo-input {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: var(--mono-md);
+  color: var(--heading);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+
+.demo-opts {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: var(--mono-md);
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.is-none {
+  color: var(--text-muted);
+}
+
+/* "no options" is a remark, not code: sans and italic, unlike the option lines. */
+.demo-opts.is-none {
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-style: italic;
+  /* Same line box as a mono option line, so every row has the same height. */
+  line-height: calc(var(--mono-md) * 1.5);
+}
+
+.demo-list dd {
+  grid-column: 2 / 4;
+  display: grid;
+  grid-template-columns: subgrid;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: var(--mono-lg);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.demo-arrow {
+  width: 18px;
+  height: 18px;
+  color: var(--text-muted);
+}
+
+.demo-list dd > span {
+  justify-self: end;
+}
+
+/* Summarized values share a neutral color; code literals keep their syntax colors. */
+.demo-list dd b,
+.summary b,
+.result b,
+.input-results dd b {
+  color: var(--result-value);
+  font-weight: 650;
+}
+
+.demo-list dd.is-null span {
+  color: var(--null);
+}
+
+.demo-more {
+  display: none;
+}
+
+.demo-foot {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.demo-note {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+@media (min-width: 640px) and (max-width: 1023px) {
+  .demo {
+    max-width: 36rem;
+  }
+}
+
+@media (max-width: 639px) {
+  .demo-list {
+    /* The long result has its own line here; reserve the next longest, 180.34 cm. */
+    grid-template-columns: minmax(0, 1fr) 20px calc(9ch + 16px);
+    column-gap: 10px;
+  }
+
+  .demo-list > div {
+    min-height: 56px;
+    padding: 7px 16px;
+  }
+
+  .demo-opts {
+    margin-top: 2px;
+  }
+
+  .demo-head {
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .demo-head,
+  .demo-foot {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+/*
+ * The smallest phones: the demo's type is a step smaller and its gaps a touch tighter, so the
+ * longest chips ("not a measurement", "eighty kilograms") stay clear of the arrows (AFA-190).
+ */
+@media (max-width: 339px) {
+  .demo {
+    --mono-md: 0.8125rem;
+    --mono-lg: 0.875rem;
+  }
+
+  .demo-list {
+    column-gap: 8px;
+  }
+
+  .demo-input {
+    padding: 1px 6px;
+  }
+}
+
+/* Four curated examples at every width. Without JavaScript all eight show. */
+[data-js] .demo:not([data-expanded='true']) .demo-extra {
+  display: none;
+}
+
+/*
+ * The long result's input and options take the whole row, with the result on the chip's line.
+ * On a phone the result takes its own line instead, leaving room for the other rows' inputs.
+ */
+.demo-list > .demo-long dt {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  align-self: baseline;
+}
+
+.demo-list > .demo-long dd {
+  grid-row: 1;
+  align-self: baseline;
+}
+
+.demo-list > .demo-long dd > span {
+  align-self: baseline;
+}
+
+@media (max-width: 639px) {
+  .demo-list > .demo-long dd {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+    margin-top: 4px;
+  }
+}
+
+/* A quiet disclosure beside Usage, with a full touch target. */
+.demo-links {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.demo-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+}
+
+.demo-links a .icon {
+  transform: rotate(90deg);
+}
+
+[data-js] .demo-more {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  /* An immediate collapse adjustment leaves the control below the sticky header. */
+  scroll-margin-top: calc(var(--header-offset) + 12px);
+  scroll-margin-bottom: 12px;
+}
+
+[data-js] .demo-more:hover {
+  text-decoration: underline;
+}
+
+.demo-more:focus-visible {
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+.demo-more .chevron {
+  transition: transform 0.15s ease;
+}
+
+.demo[data-expanded='true'] .demo-more .chevron {
+  transform: rotate(180deg);
+}
+
+/* One compact capability list near the introduction at every width. */
+.features {
+  list-style: none;
+  padding: 0 0 28px;
+  display: grid;
+  gap: 12px;
+}
+
+@media (min-width: 768px) {
+  .features {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 32px;
+    padding-bottom: 36px;
+  }
+}
+
+.features li {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.feature-icon {
+  flex: 0 0 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.feature-icon .icon {
+  width: 18px;
+  height: 18px;
+}
+
+.features p {
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.feature-title {
+  color: var(--heading);
+  font-weight: 600;
+}
+
+/* Inline titles and no decorative icons keep the phone introduction short. */
+@media (max-width: 639px) {
+  .feature-icon {
+    display: none;
+  }
+
+  .features p {
+    font-size: 0.875rem;
+  }
+}
+
+/* Docs layout */
+.docs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 48px;
+  padding-top: 0;
+  padding-bottom: 56px;
+}
+
+@media (min-width: 1024px) {
+  .docs {
+    grid-template-columns: minmax(0, 1fr) 14rem;
+    gap: 64px;
+  }
+}
+
+.doc-content {
+  min-width: 0;
+  max-width: 50rem;
+  container-type: inline-size;
+}
+
+.toc-col {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .toc-col {
+    display: block;
+    padding-top: 52px;
+  }
+
+  .toc-col .toc a {
+    padding-top: 3px;
+    padding-bottom: 3px;
+  }
+
+  .toc-col .toc > ul > li + li {
+    margin-top: 2px;
+  }
+
+  .toc-col .toc ul ul ul a {
+    padding-top: 2px;
+    padding-bottom: 2px;
+  }
+
+  .toc-col .toc {
+    position: sticky;
+    top: calc(var(--header-offset) + 32px);
+    max-height: calc(100vh - var(--header-offset) - 56px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+  }
+}
+
+.toc-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--heading);
+  margin-bottom: 10px;
+}
+
+.toc ul {
+  list-style: none;
+  padding: 0;
+}
+
+/* One continuous line down the left; the current link's bar is drawn over it. */
+.toc > ul {
+  border-left: 2px solid var(--border);
+}
+
+.toc > ul > li + li {
+  margin-top: 6px;
+}
+
+.toc a {
+  display: block;
+  margin-left: -2px;
+  padding: 4px 0 4px 12px;
+  border-left: 2px solid transparent;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  line-height: 1.45;
+  text-decoration: none;
+}
+
+.toc > ul > li > a,
+.toc > ul > li > .toc-row > a {
+  color: var(--heading);
+  font-weight: 550;
+}
+
+.toc ul ul a {
+  padding-left: 24px;
+}
+
+.toc a > code {
+  padding: 0;
+  background: none;
+  color: inherit;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+}
+
+.toc a:hover {
+  color: var(--accent);
+}
+
+/* Color and bar only: a weight change would reflow long labels. */
+.toc a[aria-current='true'] {
+  color: var(--accent);
+  border-left-color: var(--accent);
+}
+
+/*
+ * Long groups (examples, API) fold behind a reader-controlled toggle. Scrolling
+ * leaves their state alone. Without JavaScript every group stays expanded.
+ */
+.toc-row {
+  display: flex;
+  align-items: center;
+}
+
+.toc-row > a {
+  flex: 1;
+  min-width: 0;
+}
+
+.toc-toggle {
+  display: none;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin-left: 4px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+[data-js] .toc-toggle {
+  display: grid;
+}
+
+.toc-toggle:hover {
+  color: var(--heading);
+  background: var(--surface-muted);
+}
+
+.toc-toggle .icon {
+  transition: transform 0.15s ease;
+}
+
+.toc-toggle[aria-expanded='false'] .icon {
+  transform: rotate(-90deg);
+}
+
+[data-js] .toc-group:not([data-open='true']) > ul {
+  display: none;
+}
+
+.page-menu-panel .toc-toggle {
+  width: 44px;
+  height: 44px;
+}
+
+/* Phone menu: 44px top-level rows, with no gap between them. */
+.page-menu-panel .toc > ul > li + li {
+  margin-top: 0;
+}
+
+.page-menu-panel .toc a {
+  padding-top: 11px;
+  padding-bottom: 11px;
+  font-size: 0.9375rem;
+}
+
+.page-menu-panel .toc ul ul a {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  font-size: 0.875rem;
+}
+
+.page-menu-panel .toc ul ul ul a {
+  padding-top: 7px;
+  padding-bottom: 7px;
+  padding-left: 40px;
+}
+
+/* Sections */
+.doc-section {
+  padding-top: 72px;
+}
+
+.doc-section:first-child {
+  padding-top: 48px;
+}
+
+.doc-section :is(h2, h3, h4),
+#ex-basic,
+#ex-feet-inches,
+#ex-null {
+  scroll-margin-top: max(var(--anchor-offset), calc(var(--header-offset) + 24px));
+}
+
+/*
+ * Headings sit in a wrapper with their permalink, so the link's name stays out of the
+ * heading's name. The heading runs inline, so the link follows its last word.
+ */
+.hd {
+  color: var(--heading);
+  font-family: var(--font-display);
+}
+
+.hd > :is(h2, h3, h4) {
+  display: inline;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+}
+
+.hd-2 {
+  font-size: 2rem;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  padding-bottom: 14px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.hd-3 {
+  font-size: 1.375rem;
+  line-height: 1.3;
+  font-weight: 650;
+  letter-spacing: -0.022em;
+  margin: 48px 0 8px;
+}
+
+.hd-2 + .hd-3 {
+  margin-top: 32px;
+}
+
+/*
+ * A rule stated as a lead sentence; the tables and callouts around it are the evidence.
+ * No bar: the accent bar only marks the current link in the page outline.
+ */
+.topic-lead {
+  max-width: var(--measure);
+  margin-top: 6px;
+  color: var(--heading);
+  font-size: 1.0625rem;
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+.stack > .topic-lead + .measure {
+  margin-top: 8px;
+}
+
+@media (max-width: 639px) {
+  .doc-section {
+    padding-top: 56px;
+  }
+
+  .doc-section:first-child {
+    padding-top: 32px;
+  }
+
+  .hd-2 {
+    font-size: 1.75rem;
+  }
+
+  .hd-3 {
+    margin-top: 40px;
+    font-size: 1.25rem;
+  }
+}
+
+.anchor {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin: -6px 0 -6px 2px;
+  vertical-align: middle;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  text-decoration: none;
+}
+
+.anchor .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.hd:hover .anchor,
+.hd:focus-within .anchor {
+  opacity: 1;
+}
+
+.anchor:focus-visible {
+  outline-offset: 0;
+}
+
+.anchor:hover {
+  color: var(--accent);
+  background: var(--surface-muted);
+}
+
+/*
+ * Touch screens have no hover: the link stays visible at full text-muted contrast. An
+ * invisible ring widens the 28px box to a 44px target without moving the heading.
+ */
+@media (hover: none) {
+  .anchor {
+    opacity: 1;
+  }
+
+  .anchor::after {
+    content: '';
+    position: absolute;
+    inset: -8px;
+  }
+}
+
+.body-text > * + * {
+  margin-top: 16px;
+}
+
+.body-text p,
+.body-text li,
+/* A one-line aside directly under a code block. */
+.stack > .code-note {
+  margin-top: 12px;
+}
+
+.code-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: var(--measure);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.code-note .icon {
+  margin-top: 4px;
+  color: var(--null);
+}
+
+/* Prose stops at the reading measure; tables, code and callouts use the full column. */
+.measure,
+.body-text > p,
+.body-text li {
+  max-width: var(--measure);
+}
+
+.measure,
+.example > p {
+  text-wrap: pretty;
+}
+
+.topic-lead {
+  text-wrap: pretty;
+}
+
+.body-text ul,
+.body-text ol {
+  padding-left: 1.25rem;
+}
+
+.body-text li + li {
+  margin-top: 6px;
+}
+
+.body-text li::marker {
+  color: var(--text-muted);
+}
+
+.body-text strong {
+  color: var(--heading);
+  font-weight: 600;
+}
+
+.stack > * + * {
+  margin-top: 16px;
+}
+
+.mt-md {
+  margin-top: 16px;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+/* Code blocks */
+.code {
+  --result-value: var(--code-text);
+  position: relative;
+  border: 1px solid var(--code-border);
+  border-radius: var(--radius);
+  background: var(--code-bg);
+  color: var(--code-text);
+  overflow: hidden;
+}
+
+/*
+ * Every block has the same header: tabs or a language label on the left, the copy
+ * button on the right. Header text lines up with the code below it.
+ */
+.code {
+  --code-pad: 20px;
+  --tab-pad: 10px;
+}
+
+.code-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 6px 0 var(--code-pad);
+  background: var(--code-head);
+  border-bottom: 1px solid var(--code-divider);
+}
+
+.code-label {
+  color: var(--code-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.code pre {
+  overflow-x: auto;
+  padding: 16px var(--code-pad);
+  font-family: var(--font-mono);
+  font-size: var(--mono-md);
+  line-height: 1.7;
+  tab-size: 2;
+  color: var(--code-text);
+  background: transparent;
+}
+
+@media (max-width: 639px) {
+  .code {
+    --code-pad: 16px;
+    --tab-pad: 8px;
+  }
+
+  .code pre {
+    padding-top: 14px;
+    padding-bottom: 14px;
+    line-height: 1.65;
+  }
+
+  /*
+   * Phones of 380px and up read code at 15px: wrapped snippets stay within 34 characters,
+   * which still fit there. Smaller phones keep 14px.
+   */
+  @media (min-width: 380px) {
+    .code pre {
+      font-size: var(--mono-lg);
+    }
+  }
+
+  /* The Returns text lines up with the code above it. */
+  .returns-label,
+  .summary,
+  .summary-grid {
+    padding-left: var(--code-pad);
+    padding-right: var(--code-pad);
+  }
+
+  .full-object > summary {
+    margin-left: 8px;
+  }
+}
+
+/* Fade an edge of a horizontal scroller while content is hidden past it. */
+.has-more,
+.has-less {
+  --fade-start: 0px;
+  --fade-end: 0px;
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 var(--fade-start),
+    #000 calc(100% - var(--fade-end)),
+    transparent
+  );
+  mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 var(--fade-start),
+    #000 calc(100% - var(--fade-end)),
+    transparent
+  );
+}
+
+.has-more {
+  --fade-end: 32px;
+}
+
+.has-less {
+  --fade-start: 24px;
+}
+
+.code pre:focus-visible {
+  outline-offset: -3px;
+}
+
+.code code {
+  font-family: inherit;
+}
+
+.code-cmd::before {
+  content: '$ ';
+  color: var(--code-muted);
+  user-select: none;
+}
+
+/* Phones drop the prompt here and in the hero install box, so the command fits. */
+@media (max-width: 419px) {
+  .code-cmd::before {
+    content: none;
+  }
+}
+
+/* The smallest phones get slightly smaller code, so 34-character lines still fit. */
+@media (max-width: 359px) {
+  .code {
+    --code-pad: 12px;
+  }
+
+  .code pre {
+    font-size: 0.78125rem;
+  }
+
+  .code-head {
+    gap: 4px;
+  }
+}
+
+/* The result shares the panel's surface; a hairline and its label set it apart. */
+.returns {
+  border-top: 1px solid var(--code-divider);
+}
+
+.returns-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 20px 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--code-muted);
+}
+
+.code .returns pre {
+  padding-top: 6px;
+}
+
+/*
+ * Result summaries inside a Returns panel. The value and its note sit in grid columns,
+ * so a long note wraps inside its own column. Rows with a key ("result", "strict")
+ * share one grid, so their values and notes line up.
+ */
+.summary {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: baseline;
+  column-gap: 12px;
+  padding: 6px 20px 4px;
+  font-family: var(--font-mono);
+  font-size: var(--mono-lg);
+  line-height: 1.6;
+  color: var(--code-text);
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: max-content max-content minmax(0, 1fr);
+  column-gap: 12px;
+  row-gap: 2px;
+  padding: 6px 20px 14px;
+}
+
+.summary-grid > .summary {
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  padding: 0;
+}
+
+.summary .is-null {
+  color: var(--code-null);
+  font-weight: 650;
+}
+
+/* The separator dot hangs in the gap, so wrapped lines align with the note's text. */
+.summary-note {
+  position: relative;
+  margin-left: 10px;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--code-text);
+}
+
+.summary-note::before {
+  content: '·';
+  position: absolute;
+  left: -16px;
+  width: 10px;
+  text-align: center;
+  color: var(--code-muted);
+}
+
+.summary-note a {
+  color: var(--code-accent);
+  text-decoration-color: var(--code-accent-line);
+}
+
+.summary-note a:hover {
+  color: var(--code-text);
+  text-decoration-color: currentColor;
+}
+
+.summary + .summary {
+  padding-top: 0;
+}
+
+.returns > .summary:last-child {
+  padding-bottom: 14px;
+}
+
+.summary-note code {
+  font-family: var(--font-mono);
+  font-size: var(--mono-sm);
+  color: var(--code-text);
+}
+
+.summary-key {
+  font-size: var(--mono-md);
+  color: var(--code-muted);
+}
+
+/* Narrow panels: the note moves under its value, without the dot. */
+@container (max-width: 479px) {
+  .summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .summary-grid {
+    grid-template-columns: max-content minmax(0, 1fr);
+    row-gap: 8px;
+  }
+
+  .summary-note {
+    margin-left: 0;
+  }
+
+  .summary-note::before {
+    content: none;
+  }
+
+  .summary-grid .summary-note {
+    grid-column: 2;
+  }
+}
+
+.full-object {
+  padding: 0 0 8px;
+}
+
+.full-object > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  margin: 0 0 0 12px;
+  padding: 0 8px;
+  border-radius: var(--radius-sm);
+  color: var(--code-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  list-style: none;
+}
+
+.full-object > summary::-webkit-details-marker {
+  display: none;
+}
+
+.full-object > summary:hover {
+  color: var(--code-text);
+  background: var(--code-hover);
+}
+
+.full-object .chevron {
+  transform: rotate(-90deg);
+  transition: transform 0.15s ease;
+}
+
+.full-object[open] .chevron {
+  transform: none;
+}
+
+.code .full-object pre {
+  padding-top: 4px;
+}
+
+.copy-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  min-width: 32px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--code-muted);
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.copy-button:hover {
+  color: var(--code-text);
+  background: var(--code-hover);
+}
+
+/* Icon only; the label appears for "Copied". */
+.copy-button:not(.copied) [data-copy-label] {
+  display: none;
+}
+
+.copy-button .icon-check,
+.copy-button.copied .icon-copy {
+  display: none;
+}
+
+.copy-button.copied .icon-check {
+  display: block;
+}
+
+.copy-button.copied {
+  color: var(--code-accent);
+}
+
+/* The install box is a light surface, so its copy button uses page colors. */
+.install-pill .copy-button {
+  min-height: 34px;
+  color: var(--text-muted);
+}
+
+.install-pill .copy-button:hover {
+  color: var(--heading);
+  background: var(--surface-muted);
+}
+
+.install-pill .copy-button.copied {
+  color: var(--accent);
+}
+
+/* A failed copy: a toast above the bottom edge, in the page's error colors. */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  z-index: 60;
+  max-width: calc(100vw - 32px);
+  margin: 0;
+  padding: 10px 16px;
+  border: 1px solid var(--error-line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  color: var(--error);
+  font-size: 0.875rem;
+  font-weight: 500;
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-50%, 8px);
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease,
+    visibility 0.15s;
+}
+
+.toast[data-visible='true'] {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+}
+
+/* Comfortable touch targets */
+@media (pointer: coarse) {
+  .copy-button,
+  .install-pill .copy-button,
+  .full-object > summary,
+  .icon-link {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .code-head {
+    min-height: 48px;
+    padding-right: 2px;
+  }
+
+  .tab {
+    min-height: 48px;
+  }
+
+  .site-nav a {
+    min-height: 44px;
+  }
+}
+
+/* Tabs */
+/* The strip scrolls sideways if its tabs ever outgrow the header. */
+.tabs {
+  display: flex;
+  align-self: stretch;
+  flex: 0 1 auto;
+  min-width: 0;
+  gap: 4px;
+  margin-left: calc(var(--tab-pad) * -1);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  position: relative;
+  flex: none;
+  white-space: nowrap;
+  padding: 0 var(--tab-pad);
+  border: 0;
+  background: transparent;
+  color: var(--code-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.tab:hover {
+  color: var(--code-text);
+}
+
+.tab[aria-selected='true'] {
+  color: var(--code-text);
+}
+
+.tab[aria-selected='true']::after {
+  content: '';
+  position: absolute;
+  left: var(--tab-pad);
+  right: var(--tab-pad);
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--code-accent);
+}
+
+.tab:focus-visible {
+  outline-offset: -6px;
+}
+
+/* Syntax colors (see the --tok-* variables). Violet stays reserved for null. */
+.token.comment,
+.token.prolog {
+  color: var(--tok-comment);
+  font-style: italic;
+}
+
+.token.keyword {
+  color: var(--tok-keyword);
+}
+
+.token.function {
+  color: var(--code-text);
+  font-weight: 600;
+}
+
+.token.string,
+.token.char {
+  color: var(--tok-string);
+}
+
+.token.number,
+.token.boolean,
+.token.constant {
+  color: var(--tok-number);
+}
+
+.token.property,
+.token.literal-property {
+  color: var(--tok-property);
+}
+
+.token.punctuation,
+.token.operator {
+  color: var(--tok-punctuation);
+}
+
+.token.class-name,
+.token.builtin,
+.token.parameter,
+.token.variable {
+  color: var(--code-text);
+}
+
+/* Shell commands read as plain text: the command is not a function call. */
+.language-bash .token.function {
+  color: inherit;
+  font-weight: inherit;
+}
+
+/* Examples */
+/* Example spacing matches the h3 rhythm used in every other section. */
+.examples {
+  margin-top: 32px;
+}
+
+.example + .example {
+  margin-top: 40px;
+}
+
+.example > .hd-3 {
+  margin: 0;
+}
+
+.example > p {
+  margin-top: 10px;
+  margin-bottom: 16px;
+  max-width: var(--measure);
+}
+
+/* Compact input/output rows keep spelling variants beside the lesson they illustrate. */
+.input-results {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.input-results > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  align-items: baseline;
+  gap: 12px;
+  padding: 12px 16px;
+}
+
+.input-results > div + div {
+  border-top: 1px solid var(--border);
+}
+
+.input-results dt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 16px;
+}
+
+.input-text {
+  overflow-wrap: anywhere;
+}
+
+.input-options {
+  color: var(--text-muted);
+  font-size: var(--mono-sm);
+}
+
+.input-results dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  color: var(--heading);
+}
+
+.input-results .is-null {
+  color: var(--null);
+}
+
+/* Native focus scrolling must finish before a following Enter jumps to its anchor. Removing
+ * unavailable controls shortens the Tab path, so smooth scrolling can cancel that jump. */
+html:not([data-js]) {
+  scroll-behavior: auto;
+}
+
+/* Static groups carry their own labels until the tab handlers are ready. */
+.code-head:has(> [data-tab-group][hidden]) {
+  display: none;
+}
+
+/* All lesson examples remain readable when scripts are unavailable. */
+html:not([data-js]) .code .code-wide {
+  display: block;
+}
+
+html:not([data-js]) .code .code-narrow {
+  display: none;
+}
+
+html:not([data-js]) .code pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * One-line snippets where they fit; a wrapped version on narrow columns. The longest
+ * one-line call is 70 characters, which needs a 640px column. Wrapped lines stay within
+ * 34 characters, which fit a 320px screen.
+ */
+.code-narrow {
+  display: none;
+}
+
+@container (max-width: 640px) {
+  .code-wide {
+    display: none;
+  }
+
+  .code-narrow {
+    display: block;
+  }
+}
+
+@media (max-width: 419px) {
+  .code {
+    --tab-pad: 7px;
+  }
+
+  .tabs {
+    gap: 0;
+  }
+}
+
+@media (max-width: 359px) {
+  .code {
+    --tab-pad: 4px;
+  }
+}
+
+/*
+ * API reference: one card per item. The declaration heads the card in mono on a tinted
+ * band; parameter or property rows follow. Runnable code stays in the code panels.
+ */
+.api-card {
+  container-type: inline-size;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.decl {
+  padding: 14px 20px;
+  background: var(--surface-muted);
+  font-family: var(--font-mono);
+  font-size: var(--mono-md);
+  line-height: 1.7;
+  color: var(--heading);
+}
+
+.decl .kw {
+  color: var(--tok-keyword);
+}
+
+.decl .sep {
+  color: var(--text-muted);
+}
+
+.decl .fn {
+  color: var(--heading);
+  font-weight: 650;
+}
+
+.decl .str,
+.props .type .str {
+  color: var(--tok-string);
+}
+
+.decl a,
+.props .type a {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Each declaration has a one-line form and a deliberately broken one for narrow cards. */
+.decl-wide,
+.decl-narrow .line {
+  white-space: nowrap;
+}
+
+.decl-narrow {
+  display: none;
+}
+
+.decl-narrow .line {
+  display: block;
+  padding-left: 2ch;
+}
+
+@container (max-width: 740px) {
+  .decl-wide:has(+ .decl-narrow:not(.decl-short)) {
+    display: none;
+  }
+
+  .decl-narrow:not(.decl-short) {
+    display: block;
+  }
+}
+
+@container (max-width: 470px) {
+  .decl-wide:has(+ .decl-short) {
+    display: none;
+  }
+
+  .decl-short {
+    display: block;
+  }
+}
+
+.api-card > .props {
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+}
+
+.props {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.props > div {
+  padding: 14px 20px;
+}
+
+.props > div + div {
+  border-top: 1px solid var(--border);
+}
+
+.props dt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  font-family: var(--font-mono);
+  font-size: var(--mono-md);
+  line-height: 1.6;
+}
+
+.props .name {
+  color: var(--heading);
+  font-weight: 600;
+}
+
+.props .type {
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.props dd {
+  margin-top: 4px;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+/* Keep option metadata in the same order, with labels that reflow above their values. */
+.option-list > div {
+  padding-block: 20px;
+  scroll-margin-top: 100px;
+}
+
+.option-list > div > dd {
+  margin-top: 12px;
+}
+
+.option-facts {
+  display: grid;
+  gap: 10px;
+}
+
+.option-facts > div {
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr);
+  gap: 12px;
+}
+
+.option-facts dt {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.85;
+  color: var(--text-muted);
+}
+
+.option-facts dd {
+  margin: 0;
+}
+
+@container (max-width: 470px) {
+  .option-facts > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+}
+
+/* Tables */
+.table-wrap {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+/* On wide screens a cases table stays narrow, so each result sits near its input. */
+@media (min-width: 1024px) {
+  .table-wrap:has(> .cases) {
+    max-width: 44rem;
+  }
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+
+caption {
+  text-align: left;
+  padding: 12px 16px;
+  font-weight: 600;
+  color: var(--heading);
+  border-bottom: 1px solid var(--border);
+}
+
+th,
+td {
+  text-align: left;
+  vertical-align: top;
+  padding: 10px 16px;
+}
+
+thead th {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--surface-muted);
+  border-bottom: 1px solid var(--border);
+}
+
+tbody tr + tr > * {
+  border-top: 1px solid var(--border);
+}
+
+tbody th {
+  font-weight: 400;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: var(--mono-md);
+}
+
+.input-chip {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: var(--mono-md);
+  line-height: 1.6;
+  padding: 0 7px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+  color: var(--heading);
+  max-width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.result {
+  font-family: var(--font-mono);
+  font-size: var(--mono-lg);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.result-null {
+  color: var(--null);
+  font-weight: 600;
+}
+
+/* Notes explain a rule, so they use body text color; only labels are muted. */
+.note {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--text);
+  text-wrap: balance;
+}
+
+/*
+ * Case tables: every row is a two-column grid at every width. The input (with any
+ * options) sits on the left, the result on the right, and a note runs beneath the
+ * input. Roles added by the script keep the table semantics.
+ */
+.cases,
+.cases thead,
+.cases tbody {
+  display: block;
+}
+
+.cases tr {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: 24px;
+  padding: 10px 16px;
+}
+
+.cases :is(th, td) {
+  padding: 0;
+}
+
+.cases tbody tr + tr > * {
+  border-top: 0;
+}
+
+.cases tbody tr + tr,
+.cases tbody + tbody {
+  border-top: 1px solid var(--border);
+}
+
+.cases thead tr {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  background: var(--surface-muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.cases thead th {
+  padding: 0;
+  background: none;
+  border: 0;
+}
+
+.cases thead th:last-child {
+  text-align: right;
+}
+
+.cases th[scope='row'] {
+  position: relative;
+  z-index: 1;
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+}
+
+/* Inputs and options are what readers compare, so they match the 15px results. */
+.cases .input-chip {
+  font-size: var(--mono-lg);
+}
+
+/* The result cell spans both lines, sharing the row's columns. */
+.cases td {
+  grid-column: 1 / -1;
+  grid-row: 1 / span 2;
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-template-rows: subgrid;
+  text-align: left;
+}
+
+.cases td > .result,
+.cases .res-note > .result {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+  line-height: 1.6;
+}
+
+.cases .res-note {
+  display: contents;
+}
+
+.cases .res-note > .note {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  max-width: 60ch;
+  margin-top: 4px;
+  text-align: left;
+  text-wrap: pretty;
+}
+
+/*
+ * Rows are grouped under a caption that names their shared rule, styled like the unit
+ * table's groups. Groups that return null use the null color.
+ */
+.cases tr.group-head {
+  padding: 0;
+}
+
+.cases .group-head th {
+  grid-column: 1 / -1;
+  padding: 8px 16px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--heading);
+  background: var(--bg-tint);
+  border-bottom: 1px solid var(--border);
+}
+
+.cases .group-head.is-null th {
+  color: var(--null);
+  background: var(--null-soft);
+}
+
+.cases tbody .group-head + tr {
+  border-top: 0;
+}
+
+@media (max-width: 639px) {
+  /* Phones drop the column header row; each row's layout already explains itself. */
+  .cases thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .cases tr {
+    column-gap: 16px;
+    padding: 10px 14px;
+  }
+
+  .cases tr.group-head {
+    padding: 0;
+  }
+
+  .cases .group-head th {
+    padding: 8px 14px;
+  }
+}
+
+/* One table for both types, so neither half leaves a gap beside the other. */
+.units :is(th, td) {
+  vertical-align: middle;
+}
+
+.units thead th:first-child {
+  width: 5rem;
+}
+
+.units thead th:nth-child(2) {
+  width: 7rem;
+}
+
+.units .unit-name {
+  color: var(--heading);
+  font-weight: 600;
+}
+
+.units .system {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.units .group-head th {
+  padding-top: 7px;
+  padding-bottom: 7px;
+  background: var(--bg-tint);
+  color: var(--heading);
+  font-family: var(--font-display);
+  font-size: 0.8125rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  border-bottom: 1px solid var(--border);
+}
+
+.units tbody + tbody .group-head th {
+  border-top: 1px solid var(--border);
+}
+
+.units .group-head + tr > * {
+  border-top: 0;
+}
+
+@media (max-width: 479px) {
+  .units :is(th, td) {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .units thead th:first-child {
+    width: 3.75rem;
+  }
+
+  .units thead th:nth-child(2) {
+    width: 5.25rem;
+  }
+}
+
+.alias-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  list-style: none;
+  padding: 0;
+}
+
+.alias-list li {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+/* Single-character aliases get a wider chip and a name. */
+.input-chip.is-symbol {
+  min-width: 2rem;
+  text-align: center;
+  font-weight: 700;
+}
+
+.alias-name {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+/* Callouts: a tinted box with a full 1px border and an icon. Blue informs; amber cautions. */
+.callout {
+  --callout-accent: var(--accent);
+  --callout-line: var(--accent-line);
+  display: flex;
+  gap: 14px;
+  padding: 16px 20px 16px 18px;
+  border: 1px solid var(--callout-line);
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+}
+
+.callout > .icon {
+  color: var(--callout-accent);
+  margin-top: 3px;
+}
+
+.callout p,
+.callout li {
+  max-width: var(--measure);
+}
+
+.callout-title {
+  color: var(--heading);
+  font-weight: 650;
+}
+
+.callout-body > * + * {
+  margin-top: 6px;
+}
+
+.callout-body ul {
+  padding-left: 1.25rem;
+}
+
+.callout-body li + li {
+  margin-top: 6px;
+}
+
+.callout-body li::marker {
+  color: var(--text-muted);
+}
+
+.callout.is-caution {
+  --callout-accent: #b45309;
+  --callout-line: #ecd3a6;
+  background: #fffaf0;
+}
+
+/* Phones: the icon sits beside the title, and the body uses the full inner width. */
+@media (max-width: 639px) {
+  .callout:has(> .callout-body) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: 10px;
+    align-items: center;
+    padding: 14px 16px 16px 15px;
+  }
+
+  .callout:has(> .callout-body) > .icon {
+    margin-top: 0;
+  }
+
+  .callout-body {
+    display: contents;
+  }
+
+  .callout-body > * {
+    grid-column: 1 / -1;
+  }
+
+  .callout-body > .callout-title {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .callout-body ul {
+    margin-top: 8px;
+    padding-left: 18px;
+  }
+}
+
+/* A section's own index: one wrapping line of links, folded into a list on phones. */
+.local-index {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  max-width: var(--measure);
+  margin-top: 16px;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.local-index-label {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.local-index ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.local-index li {
+  white-space: nowrap;
+}
+
+/* The separator ends a line rather than starting the next one. */
+.local-index li:not(:last-child)::after {
+  content: '·';
+  margin: 0 10px;
+  color: var(--border-control);
+}
+
+/* Phones swap the inline index for one folded list of links. */
+.topic-jump {
+  display: none;
+  margin-top: 20px;
+}
+
+@media (max-width: 639px) {
+  .local-index {
+    display: none;
+  }
+
+  .topic-jump {
+    display: block;
+  }
+}
+
+/* With the side outline on screen, the inline index would only repeat it. */
+@media (min-width: 1024px) {
+  .local-index {
+    display: none;
+  }
+}
+
+.topic-links {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+}
+
+.topic-links a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 16px 0 40px;
+  color: var(--heading);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.topic-links a:hover {
+  color: var(--accent);
+  background: var(--surface-muted);
+}
+
+.topic-links .icon {
+  color: var(--text-muted);
+}
+
+.topic-links a:focus-visible {
+  outline-offset: -2px;
+}
+
+/* Full rule text behind a native disclosure */
+.rules {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.rules > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: var(--radius);
+  color: var(--heading);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.rules > summary::-webkit-details-marker {
+  display: none;
+}
+
+.rules > summary:hover {
+  background: var(--surface-muted);
+}
+
+.rules > summary:focus-visible {
+  outline-offset: -2px;
+}
+
+.rules .chevron {
+  color: var(--text-muted);
+  transform: rotate(-90deg);
+  transition: transform 0.15s ease;
+}
+
+.rules[open] .chevron {
+  transform: none;
+}
+
+.rules[open] > summary {
+  border-bottom: 1px solid var(--border);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.rules li {
+  max-width: var(--measure);
+}
+
+.edit-page {
+  margin-top: 64px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  font-size: 0.875rem;
+}
+
+.edit-page a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  color: var(--text-muted);
+}
+
+.edit-page a:hover {
+  color: var(--accent);
+}
+
+.edit-page .icon.ext {
+  margin-left: -4px;
+}
+
+.docs-resources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 24px;
+  margin-top: 16px;
+  font-size: 0.875rem;
+}
+
+.docs-resources a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Footer */
+.site-footer {
+  border-top: 1px solid var(--border);
+  background: var(--bg-tint);
+}
+
+.footer-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 32px;
+  padding-top: 32px;
+  padding-bottom: 40px;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.footer-inner ul {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+}
+
+.footer-inner a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  color: var(--text-muted);
+}
+
+.footer-inner a:hover {
+  color: var(--heading);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}

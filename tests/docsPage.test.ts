@@ -1,3 +1,4 @@
+import { ident, parse, walk, type CssNode } from 'css-tree';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { describe, expect, it } from 'vitest';
@@ -6,6 +7,86 @@ import { describe, expect, it } from 'vitest';
 // page carries an integrity hash. The browser checks the hash only for a CORS request, so each tag
 // also needs crossorigin="anonymous". A URL that starts with "//" loads from another host too.
 const page = readFileSync(new URL('../docs/index.html', import.meta.url), 'utf8');
+
+// The ticket orders these for lookup, independently of the exported interface's source order.
+// Default and omitted behavior follow the README's ParseOptions and PARSING's Bare Numbers.
+describe('the ParseOptions reference', () => {
+  const reference =
+    page.split('aria-label="ParseOptions properties">')[1]?.split('id="parsed-value"')[0] ?? '';
+  const options = [
+    ...reference.matchAll(/<div id="option-([^"]+)">([\s\S]*?)(?=<div id="option-|$)/g),
+  ];
+  const text = (html: string): string =>
+    html
+      .split(/<[^>]*>/)
+      .join('')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  it('puts common settings before the input-length safeguard', () => {
+    expect(options.map(([, id]) => id)).toEqual([
+      'type',
+      'normalized-unit',
+      'fuzziness',
+      'default-unit',
+      'max-length',
+    ]);
+  });
+
+  it.each([
+    [
+      'type',
+      'When omitted',
+      'Selected by normalizedUnit when set; otherwise by written units or defaultUnit for a bare number.',
+    ],
+    ['normalized-unit', 'When omitted', 'Uses the written or default source unit.'],
+    ['fuzziness', 'Default', '0 — unit names must be exact.'],
+    ['default-unit', 'When omitted', 'Bare numbers return null.'],
+    ['max-length', 'Default', '1000.'],
+  ])(
+    'labels %s purpose, omitted behavior and constraints in visible markup',
+    (id, label, omitted) => {
+      const option = options.find(([, key]) => key === id)?.[2] ?? '';
+      const facts = [...option.matchAll(/<dt>([^<]+)<\/dt>\s*<dd>([\s\S]*?)<\/dd>/g)];
+      expect(facts.map(([, key]) => key)).toEqual(['Purpose', label, 'Constraints']);
+      expect(text(facts[1]?.[2] ?? '')).toBe(omitted);
+      expect(facts.every(([, , value]) => text(value).length > 0)).toBe(true);
+      expect(option).toContain(`href="#option-${id}"`);
+      expect(option).not.toMatch(/<details|\bhidden\b|aria-hidden/);
+    }
+  );
+
+  it('documents source defaults, error caveats and practical example links', () => {
+    expect.hasAssertions();
+    const optionText = (id: string): string =>
+      text(options.find(([, key]) => key === id)?.[2] ?? '');
+    expect(optionText('normalized-unit')).toContain('a weight unit reads only a weight');
+    expect(optionText('normalized-unit')).toContain('A type that contradicts it throws an error');
+    expect(optionText('normalized-unit')).toContain('Shorthand such as 5-11 still needs type');
+    expect(optionText('normalized-unit')).toContain(
+      'never supplies a source unit for a bare number'
+    );
+    expect(optionText('default-unit')).toContain('Written units win');
+    expect(optionText('default-unit')).toContain('Must agree with the dimension selected');
+    expect(optionText('default-unit')).toContain('No magnitude guessing');
+    expect(optionText('max-length')).toContain('raw input.length before trimming or parsing');
+    expect(optionText('max-length')).toContain(
+      'A number of at least 1, or Infinity for no limit. Other values throw'
+    );
+    for (const id of [
+      'ex-type',
+      'ex-convert',
+      'ex-fuzzy',
+      'ex-unqualified',
+      'unit-type',
+      'measurement-type',
+    ]) {
+      expect(reference).toContain(`href="#${id}"`);
+      expect(page).toContain(`id="${id}"`);
+    }
+    expect(page).toContain('id="parse-options"');
+  });
+});
 
 /**
  * The external scripts and stylesheets in an HTML page. Prettier checks the page, and it writes
@@ -27,8 +108,6 @@ const tags = externalTags(page);
 // "curl -fsSL <url> | openssl dgst -sha512 -binary | openssl base64 -A". A new URL with an old
 // hash then fails here, not only in the browser.
 const HASHES: Record<string, string> = {
-  'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css':
-    'sha512-vswe+cgvic/XBoF1OcM/TeJ2FW0OofqAVdCZiEYkd6dwGXthvkSFWOoGGJgS2CW70VK5dQM5Oh+7ne47s74VTg==',
   'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js':
     'sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==',
   'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js':
@@ -40,60 +119,59 @@ const HASHES: Record<string, string> = {
 };
 
 /**
- * The class names in a style sheet's selectors, unescaped (AFA-121). Tailwind writes a "\" before
- * a symbol in a class name, as in ".sm\:flex". It writes a "," or a first digit as a hex code
- * point that a space can end, as in ".\32 xl\:text-lg". Comments, at-rules and quoted strings
- * hold no classes, and a class name can't start with a digit, as in a keyframe's "33.3%".
+ * The class names in a style sheet's selectors, unescaped (AFA-121). css-tree reads CSS tokens as a
+ * browser does. So a comment, a quoted string, a url() or an at-rule's prelude holds no class. A
+ * newline ends a string that has no closing quote. css-tree reads a nested rule whose selector list
+ * starts with "&". Another nested rule, as in ".a { .b { } }" or ".a { .b & { } }", is a parse
+ * error. A parse error throws, so a rule that css-tree can't read fails the check. Tailwind writes
+ * a "\" before a symbol in a class name, as in ".sm\:flex". It writes a first digit as a hex code
+ * point, as in ".\32 xl\:text-lg". A class counts where a selector requires it of an element: not
+ * inside a pseudo-class such as :not(). :is() and :where() match the element itself, so the classes
+ * that their selectors require count too. With `ownRule`, a class counts only where the rule is
+ * about it: in the last part of the selector that names a class, between combinators. So ".a .b" is
+ * about "b", ".a :is(.b)" too, and ".space-y-2 > :not([hidden])" is about "space-y-2".
  */
-function cssClasses(css: string): Set<string> {
-  const escape = String.raw`\\[\da-f]{1,6}(?:\r\n|[ \t\n\r\f])?|\\[^\da-f\n\r\f]`;
-  // Read the style sheet in tokens: an escape, a quoted string, a comment, a brace, a semicolon
-  // or other text. So a brace, a semicolon or a comment marker in a string or an escape ends
-  // nothing. A comment that isn't closed runs to the end, and it separates the text on each side,
-  // as a space does. The text before a "{" is a selector, or an at-rule, which starts with "@".
-  const tokens =
-    /\\[\s\S]|"(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*'|\/\*[\s\S]*?(?:\*\/|$)|[{};]|[^\\"'/{};]+|\//g;
-  const selectors: string[] = [];
-  let text = '';
-  for (const [token] of css.matchAll(tokens)) {
-    if (token === '{') {
-      if (!text.trim().startsWith('@')) selectors.push(text);
-      text = '';
-    } else if (token === '}' || token === ';') {
-      text = '';
-    } else if (token.startsWith('/*')) {
-      text += ' ';
-    } else if (!/^["']/.test(token)) {
-      text += token;
-    }
-  }
-  // An escape outside a class name matches on its own, so an escaped "." in an ID, as in
-  // "#a\.b", doesn't start a class.
-  const name = new RegExp(
-    String.raw`${escape}|\.((?:${escape}|[a-z_-]|[^\x00-\x7f])(?:${escape}|[\w-]|[^\x00-\x7f])*)`,
-    'gi'
-  );
-  const unescape = (match: string): string => {
-    const hex = /^\\([\da-f]+)/i.exec(match)?.[1];
-    if (!hex) return match.slice(1);
-    // CSS reads code point 0, a surrogate or any code point above U+10FFFF as U+FFFD.
-    const code = parseInt(hex, 16);
-    return code === 0 || code > 0x10ffff || (code >= 0xd800 && code <= 0xdfff)
-      ? '\uFFFD'
-      : String.fromCodePoint(code);
+function cssClasses(css: string, { ownRule = false } = {}): Set<string> {
+  const names: string[] = [];
+  const options = {
+    parseValue: false,
+    parseAtrulePrelude: false,
+    onParseError: (error: Error): never => {
+      throw error;
+    },
   };
-  return new Set(
-    selectors.flatMap(text =>
-      [...text.matchAll(name)].flatMap(([, escaped]) =>
-        escaped === undefined ? [] : [escaped.replace(new RegExp(escape, 'gi'), unescape)]
-      )
-    )
-  );
+  walk(parse(css, options), {
+    visit: 'Rule',
+    enter(rule) {
+      if (rule.prelude.type !== 'SelectorList') return;
+      rule.prelude.children.forEach(selector => names.push(...selectorClasses(selector, ownRule)));
+    },
+  });
+  return new Set(names.map(name => ident.decode(name)));
+}
+
+/** The classes that a selector requires, escaped, as `cssClasses` describes. */
+function selectorClasses(selector: CssNode, ownRule: boolean): string[] {
+  const parts: CssNode[][] = [[]];
+  for (const node of selector.type === 'Selector' ? selector.children.toArray() : []) {
+    if (node.type === 'Combinator') parts.push([]);
+    else parts[parts.length - 1].push(node);
+  }
+  const classesIn = (part: CssNode[]): string[] =>
+    part.flatMap(node => {
+      if (node.type === 'ClassSelector') return [node.name];
+      if (node.type !== 'PseudoClassSelector' || !/^(?:is|where)$/i.test(node.name)) return [];
+      return (node.children?.toArray() ?? [])
+        .flatMap(child => (child.type === 'SelectorList' ? child.children.toArray() : [child]))
+        .flatMap(inner => selectorClasses(inner, ownRule));
+    });
+  if (!ownRule) return parts.flatMap(classesIn);
+  return classesIn([...parts].reverse().find(part => classesIn(part).length > 0) ?? []);
 }
 
 /**
- * The Tailwind classes in an HTML page that have no rule in a style sheet. The page's own script,
- * Prism and the page's own <style> use the other classes.
+ * The Tailwind classes in an HTML page that have no rule of their own in a style sheet. The page's
+ * own script, Prism and the page's own <style> use the other classes.
  */
 function missingClasses(html: string, css: string): string[] {
   const used = [
@@ -103,9 +181,18 @@ function missingClasses(html: string, css: string): string[] {
     ),
   ];
   const other = new Set(['', 'copy-button', 'text-link']);
-  const defined = cssClasses(css);
+  // Tailwind's "group" and the script's "copied" mark an element for a rule on another element, as
+  // in ".group.copied .group-\[\.copied\]\:block". So they have no rule of their own. A selector
+  // must still require them, not only name them, as ":not(.group)" does.
+  const context = new Set(['group', 'copied']);
+  const own = cssClasses(css, { ownRule: true });
+  const required = cssClasses(css);
   return [...new Set(used)].filter(
-    name => !other.has(name) && !name.startsWith('language-') && !defined.has(name)
+    name =>
+      !other.has(name) &&
+      !name.startsWith('language-') &&
+      !own.has(name) &&
+      !(context.has(name) && required.has(name))
   );
 }
 
@@ -122,7 +209,11 @@ type Toasts = Record<'success-toast' | 'error-toast', Toast>;
  * has one copy button here. The stand-ins act only on the event names and the selector that the
  * page should use. Return the button's click listeners and the two toasts.
  */
-function runCopyScript(clipboardJS?: unknown): { clicks: Listener[]; toasts: Toasts } {
+function runCopyScript(clipboardJS?: unknown): {
+  clicks: Listener[];
+  toasts: Toasts;
+  button: { hidden: boolean; disabled: boolean };
+} {
   const script = page
     .split('<script>')
     .map(part => part.split('</script>')[0])
@@ -142,6 +233,8 @@ function runCopyScript(clipboardJS?: unknown): { clicks: Listener[]; toasts: Toa
   const clicks: Listener[] = [];
   let onReady: Listener = () => undefined;
   const button = {
+    hidden: true,
+    disabled: true,
     addEventListener: (event: string, listener: Listener): void => {
       if (event === 'click') clicks.push(listener);
     },
@@ -157,11 +250,11 @@ function runCopyScript(clipboardJS?: unknown): { clicks: Listener[]; toasts: Toa
   const globals = { document, setTimeout: (): number => 0, clearTimeout: (): void => undefined };
   runInNewContext(script ?? '', clipboardJS ? { ...globals, ClipboardJS: clipboardJS } : globals);
   onReady();
-  return { clicks, toasts };
+  return { clicks, toasts, button };
 }
 
 describe('the docs page', () => {
-  // Prism's stylesheet and three scripts, and clipboard.js, all from cdnjs.
+  // Prism's three scripts and clipboard.js, all from cdnjs. The page owns its styles.
   it('loads only the external files whose hashes the test knows', () => {
     expect(tags.map(({ url }) => url).sort()).toEqual(Object.keys(HASHES).sort());
   });
@@ -183,7 +276,7 @@ describe('the docs page', () => {
       'https://a.example/x.css',
     ],
     ['<SCRIPT src="//a.example/x.js"></SCRIPT>', '//a.example/x.js'],
-    // AFA-97: the Tailwind Play CDN is no longer an exception.
+    // AFA-97: the Tailwind Play CDN is an external script like any other.
     ['<script src="https://cdn.tailwindcss.com"></script>', 'https://cdn.tailwindcss.com'],
     ['<script src="http://cdn.tailwindcss.com"></script>', 'http://cdn.tailwindcss.com'],
     [
@@ -208,6 +301,23 @@ describe('the docs page', () => {
     expect(page).toContain('<link href="tailwind.css" rel="stylesheet" />');
     const css = readFileSync(new URL('../docs/tailwind.css', import.meta.url), 'utf8');
     expect(missingClasses(page, css)).toEqual([]);
+    // A class with no rule there still fails, such as the ticket's "no-such-class" and "prose".
+    expect(missingClasses('<div class="no-such-class prose"></div>', css)).toEqual([
+      'no-such-class',
+      'prose',
+    ]);
+  });
+
+  // css-tree reads a nested rule only when its selector list starts with "&". So the check throws
+  // css-tree's parse error, not passes with the rule lost (AFA-169). Another error, such as a TypeError, is a bug in the check.
+  it('throws for a style sheet that css-tree cannot read', () => {
+    expect(() => cssClasses('.a { .b { } }')).toThrow(SyntaxError);
+    expect(() => cssClasses('.a { .b { } }')).toThrow('Identifier is expected');
+  });
+
+  // css-tree reads nesting whose selector list starts with "&", so both rules' classes count.
+  it.each(['.a { &.b { } }', '.a { & .b { } }'])('reads the nested rule in %s', css => {
+    expect(cssClasses(css)).toEqual(new Set(['a', 'b']));
   });
 
   // AFA-121 item 1: Tailwind writes "2xl:text-lg" as ".\32 xl\:text-lg", so the class has a rule.
@@ -255,14 +365,46 @@ describe('the docs page', () => {
     ['#a\\.b { } [data-x=a\\.c] { } .d { }', ['d']],
     ['.a/**/b { }', ['a']],
     ['.a { } /* not closed .z { }', ['a']],
+    // AFA-135: a newline ends a string that has no closing quote, and a quote in an unquoted url()
+    // starts no string. A browser applies the rules after each one.
+    ['.a { } .b { content: "x\n} .c { } .d { content: "y" }', ['a', 'b', 'c', 'd']],
+    [".a { background: url(x'y.svg) } .b { } .c { content: 'z' }", ['a', 'b', 'c']],
   ])('reads the classes in %s', (css, names) => {
     expect([...cssClasses(css)]).toEqual(names);
+  });
+
+  // AFA-135: a class that a selector uses only to pick other elements has no rule of its own.
+  // Tailwind's "group" and the script's "copied" are such classes, so they need only a selector
+  // that names them. A Tailwind class whose rule styles its children, such as "space-y-2", has a
+  // rule of its own.
+  it.each([
+    ['foo', '.x:not(.foo) { }', ['foo']],
+    ['foo', '.foo .bar { }', ['foo']],
+    ['foo', '.bar .foo { }', []],
+    ['space-y-2', '.space-y-2 > :not([hidden]) ~ :not([hidden]) { }', []],
+    ['group copied', '.group.copied .group-\\[\\.copied\\]\\:block { }', []],
+    ['group', '.other { }', ['group']],
+    // Codex on #151: :is() and :where() match the element itself, but :not() doesn't.
+    ['foo', ':is(.foo) { }', []],
+    ['foo', ':where(.x, .foo) { }', []],
+    ['ancestor', '.ancestor :is(.foo) { }', ['ancestor']],
+    ['foo', '.x:not(:is(.foo)) { }', ['foo']],
+    // Codex on #151: a selector inside :is() keeps its own :not() and combinators, and a context
+    // class needs a selector that requires it.
+    ['foo', ':is(.x:not(.foo)) { }', ['foo']],
+    ['ancestor', ':is(.ancestor .subject) { }', ['ancestor']],
+    ['subject', ':is(.ancestor .subject) { }', []],
+    ['group', '.x:not(.group) { }', ['group']],
+    ['group', ':is(.group) .x { }', []],
+  ])('checks the class "%s" against %s', (classes, css, missing) => {
+    expect(missingClasses(`<div class="${classes}"></div>`, css)).toEqual(missing);
   });
 
   // If the browser blocks clipboard.js, or cdnjs is down, "new ClipboardJS" would throw, and the
   // copy buttons would fail with no message.
   it('shows the error toast for a copy button when clipboard.js is missing', () => {
-    const { clicks, toasts } = runCopyScript();
+    const { clicks, toasts, button } = runCopyScript();
+    expect(button).toMatchObject({ hidden: true, disabled: true });
     expect(clicks).toHaveLength(1);
     clicks[0]();
     expect(toasts['error-toast'].dataset.visible).toBe('true');
@@ -271,7 +413,13 @@ describe('the docs page', () => {
     expect(toasts['success-toast'].dataset.visible).toBe('false');
   });
 
+  it('keeps copy actions unavailable when the browser cannot copy', () => {
+    const { button } = runCopyScript({ isSupported: () => false });
+    expect(button).toMatchObject({ hidden: true, disabled: true });
+  });
+
   it('uses clipboard.js for the copy buttons when it loaded', () => {
+    expect.hasAssertions();
     const selectors: string[] = [];
     const handlers: Record<string, Listener> = {};
     function ClipboardJS(selector: string): { on: (event: string, handler: Listener) => void } {
@@ -282,12 +430,16 @@ describe('the docs page', () => {
         },
       };
     }
-    const { clicks, toasts } = runCopyScript(ClipboardJS);
+    ClipboardJS.isSupported = (action: string): boolean => {
+      expect(action).toBe('copy');
+      return true;
+    };
+    const { clicks, toasts, button } = runCopyScript(ClipboardJS);
+    expect(button).toMatchObject({ hidden: false, disabled: false });
     expect(selectors).toEqual(['.copy-button']);
     expect(clicks).toEqual([]);
     expect(Object.keys(handlers).sort()).toEqual(['error', 'success']);
 
-    // A copy marks its button and shows the success toast. A failed copy shows the error toast.
     const classes: string[] = [];
     let cleared = false;
     handlers.success({
@@ -301,5 +453,227 @@ describe('the docs page', () => {
     handlers.error({});
     expect(toasts['error-toast'].dataset.visible).toBe('true');
     expect(toasts['success-toast'].dataset.visible).toBe('false');
+  });
+});
+
+// Quick start owns the contract; Usage teaches four configuration tasks. Legacy deep links
+// still land beside the corresponding explanation after the repeated cards are removed.
+describe('the docs lessons', () => {
+  const quick = page.slice(
+    page.indexOf('<h3 id="quick-start">'),
+    page.indexOf('aria-labelledby="usage"')
+  );
+  const usage = page.slice(
+    page.indexOf('aria-labelledby="usage"'),
+    page.indexOf('aria-labelledby="api"')
+  );
+
+  it('shows the full result and null handling in Quick start', () => {
+    expect(quick).toContain('data-full-object');
+    expect(quick).toContain('Full returned object');
+    expect(quick).toContain('if (result)');
+    expect(quick).toContain('not a measurement');
+    expect(quick).toContain('id="ex-basic"');
+    expect(quick).toContain('id="ex-null"');
+    expect(quick).not.toContain('href="#ex-basic"');
+  });
+
+  it('gives each Usage task one lesson and preserves the compound-height anchor', () => {
+    expect(
+      [...usage.matchAll(/<article class="example" aria-labelledby="([^"]+)"/g)].map(
+        match => match[1]
+      )
+    ).toEqual(['ex-type', 'ex-convert', 'ex-unqualified', 'ex-fuzzy']);
+    expect(usage).toContain('id="ex-feet-inches"');
+    expect(usage).not.toContain('data-full-object');
+    expect(usage).not.toContain('class="ex-opts"');
+  });
+
+  it('keeps every local navigation link attached to a unique destination', () => {
+    const ids = [...page.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
+    const links = [...page.matchAll(/<a\b[^>]*\bhref="#([^"]+)"/g)].map(match => match[1]);
+    expect(links.length).toBeGreaterThan(0);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(links.filter(link => !ids.includes(link))).toEqual([]);
+  });
+});
+
+it('reveals the Quick start result beside either module format', () => {
+  const script = page
+    .split('<script>')
+    .map(part => part.split('</script>')[0])
+    .find(code => code.includes("querySelectorAll('pre[data-returns]"));
+  const snippet = /data-returns\s*><code class="language-typescript">([\s\S]*?)<\/code>/.exec(
+    page
+  )?.[1];
+  expect(script).toBeDefined();
+  expect(snippet).toBeDefined();
+  const output = { textContent: '' };
+  const full = { hidden: true, querySelector: (): typeof output => output };
+  const panel = { querySelector: (): null => null };
+  const card = { querySelector: (): typeof full => full };
+  const code = {
+    textContent: snippet ?? '',
+    closest: (selector: string): typeof card | typeof panel =>
+      selector === '.code' ? card : panel,
+  };
+  runInNewContext(script ?? '', { document: { querySelectorAll: (): (typeof code)[] => [code] } });
+  expect(full.hidden).toBe(false);
+  // README Usage defines this complete result, independently of the page's extraction script.
+  expect(new Function(`return (${output.textContent});`)()).toEqual({
+    value: 6,
+    unit: 'ft',
+    type: 'height',
+    matches: [{ value: 6, unit: 'ft' }],
+    raw: '6 ft',
+  });
+  expect(code.textContent).toContain('if (result)');
+  expect(code.textContent).not.toContain('✓ Returns');
+});
+
+// AFA-221: source markup must be useful before any script or CDN dependency runs.
+describe('static docs examples before initialization', () => {
+  it('does not advertise uninitialized tab widgets or selected states', () => {
+    // Opening-tag attributes distinguish static markup from the script's setAttribute calls.
+    expect(page).not.toMatch(/<[^>]+\srole="(?:tab|tablist|tabpanel)"/);
+    expect(page).not.toMatch(/<[^>]+\saria-selected=/);
+  });
+
+  it('starts each copy action hidden and disabled', () => {
+    expect.hasAssertions();
+    const buttons = [...page.matchAll(/<button\b[^>]*class="copy-button"[^>]*>/g)];
+    expect(buttons).toHaveLength(7);
+    for (const [button] of buttons) {
+      expect(button).toMatch(/\shidden(?:\s|>)/);
+      expect(button).toMatch(/\sdisabled(?:\s|>)/);
+    }
+  });
+
+  it.each([
+    ['npm', 'npm'],
+    ['yarn', 'yarn'],
+    ['pnpm', 'pnpm'],
+    ['esm', 'ES modules'],
+    ['cjs', 'CommonJS'],
+    ['convert-height', 'Height conversion'],
+    ['convert-weight', 'Weight conversion'],
+  ])('labels the visible static %s group', (id, label) => {
+    const panel = new RegExp(`<div[^>]*id="panel-${id}"[^>]*>`).exec(page)?.[0] ?? '';
+    expect(panel).toContain('role="group"');
+    expect(panel).not.toMatch(/\shidden(?:\s|>)/);
+    const labelId = /aria-labelledby="([^"]+)"/.exec(panel)?.[1];
+    expect(page).toMatch(new RegExp(`<p[^>]*id="${labelId}"[^>]*>\\s*${label}\\s*</p>`));
+  });
+});
+
+// AFA-270: "Docs for your version" opened README.md, which Pages serves as raw Markdown. The
+// link now opens a section of this page, which lists each verified version's HTML docs.
+describe('the docs for your version section', () => {
+  const site = 'https://afahy.github.io/fluent-measures/';
+  const script = page.slice(
+    page.indexOf('// Docs for each verified version'),
+    page.indexOf('// End of docs for each verified version.')
+  );
+
+  class Element {
+    hidden = false;
+    href = '';
+    textContent = '';
+    children: (Element | string)[] = [];
+    append(...nodes: (Element | string)[]): void {
+      this.children.push(...nodes);
+    }
+    replaceChildren(...nodes: Element[]): void {
+      this.children = nodes;
+    }
+  }
+
+  // Runs the page's script with a fake ledger response, and reads the list as text.
+  async function render(response: Promise<unknown>): Promise<{
+    list: Element;
+    fallback: Element;
+    requests: string[];
+  }> {
+    const list = Object.assign(new Element(), { hidden: true });
+    const fallback = new Element();
+    const requests: string[] = [];
+    let settled: Promise<unknown> = Promise.resolve();
+    runInNewContext(script, {
+      window: { fetch: true },
+      AbortSignal,
+      document: {
+        querySelector: (selector: string): Element | null =>
+          ({ '[data-doc-versions]': list, '[data-doc-versions-fallback]': fallback })[selector] ??
+          null,
+        createElement: (): Element => new Element(),
+      },
+      fetch: (url: string): Promise<unknown> => {
+        requests.push(url);
+        settled = response.then(
+          () => undefined,
+          () => undefined
+        );
+        return response;
+      },
+    });
+    await settled;
+    // Two .then steps and the catch run after the response settles.
+    for (let i = 0; i < 5; i++) await Promise.resolve();
+    return { list, fallback, requests };
+  }
+  const ledger = (body: unknown): Promise<unknown> =>
+    Promise.resolve({ ok: true, json: () => Promise.resolve(body) });
+  const items = (list: Element): string[] =>
+    list.children.map(item => {
+      const [link, note = ''] = (item as Element).children as [Element, string?];
+      return `${link.textContent} ${link.href}${note}`;
+    });
+
+  it('links the hero to the section on this page, not to the Markdown README', () => {
+    expect(page).toContain('<a href="#versions">Docs for your version</a>');
+    expect(page).toContain('<h3 id="versions">Docs for your version</h3>');
+    expect(page).not.toContain('README.md#documentation-for-your-version');
+  });
+
+  it('starts with a static link to the version list and no empty list', () => {
+    expect(page).toContain('<ul data-doc-versions hidden></ul>');
+    expect(page).toContain(`<a href="${site}versions.json"`);
+    expect(page).toContain('<code>npm ls @afahy/<wbr />fluent-measures</code>');
+  });
+
+  it('lists each verified version newest first, with a link to its HTML docs', async () => {
+    const { list, fallback, requests } = await render(
+      ledger({
+        current: '0.10.0',
+        releases: { '0.2.0': {}, '0.10.0': {}, '0.9.1': {}, '1.0.0-beta.1': {}, '01.2.3': {} },
+      })
+    );
+    expect(requests).toEqual([`${site}versions.json`]);
+    // 0.10.0 is newer than 0.9.1: the order is numeric, not alphabetical.
+    expect(items(list)).toEqual([
+      `0.10.0 ${site}versions/0.10.0/ (latest)`,
+      `0.9.1 ${site}versions/0.9.1/`,
+      `0.2.0 ${site}versions/0.2.0/`,
+    ]);
+    expect(list.hidden).toBe(false);
+    expect(fallback.hidden).toBe(true);
+  });
+
+  it.each([
+    ['a failed request', (): Promise<unknown> => Promise.reject(new Error('offline'))],
+    [
+      'an HTTP error',
+      (): Promise<unknown> => Promise.resolve({ ok: false, json: () => Promise.resolve({}) }),
+    ],
+    ['a ledger with no releases', (): Promise<unknown> => ledger({ current: '0.2.0' })],
+    ['a null ledger', (): Promise<unknown> => ledger(null)],
+    ['releases that are null', (): Promise<unknown> => ledger({ releases: null })],
+    ['releases that are a string', (): Promise<unknown> => ledger({ releases: '012' })],
+    ['no stable version', (): Promise<unknown> => ledger({ releases: { latest: {}, '1.0': {} } })],
+  ])('keeps the static link after %s', async (_name, response) => {
+    const { list, fallback } = await render(response());
+    expect(list.hidden).toBe(true);
+    expect(list.children).toEqual([]);
+    expect(fallback.hidden).toBe(false);
   });
 });

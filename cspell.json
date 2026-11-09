@@ -1,7 +1,17 @@
 {
   "version": "0.2",
   "language": "en",
-  "words": ["afahy", "Fahy", "CODEOWNERS", "coderabbitai", "worktree"],
+  "words": [
+    "afahy",
+    "Fahy",
+    "coderabbitai",
+    "worktree",
+    "worktrees",
+    "WCAG",
+    "autoplay",
+    "llms",
+    "multipoint"
+  ],
   "flagWords": [],
   "useGitignore": true,
   "files": ["**/*.md", "docs/**/*.html", ".github/**/*.md"],

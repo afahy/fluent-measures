@@ -44,7 +44,7 @@ jobs:
       # The base commit, not the PR's, so a PR can't change the AGENTS.md that it's reviewed by.
       # Each action is pinned to the commit of its tag, because a moved tag could change what
       # runs in the job that holds the secret.
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         if: env.HAS_TOKEN == 'true'
         continue-on-error: true
         with:
@@ -74,7 +74,7 @@ jobs:
       # a classifier approves calls. In dontAsk mode, Claude Code denies each call that needs an
       # approval, such as a read outside the workspace. Claude ignores the repository's Claude
       # settings. It posts only inline comments, and the last step posts its summary.
-      - uses: anthropics/claude-code-action@6fed3ca145920b639991cb756090506e1bcaf515 # v1
+      - uses: anthropics/claude-code-action@6fed3ca145920b639991cb756090506e1bcaf515 # v1.0.245
         id: review
         if: env.HAS_TOKEN == 'true'
         continue-on-error: true
@@ -95,11 +95,13 @@ jobs:
             - The PR body has exactly one line `Fixes AFA-n` or `Part of AFA-n`, and the change
               stays within what the PR body says that the ticket asks for.
             - A bug fix adds a test with the failure inputs that the PR body names, and each
-              expected result comes from the ticket, the README or a hand calculation.
+              expected result comes from the ticket, the README, `PARSING.md` or a hand
+              calculation.
             - No existing test is skipped, deleted or loosened.
-            - A result that a README example documents changes only when the PR body says that
-              the ticket asks for that change, and then the README changes with it. The README
-              is the public specification, so flag any other change to such a result as a bug.
+            - A result that an example in the README or `PARSING.md` documents changes only when
+              the PR body says that the ticket asks for that change, and then the example changes
+              with it. These examples are the public specification, so flag any other change to
+              such a result as a bug.
             - A change under `src/`, or to a `package.json` field that reaches consumers, adds a
               changeset under `.changeset/`.
             - The changed code has no bug: no wrong result, no throw and no security problem.

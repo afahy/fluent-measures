@@ -27,7 +27,8 @@ describe('pr-status workflow', () => {
     );
   });
 
-  // AFA-143: only CodeRabbit sent status events, and its state is only a note in pr:status.
+  // AFA-143: a commit status doesn't start the workflow. A CI that reports with one shows at the
+  // next scheduled run.
   it('runs on no status event', () => {
     const triggers = /^on:\n((?: {2}.*\n|\n)*)/m.exec(workflow)?.[1] ?? '';
     expect(triggers).toMatch(/^ {2}pull_request:$/m);
@@ -45,7 +46,7 @@ describe('pr-status workflow', () => {
     ]);
     expect(types('pull_request_review')).toEqual(['submitted', 'dismissed']);
     expect(workflow).toMatch(
-      /^ {2}workflow_run:\n {4}workflows: \[CI, Commitlint, Regression test\]\n {4}types: \[in_progress, completed\]$/m
+      /^ {2}workflow_run:\n {4}workflows: \[CI, Commitlint, Regression test, Evidence\]\n {4}types: \[in_progress, completed\]$/m
     );
   });
 });

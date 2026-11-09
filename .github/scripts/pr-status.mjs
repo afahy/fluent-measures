@@ -5,8 +5,9 @@
 //                               [--no-requests] [--repo <owner/name>]
 //
 // The state of each PR, from most to least urgent, with the exit code:
-//   needs-agent    10  The agent has something to do: failed CI, a bot thread with no reply,
-//                      a merge conflict, or a bot review to ask for. "Do" lists the requests.
+//   needs-agent    10  The agent has something to do: failed CI, a bot thread or a Claude
+//                      summary with no answer, a merge conflict, or a bot review to ask for.
+//                      "Do" lists the requests.
 //   ready           0  Nothing is left for the agent. Merge it if AGENTS.md lets you.
 //   merged         40
 //   closed         41
@@ -15,24 +16,27 @@
 // With several PRs, the exit code is that of the most urgent state. A bad argument exits with
 // 2, a token that GitHub refuses with 3, and another API error with 1.
 //
-// --wait prints nothing while it polls. It tries again after a network or server error, or after
-// a rate limit ends, for its first request too (AFA-147). It ends after five such errors in a row,
-// and at once after another error or a rate limit that lasts past --timeout. It returns at once
-// if a PR needs the agent, is ready, or has closed. Otherwise it returns when a PR's state changes
-// to anything but `waiting`, or when a waiting-human PR gets news, such as a bot reply. It stops
-// after --timeout minutes (default 100, under the 2-hour limit for a background command). 304
-// answers to its polls don't count against GitHub's rate limit.
+// --wait prints nothing while it polls. After a network or server error or a rate limit, it tries
+// again for its first request too (AFA-147). The next try comes after --interval, or when the
+// rate limit ends if that is later. Five such errors in a row end the call, and another error
+// ends it at once. If --timeout ends before the next try, it prints the last result, or the error
+// if it has none (AFA-148). It returns at once if a PR needs the agent, is ready, or has closed.
+// Otherwise it returns when a PR's state changes to anything but `waiting`, or when a
+// waiting-human PR gets news, such as a bot reply. It stops after --timeout minutes (default 100,
+// under the 2-hour limit for a background command). 304 answers to its polls don't count against
+// GitHub's rate limit.
 //
 // --no-requests is for after the third review round, when AGENTS.md says not to ask Codex
 // again: a Codex that hasn't reviewed is waited for until its 2 hours are up, not asked.
-// CodeRabbit is never waited for or asked (AFA-138).
+// Claude is never asked to review, and it is waited for only as the `Claude review` check.
 //
 // The token comes from GH_TOKEN, GITHUB_TOKEN or `gh auth token`. The repository comes from
 // --repo, GITHUB_REPOSITORY or the origin remote.
 
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { classify, collect, createClient, digest, mostUrgent, STATES } from './pr-state.mjs';
+import { classify, collect, createClient, mostUrgent, STATES } from './pr-state.mjs';
+import { pollStatuses } from './pr-poll.mjs';
 
 // Node's fetch ignores HTTPS_PROXY unless NODE_USE_ENV_PROXY is set when Node starts, as in
 // Claude Code cloud sessions. Run again with it set.
@@ -109,7 +113,6 @@ function describe(status) {
   if (failed.length) ci.push(`${failed.length} failed (${failed.join(', ')})`);
   lines.push(`  CI: ${ci.join(', ')}`);
   lines.push(`  Codex: ${status.codex.state}. ${status.codex.detail}`);
-  lines.push(`  CodeRabbit: ${status.coderabbit.state}. ${status.coderabbit.detail}`);
   for (const [title, items] of /** @type {const} */ ([
     ['Why', status.reasons],
     ['Do', status.actions],
@@ -133,13 +136,6 @@ function finish(statuses, json, heading) {
   process.exit(STATES[mostUrgent(statuses.map(s => s.state))]);
 }
 
-/** @param {number} ms */
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-const ACTIONABLE = new Set(['needs-agent', 'ready', 'merged', 'closed']);
-
 let options;
 try {
   options = parseArgs(process.argv.slice(2));
@@ -147,78 +143,24 @@ try {
   console.error(/** @type {Error} */ (error).message);
   process.exit(2);
 }
-const { prs, json, wait, timeout, interval, repo, requests } = options;
+const { prs, json, repo, requests } = options;
 const token = findToken();
-const api = createClient({
-  token,
-  apiUrl: process.env.GITHUB_API_URL || 'https://api.github.com',
-});
-const check = async () =>
-  Promise.all(
-    prs.map(async pr => classify(await collect(api, repo, pr), Date.now(), { requests }))
-  );
 
 try {
-  const deadline = Date.now() + timeout * 60 * 1000;
-  const started = Date.now();
-  let failures = 0;
-  /** @type {unknown} */
-  let lastError = null;
-  /**
-   * One poll's statuses, or null after an error that a later poll can try again. Without --wait,
-   * any error ends the call. With it, an error that can pass is tried again. A rate limit that
-   * ends before --timeout is waited out, and then the poll runs again at once.
-   */
-  const poll = async () => {
-    for (;;) {
-      try {
-        const statuses = await check();
-        failures = 0;
-        return statuses;
-      } catch (error) {
-        const { retryable, retryAt } =
-          /** @type {{ retryable?: boolean, retryAt?: number | null }} */ (error);
-        if (!wait || !retryable || (retryAt && retryAt >= deadline)) throw error;
-        // A reset time that has passed, as with a skewed clock, counts as another error, so the
-        // call can't try again at once without end.
-        if (retryAt && retryAt > Date.now()) {
-          await sleep(retryAt - Date.now());
-          continue;
-        }
-        if (++failures >= 5) throw error;
-        lastError = error;
-        return null;
-      }
-    }
-  };
-
-  /** @type {import('./pr-state.d.mts').PrStatus[] | null} */
-  let latest = null;
-  /** @type {Map<number, string> | null} */
-  let before = null;
-  for (;;) {
-    const statuses = await poll();
-    if (statuses && !before) {
-      if (!wait || statuses.some(s => ACTIONABLE.has(s.state))) finish(statuses, json);
-      before = new Map(statuses.map(s => [s.pr, digest(s)]));
-    } else if (statuses && before) {
-      const was = before;
-      const changed = statuses.filter(s => s.state !== 'waiting' && digest(s) !== was.get(s.pr));
-      if (changed.length > 0) {
-        const minutes = Math.round((Date.now() - started) / 60000);
-        const which = changed.map(s => `#${s.pr} is now ${s.state}`).join(', ');
-        finish(statuses, json, `After ${minutes} min: ${which}.`);
-      }
-    }
-    if (statuses) latest = statuses;
-    if (Date.now() >= deadline) break;
-    await sleep(Math.min(interval * 1000, Math.max(deadline - Date.now(), 0)));
-  }
-  // No poll got through before --timeout, so the last error says why.
-  if (!latest) throw lastError;
-  finish(latest, json, `Nothing changed in ${timeout} min.`);
+  const api = createClient({
+    token,
+    apiUrl: process.env.GITHUB_API_URL || 'https://api.github.com',
+  });
+  const check = async () =>
+    Promise.all(
+      prs.map(async pr => classify(await collect(api, repo, pr), Date.now(), { requests }))
+    );
+  await pollStatuses(options, {
+    check,
+    finish: (statuses, heading) => finish(statuses, json, heading),
+  });
 } catch (error) {
-  const { message, refused } = /** @type {{ message: string, refused?: boolean }} */ (error);
+  const { message, refused } = /** @type {import('./pr-state.d.mts').ClientError} */ (error);
   const hint = refused
     ? 'GitHub refused the token. Set GH_TOKEN, or run `gh auth login`.'
     : token

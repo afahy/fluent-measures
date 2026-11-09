@@ -5,7 +5,6 @@ if [ "$branch" = "main" ] || [ "$branch" = "master" ] || [ -n "$HUSKY_SKIP_HOOKS
   exit 0
 fi
 
-# Check if a changeset file exists in the staged files
 if ! git diff --cached --name-only | grep -q "^\.changeset/.*\.md$"; then
   echo "⚠️  Warning: No changeset file detected."
   echo "📝 Run 'pnpm changeset' to create one if you've made notable changes."

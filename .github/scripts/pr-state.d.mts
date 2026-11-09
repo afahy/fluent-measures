@@ -101,17 +101,7 @@ export interface CiSummary {
 }
 
 export interface BotState {
-  state:
-    | 'done'
-    | 'running'
-    | 'pending'
-    | 'requested'
-    | 'rate-limited'
-    | 'refused'
-    | 'failed'
-    | 'not-requested'
-    | 'gave-up'
-    | 'skipped';
+  state: 'done' | 'running' | 'pending' | 'requested' | 'not-requested' | 'gave-up' | 'skipped';
   detail: string;
   until?: string;
   action?: string;
@@ -133,11 +123,10 @@ export interface PrStatus {
   waits: string[];
   ci: CiSummary;
   codex: BotState;
-  coderabbit: BotState;
 }
 
 export const CODEX: string;
-export const CODERABBIT: string;
+export const CLAUDE: string;
 export const OWN_STATUS: string;
 export const OWN_CHECK: string;
 export const BOT_START_WAIT: number;
@@ -153,11 +142,10 @@ export function codexSummaryRows(
   body: string
 ): { review: string; status: string; commit: string | null }[];
 export function codexState(snapshot: Snapshot, now: number): BotState;
-export function coderabbitState(snapshot: Snapshot): BotState;
 export function unansweredBotThreads(comments: ReviewComment[]): ReviewComment[];
 export function botFollowUps(comments: ReviewComment[]): ReviewComment[];
-export function unansweredReviewBodies(snapshot: Snapshot): Review[];
 export function botChangeRequests(snapshot: Snapshot): Review[];
+export function unansweredClaudeSummaries(snapshot: Snapshot): IssueComment[];
 export function botOutputSincePush(snapshot: Snapshot): string[];
 export function classify(
   snapshot: Snapshot,
@@ -166,6 +154,21 @@ export function classify(
 ): PrStatus;
 export function mostUrgent(states: PrState[]): PrState;
 export function digest(status: PrStatus): string;
+
+/**
+ * An error from a Client. An error from a request sets each field except, without an answer,
+ * `status`. Other errors, such as a bad API URL, set none.
+ */
+export interface ClientError extends Error {
+  /** The HTTP status, when GitHub answered. */
+  status?: number;
+  /** When a rate limit ends, in milliseconds since 1970, or null when it isn't a rate limit. */
+  retryAt?: number | null;
+  /** Whether another try can help: a network or server error, an answer that isn't JSON, or a rate limit. */
+  retryable?: boolean;
+  /** Whether GitHub refused the token: a 401, or a 403 that isn't a rate limit. */
+  refused?: boolean;
+}
 
 export interface Client {
   get(path: string): Promise<unknown>;

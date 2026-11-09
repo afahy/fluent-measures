@@ -1,0 +1,152 @@
+{
+  "run": "fixture-head",
+  "inventory": "9f45653ee1828b39b9c2cf1e3d0c751c81b14d0f219da2afa9a7f288ef322de6",
+  "shard": "rest",
+  "state": "complete",
+  "report": {
+    "files": {
+      "src/new.ts": {
+        "language": "typescript",
+        "mutants": [
+          {
+            "id": "1",
+            "mutatorName": "BooleanLiteral",
+            "replacement": "false",
+            "status": "NoCoverage",
+            "static": false,
+            "coveredBy": [],
+            "location": {
+              "end": {
+                "column": 27,
+                "line": 1
+              },
+              "start": {
+                "column": 23,
+                "line": 1
+              }
+            }
+          }
+        ],
+        "source": "export const orphan = true;\n"
+      },
+      "src/explained.ts": {
+        "language": "typescript",
+        "mutants": [
+          {
+            "id": "0",
+            "mutatorName": "BooleanLiteral",
+            "replacement": "false",
+            "statusReason": "this is a recorded directive example",
+            "status": "Ignored",
+            "static": false,
+            "location": {
+              "end": {
+                "column": 30,
+                "line": 2
+              },
+              "start": {
+                "column": 26,
+                "line": 2
+              }
+            }
+          }
+        ],
+        "source": "// Stryker disable next-line all: this is a recorded directive example\nexport const explained = true;\n"
+      },
+      "src/other.ts": {
+        "language": "typescript",
+        "mutants": [
+          {
+            "id": "3",
+            "mutatorName": "BooleanLiteral",
+            "replacement": "value",
+            "statusReason": "expected true to be false // Object.is equality",
+            "status": "Killed",
+            "static": false,
+            "testsCompleted": 1,
+            "killedBy": ["5"],
+            "coveredBy": ["5"],
+            "location": {
+              "end": {
+                "column": 48,
+                "line": 1
+              },
+              "start": {
+                "column": 42,
+                "line": 1
+              }
+            }
+          },
+          {
+            "id": "2",
+            "mutatorName": "ArrowFunction",
+            "replacement": "() => undefined",
+            "statusReason": "expected undefined to be false // Object.is equality",
+            "status": "Killed",
+            "static": true,
+            "testsCompleted": 6,
+            "killedBy": ["5"],
+            "coveredBy": [],
+            "location": {
+              "end": {
+                "column": 48,
+                "line": 1
+              },
+              "start": {
+                "column": 22,
+                "line": 1
+              }
+            }
+          }
+        ],
+        "source": "export const other = (value: boolean) => !value;\n"
+      }
+    },
+    "schemaVersion": "1.0",
+    "thresholds": {
+      "high": 99,
+      "low": 98,
+      "break": null
+    },
+    "testFiles": {
+      "tests/units.test.ts": {
+        "tests": [
+          {
+            "id": "0",
+            "name": "negates"
+          },
+          {
+            "id": "1",
+            "name": "edge"
+          },
+          {
+            "id": "2",
+            "name": "picks"
+          },
+          {
+            "id": "3",
+            "name": "tokenizes"
+          },
+          {
+            "id": "4",
+            "name": "explains"
+          },
+          {
+            "id": "5",
+            "name": "other"
+          }
+        ],
+        "source": "import { expect, it } from 'vitest';\nimport { negate, edge, parseMeasurement as pick } from '../src/parseMeasurement';\nimport { tokenize } from '../src/tokenize';\nimport { explained } from '../src/explained';\nimport { other } from '../src/other';\nit('negates', () => { expect(negate(true)).toBe(false); expect(negate(false)).toBe(true); });\nit('edge', () => { expect(edge).toBe(true); });\nit('picks', () => { expect(pick(1)).toBeDefined(); });\nit('tokenizes', () => { expect(tokenize(true)).toBe(false); expect(tokenize(false)).toBe(true); });\nit('explains', () => { expect(explained).toBe(true); });\nit('other', () => { expect(other(true)).toBe(false); expect(other(false)).toBe(true); });\n"
+      }
+    },
+    "filesRead": {
+      "src/explained.ts": true,
+      "src/new.ts": true,
+      "src/other.ts": true,
+      "src/parseMeasurement.ts": false,
+      "src/tokenize.ts": false,
+      "src/types.ts": true
+    }
+  },
+  "attempt": 1
+}

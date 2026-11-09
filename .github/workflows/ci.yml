@@ -36,6 +36,10 @@ jobs:
       - name: Check bundle size
         run: pnpm check:size
 
+      # A change to an exported type must show in api-report.d.ts.
+      - name: Check the exported types
+        run: pnpm check:api
+
   package:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -81,8 +85,14 @@ jobs:
 
           // Bundlers that ignore exports read module, so it must name the same file.
           const manifest = import.meta.resolve('@afahy/fluent-measures/package.json');
-          const { module } = JSON.parse(readFileSync(new URL(manifest), 'utf8'));
+          const { module, homepage } = JSON.parse(readFileSync(new URL(manifest), 'utf8'));
           assert.equal(new URL(module, manifest).href, resolved, `module is ${module}`);
+          assert.equal(homepage, 'https://afahy.github.io/fluent-measures/');
+          const readme = readFileSync(new URL('README.md', manifest), 'utf8');
+          for (const link of [homepage, `${homepage}README.md`, `${homepage}llms.txt`]) {
+            assert.ok(readme.includes(`](${link})`), `Packed README is missing ${link}`);
+          }
+          assert.ok(readme.includes('## Documentation for your version'));
           EOF
 
       - name: Require the package from CJS
@@ -107,6 +117,14 @@ jobs:
           assert.equal(path.resolve(path.dirname(manifest), main), resolved, `main is ${main}`);
           EOF
 
+      # The tests of results import the installed tarball in place of src/, once through import and
+      # once through require. So they also check what the build does to the code.
+      - name: Run the tests of results against the installed package
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        env:
+          FLUENT_MEASURES_PACKAGE_DIR: ${{ runner.temp }}/consumer
+        run: pnpm test:package
+
       # publint and attw read the tarball and don't depend on the Node version, so they run
       # in one matrix leg.
       - name: Lint the package with publint
@@ -117,11 +135,18 @@ jobs:
         if: ${{ !cancelled() && steps.pack.outcome == 'success' && matrix.node-version == 24 }}
         run: npx @arethetypeswrong/cli@0.18.5 "$RUNNER_TEMP"/pack/*.tgz
 
-  mutation:
+  mutation-inventory:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 5
+    outputs:
+      hash: ${{ steps.inputs.outputs.hash }}
+      tools: ${{ steps.inputs.outputs.tools }}
+      resumed: ${{ endsWith(steps.main.outputs.cache-matched-key, '-stopped') }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The merge commit and its parents; HEAD^1 is the pull request base.
+          fetch-depth: 2
 
       - uses: ./.github/actions/setup
         with:
@@ -129,75 +154,215 @@ jobs:
 
       # Stryker's incremental mode reuses the result of each mutant whose code and killing tests
       # haven't changed (AFA-111). It compares the source files and the test files, but not the
-      # files that tests read, the packages or this job. So their hash is part of the cache key,
+      # files that tests read, the packages or these jobs. So their hash is part of the cache key,
       # and a change to one of them starts a full run. A pull request starts from its own last
-      # run, or from main's.
+      # run, or from main's. The key of main's own results hashes only the packages and the tool
+      # configs, because those results aren't exact anyway.
+      # Omit only audited release metadata/commands, unrelated jobs and tooling-only fixtures.
+      # Unknown inputs stay hashed. Projection files live outside the shared inventory artifact.
+      - name: Select the inputs that can change mutation results
+        run: node .github/scripts/mutation-cache-inputs.mjs
+
       - name: Hash the inputs that Stryker doesn't compare
         id: inputs
-        run: echo "hash=${{ hashFiles('package.json', 'pnpm-lock.yaml', 'tsconfig.json', 'stryker.config.json', 'vitest.config.ts', '.github/workflows/ci.yml', '.github/actions/setup/action.yml', 'README.md', 'tests/**', '!tests/**/*.test.ts') }}" >> "$GITHUB_OUTPUT"
+        run: |
+          set -euo pipefail
+          echo "hash=${{ hashFiles('reports/mutation-cache/package.json', 'pnpm-lock.yaml', 'tsconfig.json', 'stryker.config.json', 'vitest.config.ts', '.github/scripts/mutation-*.mjs', '.github/scripts/stryker-shard.config.mjs', '.github/scripts/changed-lines.mjs', '.github/scripts/workflow-commands.mjs', 'reports/mutation-cache/ci.yml', '.github/actions/setup/action.yml', 'README.md', 'PARSING.md', 'docs/index.html', 'tests/**', '!tests/**/*.test.ts', '!tests/fixtures/pr-status/**', '!tests/fixtures/late-bot-findings/**', '!tests/fixtures/mutation/**') }}" >> "$GITHUB_OUTPUT"
+          echo "tools=${{ hashFiles('reports/mutation-cache/package.json', 'pnpm-lock.yaml', 'tsconfig.json', 'stryker.config.json', 'vitest.config.ts') }}" >> "$GITHUB_OUTPUT"
 
-      # A change to one source file can change how the tests treat a mutant in another, which
-      # incremental mode doesn't check. So a push to main starts from no results and runs every
-      # mutant, and main's score and saved results are exact. A pull request's own later runs can
-      # reuse its earlier results. A re-run of the job runs every mutant, so a pull request can get
-      # a full run.
+      # Stryker compares only each mutant's own code and the tests that cover it. A change elsewhere
+      # in the same source file or in another one can change how the tests treat the mutant.
+      # Incremental mode doesn't check that. So only a pull request restores these results, and
+      # main saves them only from a run that started from no results. A pull request's own later
+      # runs can reuse its earlier results. A re-run of the job runs every mutant, so a pull request
+      # can get a full run.
       - uses: actions/cache/restore@v4
         if: github.event_name != 'push' && github.run_attempt == 1
         with:
           path: reports/stryker-incremental.json
-          key: stryker-incremental-${{ steps.inputs.outputs.hash }}-${{ github.sha }}-1
+          key: stryker-incremental-${{ steps.inputs.outputs.hash }}-${{ github.sha }}
           restore-keys: stryker-incremental-${{ steps.inputs.outputs.hash }}-
 
-      # Stryker writes its results at the end of a run, before it checks the score, so a run below
-      # the threshold saves them too. On SIGINT, it writes the results so far. The job's own time
-      # limit doesn't reach Stryker through the step's shell, so `timeout` sends SIGINT to the
-      # whole run 3 minutes before that limit. The step then fails, and the save step keeps the
-      # results. A pull request's next push goes on from them. A push to main and a re-run skip
-      # the restore, so they run every mutant again.
-      - name: Mutation tests
-        run: timeout --signal=INT 27m pnpm test:mutation --incremental
-
-      # Each attempt saves under its own key, because a key can't be saved twice.
-      - uses: actions/cache/save@v4
-        if: ${{ !cancelled() }}
+      # Each run on main also saves its results under a key that ends in "-stopped" when `timeout`
+      # stopped it, or in "-ended" (AFA-139). A push to main restores the newest of these entries,
+      # also when the run before it hasn't saved yet. The newest entry is the one saved last. So
+      # when runs overlap, it can come from an older commit than the last run that ended.
+      - id: main
+        uses: actions/cache/restore@v4
+        if: github.event_name == 'push' && github.run_attempt == 1
         with:
           path: reports/stryker-incremental.json
-          key: stryker-incremental-${{ steps.inputs.outputs.hash }}-${{ github.sha }}-${{ github.run_attempt }}
+          key: stryker-main-${{ steps.inputs.outputs.tools }}-${{ github.sha }}
+          restore-keys: stryker-main-${{ steps.inputs.outputs.tools }}-
 
-  # Every mutant on a line that the pull request adds or changes under src/ must be killed. When
-  # there is no pull request or it doesn't change src/, the steps are skipped and the job passes.
-  mutation-changed-lines:
-    name: Mutants on changed lines are killed
+      # Only a stopped run's results carry over, so this run tests the mutants that it didn't reach.
+      # Those results come from an earlier commit, so they aren't exact. After a run that ended, a
+      # push starts from no results and runs every mutant.
+      - name: Start from no results after a run that ended
+        if: steps.main.outputs.cache-matched-key && !endsWith(steps.main.outputs.cache-matched-key, '-stopped')
+        run: rm -f reports/stryker-incremental.json
+
+      # Stryker compares mutant spans, not git lines. Retest each changed source file even when
+      # only another expression or formatting on the same line changed, or a prior PR run cached it.
+      - name: Refresh mutation results for changed source files
+        if: github.event_name == 'pull_request'
+        run: node .github/scripts/mutation-check.mjs --prepare reports/stryker-incremental.json
+
+      # The cold dry run validates the tests and instruments the actual full selection. Its
+      # current inventory is independent of the four result sets; no historical count is used.
+      - name: Full mutant inventory and shared cache inputs
+        run: node .github/scripts/mutation-shards.mjs inventory
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mutation-inputs
+          path: reports/mutation-inputs/
+          if-no-files-found: error
+          overwrite: true
+
+  mutation:
+    needs: mutation-inventory
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [parse-start, parse-end, tokenize, rest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup
+        with:
+          node-version: 22
+
+      # Restore once above, then give every shard the identical prepared cache and inventory.
+      - uses: actions/download-artifact@v4
+        with:
+          name: mutation-inputs
+          path: reports/mutation-inputs/
+
+      - name: Select shard and trim out-of-scope cached mutants
+        id: selection
+        env:
+          MUTATION_SHARD: ${{ matrix.shard }}
+        run: node .github/scripts/mutation-shards.mjs prepare "$MUTATION_SHARD"
+
+      # Preserve the stopped-run handoff: SIGINT gives Stryker time to save partial results.
+      # Shards do not check break. Only the merged report's score can fail that threshold.
+      - name: Mutation tests
+        id: mutation
+        env:
+          MUTATE: ${{ steps.selection.outputs.mutate }}
+          MUTATION_SHARD: ${{ matrix.shard }}
+        run: |
+          set -euo pipefail
+          command -v timeout pgrep seq > /dev/null
+          rm -f reports/mutation/mutation.json reports/mutation-shard.json
+          status=0
+          timeout --signal=INT 27m pnpm test:mutation .github/scripts/stryker-shard.config.mjs --incremental --mutate "$MUTATE" || status=$?
+          if [ "$status" -eq 124 ]; then
+            echo "stopped=true" >> "$GITHUB_OUTPUT"
+            for _ in $(seq 120); do pgrep -f stryker > /dev/null || break; sleep 1; done
+          fi
+          node .github/scripts/mutation-shards.mjs pack "$MUTATION_SHARD" "$status"
+          exit "$status"
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && (steps.mutation.outcome == 'success' || steps.mutation.outcome == 'failure') }}
+        with:
+          name: mutation-shard-${{ matrix.shard }}
+          path: reports/mutation-shard.json
+          if-no-files-found: error
+          overwrite: true
+
+  mutation-report:
+    if: ${{ !cancelled() && needs.mutation-inventory.result == 'success' }}
+    needs: [mutation-inventory, mutation]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - uses: ./.github/actions/setup
+        with:
+          node-version: 22
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: mutation-inputs
+          path: reports/mutation-inputs/
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mutation-shard-*
+          path: reports/downloads/
+
+      - name: Collect the four shard artifacts
+        run: |
+          mkdir -p reports/shards
+          for shard in parse-start parse-end tokenize rest; do
+            mkdir -p "reports/shards/$shard"
+            cp "reports/downloads/mutation-shard-$shard/mutation-shard.json" "reports/shards/$shard/"
+          done
+
+      # A missing, duplicate, stale or incomplete inventory fails closed. A stopped run saves a
+      # validated partial cache but fails this job. It never writes a complete mutation report.
+      - name: Merge reports and check the aggregate score
+        id: aggregate
+        run: node .github/scripts/mutation-shards.mjs merge
+
+      - name: Mutants on changed lines are killed
+        if: ${{ !cancelled() && github.event_name == 'pull_request' && steps.aggregate.outputs.valid == 'true' && steps.aggregate.outputs.stopped == 'false' }}
+        run: node .github/scripts/mutation-check.mjs --report reports/mutation/mutation.json
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.aggregate.outputs.valid == 'true' }}
+        with:
+          name: mutation-report
+          path: |
+            reports/mutation/mutation.json
+            reports/stryker-incremental.json
+          if-no-files-found: error
+          overwrite: true
+
+      # Only cold/full main results or PR results enter the exact PR cache namespace. Results
+      # resumed from a stopped main run remain in main's separate namespace (AFA-139).
+      - uses: actions/cache/save@v4
+        if: ${{ !cancelled() && steps.aggregate.outputs.valid == 'true' && needs.mutation-inventory.outputs.resumed != 'true' }}
+        with:
+          path: reports/stryker-incremental.json
+          key: stryker-incremental-${{ needs.mutation-inventory.outputs.hash }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - uses: actions/cache/save@v4
+        if: ${{ !cancelled() && steps.aggregate.outputs.valid == 'true' && github.event_name == 'push' }}
+        with:
+          path: reports/stryker-incremental.json
+          key: stryker-main-${{ needs.mutation-inventory.outputs.tools }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ steps.aggregate.outputs.stopped == 'true' && 'stopped' || 'ended' }}
+
+  docs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-        with:
-          # The pull request's merge commit and its parents. HEAD^1 is the base branch.
-          fetch-depth: 2
-
-      - name: Check whether the PR changes src/
-        id: changes
-        if: github.event_name == 'pull_request'
-        run: |
-          if git diff --quiet HEAD^1 HEAD -- src/; then
-            echo "This PR doesn't change src/, so there are no changed lines to check."
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          fi
-
       - uses: ./.github/actions/setup
-        if: steps.changes.outputs.changed
         with:
-          node-version: 22
-
-      - name: Mutation tests on the changed lines
-        if: steps.changes.outputs.changed
-        run: node .github/scripts/mutation-check.mjs
+          node-version: 24
+      - name: Lighthouse and WCAG automated audits
+        run: pnpm docs:audit
+      - name: Docs layout and keyboard checks
+        run: pnpm docs:sweep build/docs/index.html
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: docs-audit
+          path: reports/docs-audit/
+          if-no-files-found: error
 
   ci-ok:
     if: always()
-    needs: [test, package, mutation, mutation-changed-lines]
+    needs: [test, package, mutation, mutation-report, docs]
     runs-on: ubuntu-latest
     steps:
       - name: Check all CI jobs passed

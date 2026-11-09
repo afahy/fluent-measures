@@ -1,3 +1,4 @@
+. "$(dirname -- "$0")/_pnpm.sh"
 
 echo "🧪 Running tests..."
 pnpm test || exit 1

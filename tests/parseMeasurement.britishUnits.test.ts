@@ -1,3 +1,6 @@
+// AFA-250: recovery expectations now follow the approved complete-entry contract in PARSING.md.
+// Earlier ticket rationales below describe their historical extraction contract; original
+// assertions are retained separately under design/afa-250.
 import { describe, expect, it } from 'vitest';
 import { parseMeasurement, type ParseOptions } from '../src';
 
@@ -20,14 +23,17 @@ describe('British spellings and "#" for pounds', () => {
   // working. The British spellings match only exactly, so prose such as "metro" and "mere" isn't
   // read as meters with fuzzy matching, as on main.
   it.each([
-    ['Order #5, 180 lbs', {}, 180, 'lb'],
+    'Order #5, 180 lbs',
+    'took the metro 5 stops, 180 lbs',
+    'a mere 5 stops, 180 lbs',
+    'part 12#3, 180 lbs',
+    '185#kg',
+  ])('rejects the complete entry %s (AFA-250 policy revision)', raw => {
+    expect(parseMeasurement(raw)).toBeNull();
+  });
+  it.each([
     ['180 cm', {}, 180, 'cm'],
     ['1.8 meters', {}, 1.8, 'm'],
-    ['took the metro 5 stops, 180 lbs', { fuzziness: 1 }, 180, 'lb'],
-    ['a mere 5 stops, 180 lbs', { fuzziness: 1 }, 180, 'lb'],
-    // "#" before a number isn't a unit, so "12#3" isn't pounds, and "185#kg" has its own unit.
-    ['part 12#3, 180 lbs', {}, 180, 'lb'],
-    ['185#kg', {}, 185, 'kg'],
   ] as const)('keeps reading %s with %o as %s %s', (raw, options: ParseOptions, value, unit) => {
     expect(parseMeasurement(raw, options)).toMatchObject({ value, unit });
   });

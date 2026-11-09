@@ -1,0 +1,42 @@
+name: Registry examples
+
+# This checks the published release against main, independently of PR required checks.
+on:
+  schedule:
+    - cron: '31 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  registry-examples:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+        with:
+          node-version: 22
+
+      - name: Check the published package against the examples
+        shell: bash
+        run: |
+          main_sha="$(git rev-parse HEAD)"
+          consumer="$RUNNER_TEMP/consumer"
+          mkdir "$consumer"
+          (
+            cd "$consumer"
+            npm init --yes
+            npm install --ignore-scripts --no-audit --no-fund @afahy/fluent-measures@latest
+          )
+          version="$(cd "$consumer" && node -p "require('./node_modules/@afahy/fluent-measures/package.json').version")"
+          echo "Checking @afahy/fluent-measures@$version against main $main_sha"
+          if ! FLUENT_MEASURES_PACKAGE_DIR="$consumer" pnpm test:package tests/readme.test.ts tests/docsExamples.test.ts; then
+            echo "::error::@afahy/fluent-measures@$version does not match the examples on main $main_sha. Changes on main may not be released yet; a release matching main fixes that gap."
+            exit 1
+          fi

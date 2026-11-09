@@ -1,7 +1,7 @@
 name: Late bot findings
 
-# Files a record when Codex or CodeRabbit posts a finding on a PR that has already merged or
-# closed, because no agent watches a closed PR. See .github/scripts/late-bot-findings.mjs.
+# Files a record when Codex or Claude posts a finding on a PR that has already merged or closed,
+# because no agent watches a closed PR. See .github/scripts/late-bot-findings.mjs.
 on:
   pull_request_review:
     types: [submitted]
@@ -20,7 +20,7 @@ jobs:
     # never reaches a shell.
     if: >-
       (github.event.pull_request.state == 'closed' || github.event.issue.state == 'closed') &&
-      contains(fromJSON('["chatgpt-codex-connector[bot]", "coderabbitai[bot]"]'), github.event.sender.login)
+      contains(fromJSON('["chatgpt-codex-connector[bot]", "claude[bot]"]'), github.event.sender.login)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
