@@ -1,5 +1,5 @@
 {
-  "current": "0.2.0",
+  "current": "0.3.0",
   "releases": {
     "0.2.0": {
       "version": "0.2.0",
@@ -18,6 +18,26 @@
         "site.css": "fbdee436ff4cd146f158dbda0c99e83be76e45da513a0f1f309898f345c48cb9",
         "tailwind.config.cjs": "696e933205a491ab4f81d30fb8af32de51491381c5292f537023007b0cedad9c",
         "tailwind.css": "b0140b4e2306b3c4b82a208fdff31f8f310ec1c6019fc5f76ebe2438359adb1b"
+      }
+    },
+    "0.3.0": {
+      "version": "0.3.0",
+      "revision": "cb98f756d473517d4c9e9347d27b4142968a83b9",
+      "integrity": "sha512-pXa9Pm7tANrUQG8HYxwTuHxaoda1uDB1t3vu8pkghscFyL7wYDUFMAMjdd+Zc8RrZa6Jg46yk3nfbIeT1aVJpg==",
+      "verification": "reproduced-package-and-release-examples",
+      "files": {
+        "PARSING.md": "fa3805b7c40cbfe0033b636dd42830094b3ba90ae44b2dda657fa213d1bc1979",
+        "README.md": "ae7eb2d89a7ddd6b796b4bd403cc45992ca34f8fd9f0e47111f9552a4094607a",
+        "accessibility.md": "183a88493e8d60d66e0674ce991a5770cd4b89927b8d446af8bf3bf55a738a6c",
+        "fonts/OFL.txt": "1781d2806a07d91c4edf4740b88449fab7d0eadad53f7c351b94cd4d4eb8c00f",
+        "fonts/geist-latin.woff2": "9b6f5ff45b278c744b5f379a2c4ecbaf858a842b8eaf82ac8d21b699ca16c608",
+        "index.html": "588ceb5363e2880ebab9a574517ab68eea5936272a4d465c101b641bab08de90",
+        "llms.txt": "0b333fb51add7377889af63f7f28fc43f40566f788225f589831b12e19e2bba8",
+        "og.png": "a4a54efe7c39905e12b62b177224bcfe7fcd794126820203e29096e5bb6973ac",
+        "release.json": "4ac97273f0ed8071e2008ef712acb638b9f329c8d893f7c86b64e4b3669e8721",
+        "site.css": "0d55536679673028e467884eb051db97c41c8e40b40197452baefcb8bfcd085d",
+        "tailwind.config.cjs": "696e933205a491ab4f81d30fb8af32de51491381c5292f537023007b0cedad9c",
+        "tailwind.css": "ab4ee5f79d8b3d09f7b4ac1d8281f991fe27c83301abf8a1dad735700776f5dd"
       }
     }
   }
