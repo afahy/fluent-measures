@@ -30,8 +30,9 @@ do {
 for (const name of releaseOnly) delete manifest.scripts?.[name];
 
 function workflowInputs(source) {
-  // This is a conservative text projection, not a YAML parser. Only drop the three known
-  // unrelated jobs in the current block layout. Anchors/aliases can couple otherwise unrelated
+  // This is a conservative text projection, not a YAML parser. Only drop the four known
+  // unrelated jobs in the current block layout. The changes job only decides whether the
+  // mutation jobs run, so they may depend on it. Anchors/aliases can couple otherwise unrelated
   // jobs; unfamiliar layouts/dependencies keep the entire workflow. Shared settings stay too.
   if (/(?:^|[\s[{,])[*&][\w-]+|^ *\t/m.test(source)) return source;
   const sections = source.split(/(?=^\S)/m);
@@ -44,7 +45,9 @@ function workflowInputs(source) {
   const names = blocks.map(block => /^ {2}([\w-]+):\s*\n/.exec(block)?.[1]);
   const mutationJobs = ['mutation-inventory', 'mutation', 'mutation-report'];
   if (names.includes(undefined) || mutationJobs.some(name => !names.includes(name))) return source;
-  const retained = blocks.filter((_, i) => !['test', 'package', 'ci-ok'].includes(names[i]));
+  const retained = blocks.filter(
+    (_, i) => !['changes', 'test', 'package', 'ci-ok'].includes(names[i])
+  );
   for (const block of retained) {
     const lines = block
       .split('\n')
@@ -60,7 +63,7 @@ function workflowInputs(source) {
     for (const [, needs] of block.matchAll(/^ {4}needs:([^\n]*)/gm)) {
       if (
         !/^ *(?:[\w-]+|\[[\w, -]+\]) *$/.test(needs) ||
-        needs.match(/[\w-]+/g).some(name => !mutationJobs.includes(name))
+        needs.match(/[\w-]+/g).some(name => name !== 'changes' && !mutationJobs.includes(name))
       )
         return source;
     }

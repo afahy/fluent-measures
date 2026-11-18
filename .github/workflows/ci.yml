@@ -9,6 +9,69 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    # On a pull request, the mutation and docs jobs run only when the pull request changes one of
+    # their inputs. Each list must name every file that can change its job's result:
+    # tests/ciChanges.test.ts checks them against mutation-inventory's hash and the docs scripts.
+    # A push, or a pull request that git can't compare with its base, runs both jobs.
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      mutation: ${{ steps.changes.outputs.mutation }}
+      docs: ${{ steps.changes.outputs.docs }}
+    steps:
+      - uses: actions/checkout@v4
+        if: github.event_name == 'pull_request'
+        with:
+          # The merge commit and its parents; HEAD^1 is the pull request base.
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Find the jobs whose inputs changed
+        id: changes
+        env:
+          MUTATION_INPUTS: >-
+            src
+            tests
+            :(exclude)tests/fixtures/pr-status
+            :(exclude)tests/fixtures/late-bot-findings
+            :(exclude)tests/fixtures/mutation
+            package.json
+            pnpm-lock.yaml
+            tsconfig.json
+            tsup.config.ts
+            stryker.config.json
+            vitest.config.ts
+            README.md
+            PARSING.md
+            docs/index.html
+            .github/scripts/mutation-*.mjs
+            .github/scripts/stryker-shard.config.mjs
+            .github/scripts/changed-lines.mjs
+            .github/scripts/workflow-commands.mjs
+            .github/actions/setup/action.yml
+            .github/workflows/ci.yml
+          DOCS_INPUTS: >-
+            docs
+            README.md
+            PARSING.md
+            .github/scripts/docs-*.mjs
+            package.json
+            pnpm-lock.yaml
+            .github/actions/setup/action.yml
+            .github/workflows/ci.yml
+        run: |
+          set -euf -o pipefail
+          changed() {
+            if [ "$GITHUB_EVENT_NAME" = pull_request ] && git diff --quiet HEAD^1 HEAD -- $1; then
+              echo false
+            else
+              echo true
+            fi
+          }
+          echo "mutation=$(changed "$MUTATION_INPUTS")" >> "$GITHUB_OUTPUT"
+          echo "docs=$(changed "$DOCS_INPUTS")" >> "$GITHUB_OUTPUT"
+
   test:
     runs-on: ubuntu-latest
     strategy:
@@ -136,6 +199,8 @@ jobs:
         run: npx @arethetypeswrong/cli@0.18.5 "$RUNNER_TEMP"/pack/*.tgz
 
   mutation-inventory:
+    needs: changes
+    if: needs.changes.outputs.mutation == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -342,6 +407,8 @@ jobs:
           key: stryker-main-${{ needs.mutation-inventory.outputs.tools }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ steps.aggregate.outputs.stopped == 'true' && 'stopped' || 'ended' }}
 
   docs:
+    needs: changes
+    if: needs.changes.outputs.docs == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -362,13 +429,22 @@ jobs:
 
   ci-ok:
     if: always()
-    needs: [test, package, mutation, mutation-report, docs]
+    needs: [changes, test, package, mutation-inventory, mutation, mutation-report, docs]
     runs-on: ubuntu-latest
     steps:
+      # A mutation or docs job may be skipped only when the changes job found that the pull
+      # request doesn't change its inputs. Every other result must be success.
       - name: Check all CI jobs passed
         env:
-          RESULTS: ${{ join(needs.*.result, ' ') }}
+          NEEDS: ${{ toJSON(needs) }}
         run: |
-          for result in $RESULTS; do
-            test "$result" = success
-          done
+          node --input-type=module <<'EOF'
+          const needs = JSON.parse(process.env.NEEDS);
+          const ran = needs.changes?.outputs ?? {};
+          const failed = Object.entries(needs).filter(([job, { result }]) => {
+            const gate = job.startsWith('mutation') ? ran.mutation : job === 'docs' ? ran.docs : '';
+            return result !== (gate === 'false' ? 'skipped' : 'success');
+          });
+          for (const [job, { result }] of failed) console.log(`${job}: ${result}`);
+          process.exitCode = failed.length ? 1 : 0;
+          EOF
