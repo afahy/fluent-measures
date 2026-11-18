@@ -242,8 +242,11 @@ viewport also checks the reflow width required for a 1280px window at 400% zoom.
 
 Use `--only accessibility` or `--only lighthouse` for a targeted rerun, and `--runs 1` for a
 single Lighthouse sample per device during development. CI uses all three samples, runs the
-layout sweep, and makes both part of `ci-ok` on pull requests. A push to `main` skips them; the
-Nightly workflow runs them on `main`. Do not lower the score threshold, disable audits
+layout sweep, and makes both part of `ci-ok` on pull requests. On a pull request, this `docs` job
+runs only when the pull request changes `docs/`, `README.md`, `PARSING.md`, a `docs-*` script, the
+packages or the workflow; `tests/ciChanges.test.ts` checks that list against the scripts that the
+job runs. A push to `main` skips them; the Nightly workflow runs them on `main`. Do not lower the
+score threshold, disable audits
 or select only the best run to make a failure pass. Check the saved report for the cause.
 
 JSON and HTML reports go in `reports/docs-audit/`; CI uploads them as the `docs-audit` artifact
@@ -393,6 +396,13 @@ changes that the tests catch. The job fails when the score is below the `break` 
 `stryker.config.json` (currently 98). The job output lists each change the tests missed. A
 `Survived` entry means tests ran and still passed; a `NoCoverage` entry means no test runs that
 code. Add tests that catch either kind.
+
+On a pull request, the mutation jobs run only when it changes one of their inputs: `src/`, the
+tests, the packages, the tool configs, the files that tests read and the mutation scripts. The
+`changes` job in `ci.yml` lists them, and `tests/ciChanges.test.ts` checks that the list covers
+each file that `mutation-inventory` hashes. When the jobs skip, `ci-ok` counts them as passed. The
+Nightly workflow always runs them. If you add a file that can change mutation results, add it to
+both lists.
 
 This job runs Stryker in incremental mode. A pull request reuses each result from its own last
 run, or from `main`'s, when the mutant's code and covering tests haven't changed. Stryker doesn't

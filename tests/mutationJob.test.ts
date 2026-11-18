@@ -307,7 +307,9 @@ describe('the mutation job in CI', () => {
   it('uses one mutation run and keeps it required through ci-ok', () => {
     expect([...ci.matchAll(/pnpm test:mutation/g)]).toHaveLength(1);
     expect(ci).not.toMatch(/^ {2}mutation-changed-lines:/m);
-    expect(ci).toContain('needs: [test, package, mutation, mutation-report, docs]');
+    expect(ci).toContain(
+      'needs: [changes, test, package, mutation-inventory, mutation, mutation-report, docs]'
+    );
     expect(mutation).not.toContain('continue-on-error');
     expect(job).not.toContain('continue-on-error');
   });
@@ -567,14 +569,17 @@ describe('mutation cache key behavior', () => {
     }
   );
 
-  it.each(['test', 'package', 'ci-ok'])('keeps the key for unrelated CI job %s', name => {
-    const directory = cacheFixture();
-    const before = cacheKeys(directory);
-    editWorkflow(directory, source =>
-      source.replace(`\n  ${name}:\n`, `\n  ${name}:\n    env: { UNRELATED: changed }\n`)
-    );
-    expect(cacheKeys(directory)).toEqual(before);
-  });
+  it.each(['changes', 'test', 'package', 'ci-ok'])(
+    'keeps the key for unrelated CI job %s',
+    name => {
+      const directory = cacheFixture();
+      const before = cacheKeys(directory);
+      editWorkflow(directory, source =>
+        source.replace(`\n  ${name}:\n`, `\n  ${name}:\n    env: { UNRELATED: changed }\n`)
+      );
+      expect(cacheKeys(directory)).toEqual(before);
+    }
+  );
 
   it.each(['mutation-inventory', 'mutation', 'mutation-report'])(
     'changes the key for CI job %s',
@@ -723,7 +728,9 @@ describe('parallel mutation workflow', () => {
     expect(ci).toContain('needs: [mutation-inventory, mutation]');
     expect(ci.match(/if-no-files-found: error/g)).toHaveLength(4);
     expect(ci).toContain('node .github/scripts/mutation-shards.mjs merge');
-    expect(ci).toContain('needs: [test, package, mutation, mutation-report, docs]');
+    expect(ci).toContain(
+      'needs: [changes, test, package, mutation-inventory, mutation, mutation-report, docs]'
+    );
   });
 
   it('disables only the shard break check and retains the configured aggregate threshold', () => {
