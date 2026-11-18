@@ -1,0 +1,18 @@
+name: Nightly
+
+# A push to main runs only CI's test and package jobs. This workflow runs all of CI on main,
+# including mutation testing and the docs audit, and saves the mutation results that pull
+# requests reuse. Its check runs are named "ci / <job>", so they don't match CI's ci-ok on a push.
+on:
+  schedule:
+    - cron: '17 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    # A run by hand on another branch would save main's mutation results where no PR reads them.
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/ci.yml
