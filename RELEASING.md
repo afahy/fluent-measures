@@ -75,6 +75,10 @@ through another PR and select a new approved release commit. Do not substitute a
 run on a different SHA. Save the successful run URL on the release ticket. The release CLI
 checks these same fields using `gh`, failing closed on a missing, running or failed run.
 
+A push to `main` runs only CI's `test` and `package` jobs. Mutation testing runs again in step 3's
+`pnpm check`. The docs audit runs only on pull requests and in the Nightly workflow
+(`nightly.yml`), so look at the latest Nightly run on `main` too.
+
 ## 3. Validate a clean checkout of that release commit
 
 Use a fresh clone for publication so ignored build output and dependencies from development

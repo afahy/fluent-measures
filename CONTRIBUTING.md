@@ -242,7 +242,8 @@ viewport also checks the reflow width required for a 1280px window at 400% zoom.
 
 Use `--only accessibility` or `--only lighthouse` for a targeted rerun, and `--runs 1` for a
 single Lighthouse sample per device during development. CI uses all three samples, runs the
-layout sweep, and makes both part of `ci-ok`. Do not lower the score threshold, disable audits
+layout sweep, and makes both part of `ci-ok` on pull requests. A push to `main` skips them; the
+Nightly workflow runs them on `main`. Do not lower the score threshold, disable audits
 or select only the best run to make a failure pass. Check the saved report for the cause.
 
 JSON and HTML reports go in `reports/docs-audit/`; CI uploads them as the `docs-audit` artifact
@@ -382,8 +383,11 @@ pnpm test:unit:coverage
 pnpm test:mutation
 ```
 
-CI also runs mutation testing with Stryker on pull requests to `main` and on pushes to `main`.
-Stryker makes small changes to the code in `src/`, such as flipping a condition or deleting a
+CI also runs mutation testing with Stryker on pull requests to `main`. A push to `main` skips it
+and the docs audit, so its `ci-ok` covers only the `test` and `package` jobs. The Nightly workflow
+(`nightly.yml`) runs all of CI on `main` every night and when started by hand, with mutation
+testing and the docs audit. A failure that only `main` shows, such as one from two pull requests
+that pass alone, fails that night's run, not the push. Stryker makes small changes to the code in `src/`, such as flipping a condition or deleting a
 statement, and runs the tests against each one. The mutation score is the percentage of these
 changes that the tests catch. The job fails when the score is below the `break` threshold in
 `stryker.config.json` (currently 98). The job output lists each change the tests missed. A
@@ -396,16 +400,17 @@ check other code that the mutant depends on, also in the same file. So a pull re
 differ from a full run. A change to the packages, or to a file that tests read, starts a full run.
 Such files are `README.md`, `PARSING.md` and the corpus.
 
-A push to `main` starts from no results and runs every mutant, except as the next paragraph says.
-It saves the results that pull requests reuse. For a
+A run on `main` starts from no results and runs every mutant, except as the next paragraph says.
+It saves the results that pull requests reuse. So a pull request reuses results from the last
+nightly run, not from the last push. For a
 full run on a pull request, re-run all jobs. Re-running a mutation shard runs all of its mutants;
 "Re-run failed jobs" keeps artifacts from successful shards of that same workflow run and commit.
 Artifacts from another workflow run or commit cannot be reused as current results. Repeated
 attempts ignore the shared incremental input, and replace their own shard artifacts.
 
 A run that takes more than 27 minutes stops and fails, but it saves its results so far. On a pull
-request, the next push goes on from them. On `main`, each push looks at the newest results that a
-run on `main` saved. If that run stopped, the push goes on from its results and runs the mutants
+request, the next push goes on from them. On `main`, each run looks at the newest results that a
+run on `main` saved. If that run stopped, the next run goes on from its results and runs the mutants
 that it didn't reach. These results come from an earlier commit, and a change to a file that tests
 read doesn't reset them. So they aren't exact, and a run that goes on from them doesn't save its
 results for pull requests. When runs on `main` overlap, the newest results can come from an older
