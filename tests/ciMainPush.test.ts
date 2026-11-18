@@ -56,17 +56,18 @@ describe('CI on a push to main', () => {
     );
   });
 
-  // RESULTS as GitHub sets it: on a push, the results of test and package; otherwise, of all five
-  // jobs in the order of needs.
+  // These cases run only the step's script. Each RESULTS value is the one that the expression
+  // above gives for the named case, worked out by hand: on a push, the results of test and package;
+  // otherwise, of all five jobs in the order of needs.
   it.each([
-    ['a push where test and package pass', 'success success', 0],
-    ['a push where package fails', 'success failure', 1],
-    ['a push where test is cancelled', 'cancelled success', 1],
-    ['a pull request where every job passes', 'success success success success success', 0],
-    ['a pull request that skips mutation', 'success success skipped skipped success', 1],
-    ['a pull request that skips docs', 'success success success success skipped', 1],
-    ['a pull request where mutation-report fails', 'success success success failure success', 1],
-  ])('ci-ok on %s exits with %i', (_name, value, status) => {
+    ['test and package pass on a push', 'success success', 0],
+    ['package fails on a push', 'success failure', 1],
+    ['test is cancelled on a push', 'cancelled success', 1],
+    ['every job passes on a pull request', 'success success success success success', 0],
+    ['mutation skips on a pull request', 'success success skipped skipped success', 1],
+    ['docs skips on a pull request', 'success success success success skipped', 1],
+    ['mutation-report fails on a pull request', 'success success success failure success', 1],
+  ])('when %s, RESULTS is "%s" and ci-ok exits with %i', (_name, value, status) => {
     expect(ciOk(value)).toBe(status);
   });
 });
@@ -78,8 +79,10 @@ describe('the nightly workflow', () => {
     );
   });
 
-  it('runs all of CI, with read-only contents', () => {
-    expect(nightly).toMatch(/^jobs:\n {2}ci:\n {4}uses: \.\/\.github\/workflows\/ci\.yml\n$/m);
+  it('runs all of CI on main only, with read-only contents', () => {
+    expect(nightly).toMatch(
+      /^jobs:\n {2}ci:\n(?: {4}#.*\n)* {4}if: github\.ref == 'refs\/heads\/main'\n {4}uses: \.\/\.github\/workflows\/ci\.yml\n$/m
+    );
     expect(nightly).toMatch(/^permissions:\n {2}contents: read\n\n/m);
   });
 });

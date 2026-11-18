@@ -77,7 +77,16 @@ checks these same fields using `gh`, failing closed on a missing, running or fai
 
 A push to `main` runs only CI's `test` and `package` jobs. Mutation testing runs again in step 3's
 `pnpm check`. The docs audit runs only on pull requests and in the Nightly workflow
-(`nightly.yml`), so look at the latest Nightly run on `main` too.
+(`nightly.yml`). So also find a successful Nightly run on `main` whose head SHA is the release
+commit or a later commit, and save its URL on the release ticket:
+
+```bash
+gh run list --repo afahy/fluent-measures --workflow nightly.yml --branch main --status completed \
+  --limit 5 --json headSha,conclusion,url
+```
+
+If the latest such run failed, fix the failure through a PR before you release. If none has run
+since the release commit, start one with `gh workflow run nightly.yml --ref main` and wait for it.
 
 ## 3. Validate a clean checkout of that release commit
 
