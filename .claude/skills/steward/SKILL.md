@@ -23,7 +23,7 @@ separate call.
 | State           | Exit code | What to do                                                                                                                                 |
 | --------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | `needs-agent`   | 10        | Do each item under "Do", and handle each item under "Why" as AGENTS.md "Handle findings and CI" says. Push if you changed code, then wait. |
-| `waiting`       | 20        | Wait, as the next section says.                                                                                                            |
+| `waiting`       | 20        | Wait, as the next section says. If "Auto-merge" in AGENTS.md allows it, turn on auto-merge first.                                          |
 | `waiting-human` | 30        | Say once, in one line, what the maintainer needs to do. Then wait for the maintainer, as the next section says.                            |
 | `ready`         | 0         | Do "Finish the PR" in AGENTS.md, then merge as "Merge your own PR" says.                                                                   |
 | `merged`        | 40        | Do the comment check from "Finish the PR" at once. `pr:status` still lists bot threads with no reply. Then do the rest of "Finish the PR". |
