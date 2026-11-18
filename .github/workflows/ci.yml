@@ -4,6 +4,8 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # nightly.yml runs every job, including the ones that a push to main skips.
+  workflow_call:
 
 permissions:
   contents: read
@@ -13,7 +15,8 @@ jobs:
     # On a pull request, the mutation and docs jobs run only when the pull request changes one of
     # their inputs. Each list must name every file that can change its job's result:
     # tests/ciChanges.test.ts checks them against mutation-inventory's hash and the docs scripts.
-    # A push, or a pull request that git can't compare with its base, runs both jobs.
+    # A push to main skips both jobs; nightly.yml runs them on main. Its schedule and
+    # workflow_dispatch runs, and a pull request that git can't compare with its base, run both.
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -63,11 +66,11 @@ jobs:
         run: |
           set -euf -o pipefail
           changed() {
-            if [ "$GITHUB_EVENT_NAME" = pull_request ] && git diff --quiet HEAD^1 HEAD -- $1; then
-              echo false
-            else
-              echo true
-            fi
+            case "$GITHUB_EVENT_NAME" in
+              push) echo false ;;
+              pull_request) git diff --quiet HEAD^1 HEAD -- $1 && echo false || echo true ;;
+              *) echo true ;;
+            esac
           }
           echo "mutation=$(changed "$MUTATION_INPUTS")" >> "$GITHUB_OUTPUT"
           echo "docs=$(changed "$DOCS_INPUTS")" >> "$GITHUB_OUTPUT"
@@ -198,6 +201,7 @@ jobs:
         if: ${{ !cancelled() && steps.pack.outcome == 'success' && matrix.node-version == 24 }}
         run: npx @arethetypeswrong/cli@0.18.5 "$RUNNER_TEMP"/pack/*.tgz
 
+  # A push to main skips mutation testing and the docs audit. nightly.yml runs them on main.
   mutation-inventory:
     needs: changes
     if: needs.changes.outputs.mutation == 'true'
@@ -242,19 +246,20 @@ jobs:
       # runs can reuse its earlier results. A re-run of the job runs every mutant, so a pull request
       # can get a full run.
       - uses: actions/cache/restore@v4
-        if: github.event_name != 'push' && github.run_attempt == 1
+        if: github.event_name == 'pull_request' && github.run_attempt == 1
         with:
           path: reports/stryker-incremental.json
           key: stryker-incremental-${{ steps.inputs.outputs.hash }}-${{ github.sha }}
           restore-keys: stryker-incremental-${{ steps.inputs.outputs.hash }}-
 
       # Each run on main also saves its results under a key that ends in "-stopped" when `timeout`
-      # stopped it, or in "-ended" (AFA-139). A push to main restores the newest of these entries,
+      # stopped it, or in "-ended" (AFA-139). A run on main restores the newest of these entries,
       # also when the run before it hasn't saved yet. The newest entry is the one saved last. So
-      # when runs overlap, it can come from an older commit than the last run that ended.
+      # when runs overlap, it can come from an older commit than the last run that ended. The runs
+      # on main are nightly.yml's schedule and workflow_dispatch runs.
       - id: main
         uses: actions/cache/restore@v4
-        if: github.event_name == 'push' && github.run_attempt == 1
+        if: github.event_name != 'pull_request' && github.run_attempt == 1
         with:
           path: reports/stryker-incremental.json
           key: stryker-main-${{ steps.inputs.outputs.tools }}-${{ github.sha }}
@@ -262,7 +267,7 @@ jobs:
 
       # Only a stopped run's results carry over, so this run tests the mutants that it didn't reach.
       # Those results come from an earlier commit, so they aren't exact. After a run that ended, a
-      # push starts from no results and runs every mutant.
+      # run on main starts from no results and runs every mutant.
       - name: Start from no results after a run that ended
         if: steps.main.outputs.cache-matched-key && !endsWith(steps.main.outputs.cache-matched-key, '-stopped')
         run: rm -f reports/stryker-incremental.json
@@ -401,7 +406,7 @@ jobs:
           key: stryker-incremental-${{ needs.mutation-inventory.outputs.hash }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - uses: actions/cache/save@v4
-        if: ${{ !cancelled() && steps.aggregate.outputs.valid == 'true' && github.event_name == 'push' }}
+        if: ${{ !cancelled() && steps.aggregate.outputs.valid == 'true' && github.event_name != 'pull_request' }}
         with:
           path: reports/stryker-incremental.json
           key: stryker-main-${{ needs.mutation-inventory.outputs.tools }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ steps.aggregate.outputs.stopped == 'true' && 'stopped' || 'ended' }}

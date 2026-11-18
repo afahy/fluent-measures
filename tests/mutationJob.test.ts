@@ -134,7 +134,9 @@ describe('the mutation job in CI', () => {
   });
 
   it("restores a pull request's own results or main's, on the first attempt only", () => {
-    expect(field(restore, 'if')).toBe("github.event_name != 'push' && github.run_attempt == 1");
+    expect(field(restore, 'if')).toBe(
+      "github.event_name == 'pull_request' && github.run_attempt == 1"
+    );
     const run = { sha: 'merge' };
     expect(finds(restore, run, keyOf(field(save, 'key'), { sha: 'main' }))).toBe(true);
   });
@@ -146,11 +148,13 @@ describe('the mutation job in CI', () => {
     );
   });
 
-  // AFA-139: when `timeout` stops a full run on main, a later push to main goes on from its
-  // results. It looks for the newest entry of any run on main, because the run of the push before
-  // it may not have saved yet.
+  // AFA-139: when `timeout` stops a full run on main, a later run on main goes on from its
+  // results. It looks for the newest entry of any run on main, because the run before it may not
+  // have saved yet. The runs on main come from nightly.yml, not from a push.
   it('restores the results of any earlier run on main, on the first attempt only', () => {
-    expect(field(restoreMain, 'if')).toBe("github.event_name == 'push' && github.run_attempt == 1");
+    expect(field(restoreMain, 'if')).toBe(
+      "github.event_name != 'pull_request' && github.run_attempt == 1"
+    );
     const next = { sha: 'third' };
     expect(finds(restoreMain, next, keyOf(field(saveMain, 'key'), { sha: 'first' }))).toBe(true);
     // The results that main saves for pull requests have a different prefix.
@@ -159,7 +163,7 @@ describe('the mutation job in CI', () => {
 
   it('saves the results of each run on main, with whether timeout stopped it', () => {
     expect(field(saveMain, 'if')).toBe(
-      "${{ !cancelled() && steps.aggregate.outputs.valid == 'true' && github.event_name == 'push' }}"
+      "${{ !cancelled() && steps.aggregate.outputs.valid == 'true' && github.event_name != 'pull_request' }}"
     );
     expect(keyOf(field(saveMain, 'key'), { sha: 'first', stopped: true })).toBe(
       'stryker-main-tools-first-7-1-stopped'

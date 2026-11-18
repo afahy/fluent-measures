@@ -106,7 +106,16 @@ status is `completed`, then read its conclusion. If the conclusion isn't `succes
 hasn't completed 45 minutes after the merge, read the commit's other check runs. A `ci-ok` that
 hasn't completed can be missing, or have a status such as `queued` or `in_progress`. Find the CI
 job that failed or was cancelled, or the one that no runner picked up. If you find none, report
-that CI on `main` is stuck, and stop. Workflows other than CI, such as `pr-status.yml`,
+that CI on `main` is stuck, and stop. A push to `main` runs only CI's `test` and `package`
+jobs, so its `ci-ok` doesn't cover mutation testing or the docs audit. `nightly.yml` runs them
+on `main` each night. Its check runs are named `ci / <job>`, so they don't match the `ci-ok`
+query, and they aren't part of watching a merge. Workflows other than CI, such as `pr-status.yml`,
 `late-bot-findings.yml` and `deploy-docs.yml`, add check runs to the merge commit too. Their
 results aren't CI results. Don't use `gh run list --branch main`, which hid queued runs during
 an Actions incident.
+
+Once the merge's `ci-ok` passes, also read the conclusion of the last completed Nightly run, for
+example from
+`gh run list --repo afahy/fluent-measures --workflow nightly.yml --branch main --status completed --limit 1 --json conclusion,headSha,url`.
+If it isn't `success`, report the failure and its URL with your result. A Nightly failure is a
+failure on `main` that no push showed, so it isn't caused by the PR that you merged.

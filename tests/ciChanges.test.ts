@@ -281,10 +281,22 @@ describe('the changes job', () => {
     }
   );
 
-  it('runs both jobs on a push, also when no input changed or nothing is checked out', () => {
-    expect(changes(() => {}, 'push')).toEqual({ mutation: 'true', docs: 'true' });
-    expect(runChanges(temporary(), 'push')).toEqual({ mutation: 'true', docs: 'true' });
+  // A push to main runs neither job, also when it changes their inputs. nightly.yml calls ci.yml
+  // on a schedule or by hand, and then the event name is the caller's. It runs both jobs, also
+  // when no input changed and with no checkout.
+  it('skips both jobs on a push, also when their inputs changed', () => {
+    expect(changes(edit('src/parse.ts'), 'push')).toEqual({ mutation: 'false', docs: 'false' });
+    expect(changes(edit('README.md'), 'push')).toEqual({ mutation: 'false', docs: 'false' });
+    expect(runChanges(temporary(), 'push')).toEqual({ mutation: 'false', docs: 'false' });
   });
+
+  it.each(['schedule', 'workflow_dispatch', 'workflow_call'])(
+    'runs both jobs on a %s run, also when no input changed',
+    event => {
+      expect(changes(() => {}, event)).toEqual({ mutation: 'true', docs: 'true' });
+      expect(runChanges(temporary(), event)).toEqual({ mutation: 'true', docs: 'true' });
+    }
+  );
 
   it("runs both jobs when git can't find the pull request base", () => {
     const repository = temporary();
