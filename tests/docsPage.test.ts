@@ -40,7 +40,7 @@ describe('the ParseOptions reference', () => {
       'Selected by normalizedUnit when set; otherwise by written units or defaultUnit for a bare number.',
     ],
     ['normalized-unit', 'When omitted', 'Uses the written or default source unit.'],
-    ['fuzzy', 'Default', 'false — unit names must be exact.'],
+    ['fuzzy', 'Default', 'false (unit names must be exact).'],
     ['default-unit', 'When omitted', 'Bare numbers return null.'],
     ['max-length', 'Default', '1000.'],
   ])(
@@ -553,6 +553,7 @@ describe('static docs examples before initialization', () => {
     ['npm', 'npm'],
     ['yarn', 'yarn'],
     ['pnpm', 'pnpm'],
+    ['bun', 'bun'],
     ['esm', 'ES modules'],
     ['cjs', 'CommonJS'],
     ['convert-height', 'Height conversion'],

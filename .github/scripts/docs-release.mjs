@@ -144,7 +144,7 @@ export function buildReleaseDocs(source, output, binding) {
     .replaceAll(`content="${site}og.png"`, `content="${base}og.png"`)
     // Installation must select the documented version, even if npm's latest has moved on.
     .replace(
-      /((?:npm install|pnpm add|yarn add) @afahy\/fluent-measures)(?![\w@-])/g,
+      /((?:npm install|pnpm add|yarn add|bun add) @afahy\/fluent-measures)(?![\w@-])/g,
       `$1@${version}`
     );
   // The npm badge still labels the latest registry version separately from the documented one.
@@ -156,7 +156,7 @@ export function buildReleaseDocs(source, output, binding) {
     if (file === 'README.md') {
       markdown = markdown.replace(/\n## Documentation for your version\n[\s\S]*?(?=\n## |$)/, '\n');
       markdown = markdown.replace(
-        /((?:npm install|pnpm add|yarn add) @afahy\/fluent-measures)(?![\w@-])/g,
+        /((?:npm install|pnpm add|yarn add|bun add) @afahy\/fluent-measures)(?![\w@-])/g,
         `$1@${version}`
       );
     }

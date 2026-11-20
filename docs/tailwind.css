@@ -75,8 +75,8 @@
   --tok-number: #8b431a;
   --tok-property: #35424a;
   --tok-punctuation: #56616b;
-  /* Reading measure for prose: about 70-75 characters at 16px. */
-  --measure: 38rem;
+  /* Prose matches the doc-content column width so text aligns with code cards and tables. */
+  --measure: 50rem;
   color-scheme: light;
   --radius: 10px;
   --radius-sm: 6px;
@@ -780,7 +780,7 @@ html:not([data-js]) .site-header {
     grid-template-columns: minmax(0, 1fr) minmax(0, 30rem);
     align-items: start;
     gap: 64px;
-    padding: 56px 0 40px;
+    padding: 56px 0 48px;
   }
 }
 
@@ -1250,67 +1250,6 @@ html:not([data-js]) .site-header {
 
 .demo[data-expanded='true'] .demo-more .chevron {
   transform: rotate(180deg);
-}
-
-/* One compact capability list near the introduction at every width. */
-
-.features {
-  list-style: none;
-  padding: 0 0 28px;
-  display: grid;
-  gap: 12px;
-}
-
-@media (min-width: 768px) {
-  .features {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 32px;
-    padding-bottom: 36px;
-  }
-}
-
-.features li {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-}
-
-.feature-icon {
-  flex: 0 0 32px;
-  height: 32px;
-  border-radius: 8px;
-  display: grid;
-  place-items: center;
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-
-.feature-icon .icon {
-  width: 18px;
-  height: 18px;
-}
-
-.features p {
-  font-size: 0.9375rem;
-  line-height: 1.6;
-  color: var(--text-muted);
-}
-
-.feature-title {
-  color: var(--heading);
-  font-weight: 600;
-}
-
-/* Inline titles and no decorative icons keep the phone introduction short. */
-
-@media (max-width: 639px) {
-  .feature-icon {
-    display: none;
-  }
-
-  .features p {
-    font-size: 0.875rem;
-  }
 }
 
 /* Docs layout */

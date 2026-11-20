@@ -5,58 +5,30 @@
 [![Bundle Size](https://img.shields.io/bundlephobia/minzip/@afahy/fluent-measures)](https://bundlephobia.com/package/@afahy/fluent-measures)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/afahy/fluent-measures/blob/main/LICENSE)
 
-A TypeScript library that reads a height or a weight from everyday text, such as `5' 11"` or
-`eighty kilograms`, and returns its value, unit and measurement type.
+A TypeScript library for health apps, fitness trackers, and intake forms. Turn freeform height and
+weight inputs like `5' 11"`, `180 cm`, or `eighty kilograms` into the units your app needs.
 
-Use it to read measurements that people type, for example in health apps, fitness trackers and
-web forms. The result is `null` when the complete entry is unsupported, incomplete or ambiguous.
-Your app can then ask the person again.
+When an entry is incomplete, unsupported, or ambiguous, `parseMeasurement` returns `null` instead of
+returning a partial match so your UI can prompt the user to clarify.
 
 [Documentation](https://afahy.github.io/fluent-measures/) ·
 [Markdown reference](https://afahy.github.io/fluent-measures/README.md) ·
 [Agent index (llms.txt)](https://afahy.github.io/fluent-measures/llms.txt)
 
-## Documentation for your version
-
-The public documentation identifies the exact published npm version and verified source revision
-that it describes. npm may have a newer release while its documentation is being verified. This
-repository's README and parsing rules describe the checked-out source, which can be unreleased.
-
-Find your installed version with `npm ls @afahy/fluent-measures` in your app (or `pnpm list` /
-`yarn why` with the same package name). Select that exact version from the
-[verified documentation versions](https://afahy.github.io/fluent-measures/versions.json), then
-follow its `versions/<version>/README.md` and `versions/<version>/PARSING.md` URLs. These references
-retain their meaning across later deployments. Only complete verified sets appear in the index;
-an absent version does not use the current site's specification as a substitute.
-
-Releases use `v<version>` tags in the
-[repository's tag list](https://github.com/afahy/fluent-measures/tags). For version **0.2.0**, use
-the [tagged README](https://github.com/afahy/fluent-measures/blob/v0.2.0/README.md) and
-[tagged parsing rules](https://github.com/afahy/fluent-measures/blob/v0.2.0/PARSING.md), or their
-[raw README](https://raw.githubusercontent.com/afahy/fluent-measures/v0.2.0/README.md) and
-[raw parsing rules](https://raw.githubusercontent.com/afahy/fluent-measures/v0.2.0/PARSING.md).
-The [tagged package manifest](https://github.com/afahy/fluent-measures/blob/v0.2.0/package.json)
-confirms version 0.2.0. When following links inside an older README, stay on that tag: its links
-to `main` are not pinned to the release.
-
-For another version, first inspect its tag's file list and package manifest. Older tags
-`v0.1.0` and `v0.1.1` have a README but no `PARSING.md`. They also have historical metadata
-mismatches: `v0.1.0` names the unscoped package, and `v0.1.1` still declares version 0.1.0.
-For those versions, use the README shipped in your installed package as the release reference;
-do not treat the current parsing rules as their specification.
-
 ## Features
 
-- Reads heights and weights in `ft`, `in`, `cm`, `m`, `lb` and `kg`
-- Reads numbers in digits or in words, as in `5' 11"`, `five feet eleven inches` and
-  `one hundred fifty pounds`
-- Reads thousands separators and decimal commas, as in `1,000 lbs` and `72,5 kg`
-- Reads unit names with one spelling error when you set `fuzzy: true`, as in `5 foot 11 inc`
-- Converts the result to the unit that you set in `normalizedUnit`
-- Has no dependencies
-- Is at most 6.0 kB for ESM and 6.0 kB for CommonJS, minified and compressed with Brotli; CI
-  enforces these limits
-- Supports ESM and CommonJS
+- **Metric and imperial units:** parses `ft`, `in`, `cm`, `m`, `lb`, and `kg`, including symbols
+  (`'`, `"`, `#`) and British spellings
+- **Digits, words, and regional decimals:** reads `5' 11"`, `five feet eleven inches`,
+  `one hundred fifty pounds`, thousands separators (`1,000 lbs`), and decimal commas (`72,5 kg`)
+- **Unit conversion:** set `normalizedUnit` to return the unit your database or formula expects
+  while keeping the original parts in `matches`
+- **Optional typo tolerance:** set `fuzzy: true` to accept one-letter spelling mistakes in unit
+  names, like `5 foot 11 inc`
+- **Returns `null` on bad input:** rejects ranges, duplicate readings, and unrelated prose instead
+  of returning a partial match
+- **Zero dependencies, small bundle:** under 6.0 kB for ESM and 6.0 kB for CommonJS (minified and
+  Brotli-compressed), with both ESM and CommonJS exports
 
 ## Installation
 
@@ -64,7 +36,7 @@ do not treat the current parsing rules as their specification.
 npm install @afahy/fluent-measures
 ```
 
-You can also use `yarn add` or `pnpm add`.
+Or use `yarn add`, `pnpm add`, or `bun add`.
 
 ## Usage
 
@@ -72,13 +44,14 @@ You can also use `yarn add` or `pnpm add`.
 import { parseMeasurement } from '@afahy/fluent-measures';
 ```
 
-In CommonJS, use `require`:
+CommonJS:
 
 ```javascript
 const { parseMeasurement } = require('@afahy/fluent-measures');
 ```
 
-The unit in the text shows whether it is a height or a weight, so these calls need no options:
+Inputs that include a unit don't require options; the unit determines whether the result is a height
+or a weight:
 
 ```typescript
 parseMeasurement('6 ft');
@@ -88,24 +61,25 @@ parseMeasurement('150 lbs');
 // { value: 150, unit: 'lb', type: 'weight', matches: [{ value: 150, unit: 'lb' }], raw: '150 lbs' }
 ```
 
-A height in feet and inches gives the total in inches, and `matches` lists each part:
+Compound heights in feet and inches automatically combine into total inches, while `matches` keeps
+each part as written:
 
 ```typescript
 parseMeasurement('five foot ten', { type: 'height' });
 // { value: 70, unit: 'in', type: 'height', matches: [{ value: 5, unit: 'ft' }, { value: 10, unit: 'in' }], raw: 'five foot ten' }
 ```
 
-Set `type` when a field expects one kind of measurement, such as a weight. A single measurement
-must have that kind, so a height typed into a weight field returns `null`. A complete height/weight pair
-requires `type` or `normalizedUnit` to select one; an invalid part rejects the whole entry:
+Pass `type` when a field accepts only one kind of measurement. A height passed with
+`type: 'weight'` returns `null`. When a single string holds both a height and a weight (such as
+`5'11", 180 lbs`), `type` or `normalizedUnit` selects one (both halves must be valid):
 
 ```typescript
 parseMeasurement('eighty kilograms', { type: 'weight' });
 // { value: 80, unit: 'kg', type: 'weight', matches: [{ value: 80, unit: 'kg' }], raw: 'eighty kilograms' }
 ```
 
-Set `normalizedUnit` to get the result in the unit that you store. `matches` keeps each part in
-its unit from the text:
+Set `normalizedUnit` to convert the returned value to a specific unit (such as `cm` or `kg`).
+`matches` preserves each part in its original unit:
 
 ```typescript
 parseMeasurement('5\' 11"', { type: 'height', normalizedUnit: 'cm' });
@@ -115,23 +89,23 @@ parseMeasurement('150 lbs', { type: 'weight', normalizedUnit: 'kg' });
 // { value: 68.0388555, unit: 'kg', type: 'weight', matches: [{ value: 150, unit: 'lb' }], raw: '150 lbs' }
 ```
 
-People sometimes type only a number, for example in a calculator field labeled “Height (in)”.
-Set `defaultUnit` to that field's source unit. Written units take precedence; `normalizedUnit`
-only chooses the output unit and measurement type. It never supplies a source unit:
+Set `defaultUnit` for fields labeled with a unit (such as “Height (in)” or “Weight (kg)”) where
+users may enter a bare number. Written units take precedence. `normalizedUnit` sets only the output
+unit and never acts as a fallback input unit:
 
 ```typescript
 parseMeasurement('72', { defaultUnit: 'in' });
 // { value: 72, unit: 'in', type: 'height', matches: [{ value: 72, unit: 'in' }], raw: '72' }
 ```
 
-Set `fuzzy: true` to read unit names that have one spelling error:
+Set `fuzzy: true` to accept a single-letter spelling error in a unit name:
 
 ```typescript
 parseMeasurement('5 foots 10 inc', { fuzzy: true });
 // { value: 70, unit: 'in', type: 'height', matches: [{ value: 5, unit: 'ft' }, { value: 10, unit: 'in' }], raw: '5 foots 10 inc' }
 ```
 
-Text with no measurement returns `null`, so check the result before you use it:
+Anything that can't be parsed reliably returns `null`, so always guard before using the result:
 
 ```typescript
 parseMeasurement('not a measurement');
@@ -142,78 +116,80 @@ parseMeasurement('not a measurement');
 
 ### `parseMeasurement(input, options?): ParsedValue | null`
 
-Reads one height or weight from a string.
+Parses one height or weight from a string and returns `null` when the entry can't be parsed safely.
 
 #### Parameters
 
-- `input: string`: the text to read, for example "6 ft", "150 lbs" or "180 cm"
-- `options?: ParseOptions`: optional settings
+- `input: string`: input string to parse, such as `"6 ft"`, `"150 lbs"`, or `"180 cm"`
+- `options?: ParseOptions`: optional settings to lock the type, normalize units, set a bare-number
+  default, or tolerate typos
 
 #### `ParseOptions`
 
 ```typescript
 interface ParseOptions {
-  // The largest raw input.length before trimming or parsing; defaults to 1000.
-  // Must be a number >= 1, or Infinity for no limit. Other values throw.
+  // Max raw input.length (before trimming or parsing); defaults to 1000.
+  // Must be >= 1, or Infinity for no limit. Other values throw.
   maxLength?: number;
 
-  // The measurement type to return from a valid complete entry
+  // Lock parsing to heights or weights, or pick one side of a height/weight pair.
   type?: 'height' | 'weight';
 
-  // Read a unit name with one spelling error, such as foots or ponds. Without it, a unit name
-  // must be exact. Must be true or false when supplied.
+  // Accept a unit name with one spelling error (like "foots" or "ponds").
+  // Defaults to false (exact unit names only). Non-boolean values throw.
   fuzzy?: boolean;
 
-  // Source unit for one complete number with no unit. Without it, a bare number returns null.
-  // Written units win. No magnitude guessing: 1.8 with defaultUnit: 'cm' means 1.8 cm.
+  // Fallback unit for a bare number with no written unit. Without it, bare numbers return null.
+  // Written units win, and there's no magnitude guessing (1.8 with defaultUnit: 'cm' is 1.8 cm).
   // Must agree with the dimension selected by type or normalizedUnit, when supplied.
   defaultUnit?: 'ft' | 'in' | 'cm' | 'm' | 'lb' | 'kg';
 
-  // The unit of the result. It also selects the measurement type from a valid complete entry.
-  // A type that contradicts it throws an error. Shorthand such as 5-11 still needs type.
-  // This option never supplies a source unit for a bare number.
+  // Output unit for the returned value. Also selects the measurement type from a valid entry.
+  // Throws if it contradicts type. Shorthand like 5-11 still needs type.
+  // Never supplies a fallback source unit for a bare number.
   normalizedUnit?: 'ft' | 'in' | 'cm' | 'm' | 'lb' | 'kg';
 }
 ```
 
-For string input, these checks run before raw length or text: the options object shape,
-`maxLength`, `type`, `normalizedUnit`, `defaultUnit`, `fuzzy`, retired options, then dimension
-conflicts. Invalid values for those checks throw, even for empty or overlong strings. Non-string
-runtime input returns `null` before reading options. Empty strings and null values for `type` or `normalizedUnit` count as absent;
-`defaultUnit` must be one of the six canonical units when defined, so null remains invalid.
+For string input, options are validated before checking length or parsing text, in this order: the
+options object shape, `maxLength`, `type`, `normalizedUnit`, `defaultUnit`, `fuzzy`, retired
+options, then dimension conflicts. Invalid options throw even for empty or overlong strings, while
+non-string runtime input returns `null` before reading options. Empty strings and `null` for `type`
+or `normalizedUnit` count as omitted; `defaultUnit` must be one of the six canonical units whenever
+defined, so `null` throws.
 
-Migration: remove `allowUnqualified` and `inferUnit`. Either retired option throws when its value
-is defined, including `false`; an explicitly `undefined` property is absent. Replace imperial
-height/weight inference with `defaultUnit: 'in'`/`'lb'`, metric weight with `'kg'`, and choose
-`'m'` or `'cm'` explicitly for height. The parser no longer guesses meters below 3. A default
-applies only to an entire unwrapped number, including supported fractions or number words.
+**Migration note**
 
-`fuzziness` is retired too. Any defined value throws, including `0` and `Infinity`; an explicitly
-`undefined` property is absent. Replace `fuzziness: 1` or `2` with `fuzzy: true`, and remove
-`fuzziness: 0`. `fuzzy` reads one spelling error, so most unit names with two errors return
-`null`. PARSING.md lists the few reviewed typos that `fuzzy` reads beyond that, such as `kilgrm`
-and the number word `fourty`.
+- `allowUnqualified` and `inferUnit` are retired and throw whenever defined (including `false`; an
+  explicit `undefined` property is ignored). Replace imperial inference with `defaultUnit: 'in'` or
+  `'lb'`, metric weight with `'kg'`, and pick `'m'` or `'cm'` explicitly for metric height (the
+  parser no longer guesses meters below 3). `defaultUnit` applies only to a bare, unwrapped number
+  (including supported fractions and number words).
+- `fuzziness` is retired too and throws for any defined value (including `0` and `Infinity`;
+  explicit `undefined` is ignored). Replace `fuzziness: 1` or `2` with `fuzzy: true`, and remove
+  `fuzziness: 0`. `fuzzy` allows one spelling error, plus a small reviewed list of common typos in
+  PARSING.md (such as `kilgrm` and the number word `fourty`).
 
 #### `ParsedValue`
 
 ```typescript
 interface ParsedValue {
-  // The value of the measurement
+  // Parsed numeric value (already converted if normalizedUnit is set)
   value: number;
 
-  // The unit of the value
+  // Canonical unit for value
   unit: 'ft' | 'in' | 'cm' | 'm' | 'lb' | 'kg' | null;
 
-  // The measurement type
+  // Whether the measurement is a height or a weight
   type: 'height' | 'weight';
 
-  // Each part of the measurement in its unit from the text, as 5 ft and 11 in for 5' 11"
+  // Each part parsed from the input in its original unit, e.g. 5 ft and 11 in for 5' 11"
   matches: Array<{
     value: number;
     unit: 'ft' | 'in' | 'cm' | 'm' | 'lb' | 'kg' | null;
   }>;
 
-  // The input text
+  // The untouched input string
   raw: string;
 }
 ```
@@ -224,19 +200,20 @@ interface ParsedValue {
 
 ### Height
 
-- **Imperial**: `ft` (feet, foot, `'`) and `in` (inch, inches, `"`)
-- **Metric**: `cm` (cms, centimeter, centimeters, centimetre, centimetres) and `m` (meter, meters,
-  metre, metres)
+- **Imperial**: `ft` (`feet`, `foot`, `'`) and `in` (`inch`, `inches`, `"`)
+- **Metric**: `cm` (`cms`, `centimeter`, `centimeters`, `centimetre`, `centimetres`) and `m`
+  (`meter`, `meters`, `metre`, `metres`)
 
 ### Weight
 
-- **Imperial**: `lb` (lbs, pound, pounds, and `#` directly after a number, as in `185#`)
-- **Metric**: `kg` (kgs, kilo, kilos, kilogram, kilograms, kilogramme, kilogrammes)
+- **Imperial**: `lb` (`lbs`, `pound`, `pounds`, and `#` right after a number, like `185#`)
+- **Metric**: `kg` (`kgs`, `kilo`, `kilos`, `kilogram`, `kilograms`, `kilogramme`, `kilogrammes`)
 
-Most units can also come before their number, as in `kg 70`. The short forms `in` and `m` can
-come first only as a label, because before a number they are usually ordinary words.
+Most units can also come before the number, as in `kg 70`. The short forms `in` and `m` only work
+before a number as a label (such as `in: 72`, `in = 72`, or `Height (in): 72`), because otherwise
+they are usually ordinary words. See
 [PARSING.md](https://github.com/afahy/fluent-measures/blob/main/PARSING.md#units-before-a-number)
-says what counts as a label.
+for what counts as a label.
 
 ## Limits
 
@@ -247,47 +224,76 @@ parseMeasurement('70 kg (154 lbs)'); // null: two weights, even when they agree
 parseMeasurement('210 lbs to 180 lbs'); // null: two weights
 ```
 
-The parser reads a complete entry, including a few ordinary words around it, such as
-`I'm five foot eleven tall` and `about 180 cm`. It does not search arbitrary prose for a
-usable fragment. Extra values, malformed fragments, unsupported units and ranges reject the
-whole entry. `Top 10 in the class` returns `null`. Quotation marks and brackets cannot
-surround the whole entry or a number: `(180 cm)` and `"180 lbs"` return `null`. Brackets still
-mark a unit label, as in `Height (in): 72`. Curly quotes after a number are feet and inch marks,
-so `5’11”` is 71 inches.
+`fluent-measures` is built for form fields and short replies, not for scraping freeform paragraphs.
+Light framing such as `I'm five foot eleven tall` or `about 180 cm` is accepted, but extra values,
+malformed fragments, unsupported units, and ranges reject the whole entry. `Top 10 in the class`
+returns `null`. Wrapping the whole entry or a number in quotes or brackets is rejected too
+(`(180 cm)` and `"180 lbs"` return `null`), though brackets still work for unit labels like
+`Height (in): 72`, and phone curly quotes after a number still count as feet and inch marks
+(`5’11”` parses as 71 inches).
 
-Feet and inches, or meters and centimeters, can form one compound height. Two independent
-heights or two independent weights return `null`, even if they are equal or are conversions
-of one another. There is no first-result or 1% agreement rule.
+Feet + inches or meters + centimeters combine into one compound height, but two separate heights or
+two separate weights always return `null`, even if they convert to the same value. There is no “take
+the first one” or 1% agreement rule.
 
-A complete pair with exactly one height and one weight is accepted only when `type` or
-`normalizedUnit` selects one. For example, `5'11", 180 lbs` returns 71 inches with
-`type: 'height'` and 180 pounds with `type: 'weight'`; without a selector it returns `null`.
-Both measurements must be valid. The parser does not discard a negative, zero, ranged or
-unsupported measurement to return the other one.
+If an entry contains exactly one height and one weight, pass `type` or `normalizedUnit` to select
+one: `5'11", 180 lbs` returns 71 inches with `type: 'height'` and 180 pounds with `type: 'weight'`,
+or `null` without a selector. Both measurements must be valid; the parser does not drop a negative,
+zero, ranged, or unsupported value to salvage the other half.
 
-Send the current field value to the parser. Keep ages, dates, earlier readings and other
-application metadata outside that value. To display an alternate unit, convert the selected
-measurement instead of submitting both representations.
+Pass only the field value you want to parse. Keep ages, dates, previous weigh-ins, and other
+metadata outside the string, and convert the parsed result in your app when you need to display a
+second unit.
 
-[PARSING.md](https://github.com/afahy/fluent-measures/blob/main/PARSING.md) gives the complete
-entry grammar, the words that can surround a measurement, and examples. With `fuzzy: true`, an
-ordinary word one letter from a unit name reads as that unit, such as `5 feat` as 5 ft; fuzzy
-matching applies only within that grammar.
+For the full grammar, allowed surrounding words, and edge-case examples, see
+[PARSING.md](https://github.com/afahy/fluent-measures/blob/main/PARSING.md). When `fuzzy: true`
+is on, any ordinary word one letter from a unit name matches that unit inside the grammar (for
+example, `5 feat` parses as 5 ft).
 
 ## Troubleshooting
 
-If `parseMeasurement` returns `null`, look for these causes:
+Common reasons `parseMeasurement` returns `null`:
 
-1. The unit isn't supported. See [Supported units](#supported-units).
-2. The text doesn't say whether it is a height or a weight. Set `type`.
-3. A number has no unit. Set `defaultUnit` to the source unit shown by the field.
-4. A unit name has a spelling error. Set `fuzzy: true` to read one error.
-5. The entry has a range, duplicate measurement, unsupported fragment or extra text. See
-   [Limits](#limits).
-6. The input isn't a string. Non-string input returns `null` at runtime; the TypeScript parameter
-   remains `string`.
-7. The raw `input.length`, before trimming, exceeds `maxLength` (default 1,000). Set a larger
-   `maxLength` or `Infinity` for no limit. Length counts UTF-16 code units, as JavaScript does.
+1. **Unsupported unit:** Stone, ounces, and grams aren't supported. See
+   [Supported units](#supported-units).
+2. **Missing `type`:** Shorthand like `5-11` or a combined height/weight pair requires `type` (or
+   `normalizedUnit` for pairs) to select one.
+3. **Bare number with no default:** Pass `defaultUnit` matching the field label when the input omits
+   the unit.
+4. **Typo in the unit name:** Set `fuzzy: true` to allow a single-letter spelling error.
+5. **Range, duplicate, or extra text:** Ranges, two measurements of the same kind, or extra prose
+   reject the whole entry. See [Limits](#limits).
+6. **Non-string value:** Non-string inputs return `null` at runtime, even though the TypeScript
+   signature expects `string`.
+7. **Over `maxLength`:** Raw `input.length` (UTF-16 code units, before trimming) defaults to a
+   1,000-character limit. Pass a higher `maxLength` or `Infinity` for longer inputs.
+
+## Documentation for your version
+
+The docs site always labels the exact npm release and source commit it covers. This README in the
+repository tracks the checked-out branch, which may be ahead of npm while a release is being
+verified.
+
+To check which version your app uses, run `npm ls @afahy/fluent-measures` (or `pnpm list` /
+`yarn why`). Then look up that version in the
+[verified documentation versions](https://afahy.github.io/fluent-measures/versions.json) index and
+open its `versions/<version>/README.md` and `versions/<version>/PARSING.md` links. Versioned docs
+stay pinned across future deploys, and only complete verified releases appear in the index.
+
+Git tags use `v<version>` in the
+[repository's tag list](https://github.com/afahy/fluent-measures/tags). For **0.2.0**, use the
+[tagged README](https://github.com/afahy/fluent-measures/blob/v0.2.0/README.md) and
+[tagged parsing rules](https://github.com/afahy/fluent-measures/blob/v0.2.0/PARSING.md) (or the
+[raw README](https://raw.githubusercontent.com/afahy/fluent-measures/v0.2.0/README.md) and
+[raw parsing rules](https://raw.githubusercontent.com/afahy/fluent-measures/v0.2.0/PARSING.md)).
+The [tagged package manifest](https://github.com/afahy/fluent-measures/blob/v0.2.0/package.json)
+confirms version 0.2.0. Stay on that tag when clicking links inside an older README, since links to
+`main` aren't pinned to the release.
+
+For other versions, check the tag's file list and `package.json` first. Older tags `v0.1.0` and
+`v0.1.1` don't have a `PARSING.md` and have metadata quirks (`v0.1.0` uses the unscoped package
+name, and `v0.1.1` still lists version 0.1.0). For those releases, rely on the README shipped inside
+your installed package rather than the current parsing rules.
 
 ## Contributing
 
@@ -295,7 +301,6 @@ See [CONTRIBUTING.md](https://github.com/afahy/fluent-measures/blob/main/CONTRIB
 
 ## License
 
-This project uses the MIT License. See the
-[LICENSE](https://github.com/afahy/fluent-measures/blob/main/LICENSE) file.
+MIT. See [LICENSE](https://github.com/afahy/fluent-measures/blob/main/LICENSE).
 
 © 2025 Adam Fahy (afahy)

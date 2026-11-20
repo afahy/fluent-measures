@@ -69,7 +69,7 @@ function sourceFixture(path: string, version = '1.2.3'): void {
   writeFileSync(join(path, 'LICENSE'), 'MIT fixture');
   writeFileSync(
     join(path, 'README.md'),
-    '# fluent-measures\n\nRelease-only text.\n\n```js\nparseMeasurement("6 ft"); // { value: 6, unit: "ft" }\n```\n\n[Rules](PARSING.md#ranges)\n[Source](src/index.ts)\n'
+    '# fluent-measures\n\nRelease-only text.\n\n```bash\nnpm install @afahy/fluent-measures\nbun add @afahy/fluent-measures\n```\n\n```js\nparseMeasurement("6 ft"); // { value: 6, unit: "ft" }\n```\n\n[Rules](PARSING.md#ranges)\n[Source](src/index.ts)\n'
   );
   writeFileSync(
     join(path, 'PARSING.md'),
@@ -239,6 +239,7 @@ describe('release verification before promotion', () => {
     const html = read(join(path, 'index.html'));
     const markdown = read(join(path, 'README.md'));
     expect(html).toContain('npm install @afahy/fluent-measures@1.2.3');
+    expect(html).toContain('bun add @afahy/fluent-measures@1.2.3');
     expect(html).toContain('<span class="nowrap">@afahy/fluent-measures@1.2.3</span>');
     expect(html).toContain(
       '.code pre:has(.code-cmd) { white-space: pre-wrap; overflow-wrap: anywhere; }'
@@ -248,6 +249,8 @@ describe('release verification before promotion', () => {
       'href="https://afahy.github.io/fluent-measures/versions/1.2.3/README.md"'
     );
     expect(markdown).toContain('Release-only text.');
+    expect(markdown).toContain('npm install @afahy/fluent-measures@1.2.3');
+    expect(markdown).toContain('bun add @afahy/fluent-measures@1.2.3');
     expect(markdown).toContain('parseMeasurement("6 ft"); // { value: 6, unit: "ft" }');
     expect(markdown).toContain(`](${site}versions/1.2.3/PARSING.md#ranges)`);
     expect(markdown).toContain(
