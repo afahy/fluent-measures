@@ -1383,14 +1383,16 @@ const strict = parseMeasurement(
               <p class="measure">
                 Parses one height or weight from a string, or returns <code>null</code> if the input
                 cannot be parsed (see <a href="#troubleshooting">Troubleshooting</a> for common
-                causes, including strings longer than <code>maxLength</code>). For string input,
-                options are validated before checking length or parsing text, in this order: options
-                object, <code>maxLength</code>, <code>type</code>, <code>normalizedUnit</code>,
-                <code>defaultUnit</code>, <code>fuzzy</code>, retired options, then dimension
-                conflicts. Invalid options throw even on empty or overlong strings; non-string
-                runtime input returns <code>null</code> before reading options. Empty strings and
-                <code>null</code> for <code>type</code> or <code>normalizedUnit</code> count as
-                omitted.
+                causes, including strings longer than <code>maxLength</code>).
+              </p>
+              <p class="measure">
+                For string input, options are validated before checking length or parsing text, in
+                this order: options object, <code>maxLength</code>, <code>type</code>,
+                <code>normalizedUnit</code>, <code>defaultUnit</code>, <code>fuzzy</code>, retired
+                options, then dimension conflicts. Invalid options throw even on empty or overlong
+                strings; non-string runtime input returns <code>null</code> before reading options.
+                Empty strings and <code>null</code> for <code>type</code> or
+                <code>normalizedUnit</code> count as omitted.
               </p>
               <p class="measure">
                 Migration note: <code>allowUnqualified</code>, <code>inferUnit</code>, and
@@ -1425,8 +1427,8 @@ const strict = parseMeasurement(
                   <div>
                     <dt><span class="name">input</span><span class="type">string</span></dt>
                     <dd>
-                      Raw text from your form or user, like <code>"6 ft"</code>,
-                      <code>"150 lbs"</code>, or <code>"180 cm"</code>.
+                      Input string to parse, such as <code>"6 ft"</code>, <code>"150 lbs"</code>, or
+                      <code>"180 cm"</code>.
                     </dd>
                   </div>
                   <div>
@@ -1524,8 +1526,8 @@ const strict = parseMeasurement(
                       <div>
                         <dt>Purpose</dt>
                         <dd>
-                          Tolerates one-letter spelling mistakes in unit names (plus a short list of
-                          common typos). See <a href="#ex-fuzzy">Allow typos in unit names</a>.
+                          Accepts a unit name with one spelling error (plus a short list of common
+                          typos). See <a href="#ex-fuzzy">Allow typos in unit names</a>.
                         </dd>
                       </div>
                       <div>
@@ -1828,9 +1830,10 @@ const strict = parseMeasurement(
               </table>
             </div>
             <p class="measure mt-md">
-              Most units can also come before the number, like <code>kg 70</code>. Short forms
-              <code>in</code> and <code>m</code> only work before a number when punctuated as a
-              label (like <code>in: 72</code>), so ordinary words don't get misread. See
+              Most units can also come before the number, as in <code>kg 70</code>. Short forms
+              <code>in</code> and <code>m</code> only work before a number as a label (such as
+              <code>in: 72</code>, <code>in = 72</code>, or <code>Height (in): 72</code>), so
+              ordinary words don't get misread. See
               <a
                 href="https://github.com/afahy/fluent-measures/blob/main/PARSING.md#units-before-a-number"
                 >PARSING.md<svg class="icon ext" aria-hidden="true">
@@ -1850,7 +1853,7 @@ const strict = parseMeasurement(
             <div class="stack">
               <p class="measure">
                 When an input is ambiguous, unsupported, or contains extra values, the parser
-                returns <code>null</code> rather than guessing.
+                returns <code>null</code> instead of returning a partial match.
               </p>
               <div class="table-wrap">
                 <table class="cases">

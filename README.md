@@ -9,7 +9,7 @@ A TypeScript library for health apps, fitness trackers, and intake forms. Turn f
 weight inputs like `5' 11"`, `180 cm`, or `eighty kilograms` into the units your app needs.
 
 When an entry is incomplete, unsupported, or ambiguous, `parseMeasurement` returns `null` instead of
-guessing so your UI can prompt the user to clarify.
+returning a partial match so your UI can prompt the user to clarify.
 
 [Documentation](https://afahy.github.io/fluent-measures/) ·
 [Markdown reference](https://afahy.github.io/fluent-measures/README.md) ·
@@ -25,8 +25,8 @@ guessing so your UI can prompt the user to clarify.
   while keeping the original parts in `matches`
 - **Optional typo tolerance:** set `fuzzy: true` to accept one-letter spelling mistakes in unit
   names, like `5 foot 11 inc`
-- **Returns `null` on bad input:** rejects ranges, duplicate readings, and unrelated prose rather
-  than guessing
+- **Returns `null` on bad input:** rejects ranges, duplicate readings, and unrelated prose instead
+  of returning a partial match
 - **Zero dependencies, small bundle:** under 6.0 kB for ESM and 6.0 kB for CommonJS (minified and
   Brotli-compressed), with both ESM and CommonJS exports
 
@@ -120,7 +120,7 @@ Parses one height or weight from a string and returns `null` when the entry can'
 
 #### Parameters
 
-- `input: string`: raw text from your form or user, like `"6 ft"`, `"150 lbs"`, or `"180 cm"`
+- `input: string`: input string to parse, such as `"6 ft"`, `"150 lbs"`, or `"180 cm"`
 - `options?: ParseOptions`: optional settings to lock the type, normalize units, set a bare-number
   default, or tolerate typos
 
@@ -210,8 +210,8 @@ interface ParsedValue {
 - **Metric**: `kg` (`kgs`, `kilo`, `kilos`, `kilogram`, `kilograms`, `kilogramme`, `kilogrammes`)
 
 Most units can also come before the number, as in `kg 70`. The short forms `in` and `m` only work
-before a number when punctuated as a label (like `in: 72`), because otherwise they're usually
-ordinary words. See
+before a number as a label (such as `in: 72`, `in = 72`, or `Height (in): 72`), because otherwise
+they are usually ordinary words. See
 [PARSING.md](https://github.com/afahy/fluent-measures/blob/main/PARSING.md#units-before-a-number)
 for what counts as a label.
 
