@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>fluent-measures — parse real-world height and weight inputs in TypeScript</title>
+    <title>fluent-measures — parse height and weight inputs in TypeScript</title>
     <meta
       name="description"
-      content='Parse real-world height and weight inputs in TypeScript. Handles 5&apos; 11", 180 cm, and "eighty kilograms", converts units, and ships with zero dependencies.'
+      content='Parse freeform height and weight inputs in TypeScript. Handles 5&apos; 11", 180 cm, and "eighty kilograms" across metric and imperial units, with zero dependencies.'
     />
     <link rel="canonical" href="https://afahy.github.io/fluent-measures/" />
     <link rel="alternate" type="text/markdown" href="README.md" title="View Markdown" />
@@ -24,11 +24,11 @@
     <meta property="og:site_name" content="fluent-measures" />
     <meta
       property="og:title"
-      content="fluent-measures — parse real-world height and weight inputs in TypeScript"
+      content="fluent-measures — parse height and weight inputs in TypeScript"
     />
     <meta
       property="og:description"
-      content='Parse real-world height and weight inputs in TypeScript. Handles 5&apos; 11", 180 cm, and "eighty kilograms", converts units, and ships with zero dependencies.'
+      content='Parse freeform height and weight inputs in TypeScript. Handles 5&apos; 11", 180 cm, and "eighty kilograms" across metric and imperial units, with zero dependencies.'
     />
     <meta property="og:url" content="https://afahy.github.io/fluent-measures/" />
     <meta property="og:image" content="https://afahy.github.io/fluent-measures/og.png" />
@@ -164,23 +164,6 @@
         <path d="m11.5 9.5 2-2" />
         <path d="m8.5 6.5 2-2" />
         <path d="m17.5 15.5 2-2" />
-      </symbol>
-      <symbol id="i-measure" viewBox="0 0 24 24">
-        <path d="M2 8V4" />
-        <path d="M22 6H2" />
-        <path d="M22 8V4" />
-        <rect x="2" y="12" width="20" height="8" rx="2" />
-        <path d="M6 15v-3" />
-        <path d="M10 15v-3" />
-        <path d="M14 15v-3" />
-        <path d="M18 15v-3" />
-      </symbol>
-      <symbol id="i-numbers" viewBox="0 0 24 24">
-        <circle cx="7" cy="12" r="3" />
-        <path d="M10 9v6" />
-        <circle cx="17" cy="12" r="3" />
-        <path d="M14 7v8" />
-        <path d="M22 17v1c0 .5-.5 1-1 1H3c-.5 0-1-.5-1-1v-1" />
       </symbol>
       <symbol id="i-chevron" viewBox="0 0 24 24">
         <path d="m6 9 6 6 6-6" />
@@ -441,17 +424,18 @@
           <div class="hero-grid">
             <div>
               <h1 class="hero-title">
-                Turn <span class="title-long">real-world </span>height and weight inputs into clean
-                numbers
+                Parse <span class="title-long">freeform </span>height and weight inputs
               </h1>
               <p class="hero-intro">
                 <span class="intro-long"
-                  >Skip the dual dropdowns and brittle regexes. Built for health apps and intake
-                  forms, it turns inputs like <strong>5' 11"</strong> or
-                  <strong>five feet eleven inches</strong> into the unit your app stores.</span
+                  >A TypeScript library for health apps, fitness trackers, and intake forms. Parse
+                  inputs like <strong>5' 11"</strong> or
+                  <strong>five feet eleven inches</strong> across ft, in, cm, m, lb, and kg, and
+                  convert to the unit your app stores.</span
                 ><span class="intro-short"
-                  >Built for health and fitness forms. Turns inputs like <strong>5' 11"</strong> or
-                  <strong>five feet eleven inches</strong> into the unit you store.</span
+                  >A TypeScript library for health and fitness forms. Parse <strong>5' 11"</strong>,
+                  <strong>180 cm</strong>, or <strong>five feet eleven inches</strong> into the unit
+                  you store.</span
                 >
               </p>
               <div class="install-pill">
@@ -621,29 +605,6 @@
               </figcaption>
             </figure>
           </div>
-
-          <ul class="features" aria-label="Parsing capabilities">
-            <li>
-              <span class="feature-icon" aria-hidden="true"
-                ><svg class="icon"><use href="#i-measure" /></svg
-              ></span>
-              <p>
-                <strong class="feature-title">Metric and imperial:</strong>
-                Handles ft, in, cm, m, lb, and kg, and converts straight to your storage unit with
-                <code>normalizedUnit</code>.
-              </p>
-            </li>
-            <li>
-              <span class="feature-icon" aria-hidden="true"
-                ><svg class="icon"><use href="#i-numbers" /></svg
-              ></span>
-              <p>
-                <strong class="feature-title">Typed like a person:</strong>
-                Reads digits, words, thousands separators, and decimal commas, plus single-letter
-                typos with <code>fuzzy</code>.
-              </p>
-            </li>
-          </ul>
         </div>
       </div>
 
@@ -931,9 +892,9 @@ if (result) {
             </div>
 
             <p class="measure">
-              Most health and fitness forms have a few extra rules: a weight box shouldn't accept a
-              height, your database probably wants centimeters or kilograms, and users often skip
-              units or mistype them. Here's how to handle each one.
+              Health and intake forms usually need a few guardrails: a weight field shouldn't accept
+              a height, your database probably stores centimeters or kilograms, and users often
+              leave off units or mistype them.
             </p>
             <nav class="local-index" aria-label="Usage tasks">
               <p class="local-index-label" aria-hidden="true">Tasks</p>
@@ -1301,13 +1262,12 @@ const rejected = parseMeasurement(
                   ></a>
                 </div>
                 <p>
-                  People type fast on phones. Set
-                  <a href="#parse-options"><code>fuzzy: true</code></a> to tolerate a single-letter
-                  spelling error in a unit name—one letter added, dropped, or swapped—instead of
-                  rejecting the entry. Without it, unit names must be exact and the same text
-                  returns <code>null</code>. Keep in mind that any ordinary word one letter off from
-                  a unit (like <code>feat</code>) also matches, and a short reviewed list of common
-                  slips like <code>fourty</code> is included too (see PARSING.md).
+                  Set <a href="#parse-options"><code>fuzzy: true</code></a> to tolerate a
+                  single-letter spelling error in a unit name—one letter added, dropped, or
+                  swapped—instead of rejecting the entry. Without it, unit names must be exact and
+                  the same text returns <code>null</code>. Keep in mind that any ordinary word one
+                  letter off from a unit (like <code>feat</code>) also matches, and a short reviewed
+                  list of common slips like <code>fourty</code> is included too (see PARSING.md).
                   <!-- cspell:ignore fourty -->
                   Check <a href="#limits">Limits</a> for the trade-offs.
                 </p>
@@ -1883,9 +1843,8 @@ const strict = parseMeasurement(
             </div>
             <div class="stack">
               <p class="measure">
-                When an input is ambiguous, unsupported, or includes extra data, the parser returns
-                <code>null</code> rather than guessing—keeping bad numbers out of health records and
-                calculators.
+                When an input is ambiguous, unsupported, or contains extra values, the parser
+                returns <code>null</code> rather than guessing.
               </p>
               <div class="table-wrap">
                 <table class="cases">

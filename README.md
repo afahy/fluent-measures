@@ -5,13 +5,13 @@
 [![Bundle Size](https://img.shields.io/bundlephobia/minzip/@afahy/fluent-measures)](https://bundlephobia.com/package/@afahy/fluent-measures)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/afahy/fluent-measures/blob/main/LICENSE)
 
-A TypeScript library that turns real-world height and weight inputs—like `5' 11"`, `180 cm`, or
-`eighty kilograms`—into clean, typed numbers in whatever unit your app stores.
+A TypeScript library for parsing freeform height and weight inputs—like `5' 11"`, `180 cm`, or
+`eighty kilograms`—into typed numbers in the unit your app stores.
 
-Built for health apps, fitness trackers, BMR/BMI calculators, and intake forms where you'd rather
-give people one plain text field than force them through dual unit dropdowns. When an entry is
-incomplete, unsupported, or ambiguous, `parseMeasurement` returns `null` instead of guessing so
-your UI can safely ask them to clarify.
+Built for health apps, fitness trackers, BMR/BMI calculators, and intake forms where users type
+into a plain text field instead of separate unit dropdowns. When an entry is incomplete,
+unsupported, or ambiguous, `parseMeasurement` returns `null` instead of guessing so your UI can
+prompt them to clarify.
 
 [Documentation](https://afahy.github.io/fluent-measures/) ·
 [Markdown reference](https://afahy.github.io/fluent-measures/README.md) ·
@@ -19,16 +19,16 @@ your UI can safely ask them to clarify.
 
 ## Features
 
-- **Metric and imperial out of the box** — parses `ft`, `in`, `cm`, `m`, `lb`, and `kg`, including
-  symbols (`'`, `"`, `#`) and British spellings
+- **Metric and imperial units** — parses `ft`, `in`, `cm`, `m`, `lb`, and `kg`, including symbols
+  (`'`, `"`, `#`) and British spellings
 - **Digits, words, and regional decimals** — reads `5' 11"`, `five feet eleven inches`,
   `one hundred fifty pounds`, thousands separators (`1,000 lbs`), and decimal commas (`72,5 kg`)
-- **One-line unit conversion** — set `normalizedUnit` to always get the unit your database or
-  formula expects while keeping the original parts in `matches`
+- **Unit conversion** — set `normalizedUnit` to return the unit your database or formula expects
+  while keeping the original parts in `matches`
 - **Optional typo tolerance** — turn on `fuzzy: true` to accept one-letter spelling mistakes in
   unit names, like `5 foot 11 inc`
-- **Safe failure on bad input** — rejects ranges, duplicate readings, and unrelated prose with
-  `null` rather than silently guessing
+- **Returns `null` on bad input** — rejects ranges, duplicate readings, and unrelated prose rather
+  than silently guessing
 - **Zero dependencies, small bundle** — capped at 6.0 kB for ESM and 6.0 kB for CommonJS
   (minified and compressed with Brotli, enforced in CI), with both ESM and CommonJS exports
 
@@ -81,7 +81,7 @@ parseMeasurement('eighty kilograms', { type: 'weight' });
 // { value: 80, unit: 'kg', type: 'weight', matches: [{ value: 80, unit: 'kg' }], raw: 'eighty kilograms' }
 ```
 
-Set `normalizedUnit` to convert straight into the unit you store or run calculations on (like `cm`
+Set `normalizedUnit` to convert directly to the unit you store or run calculations on (like `cm`
 or `kg`). `matches` still preserves each part in the user's original unit:
 
 ```typescript
