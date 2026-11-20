@@ -8,6 +8,7 @@ const EXAMPLES = [
   ['npm', 'npm', 'npm install @afahy/fluent-measures'],
   ['yarn', 'yarn', 'yarn add @afahy/fluent-measures'],
   ['pnpm', 'pnpm', 'pnpm add @afahy/fluent-measures'],
+  ['bun', 'bun', 'bun add @afahy/fluent-measures'],
   ['esm', 'ES modules', "import { parseMeasurement } from '@afahy/fluent-measures';"],
   ['cjs', 'CommonJS', "const { parseMeasurement } = require('@afahy/fluent-measures');"],
   ['convert-height', 'Height conversion', '180.34'],
@@ -25,7 +26,7 @@ async function examplesForPage(browser) {
   return EXAMPLES.map(([id, label, text]) => [
     id,
     label,
-    version && ['npm', 'yarn', 'pnpm'].includes(id) ? `${text}@${version}` : text,
+    version && ['npm', 'yarn', 'pnpm', 'bun'].includes(id) ? `${text}@${version}` : text,
   ]);
 }
 
@@ -142,7 +143,7 @@ async function interactiveControls(browser, url, viewport) {
   await browser.load(url, viewport);
   const examples = await examplesForPage(browser);
   const groups = [
-    ['pm', ['npm', 'yarn', 'pnpm']],
+    ['pm', ['npm', 'yarn', 'pnpm', 'bun']],
     ['module', ['esm', 'cjs']],
     ['convert', ['convert-height', 'convert-weight']],
   ];
@@ -167,7 +168,7 @@ async function interactiveControls(browser, url, viewport) {
     .filter(button => !button.disabled && button.getClientRects().length).length`),
     7
   );
-  for (const id of ['npm', 'yarn', 'pnpm']) {
+  for (const id of ['npm', 'yarn', 'pnpm', 'bun']) {
     await click(browser, '#tab-' + id);
     const command = examples.find(([key]) => key === id)[2];
     await copy(browser, '[data-copy="#hero-command"]', command);
@@ -191,9 +192,9 @@ async function interactiveControls(browser, url, viewport) {
   );
   // Both persisted choices and the synchronized hero command survive a new document load.
   await browser.load(url, viewport);
-  await selected(browser, 'pm', 'pnpm');
+  await selected(browser, 'pm', 'bun');
   await selected(browser, 'module', 'cjs');
-  await copy(browser, '[data-copy="#hero-command"]', examples.find(([id]) => id === 'pnpm')[2]);
+  await copy(browser, '[data-copy="#hero-command"]', examples.find(([id]) => id === 'bun')[2]);
 }
 
 export async function checkDocsControls(browser, url) {

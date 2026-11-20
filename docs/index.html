@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>fluent-measures — parse height and weight inputs in TypeScript</title>
+    <title>fluent-measures: parse height and weight inputs in TypeScript</title>
     <meta
       name="description"
       content='Parse freeform height and weight inputs in TypeScript. Handles 5&apos; 11", 180 cm, and "eighty kilograms" across metric and imperial units, with zero dependencies.'
@@ -24,7 +24,7 @@
     <meta property="og:site_name" content="fluent-measures" />
     <meta
       property="og:title"
-      content="fluent-measures — parse height and weight inputs in TypeScript"
+      content="fluent-measures: parse height and weight inputs in TypeScript"
     />
     <meta
       property="og:description"
@@ -608,7 +608,7 @@
               ></a>
             </div>
             <div class="stack">
-              <p class="measure">Install the package with npm, yarn, or pnpm.</p>
+              <p class="measure">Install the package with npm, yarn, pnpm, or bun.</p>
               <div class="code on-code">
                 <div class="code-head">
                   <div class="tabs" hidden aria-label="Package manager" data-tab-group="pm">
@@ -641,6 +641,16 @@
                       data-value="pnpm"
                     >
                       pnpm
+                    </button>
+                    <button
+                      class="tab"
+                      type="button"
+                      disabled
+                      id="tab-bun"
+                      aria-controls="panel-bun"
+                      data-value="bun"
+                    >
+                      bun
                     </button>
                   </div>
                   <button
@@ -694,6 +704,18 @@
                   <pre
                     tabindex="0"
                   ><code class="language-bash code-cmd">pnpm add @afahy/fluent-measures</code></pre>
+                </div>
+                <div
+                  role="group"
+                  data-example-panel
+                  id="panel-bun"
+                  aria-labelledby="label-bun"
+                  data-value="bun"
+                >
+                  <p class="code-head code-label" id="label-bun" data-example-label>bun</p>
+                  <pre
+                    tabindex="0"
+                  ><code class="language-bash code-cmd">bun add @afahy/fluent-measures</code></pre>
                 </div>
               </div>
               <p class="code-note">
@@ -1189,8 +1211,8 @@ const rejected = parseMeasurement(
                 <p>
                   Set <a href="#parse-options"><code>defaultUnit</code></a> for fields labeled with
                   a unit (such as “Height (in)” or “Weight (kg)”) where users may enter a bare
-                  number. Written units take precedence, and <code>normalizedUnit</code> sets only
-                  the output unit—it never supplies a fallback input unit. There is no magnitude
+                  number. Written units take precedence. <code>normalizedUnit</code> sets only the
+                  output unit and never supplies a fallback input unit. There is no magnitude
                   guessing: <code>1.8</code> with <code>defaultUnit: 'cm'</code> stays 1.8 cm.
                 </p>
                 <div class="code on-code">
@@ -1250,14 +1272,13 @@ const rejected = parseMeasurement(
                   ></a>
                 </div>
                 <p>
-                  Set <a href="#parse-options"><code>fuzzy: true</code></a> to tolerate a
-                  single-letter spelling error in a unit name—one letter added, dropped, or
-                  swapped—instead of rejecting the entry. Without it, unit names must be exact and
-                  the same text returns <code>null</code>. Keep in mind that any ordinary word one
-                  letter off from a unit (like <code>feat</code>) also matches, and a short reviewed
-                  list of common slips like <code>fourty</code> is included too (see PARSING.md).
+                  Set <a href="#parse-options"><code>fuzzy: true</code></a> to accept a unit name
+                  with one spelling error (one letter added, removed, or changed). Without it, unit
+                  names must be exact and the same input returns <code>null</code>. Any ordinary
+                  word one letter from a unit (such as <code>feat</code>) also matches, along with a
+                  short list of common typos such as <code>fourty</code> in PARSING.md.
                   <!-- cspell:ignore fourty -->
-                  Check <a href="#limits">Limits</a> for the trade-offs.
+                  See <a href="#limits">Limits</a> for edge cases.
                 </p>
                 <div class="code on-code">
                   <div class="code-head">
@@ -1343,9 +1364,9 @@ const strict = parseMeasurement(
               ></a>
             </div>
             <p class="measure">
-              The package exports one function—<a href="#parse-measurement"
-                ><code>parseMeasurement</code></a
-              >—plus four TypeScript types: <a href="#parse-options"><code>ParseOptions</code></a
+              The package exports one function,
+              <a href="#parse-measurement"><code>parseMeasurement</code></a
+              >, and four TypeScript types: <a href="#parse-options"><code>ParseOptions</code></a
               >, <a href="#parsed-value"><code>ParsedValue</code></a
               >, <a href="#unit-type"><code>Unit</code></a
               >, and <a href="#measurement-type"><code>MeasurementType</code></a
@@ -1360,26 +1381,26 @@ const strict = parseMeasurement(
             </div>
             <div class="stack">
               <p class="measure">
-                Parses one height or weight from a string and returns <code>null</code> when the
-                entry can't be parsed safely (see <a href="#troubleshooting">Troubleshooting</a> for
-                common causes, including strings over <code>maxLength</code>). For string input,
-                options are validated upfront—before checking length or parsing text—in this order:
-                options object, <code>maxLength</code>, <code>type</code>,
-                <code>normalizedUnit</code>, <code>defaultUnit</code>, <code>fuzzy</code>, retired
-                options, then dimension conflicts. Invalid options throw even on empty or overlong
-                strings, while non-string runtime input returns <code>null</code> before reading
-                options. Empty strings and <code>null</code> for <code>type</code> or
-                <code>normalizedUnit</code> count as omitted.
+                Parses one height or weight from a string, or returns <code>null</code> if the input
+                cannot be parsed (see <a href="#troubleshooting">Troubleshooting</a> for common
+                causes, including strings longer than <code>maxLength</code>). For string input,
+                options are validated before checking length or parsing text, in this order: options
+                object, <code>maxLength</code>, <code>type</code>, <code>normalizedUnit</code>,
+                <code>defaultUnit</code>, <code>fuzzy</code>, retired options, then dimension
+                conflicts. Invalid options throw even on empty or overlong strings; non-string
+                runtime input returns <code>null</code> before reading options. Empty strings and
+                <code>null</code> for <code>type</code> or <code>normalizedUnit</code> count as
+                omitted.
               </p>
               <p class="measure">
-                Upgrading from an earlier release? <code>allowUnqualified</code>,
-                <code>inferUnit</code>, and <code>fuzziness</code> have been retired and throw
-                whenever defined (including <code>false</code> or <code>0</code>; explicit
-                <code>undefined</code> is ignored). Swap <code>allowUnqualified</code> /
-                <code>inferUnit</code> for <code>defaultUnit: 'in'</code> or <code>'lb'</code> on
-                imperial fields, <code>'kg'</code> for metric weight, and <code>'m'</code> or
-                <code>'cm'</code> for metric height. Replace <code>fuzziness: 1</code> or
-                <code>2</code> with <code>fuzzy: true</code>.
+                Migration note: <code>allowUnqualified</code>, <code>inferUnit</code>, and
+                <code>fuzziness</code> are retired and throw whenever defined (including
+                <code>false</code> or <code>0</code>; explicit <code>undefined</code> is ignored).
+                Replace <code>allowUnqualified</code> and <code>inferUnit</code> with
+                <code>defaultUnit: 'in'</code> or <code>'lb'</code> for imperial fields,
+                <code>'kg'</code> for metric weight, and <code>'m'</code> or <code>'cm'</code> for
+                metric height. Replace <code>fuzziness: 1</code> or <code>2</code> with
+                <code>fuzzy: true</code>.
               </p>
               <div class="api-card">
                 <p class="decl">
@@ -1443,8 +1464,8 @@ const strict = parseMeasurement(
                       <div>
                         <dt>Purpose</dt>
                         <dd>
-                          Restricts parsing to heights or weights—handy when a field only expects
-                          one. See <a href="#ex-type">Lock to height or weight</a>.
+                          Restricts parsing to heights or weights. See
+                          <a href="#ex-type">Lock to height or weight</a>.
                         </dd>
                       </div>
                       <div>
@@ -1474,8 +1495,8 @@ const strict = parseMeasurement(
                       <div>
                         <dt>Purpose</dt>
                         <dd>
-                          Converts the returned value into the unit your app stores or calculates
-                          with. See <a href="#ex-convert">Convert to a storage unit</a>.
+                          Converts the returned value to a target unit. See
+                          <a href="#ex-convert">Convert to a storage unit</a>.
                         </dd>
                       </div>
                       <div>
@@ -1509,7 +1530,7 @@ const strict = parseMeasurement(
                       </div>
                       <div>
                         <dt>Default</dt>
-                        <dd><code>false</code> — unit names must be exact.</dd>
+                        <dd><code>false</code> (unit names must be exact).</dd>
                       </div>
                       <div>
                         <dt>Constraints</dt>
@@ -1529,7 +1550,7 @@ const strict = parseMeasurement(
                         <dt>Purpose</dt>
                         <dd>
                           Fallback unit for a bare number (including supported fractions and
-                          spelled-out numbers) when a user skips the unit. See
+                          spelled-out numbers) when no unit is written. See
                           <a href="#ex-unqualified">Handle bare numbers</a>.
                         </dd>
                       </div>
@@ -1558,10 +1579,7 @@ const strict = parseMeasurement(
                     <dl class="option-facts">
                       <div>
                         <dt>Purpose</dt>
-                        <dd>
-                          Caps the raw <code>input.length</code> before trimming or parsing to guard
-                          against oversized inputs.
-                        </dd>
+                        <dd>Maximum raw <code>input.length</code> before trimming or parsing.</dd>
                       </div>
                       <div>
                         <dt>Default</dt>
@@ -1623,13 +1641,13 @@ const strict = parseMeasurement(
                     >
                   </dt>
                   <dd>
-                    Each part parsed from the input in its original unit—for example, 5&nbsp;ft and
+                    Each part parsed from the input in its original unit, such as 5&nbsp;ft and
                     11&nbsp;in for <code>5' 11"</code>.
                   </dd>
                 </div>
                 <div>
                   <dt><span class="name">raw</span><span class="type">string</span></dt>
-                  <dd>The original input string, untouched.</dd>
+                  <dd>The original input string.</dd>
                 </div>
               </dl>
             </div>
@@ -1659,8 +1677,8 @@ const strict = parseMeasurement(
                 </p>
               </div>
               <p class="measure">
-                The six canonical unit codes returned in results. Users can still type full words,
-                plurals, or symbols—see <a href="#units">Supported units</a>.
+                The six canonical unit codes returned in results. Inputs can use full words,
+                plurals, or symbols; see <a href="#units">Supported units</a>.
               </p>
             </div>
 
@@ -1883,25 +1901,25 @@ const strict = parseMeasurement(
                 </table>
               </div>
               <p class="topic-lead">
-                Each input needs to be one complete measurement (including compound heights like
-                <code>5 ft 11 in</code>). Two heights or two weights always return
-                <code>null</code>, even if they convert to the same value. When one entry contains a
-                height and a weight—like <code>5'11", 180 lbs</code>—pass
-                <a href="#ex-type"><code>type</code></a> or <code>normalizedUnit</code> to pick the
-                one you want; both halves still need to be valid.
+                Each input must be one complete measurement, including compound heights such as
+                <code>5 ft 11 in</code>. Two heights or two weights return <code>null</code>, even
+                if they convert to the same value. When one entry contains a height and a weight
+                (such as <code>5'11", 180 lbs</code>), pass
+                <a href="#ex-type"><code>type</code></a> or <code>normalizedUnit</code> to select
+                one; both halves must be valid.
               </p>
               <div class="callout is-caution">
                 <svg class="icon" aria-hidden="true"><use href="#i-alert" /></svg>
                 <div class="callout-body">
-                  <p class="callout-title">Built for form fields, not freeform paragraphs</p>
+                  <p class="callout-title">Short form inputs only, not arbitrary prose</p>
                   <p>
-                    Light conversational framing like <code>I'm five foot eleven tall</code> or
-                    <code>about 180 cm</code> works, because people type that way into chat and
-                    intake forms. Arbitrary prose doesn't: <code>Top 10 in the class</code> returns
-                    <code>null</code>, and wrapping the whole entry or a number in quotes or
-                    brackets (like <code>(180 cm)</code>) is rejected too. With
-                    <code>fuzzy: true</code>, ordinary words one letter off from a unit still match
-                    inside that grammar—for instance, <code>6 food</code> parses as 6 ft.
+                    Light framing such as <code>I'm five foot eleven tall</code> or
+                    <code>about 180 cm</code> is accepted. Unrelated prose is not:
+                    <code>Top 10 in the class</code> returns <code>null</code>, and wrapping the
+                    whole entry or a number in quotes or brackets (such as <code>(180 cm)</code>) is
+                    rejected. With <code>fuzzy: true</code>, ordinary words one letter from a unit
+                    still match inside that grammar (for example, <code>6 food</code> parses as 6
+                    ft).
                   </p>
                 </div>
               </div>
@@ -1924,54 +1942,51 @@ const strict = parseMeasurement(
             </div>
             <div class="stack">
               <div class="body-text">
-                <p>
-                  Getting <code>null</code> when you expected a measurement? It's usually one of
-                  these:
-                </p>
+                <p>Common reasons <code>parseMeasurement</code> returns <code>null</code>:</p>
                 <ol>
                   <li>
-                    <strong>Unsupported unit</strong> — stone, ounces, and grams aren't supported.
+                    <strong>Unsupported unit:</strong> Stone, ounces, and grams aren't supported.
                     See <a href="#units">Supported units</a>.
                   </li>
                   <li>
-                    <strong>Missing <code>type</code></strong> — shorthand like <code>5-11</code> or
-                    a combined height/weight pair needs <a href="#ex-type"><code>type</code></a> (or
-                    <code>normalizedUnit</code> for pairs) to pick what you want.
+                    <strong>Missing <code>type</code>:</strong> Shorthand like <code>5-11</code> or
+                    a combined height/weight pair requires
+                    <a href="#ex-type"><code>type</code></a> (or <code>normalizedUnit</code> for
+                    pairs) to select one.
                   </li>
                   <li>
-                    <strong>Bare number without a default</strong> — if a user leaves off the unit,
-                    pass <a href="#ex-unqualified"><code>defaultUnit</code></a> matching your field
-                    label.
+                    <strong>Bare number without a default:</strong> Pass
+                    <a href="#ex-unqualified"><code>defaultUnit</code></a> matching the field label
+                    when the input omits the unit.
                   </li>
                   <li>
-                    <strong>Typo in the unit name</strong> — turn on
-                    <a href="#ex-fuzzy"><code>fuzzy: true</code></a> to tolerate a one-letter
-                    spelling mistake.
+                    <strong>Typo in the unit name:</strong> Set
+                    <a href="#ex-fuzzy"><code>fuzzy: true</code></a> to allow a one-letter spelling
+                    error.
                   </li>
                   <li>
-                    <strong>Range, duplicate, or extra text</strong> — ranges, two measurements of
+                    <strong>Range, duplicate, or extra text:</strong> Ranges, two measurements of
                     the same kind, or extra prose reject the whole entry. See
                     <a href="#limits">Limits</a>.
                   </li>
                   <li>
-                    <strong>Non-string value</strong> — non-string inputs return
-                    <code>null</code> at runtime, even though the TypeScript parameter stays
-                    <code>string</code>.
+                    <strong>Non-string value:</strong> Non-string inputs return <code>null</code> at
+                    runtime, even though the TypeScript parameter is <code>string</code>.
                   </li>
                   <li>
-                    <strong>Over <code>maxLength</code></strong> — raw
-                    <code>input.length</code> (UTF-16 code units, before trimming) is capped at
-                    1,000 by default. Pass a higher <code>maxLength</code> or
-                    <code>Infinity</code> if you need more.
+                    <strong>Over <code>maxLength</code>:</strong> Raw
+                    <code>input.length</code> (UTF-16 code units, before trimming) defaults to a
+                    1,000-character limit. Pass a higher <code>maxLength</code> or
+                    <code>Infinity</code> for longer inputs.
                   </li>
                 </ol>
               </div>
               <div class="callout">
                 <svg class="icon" aria-hidden="true"><use href="#i-help" /></svg>
                 <p>
-                  Still seeing an unexpected result? Search
-                  <a href="https://github.com/afahy/fluent-measures/issues">GitHub issues</a>, or
-                  open a new one with the input string, options, and expected output.
+                  If none of these explain the result, search
+                  <a href="https://github.com/afahy/fluent-measures/issues">GitHub issues</a> or
+                  open a new issue with the input string, options, and expected output.
                 </p>
               </div>
             </div>
@@ -1997,8 +2012,8 @@ const strict = parseMeasurement(
                   >, or open <code>versions/&lt;version&gt;/</code> directly on this site.
                 </p>
                 <p>
-                  Versions 0.1.0 and 0.1.1 predate the docs site—check the README bundled inside
-                  your installed package instead.
+                  Versions 0.1.0 and 0.1.1 have no docs page. Use the README bundled inside your
+                  installed package instead.
                 </p>
               </div>
             </div>
@@ -2357,6 +2372,7 @@ const strict = parseMeasurement(
           npm: 'npm install',
           yarn: 'yarn add',
           pnpm: 'pnpm add',
+          bun: 'bun add',
         };
 
         // Tabs: every tab list in a group shares one selection.

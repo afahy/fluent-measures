@@ -239,6 +239,7 @@ describe('release verification before promotion', () => {
     const html = read(join(path, 'index.html'));
     const markdown = read(join(path, 'README.md'));
     expect(html).toContain('npm install @afahy/fluent-measures@1.2.3');
+    expect(html).toContain('bun add @afahy/fluent-measures@1.2.3');
     expect(html).toContain('<span class="nowrap">@afahy/fluent-measures@1.2.3</span>');
     expect(html).toContain(
       '.code pre:has(.code-cmd) { white-space: pre-wrap; overflow-wrap: anywhere; }'
