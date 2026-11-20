@@ -190,15 +190,6 @@
         />
         <circle cx="7.5" cy="7.5" r=".5" fill="currentColor" />
       </symbol>
-      <symbol id="i-package-check" viewBox="0 0 24 24">
-        <path d="m16 16 2 2 4-4" />
-        <path
-          d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14"
-        />
-        <path d="m7.5 4.27 9 5.15" />
-        <path d="M3.29 7 12 12l8.71-5" />
-        <path d="M12 22V12" />
-      </symbol>
       <symbol id="i-external" viewBox="0 0 24 24">
         <path d="M7 7h10v10" />
         <path d="M7 17 17 7" />
@@ -428,14 +419,13 @@
               </h1>
               <p class="hero-intro">
                 <span class="intro-long"
-                  >A TypeScript library for health apps, fitness trackers, and intake forms. Parse
-                  inputs like <strong>5' 11"</strong> or
-                  <strong>five feet eleven inches</strong> across ft, in, cm, m, lb, and kg, and
-                  convert to the unit your app stores.</span
+                  >Built for health apps and intake forms, turn inputs like
+                  <strong class="nowrap">5' 11"</strong>, <strong class="nowrap">180 cm</strong>, or
+                  <strong>five feet eleven inches</strong> into the units your app needs.</span
                 ><span class="intro-short"
-                  >A TypeScript library for health and fitness forms. Parse <strong>5' 11"</strong>,
-                  <strong>180 cm</strong>, or <strong>five feet eleven inches</strong> into the unit
-                  you store.</span
+                  >Built for health apps and intake forms. Turn inputs like
+                  <strong class="nowrap">5' 11"</strong> or
+                  <strong>five feet eleven inches</strong> into the units your app needs.</span
                 >
               </p>
               <div class="install-pill">
@@ -707,10 +697,9 @@
                 </div>
               </div>
               <p class="code-note">
-                <svg class="icon icon-sm" aria-hidden="true"><use href="#i-package-check" /></svg>
                 <span
-                  ><strong>Zero dependencies.</strong> Capped at 6.0 kB for ESM and 6.0 kB for
-                  CommonJS (minified and Brotli-compressed), enforced in CI.</span
+                  ><strong>Zero dependencies.</strong> Under 6.0 kB for ESM and 6.0 kB for CommonJS
+                  (minified and Brotli-compressed).</span
                 >
               </p>
             </div>
@@ -723,9 +712,9 @@
             </div>
             <div class="stack">
               <p class="measure">
-                Pass whatever your user typed into <code>parseMeasurement</code> and check for
-                <code>null</code> before using it. When the text already includes a unit, the parser
-                knows whether it's a height or a weight—no options required.
+                Import <code>parseMeasurement</code>, pass an input string, and check for
+                <code>null</code> before reading the result. Inputs that include a unit don't
+                require options; the unit determines whether the result is a height or a weight.
               </p>
               <div class="code on-code">
                 <div class="code-head">
@@ -858,16 +847,16 @@ if (result) {
                 </div>
               </div>
               <p class="measure">
-                You get back the numeric <code>value</code> and canonical <code>unit</code>, whether
-                it's a height or weight (<code>type</code>), the individual parts in
-                <code>matches</code>, and the untouched <code>raw</code> string.
+                The returned object contains the numeric <code>value</code>, canonical
+                <code>unit</code>, measurement <code>type</code> (<code>'height'</code> or
+                <code>'weight'</code>), the parsed parts in <code>matches</code>, and the original
+                <code>raw</code> string.
               </p>
               <p class="code-note" id="ex-null">
                 <svg class="icon icon-sm" aria-hidden="true"><use href="#i-null" /></svg>
                 <span
-                  >If the input isn't a valid measurement, <code>result</code> is
-                  <code>null</code>—the <code>if (result)</code> guard above handles that so your UI
-                  can ask the user to try again.</span
+                  >Invalid inputs return <code>null</code>. Check <code>if (result)</code> before
+                  accessing properties.</span
                 >
               </p>
               <dl class="input-results" aria-label="More inputs without options">
@@ -892,9 +881,9 @@ if (result) {
             </div>
 
             <p class="measure">
-              Health and intake forms usually need a few guardrails: a weight field shouldn't accept
-              a height, your database probably stores centimeters or kilograms, and users often
-              leave off units or mistype them.
+              Pass options as a second argument to restrict a field to heights or weights, convert
+              to a target unit, supply a fallback unit for bare numbers, or allow spelling errors in
+              unit names.
             </p>
             <nav class="local-index" aria-label="Usage tasks">
               <p class="local-index-label" aria-hidden="true">Tasks</p>
@@ -947,11 +936,11 @@ if (result) {
                   ></a>
                 </div>
                 <p>
-                  Pass <a href="#parse-options"><code>type</code></a> when a field only accepts one
-                  kind of measurement. If someone enters a height into a weight box,
-                  <code>parseMeasurement</code> returns <code>null</code> instead of saving the
-                  wrong value. Use <code>type: 'height'</code> for height inputs, or pass a selector
-                  to pull one side from a combined entry like <code>5'11", 180 lbs</code>.
+                  Pass <a href="#parse-options"><code>type</code></a> when a field accepts only one
+                  kind of measurement. A height passed with <code>type: 'weight'</code> returns
+                  <code>null</code>. Use <code>type: 'height'</code> for height fields, or pass
+                  <code>type</code> to extract one side of a combined height/weight entry like
+                  <code>5'11", 180 lbs</code>.
                 </p>
                 <div class="code on-code">
                   <div class="code-head">
@@ -1038,10 +1027,10 @@ const rejected = parseMeasurement(
                   ></a>
                 </div>
                 <p>
-                  Set <a href="#parse-options"><code>normalizedUnit</code></a> so your app always
-                  gets the unit it stores or calculates with—like centimeters for a BMR formula or
-                  kilograms for a weigh-in log. Below, 5 ft and 11 in combine into (5 × 12 + 11) ×
-                  2.54 = 180.34 cm, while <code>matches</code> keeps each original part.
+                  Set <a href="#parse-options"><code>normalizedUnit</code></a> to convert the
+                  returned value to a specific unit (for example, <code>'cm'</code> or
+                  <code>'kg'</code>). Below, 5 ft and 11 in combine into (5 × 12 + 11) × 2.54 =
+                  180.34 cm, while <code>matches</code> preserves each original part.
                 </p>
                 <div class="code on-code">
                   <div class="code-head">
@@ -1198,12 +1187,11 @@ const rejected = parseMeasurement(
                   ></a>
                 </div>
                 <p>
-                  When a field label already says “Height (in)” or “Weight (kg)”, people often type
-                  just a number. Set <a href="#parse-options"><code>defaultUnit</code></a> to tell
-                  the parser what that field assumes. Written units always win, and
-                  <code>normalizedUnit</code> only chooses the output unit—it never acts as a
-                  fallback input unit. There is no magnitude guessing: <code>1.8</code> with a
-                  centimeter default stays 1.8 cm.
+                  Set <a href="#parse-options"><code>defaultUnit</code></a> for fields labeled with
+                  a unit (such as “Height (in)” or “Weight (kg)”) where users may enter a bare
+                  number. Written units take precedence, and <code>normalizedUnit</code> sets only
+                  the output unit—it never supplies a fallback input unit. There is no magnitude
+                  guessing: <code>1.8</code> with <code>defaultUnit: 'cm'</code> stays 1.8 cm.
                 </p>
                 <div class="code on-code">
                   <div class="code-head">

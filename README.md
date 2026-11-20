@@ -5,13 +5,11 @@
 [![Bundle Size](https://img.shields.io/bundlephobia/minzip/@afahy/fluent-measures)](https://bundlephobia.com/package/@afahy/fluent-measures)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/afahy/fluent-measures/blob/main/LICENSE)
 
-A TypeScript library for parsing freeform height and weight inputs—like `5' 11"`, `180 cm`, or
-`eighty kilograms`—into typed numbers in the unit your app stores.
+A TypeScript library for health apps, fitness trackers, and intake forms. Turn freeform height and
+weight inputs—like `5' 11"`, `180 cm`, or `eighty kilograms`—into the units your app needs.
 
-Built for health apps, fitness trackers, BMR/BMI calculators, and intake forms where users type
-into a plain text field instead of separate unit dropdowns. When an entry is incomplete,
-unsupported, or ambiguous, `parseMeasurement` returns `null` instead of guessing so your UI can
-prompt them to clarify.
+When an entry is incomplete, unsupported, or ambiguous, `parseMeasurement` returns `null` instead of
+guessing so your UI can prompt the user to clarify.
 
 [Documentation](https://afahy.github.io/fluent-measures/) ·
 [Markdown reference](https://afahy.github.io/fluent-measures/README.md) ·
@@ -29,8 +27,8 @@ prompt them to clarify.
   unit names, like `5 foot 11 inc`
 - **Returns `null` on bad input** — rejects ranges, duplicate readings, and unrelated prose rather
   than silently guessing
-- **Zero dependencies, small bundle** — capped at 6.0 kB for ESM and 6.0 kB for CommonJS
-  (minified and compressed with Brotli, enforced in CI), with both ESM and CommonJS exports
+- **Zero dependencies, small bundle** — under 6.0 kB for ESM and 6.0 kB for CommonJS (minified and
+  Brotli-compressed), with both ESM and CommonJS exports
 
 ## Installation
 

@@ -75,8 +75,8 @@
   --tok-number: #8b431a;
   --tok-property: #35424a;
   --tok-punctuation: #56616b;
-  /* Reading measure for prose: about 70-75 characters at 16px. */
-  --measure: 38rem;
+  /* Prose matches the doc-content column width so text aligns with code cards and tables. */
+  --measure: 50rem;
   color-scheme: light;
   --radius: 10px;
   --radius-sm: 6px;
