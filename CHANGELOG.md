@@ -1,5 +1,16 @@
 # @afahy/fluent-measures
 
+## 0.3.1
+
+### Patch Changes
+
+- be5ccba: With `fuzzy: true`, read a few more common typos that the one-error rule doesn't accept:
+  `lbss` and `Ibs` as pounds, `cenitmeters` as centimeters, and the number words `fourty` and
+  `ninty` as forty and ninety, so `fourty-two kg` reads as 42 kg. PARSING.md lists each typo with
+  its reason. Without `fuzzy`, nothing changes.
+
+  <!-- cspell:ignore lbss cenitmeters fourty ninty -->
+
 ## 0.3.0
 
 ### Upgrading from 0.2.0
