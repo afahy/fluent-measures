@@ -62,7 +62,6 @@ export async function checkFocus(browser, scheme) {
     '#option-fuzzy a.name',
     '#tab-npm',
     '[aria-label="Copy quick start"]',
-    '.full-object > summary',
   ];
   for (const motion of ['no-preference', 'reduce']) {
     await browser.send('Emulation.setEmulatedMedia', {

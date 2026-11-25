@@ -121,7 +121,7 @@ try {
   // AFA-246: comparing palettes must keep the documentation at the same position.
   for (const width of [320, 390, 1440]) {
     for (const scheme of ['light', 'dark']) {
-      await browser.load(`${base}?palette=atlas`, {
+      await browser.load(`${base}?palette=braun`, {
         width,
         height: 900,
         scale: 1,
@@ -153,7 +153,7 @@ try {
         select.value = 'rosewater'; select.dispatchEvent(new Event('change'));`);
       await stableFeedback('palette selection');
       await browser.evaluate(`document.querySelector('[data-palette-reset]').click()`);
-      await stableFeedback('Atlas reset');
+      await stableFeedback('Braun Caliper reset');
       await browser.evaluate(`Object.defineProperty(navigator, 'clipboard', {
         configurable: true, value: { writeText: () => Promise.resolve() }
       }); document.querySelector('[data-palette-link]').click();`);
@@ -252,9 +252,9 @@ try {
   await frame();
   check(
     await browser.evaluate(
-      `document.documentElement.dataset.palette==='atlas' && !document.documentElement.style.getPropertyValue('--accent') && localStorage.getItem('fluent-measures:palette')===null && document.documentElement.dataset.themePref==='dark'`
+      `document.documentElement.dataset.palette==='braun' && !document.documentElement.style.getPropertyValue('--accent') && localStorage.getItem('fluent-measures:palette')===null && document.documentElement.dataset.themePref==='dark'`
     ),
-    'Atlas reset clears palette overrides without resetting theme'
+    'Braun Caliper reset clears palette overrides without resetting theme'
   );
   check(themeBefore === 'system', 'initial preference follows system');
   await browser.evaluate(
@@ -293,12 +293,12 @@ try {
         scheme,
       });
       await browser.send('Emulation.setScriptExecutionDisabled', { value: false });
-      const expected = scheme === 'light' ? '#2456b3' : '#8db5ff';
+      const expected = scheme === 'light' ? '#bf3b0a' : '#ff7a45';
       check(
         await browser.evaluate(
           `!document.querySelector('.palette-preview') && document.querySelector('h1').textContent.length>0 && getComputedStyle(document.documentElement).colorScheme===${JSON.stringify(scheme)} && getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()===${JSON.stringify(expected)}`
         ),
-        `no-script Atlas ${scheme} fallback: ${page}`
+        `no-script Braun Caliper ${scheme} fallback: ${page}`
       );
       const colors = await browser.evaluate(`(${probe})()`);
       for (const pair of colors.failures) {

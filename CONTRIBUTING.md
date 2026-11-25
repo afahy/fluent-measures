@@ -88,7 +88,7 @@ pnpm exec prettier --write docs/tailwind.css
 `tests/docsPage.test.ts` fails if a class in a `class` attribute or a `classList` call on the page
 has no rule in `tailwind.css`.
 
-Production uses Atlas in light and dark, with the existing Light/System/Dark preference and
+Production uses Braun Caliper in light and dark, with the existing Light/System/Dark preference and
 system colors when JavaScript is disabled. To compare palettes locally, run:
 
 ```bash
@@ -97,11 +97,12 @@ pnpm docs:preview
 
 Open the printed file URL, or open `.docs-preview/index.html` directly. No server is needed.
 The command replaces this ignored directory with a copy of production docs and injects the
-palette controls from `.github/docs-preview/`. Atlas is the default; **Reset to Atlas** clears
-only the palette preference. **Original (teal)** restores the former production colors. All ten
-candidate families remain available, independently of Light/System/Dark. A URL such as
+palette controls from `.github/docs-preview/`. Braun Caliper is the default; **Reset to Braun
+Caliper** clears only the palette preference. **Original (teal)** restores the former teal
+production colors, and **Atlas** plus all other candidate families remain available independently
+of Light/System/Dark. A URL such as
 `.docs-preview/index.html?palette=grove#usage` overrides the saved palette; invalid values fall
-back to Atlas. **Copy link** preserves the palette and section, while the theme stays the
+back to Braun Caliper. **Copy link** preserves the palette and section, while the theme stays the
 reader's preference. If copying is unavailable, use the fallback link. **Exit preview** returns
 to `docs/index.html` at the same section. Local links require a copy of this checkout.
 
@@ -176,7 +177,7 @@ After generating the preview, focused tests can be run with
 theme and responsive checks across every preview palette, run
 `pnpm exec node .github/scripts/docs-palettes.mjs`. This regenerates the preview and writes
 `reports/docs-palettes.json`; an optional first argument changes that report path. It also
-checks production isolation and Atlas in both no-script system themes. Coordinate this broad
+checks production isolation and Braun Caliper in both no-script system themes. Coordinate this broad
 audit with any shared CPU window, just as for the full docs checks below.
 
 Two scripts check the page in your installed Chrome or Chromium, so they need no other package.

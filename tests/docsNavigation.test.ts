@@ -275,4 +275,73 @@ describe('stable docs navigation', () => {
       ['true', 'true'],
     ]);
   });
+
+  it('tracks nested headings in a flat desktop rail while mobile menu groups stay collapsed', () => {
+    const destinations = [
+      ['#install', '#quick-start'],
+      ['#usage', '#usage-second', '#usage-first'],
+      ['#api', '#api-child'],
+      ['#units'],
+    ];
+    const flatRailLinks = destinations.flat().map(href => new Link(href, null));
+    const menu = destinations.map(hrefs => new Group(hrefs));
+    const groups = menu.filter(item => item.links.length > 1);
+    const siteLinks = destinations.map(([href]) => new Link(href, null, true));
+    const links = [...flatRailLinks, ...menu.flatMap(item => item.links), ...siteLinks];
+    const windowEvents: Record<string, Listener> = {};
+    let scrollY = 0;
+    const headings: Heading[] = destinations.flat().map((href, index) => ({
+      id: href.slice(1),
+      position: 1000 + index * 1000,
+      getBoundingClientRect(): { top: number } {
+        return { top: this.position - scrollY };
+      },
+      compareDocumentPosition(other: { position: number }): number {
+        return this.position < other.position ? 4 : 2;
+      },
+    }));
+    const heading = (id: string): Heading | undefined => headings.find(item => item.id === id);
+    scrollY = heading('usage-first')!.position - 100;
+    runInNewContext(script, {
+      document: {
+        documentElement: { scrollHeight: 20000 },
+        getElementById: heading,
+        addEventListener: (): void => undefined,
+        querySelectorAll: (selector: string): (Group | Link)[] => {
+          if (selector === '.toc-group') return groups;
+          if (selector === '.toc a, [data-section-nav] a') return links;
+          if (selector === '.toc > ul > li') return menu;
+          throw new Error(`Unexpected document selector: ${selector}`);
+        },
+        querySelector: (selector: string): { classList: { toggle: () => void } } | null => {
+          if (selector === '.toc-col .toc') return null;
+          if (selector === '.site-header') return { classList: { toggle: (): void => undefined } };
+          throw new Error(`Unexpected document selector: ${selector}`);
+        },
+      },
+      window: {
+        innerHeight: 800,
+        get scrollY(): number {
+          return scrollY;
+        },
+        addEventListener: (name: string, fn: Listener): Listener => (windowEvents[name] = fn),
+      },
+      location: { hash: '' },
+      Node: { DOCUMENT_POSITION_FOLLOWING: 4 },
+      requestAnimationFrame: (fn: () => void) => fn(),
+      updateOverflow: () => undefined,
+    });
+
+    expect(
+      flatRailLinks
+        .filter(link => link.attributes['aria-current'] === 'true')
+        .map(link => link.attributes.href)
+    ).toEqual(['#usage-first']);
+    expect(states(menu)).toEqual([
+      ['false', 'false'],
+      ['false', 'false'],
+      ['false', 'false'],
+    ]);
+    expect(active(menu).map(link => link.attributes.href)).toEqual(['#usage']);
+  });
 });

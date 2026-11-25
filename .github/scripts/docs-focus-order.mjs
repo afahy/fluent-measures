@@ -113,18 +113,23 @@ async function codeOrder(browser) {
     'fitting example leaves Tab order'
   );
 
-  await browser.evaluate(
-    'document.querySelector(".full-object").open = false; document.querySelector(".full-object summary").focus()'
-  );
-  await press(browser, 'Enter');
-  await frames(browser);
-  assert.equal(
-    await browser.evaluate('document.querySelector(".full-object").open'),
-    true,
-    'Enter opens the full-result disclosure'
-  );
+  await browser.evaluate('document.querySelector(\'[aria-label="Copy quick start"]\').focus()');
   await press(browser, 'Tab');
-  await focused(browser, '.anchor[href="#usage"]');
+  await focused(browser, '#panel-esm pre');
+  const hasFullObjectSummary = await browser.evaluate(
+    'Boolean(document.querySelector(".full-object summary"))'
+  );
+  if (hasFullObjectSummary) {
+    await press(browser, 'Tab');
+    await focused(browser, '.full-object summary');
+    await press(browser, 'Enter');
+    await frames(browser);
+    await press(browser, 'Tab');
+    await focused(browser, '.anchor[href="#usage"]');
+  } else {
+    await press(browser, 'Tab');
+    await focused(browser, '.anchor[href="#usage"]');
+  }
 }
 
 export async function checkFocusOrder(browser, url) {

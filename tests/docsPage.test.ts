@@ -469,8 +469,9 @@ describe('the docs lessons', () => {
   );
 
   it('shows the full result and null handling in Quick start', () => {
-    expect(quick).toContain('data-full-object');
-    expect(quick).toContain('Full returned object');
+    expect(quick).toContain('<div class="returns full-object" data-full-object');
+    expect(quick).toContain('Returns');
+    expect(quick).not.toContain('<details class="full-object"');
     expect(quick).toContain('if (result)');
     expect(quick).toContain('not a measurement');
     expect(quick).toContain('id="ex-basic"');

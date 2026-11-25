@@ -10,13 +10,20 @@ try {
 } catch {
   // The URL remains repeatable when storage is unavailable.
 }
+const defaultPalette = 'braun';
 const requested = url.searchParams.get('palette');
 let selected =
-  requested !== null ? (valid(requested) ? requested : 'atlas') : valid(saved) ? saved : 'atlas';
+  requested !== null
+    ? valid(requested)
+      ? requested
+      : defaultPalette
+    : valid(saved)
+      ? saved
+      : defaultPalette;
 let previousKeys = [];
 const apply = () => {
   previousKeys.forEach(key => root.style.removeProperty(`--${key}`));
-  const palette = palettes.find(p => p.id === selected && p.id !== 'atlas');
+  const palette = palettes.find(p => p.id === selected && p.id !== defaultPalette);
   const mode = root.dataset.theme === 'dark' ? 'dark' : 'light';
   const colors = palette
     ? { ...(selected === 'original' ? {} : common[mode]), ...palette[mode] }
@@ -40,8 +47,8 @@ const initialize = () => {
     <div class="palette-preview-choice"><label for="palette-choice">Palette preview</label>
     <select id="palette-choice" aria-describedby="palette-help">${palettes.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}</select>
     <span class="palette-swatches" aria-hidden="true"><i></i><i></i><i></i></span></div>
-    <div class="palette-preview-actions"><button type="button" data-palette-reset>Reset to Atlas</button><button type="button" data-palette-link>Copy link</button><a data-palette-exit>Exit preview</a></div>
-    <p id="palette-help">Atlas is the production default. Only this preview changes. Use the header theme control for Light, System or Dark.</p>
+    <div class="palette-preview-actions"><button type="button" data-palette-reset>Reset to Braun Caliper</button><button type="button" data-palette-link>Copy link</button><a data-palette-exit>Exit preview</a></div>
+    <p id="palette-help">Braun Caliper is the production default. Only this preview changes. Use the header theme control for Light, System or Dark.</p>
     <p class="palette-preview-status" role="status" aria-live="polite"></p>
   </div>`;
   document.querySelector('.site-header').insertAdjacentElement('afterend', panel);
@@ -62,7 +69,7 @@ const initialize = () => {
     selected = value;
     select.value = value;
     try {
-      if (value === 'atlas') localStorage.removeItem(storageKey);
+      if (value === defaultPalette) localStorage.removeItem(storageKey);
       else localStorage.setItem(storageKey, value);
     } catch {
       /* Storage is optional. */
@@ -72,10 +79,14 @@ const initialize = () => {
     apply();
     updateUrl();
     status.textContent =
-      value === 'atlas' ? 'Reset to Atlas.' : `${select.selectedOptions[0].textContent} selected.`;
+      value === defaultPalette
+        ? 'Reset to Braun Caliper.'
+        : `${select.selectedOptions[0].textContent} selected.`;
   };
   select.addEventListener('change', () => choose(select.value));
-  panel.querySelector('[data-palette-reset]').addEventListener('click', () => choose('atlas'));
+  panel
+    .querySelector('[data-palette-reset]')
+    .addEventListener('click', () => choose(defaultPalette));
   const exit = new URL('../docs/index.html', location.href);
   const exitLink = panel.querySelector('[data-palette-exit]');
   const updateExit = () => {

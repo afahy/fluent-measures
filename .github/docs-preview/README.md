@@ -6,11 +6,11 @@ to the copied page. Open `.docs-preview/index.html` directly; no server is requi
 the command replaces that output. Never put these assets or a loader in `docs/`: the Pages
 builder copies that entire directory into its deployment artifact.
 
-Atlas is the production default. Its light tokens live in `docs/site.css` (built into
+Braun Caliper is the production default. Its light tokens live in `docs/site.css` (built into
 `tailwind.css`), and its dark tokens live in the existing media-controlled stylesheet in
-`docs/index.html`. The Atlas manifest entry deliberately has no overrides: selecting or
-resetting to it removes all preview overrides. Every other candidate combines the manifest's
-common tokens with its family tokens. Original has complete legacy tokens of its own,
+`docs/index.html`. The Braun Caliper manifest entry deliberately has no overrides: selecting or
+resetting to it removes all preview overrides. Atlas and every other candidate combine the
+manifest's common tokens with their family tokens. Original has complete legacy tokens of its own,
 including the local note border, so it restores teal independently of the production palette.
 
 The candidate values come from the judged implementation at
@@ -24,6 +24,6 @@ directory. This is adoption, not another design-judging round.
 `tests/docsPalettePreview.test.ts` exercises generated output, production isolation, intended
 palette values, independent preferences and failure paths. The browser audit is
 `pnpm exec node .github/scripts/docs-palettes.mjs`; it regenerates the preview, checks all
-eleven choices in both themes, and verifies production and no-script Atlas separately.
+twelve choices in both themes, and verifies production and no-script Braun Caliper separately.
 It needs the same Chrome setup as the other docs tools. Follow any shared CPU hold before
 running it or the repository's full checks. AFA-243 and AFA-245 remain separate baseline issues.

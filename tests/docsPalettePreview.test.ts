@@ -36,9 +36,10 @@ function rootTokens(source: string): Record<string, string> {
   );
 }
 
-// Expectations come from the selected Atlas common + palette tokens at ad4c503 (AFA-246),
-// and the former Original teal design. Atlas remains canonical in production CSS.
-describe('Atlas production and preview boundary', () => {
+// Expectations come from the Braun Caliper production design, the preserved Atlas family
+// tokens at ad4c503 (AFA-246), and the former Original teal design. Braun Caliper is canonical
+// in production CSS.
+describe('Braun Caliper production and preview boundary', () => {
   it('keeps every deployed source byte unchanged when generating and regenerating a preview', () => {
     const production = files(join(repository, 'docs'));
     writeFileSync(join(repository, '.docs-preview/stale.js'), 'old preview');
@@ -82,81 +83,81 @@ describe('Atlas production and preview boundary', () => {
     [
       'light',
       {
-        bg: '#fafbfc',
-        'bg-tint': '#f2f4f8',
-        heading: '#202329',
-        text: '#353b43',
-        'text-muted': '#59616b',
-        accent: '#2456b3',
-        'accent-hover': '#1b448f',
-        'accent-soft': '#e7ebf3',
-        'code-bg': '#f3f4f7',
-        'code-head': '#eaecf1',
-        'code-text': '#282e36',
-        'tok-keyword': '#2456b3',
-        'tok-string': '#2c665e',
-        'result-value': '#202329',
+        bg: '#ffffff',
+        'bg-tint': '#f5f5f3',
+        heading: '#121211',
+        text: '#353532',
+        'text-muted': '#5c5c56',
+        accent: '#bf3b0a',
+        'accent-hover': '#9a2e06',
+        'accent-soft': '#f9efeb',
+        'code-bg': '#f5f5f3',
+        'code-head': '#ecebe7',
+        'code-text': '#1c1c1a',
+        'tok-keyword': '#bf3b0a',
+        'tok-string': '#0f6657',
+        'result-value': '#121211',
       },
     ],
     [
       'dark',
       {
-        bg: '#0f1115',
-        'bg-tint': '#12161c',
-        heading: '#f2f2f4',
-        text: '#d1d4d9',
-        'text-muted': '#afb5bf',
-        accent: '#8db5ff',
-        'accent-hover': '#afcbff',
-        'accent-soft': '#1f2633',
-        'code-bg': '#191d24',
-        'code-head': '#1f242d',
-        'code-text': '#e5e8ed',
-        'tok-keyword': '#8db5ff',
-        'tok-string': '#a0d5bd',
-        'result-value': '#f2f2f4',
+        bg: '#0c0c0b',
+        'bg-tint': '#141413',
+        heading: '#f5f5f3',
+        text: '#d4d4cf',
+        'text-muted': '#a6a69e',
+        accent: '#ff7a45',
+        'accent-hover': '#ff986e',
+        'accent-soft': '#261a15',
+        'code-bg': '#151513',
+        'code-head': '#1d1d1a',
+        'code-text': '#ecece8',
+        'tok-keyword': '#ff7a45',
+        'tok-string': '#64d8c0',
+        'result-value': '#f5f5f3',
       },
     ],
-  ])('ships static Atlas %s tokens for system/no-script rendering', (mode, expected) => {
+  ])('ships static Braun Caliper %s tokens for system/no-script rendering', (mode, expected) => {
     const source = mode === 'light' ? css : page;
     expect(rootTokens(source)).toMatchObject(expected);
     expect(page).toContain('<style media="(prefers-color-scheme: dark)" data-dark-theme>');
     expect(page).toContain(`content="${expected.bg}" media="(prefers-color-scheme: ${mode})"`);
   });
 
-  it('keeps code results neutral and callout borders in the chosen accent family', () => {
+  it('keeps code results neutral and callout borders in the production token system', () => {
     expect(css).toMatch(/\.code\s*\{\s*--result-value: var\(--code-text\)/);
     expect(css).toMatch(
-      /\.result b,[^{]+\{[^}]*color: var\(--result-value\)[^}]*font-weight: 650/s
+      /\.result b,[^{]+\{[^}]*color: var\(--result-value\)[^}]*font-weight: 600/s
     );
-    expect(css).toMatch(/\.callout\s*\{[^}]*--callout-line: var\(--accent-line\)/s);
+    expect(css).toMatch(/\.callout\s*\{[^}]*--callout-line: var\(--border\)/s);
     expect(page).not.toContain('--callout-line: rgba(45, 212, 191');
-    expect(page).toContain("fill='%232456b3'");
+    expect(page).toContain("fill='%23141413'");
   });
 
   it.each([
-    { saved: 'light', systemDark: true, theme: 'light', media: 'not all', color: '#fafbfc' },
-    { saved: 'dark', systemDark: false, theme: 'dark', media: 'all', color: '#0f1115' },
+    { saved: 'light', systemDark: true, theme: 'light', media: 'not all', color: '#ffffff' },
+    { saved: 'dark', systemDark: false, theme: 'dark', media: 'all', color: '#0c0c0b' },
     {
       saved: null,
       systemDark: false,
       theme: 'light',
       media: '(prefers-color-scheme: dark)',
-      color: '#fafbfc',
+      color: '#ffffff',
     },
     {
       saved: 'invalid',
       systemDark: true,
       theme: 'dark',
       media: '(prefers-color-scheme: dark)',
-      color: '#0f1115',
+      color: '#0c0c0b',
     },
     {
       saved: 'blocked',
       systemDark: true,
       theme: 'dark',
       media: '(prefers-color-scheme: dark)',
-      color: '#0f1115',
+      color: '#0c0c0b',
     },
   ])(
     'preserves the saved/system theme for $saved / system dark $systemDark',
@@ -258,7 +259,7 @@ function preview(
   const preference = new Map([['fluent-measures:theme', 'system']]);
   if (options.saved) preference.set('fluent-measures:palette', options.saved);
   const location = new URL(`file:///repo/.docs-preview/index.html${search}`);
-  const meta = { content: '#fafbfc' };
+  const meta = { content: '#ffffff' };
   const select = new Element();
   const status = new Element();
   const reset = new Element();
@@ -288,7 +289,7 @@ function preview(
     return action();
   };
   const applyTheme = (): void => {
-    meta.content = dataset.theme === 'dark' ? '#0f1115' : '#fafbfc';
+    meta.content = dataset.theme === 'dark' ? '#0c0c0b' : '#ffffff';
   };
   runInNewContext(script, {
     URL,
@@ -360,12 +361,13 @@ function preview(
 }
 
 describe('generated palette preview', () => {
-  it('defaults to Atlas with all ten families and Original available', () => {
+  it('defaults to Braun Caliper with all ten families and Original available', () => {
     const result = preview();
-    expect(result.dataset.palette).toBe('atlas');
+    expect(result.dataset.palette).toBe('braun');
     expect(result.colors.size).toBe(0);
-    expect(result.select.value).toBe('atlas');
+    expect(result.select.value).toBe('braun');
     expect(result.select.options.map(option => option.value)).toEqual([
+      'braun',
       'original',
       'tidal',
       'atlas',
@@ -378,13 +380,14 @@ describe('generated palette preview', () => {
       'glacier',
       'damson',
     ]);
-    expect(result.panel.innerHTML).toContain('Atlas (production default)');
+    expect(result.panel.innerHTML).toContain('Braun Caliper (production default)');
     expect(result.panel.innerHTML).toContain('aria-live="polite"');
     expect(result.insert).toHaveBeenCalledOnce();
   });
 
   it.each([
     ['tidal', '#07514d', '#67d8c5'],
+    ['atlas', '#2456b3', '#8db5ff'],
     ['iris', '#6842b5', '#bca4f4'],
     ['grove', '#286344', '#8ecba5'],
     ['vellum', '#765b42', '#d6bd98'],
@@ -432,10 +435,10 @@ describe('generated palette preview', () => {
   });
 
   it.each(['', 'unknown', '__proto__', 'constructor', '<script>'])(
-    'validates URL palette %s and falls back to Atlas',
+    'validates URL palette %s and falls back to Braun Caliper',
     name => {
       const result = preview(`?palette=${encodeURIComponent(name)}`, { saved: 'grove' });
-      expect(result.dataset.palette).toBe('atlas');
+      expect(result.dataset.palette).toBe('braun');
       expect(result.colors.size).toBe(0);
     }
   );
@@ -443,23 +446,23 @@ describe('generated palette preview', () => {
   it('uses a saved palette unless the URL supplies a valid choice', () => {
     expect(preview('', { saved: 'grove' }).dataset.palette).toBe('grove');
     expect(preview('?palette=kiln', { saved: 'grove' }).dataset.palette).toBe('kiln');
-    expect(preview('', { saved: 'invalid' }).dataset.palette).toBe('atlas');
+    expect(preview('', { saved: 'invalid' }).dataset.palette).toBe('braun');
   });
 
-  it('resets to static Atlas and clears only the palette preference and overrides', () => {
+  it('resets to static Braun Caliper and clears only the palette preference and overrides', () => {
     const result = preview('?palette=original#usage');
     result.choose('original');
     expect(result.preference.get('fluent-measures:palette')).toBe('original');
     result.changeTheme();
     result.reset();
-    expect(result.dataset).toMatchObject({ palette: 'atlas', theme: 'dark', themePref: 'dark' });
+    expect(result.dataset).toMatchObject({ palette: 'braun', theme: 'dark', themePref: 'dark' });
     expect(result.colors.size).toBe(0);
-    expect(result.meta.content).toBe('#0f1115');
+    expect(result.meta.content).toBe('#0c0c0b');
     expect(result.preference.has('fluent-measures:palette')).toBe(false);
     expect(result.preference.get('fluent-measures:theme')).toBe('system');
-    expect(result.location.href).toBe('file:///repo/.docs-preview/index.html?palette=atlas#usage');
-    expect(result.select.value).toBe('atlas');
-    expect(result.status.textContent).toBe('Reset to Atlas.');
+    expect(result.location.href).toBe('file:///repo/.docs-preview/index.html?palette=braun#usage');
+    expect(result.select.value).toBe('braun');
+    expect(result.status.textContent).toBe('Reset to Braun Caliper.');
   });
 
   it('keeps URL selection and reset usable when storage is blocked', () => {
@@ -468,9 +471,9 @@ describe('generated palette preview', () => {
     result.choose('original');
     expect(result.colors.get('--accent')).toBe('#0f766e');
     result.reset();
-    expect(result.dataset.palette).toBe('atlas');
+    expect(result.dataset.palette).toBe('braun');
     expect(result.colors.size).toBe(0);
-    expect(preview('', { storageBlocked: true }).dataset.palette).toBe('atlas');
+    expect(preview('', { storageBlocked: true }).dataset.palette).toBe('braun');
   });
 
   it('copies a repeatable palette and anchor link independently of theme', async () => {

@@ -125,19 +125,28 @@ function returnsBlocks(html: string): {
   calls: { name: string; input: string; options?: ParseOptions }[];
   summaries: { key: string; shown: Shown }[];
 }[] {
-  const pieces = html.split('<div class="returns">');
-  return pieces.slice(1).map((block, index) => {
-    const code = [...pieces[index].matchAll(/<code class="language-[\w-]+">([\s\S]*?)<\/code>/g)];
+  const pieces = html.split(/(<div class="returns(?:\s[^"]*)?"[^>]*>)/);
+  const blocks: {
+    calls: { name: string; input: string; options?: ParseOptions }[];
+    summaries: { key: string; shown: Shown }[];
+  }[] = [];
+  for (let i = 1; i < pieces.length; i += 2) {
+    const openingTag = pieces[i];
+    if (openingTag.includes('data-full-object')) continue;
+    const before = pieces[i - 1];
+    const block = pieces[i + 1];
+    const code = [...before.matchAll(/<code class="language-[\w-]+">([\s\S]*?)<\/code>/g)];
     const summary =
       /<p class="summary">\s*(?:<span class="summary-key">([^<]*)<\/span>)?<span( class="is-null")?>([\s\S]*?)<\/span\s*>/g;
-    return {
+    blocks.push({
       calls: code.flatMap(([, text]) => callsIn(text)),
       summaries: [...block.matchAll(summary)].map(([, key, isNull, result]) => ({
         key: key ?? '',
         shown: shownResult(Boolean(isNull), result),
       })),
-    };
-  });
+    });
+  }
+  return blocks;
 }
 
 const rows = heroRows(page);
