@@ -42,10 +42,12 @@ const temporary = (): string => {
   return directory;
 };
 
-/** The files of this checkout, without dependencies, build output and reports. */
-function repositoryFiles(directory = '.'): string[] {
+/**
+ * The files of the checkout at `root`, without dependencies, build output and reports. Paths are
+ * relative to `root`.
+ */
+function repositoryFiles(directory = '.', root = '.'): string[] {
   const ignored = new Set([
-    '.git',
     'node_modules',
     'dist',
     'build',
@@ -55,17 +57,22 @@ function repositoryFiles(directory = '.'): string[] {
     'docs-shots',
     '.docs-preview',
   ]);
-  return readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
+  return readdirSync(join(root, directory), { withFileTypes: true }).flatMap(entry => {
+    // .git is a directory in a standalone clone and a file in a linked worktree.
+    if (entry.name === '.git') return [];
     const path = directory === '.' ? entry.name : join(directory, entry.name);
-    if (entry.isDirectory()) return ignored.has(entry.name) ? [] : repositoryFiles(path);
+    if (entry.isDirectory()) return ignored.has(entry.name) ? [] : repositoryFiles(path, root);
     return entry.isFile() ? [path] : [];
   });
 }
 
-/** The files of this checkout that git pathspecs select, from an empty copy of each file. */
-function selected(pathspecs: string[]): Set<string> {
+/**
+ * The files of the checkout at `root` that git pathspecs select, from an empty copy of each
+ * file.
+ */
+function selected(pathspecs: string[], root = '.'): Set<string> {
   const directory = temporary();
-  for (const file of repositoryFiles()) {
+  for (const file of repositoryFiles('.', root)) {
     mkdirSync(join(directory, dirname(file)), { recursive: true });
     writeFileSync(join(directory, file), '');
   }
@@ -84,6 +91,43 @@ const matching = (files: string[], patterns: string[]): string[] =>
       patterns.some(pattern => !pattern.startsWith('!') && matchesGlob(file, pattern)) &&
       !patterns.some(pattern => pattern.startsWith('!') && matchesGlob(file, pattern.slice(1)))
   );
+
+// In a standalone clone .git is a directory. In a linked worktree, as `git worktree add` makes it,
+// .git is a file that names the repository. Neither is a file of the checkout.
+describe('the copy of a checkout that selects job inputs', () => {
+  const standalone = (): string => {
+    const clone = temporary();
+    git(clone, 'init', '--quiet', '--initial-branch', 'main');
+    git(clone, 'config', 'user.email', 'test@example.com');
+    git(clone, 'config', 'user.name', 'Test');
+    git(clone, 'config', 'commit.gpgsign', 'false');
+    for (const file of ['src/parse.ts', 'docs/site.css', 'notes.txt']) {
+      mkdirSync(join(clone, dirname(file)), { recursive: true });
+      writeFileSync(join(clone, file), 'base\n');
+    }
+    git(clone, 'add', '--all');
+    git(clone, 'commit', '--quiet', '-m', 'base');
+    return clone;
+  };
+  const linked = (): string => {
+    const worktree = join(temporary(), 'linked');
+    git(standalone(), 'worktree', 'add', '--quiet', '--detach', worktree);
+    return worktree;
+  };
+
+  it.each([
+    ['a standalone clone', standalone],
+    ['a linked worktree', linked],
+  ])('leaves out .git in %s', (_, checkout) => {
+    const root = checkout();
+    expect(repositoryFiles('.', root).sort()).toEqual([
+      'docs/site.css',
+      'notes.txt',
+      'src/parse.ts',
+    ]);
+    expect(selected(['src', 'notes.txt'], root)).toEqual(new Set(['notes.txt', 'src/parse.ts']));
+  });
+});
 
 describe('the inputs of the mutation and docs jobs', () => {
   it('gates the mutation and docs jobs on the changes job, before their steps start', () => {
