@@ -48,7 +48,6 @@ const temporary = (): string => {
  */
 function repositoryFiles(directory = '.', root = '.'): string[] {
   const ignored = new Set([
-    '.git',
     'node_modules',
     'dist',
     'build',
@@ -59,10 +58,10 @@ function repositoryFiles(directory = '.', root = '.'): string[] {
     '.docs-preview',
   ]);
   return readdirSync(join(root, directory), { withFileTypes: true }).flatMap(entry => {
-    // A linked worktree's .git is a file, so leave out each ignored name, whatever its type.
-    if (ignored.has(entry.name)) return [];
+    // .git is a directory in a standalone clone and a file in a linked worktree.
+    if (entry.name === '.git') return [];
     const path = directory === '.' ? entry.name : join(directory, entry.name);
-    if (entry.isDirectory()) return repositoryFiles(path, root);
+    if (entry.isDirectory()) return ignored.has(entry.name) ? [] : repositoryFiles(path, root);
     return entry.isFile() ? [path] : [];
   });
 }
@@ -96,7 +95,7 @@ const matching = (files: string[], patterns: string[]): string[] =>
 // In a standalone clone .git is a directory. In a linked worktree, as `git worktree add` makes it,
 // .git is a file that names the repository. Neither is a file of the checkout.
 describe('the copy of a checkout that selects job inputs', () => {
-  const checkouts = (): Record<string, string> => {
+  const standalone = (): string => {
     const clone = temporary();
     git(clone, 'init', '--quiet', '--initial-branch', 'main');
     git(clone, 'config', 'user.email', 'test@example.com');
@@ -108,13 +107,19 @@ describe('the copy of a checkout that selects job inputs', () => {
     }
     git(clone, 'add', '--all');
     git(clone, 'commit', '--quiet', '-m', 'base');
+    return clone;
+  };
+  const linked = (): string => {
     const worktree = join(temporary(), 'linked');
-    git(clone, 'worktree', 'add', '--quiet', '--detach', worktree);
-    return { 'a standalone clone': clone, 'a linked worktree': worktree };
+    git(standalone(), 'worktree', 'add', '--quiet', '--detach', worktree);
+    return worktree;
   };
 
-  it.each(['a standalone clone', 'a linked worktree'])('leaves out .git in %s', name => {
-    const root = checkouts()[name];
+  it.each([
+    ['a standalone clone', standalone],
+    ['a linked worktree', linked],
+  ])('leaves out .git in %s', (_, checkout) => {
+    const root = checkout();
     expect(repositoryFiles('.', root).sort()).toEqual([
       'docs/site.css',
       'notes.txt',
