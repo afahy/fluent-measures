@@ -15,12 +15,13 @@ The audit does not waive the following manual checks just because Lighthouse pas
 
 ## Review of the current page
 
-Reviewed on 6 November 2026 with Atlas, using the page's markup, styles and Chrome 158.
+Reviewed on 24 November 2026 with Braun Caliper, using the page's markup, styles and Chrome 158.
 `pnpm docs:audit` passed all 46 axe scans with zero violations. Each of its three mobile and
 three desktop Lighthouse samples scored 100 for performance, accessibility, best practices
 and SEO. `pnpm docs:sweep` passed from 320 to 1600 CSS pixels in both themes, including its
-keyboard and no-script navigation checks. Axe's remaining manual-review items are gradient
-contrast and table header associations, discussed below. Reports are in `reports/docs-audit/`.
+keyboard and no-script navigation checks. Axe's remaining manual-review items are hero
+contrast over the ruler-tick seam pseudo-element and table header associations, discussed
+below. Reports are in `reports/docs-audit/`.
 
 - **Text and non-text content (1.1.1, 1.3.1, 1.3.2):** examples, units and results are text.
   Decorative SVGs are hidden from assistive technology. Controls have names. Headings and
@@ -28,13 +29,11 @@ contrast and table header associations, discussed below. Reports are in `reports
   separate Height/Weight body groups with `scope="rowgroup"`. Axe flags this table for review
   because the Unit column contains row headers rather than data cells; those cells are
   intentionally headers. Confirm their associations in a screen reader, as described below.
-- **Contrast (1.4.3):** axe checks the solid surfaces in both themes. It cannot evaluate the
-  hero's gradient automatically. Using the WCAG relative-luminance calculation at the two
-  gradient endpoints, the minimum ratios for heading, body and muted text are respectively
-  13.18:1, 9.46:1 and 5.25:1 in Atlas light; 13.58:1, 10.21:1 and 7.36:1 in Atlas dark.
-  The endpoints are the opaque `--accent-soft` and `--bg-tint` tokens: `#e7ebf3` / `#f2f4f8`
-  in light and `#1f2633` / `#12161c` in dark. All exceed 4.5:1. These calculations supplement
-  axe's gradient manual-review item. Recalculate if colors, opacity or gradient layers change.
+- **Contrast (1.4.3):** axe checks the solid surfaces in both themes, including the solid
+  `--bg-tint` hero surface (`#f5f5f3` in light, `#141413` in dark). Using the WCAG
+  relative-luminance calculation on `--bg-tint`, heading, body and muted text ratios are
+  17.25:1, 11.22:1 and 6.15:1 in light, and 16.95:1, 12.45:1 and 7.54:1 in dark. All exceed
+  4.5:1. Recalculate if surface or text tokens change.
 - **Color and controls (1.4.1, 1.4.11):** result text names the value and unit or says `null`;
   color is not its only distinction. Selected tabs use an underline and selected state.
   Links in prose are underlined, and keyboard focus has an outline in both themes. Review

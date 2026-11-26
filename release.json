@@ -1,6 +1,6 @@
 {
-  "version": "0.3.0",
-  "revision": "cb98f756d473517d4c9e9347d27b4142968a83b9",
-  "integrity": "sha512-pXa9Pm7tANrUQG8HYxwTuHxaoda1uDB1t3vu8pkghscFyL7wYDUFMAMjdd+Zc8RrZa6Jg46yk3nfbIeT1aVJpg==",
+  "version": "0.3.1",
+  "revision": "89c9a2b437c7c93e5738cfc89303bee6647b3eef",
+  "integrity": "sha512-ChKDWTcS6MKIaNXBRiAOgqKmY+K45dUxxTbJtDc3Xpu6s36PS6jsSft3LcoH1aYxqd+1USbTotBaa9xY1ry0Xw==",
   "verification": "reproduced-package-and-release-examples"
 }

@@ -1,14 +1,14 @@
 # fluent-measures
 
-Documented package: **@afahy/fluent-measures@0.3.0**.
-Source revision: [cb98f756d473517d4c9e9347d27b4142968a83b9](https://github.com/afahy/fluent-measures/tree/cb98f756d473517d4c9e9347d27b4142968a83b9).
+Documented package: **@afahy/fluent-measures@0.3.1**.
+Source revision: [89c9a2b437c7c93e5738cfc89303bee6647b3eef](https://github.com/afahy/fluent-measures/tree/89c9a2b437c7c93e5738cfc89303bee6647b3eef).
 
-[Documentation](https://afahy.github.io/fluent-measures/versions/0.3.0/) · [Markdown reference](https://afahy.github.io/fluent-measures/versions/0.3.0/README.md) · [Parsing rules](https://afahy.github.io/fluent-measures/versions/0.3.0/PARSING.md) · [Agent index (llms.txt)](https://afahy.github.io/fluent-measures/versions/0.3.0/llms.txt)
+[Documentation](https://afahy.github.io/fluent-measures/versions/0.3.1/) · [Markdown reference](https://afahy.github.io/fluent-measures/versions/0.3.1/README.md) · [Parsing rules](https://afahy.github.io/fluent-measures/versions/0.3.1/PARSING.md) · [Agent index (llms.txt)](https://afahy.github.io/fluent-measures/versions/0.3.1/llms.txt)
 
 [![CI](https://github.com/afahy/fluent-measures/actions/workflows/ci.yml/badge.svg)](https://github.com/afahy/fluent-measures/actions/workflows/ci.yml)
 [![npm version](https://badge.fury.io/js/%40afahy%2Ffluent-measures.svg)](https://badge.fury.io/js/%40afahy%2Ffluent-measures)
 [![Bundle Size](https://img.shields.io/bundlephobia/minzip/@afahy/fluent-measures)](https://bundlephobia.com/package/@afahy/fluent-measures)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/afahy/fluent-measures/blob/cb98f756d473517d4c9e9347d27b4142968a83b9/LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/afahy/fluent-measures/blob/89c9a2b437c7c93e5738cfc89303bee6647b3eef/LICENSE)
 
 A TypeScript library that reads a height or a weight from everyday text, such as `5' 11"` or
 `eighty kilograms`, and returns its value, unit and measurement type.
@@ -17,9 +17,9 @@ Use it to read measurements that people type, for example in health apps, fitnes
 web forms. The result is `null` when the complete entry is unsupported, incomplete or ambiguous.
 Your app can then ask the person again.
 
-[Documentation](https://afahy.github.io/fluent-measures/versions/0.3.0/) ·
-[Markdown reference](https://afahy.github.io/fluent-measures/versions/0.3.0/README.md) ·
-[Agent index (llms.txt)](https://afahy.github.io/fluent-measures/versions/0.3.0/llms.txt)
+[Documentation](https://afahy.github.io/fluent-measures/versions/0.3.1/) ·
+[Markdown reference](https://afahy.github.io/fluent-measures/versions/0.3.1/README.md) ·
+[Agent index (llms.txt)](https://afahy.github.io/fluent-measures/versions/0.3.1/llms.txt)
 
 
 ## Features
@@ -38,7 +38,7 @@ Your app can then ask the person again.
 ## Installation
 
 ```bash
-npm install @afahy/fluent-measures@0.3.0
+npm install @afahy/fluent-measures@0.3.1
 ```
 
 You can also use `yarn add` or `pnpm add`.
@@ -168,7 +168,8 @@ applies only to an entire unwrapped number, including supported fractions or num
 `fuzziness` is retired too. Any defined value throws, including `0` and `Infinity`; an explicitly
 `undefined` property is absent. Replace `fuzziness: 1` or `2` with `fuzzy: true`, and remove
 `fuzziness: 0`. `fuzzy` reads one spelling error, so most unit names with two errors return
-`null`. PARSING.md lists the few reviewed typos that `fuzzy` reads beyond that, such as `kilgrm`.
+`null`. PARSING.md lists the few reviewed typos that `fuzzy` reads beyond that, such as `kilgrm`
+and the number word `fourty`.
 
 #### `ParsedValue`
 
@@ -196,7 +197,7 @@ interface ParsedValue {
 
 ## Supported units
 
-<!-- cspell:ignore centimetre centimetres kilogramme kilogrammes kilgrm -->
+<!-- cspell:ignore centimetre centimetres kilogramme kilogrammes kilgrm fourty -->
 
 ### Height
 
@@ -211,7 +212,7 @@ interface ParsedValue {
 
 Most units can also come before their number, as in `kg 70`. The short forms `in` and `m` can
 come first only as a label, because before a number they are usually ordinary words.
-[PARSING.md](https://afahy.github.io/fluent-measures/versions/0.3.0/PARSING.md#units-before-a-number)
+[PARSING.md](https://afahy.github.io/fluent-measures/versions/0.3.1/PARSING.md#units-before-a-number)
 says what counts as a label.
 
 ## Limits
@@ -245,7 +246,7 @@ Send the current field value to the parser. Keep ages, dates, earlier readings a
 application metadata outside that value. To display an alternate unit, convert the selected
 measurement instead of submitting both representations.
 
-[PARSING.md](https://afahy.github.io/fluent-measures/versions/0.3.0/PARSING.md) gives the complete
+[PARSING.md](https://afahy.github.io/fluent-measures/versions/0.3.1/PARSING.md) gives the complete
 entry grammar, the words that can surround a measurement, and examples. With `fuzzy: true`, an
 ordinary word one letter from a unit name reads as that unit, such as `5 feat` as 5 ft; fuzzy
 matching applies only within that grammar.
@@ -267,18 +268,18 @@ If `parseMeasurement` returns `null`, look for these causes:
 
 ## Contributing
 
-See [CONTRIBUTING.md](https://github.com/afahy/fluent-measures/blob/cb98f756d473517d4c9e9347d27b4142968a83b9/CONTRIBUTING.md).
+See [CONTRIBUTING.md](https://github.com/afahy/fluent-measures/blob/89c9a2b437c7c93e5738cfc89303bee6647b3eef/CONTRIBUTING.md).
 
 ## License
 
 This project uses the MIT License. See the
-[LICENSE](https://github.com/afahy/fluent-measures/blob/cb98f756d473517d4c9e9347d27b4142968a83b9/LICENSE) file.
+[LICENSE](https://github.com/afahy/fluent-measures/blob/89c9a2b437c7c93e5738cfc89303bee6647b3eef/LICENSE) file.
 
 © 2025 Adam Fahy (afahy)
 
 ## Documentation for your version
 
-These documents describe **@afahy/fluent-measures@0.3.0**. The [stable site](https://afahy.github.io/fluent-measures/) identifies its documented release; npm can have a newer release while documentation is being verified.
+These documents describe **@afahy/fluent-measures@0.3.1**. The [stable site](https://afahy.github.io/fluent-measures/) identifies its documented release; npm can have a newer release while documentation is being verified.
 
 Find your installed version with `npm ls @afahy/fluent-measures` (or `pnpm list` / `yarn why`). Use the matching entry in the [verified versions](https://afahy.github.io/fluent-measures/versions.json). Only complete verified sets are listed. Each version's URLs retain their content across later deployments.
 

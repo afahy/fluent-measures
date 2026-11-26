@@ -1,5 +1,5 @@
 {
-  "current": "0.3.0",
+  "current": "0.3.1",
   "releases": {
     "0.2.0": {
       "version": "0.2.0",
@@ -38,6 +38,30 @@
         "site.css": "0d55536679673028e467884eb051db97c41c8e40b40197452baefcb8bfcd085d",
         "tailwind.config.cjs": "696e933205a491ab4f81d30fb8af32de51491381c5292f537023007b0cedad9c",
         "tailwind.css": "ab4ee5f79d8b3d09f7b4ac1d8281f991fe27c83301abf8a1dad735700776f5dd"
+      }
+    },
+    "0.3.1": {
+      "version": "0.3.1",
+      "revision": "89c9a2b437c7c93e5738cfc89303bee6647b3eef",
+      "integrity": "sha512-ChKDWTcS6MKIaNXBRiAOgqKmY+K45dUxxTbJtDc3Xpu6s36PS6jsSft3LcoH1aYxqd+1USbTotBaa9xY1ry0Xw==",
+      "verification": "reproduced-package-and-release-examples",
+      "files": {
+        "PARSING.md": "28cdba8d60c720b84a06764417ad1ec5974327b4996902995855ab16f2372a8f",
+        "README.md": "bb382f14a12485ff6657061446416e50aa30762dcb05319b6f7be1924376b418",
+        "accessibility.md": "72c963d84953fae8c8bab0b260009f2fd99bd540ec716a606ae83fd0e441669c",
+        "fonts/OFL.txt": "37784b44044a4ffd9256702b7c0982c37e5c8887ba90c6dca0479aea93dc898d",
+        "fonts/ibm-plex-mono-400-latin.woff2": "7ced53420784c93cecccb7c27237594f0e41e5a7990581565f0aef8eda9e9d2f",
+        "fonts/ibm-plex-mono-400i-latin.woff2": "8d151e9318acda67b8177ea35aa3f9e35f030aaa3c3c09b5028c32891a881548",
+        "fonts/ibm-plex-mono-500-latin.woff2": "6e618344335cc436ffd25deba4f4cb5a60ca6c3a4832e67f236ca43922f74eea",
+        "fonts/ibm-plex-mono-600-latin.woff2": "cecb8f0bc58b996a828bc0a23e2814e4acec33f0f531adf565c0248e242061e1",
+        "fonts/ibm-plex-sans-latin.woff2": "e2291e842cf5af167122a22881a740c7f2dda7716f1e8cd76680264f4a859470",
+        "index.html": "06a49e78df757d3a4b027d4b0fb6863c057bcbacc60024a878a9a4b576bcab2e",
+        "llms.txt": "6aeca6704ccb44bdd8cd25f5602901bcecadf797a1eb735c53dde11259811322",
+        "og.png": "a4a54efe7c39905e12b62b177224bcfe7fcd794126820203e29096e5bb6973ac",
+        "release.json": "9a272cf85d34b4ea7e17e0ab3eb19da8cf1f131bbd3af32169a6bca2c8eff23d",
+        "site.css": "0dc9f063c105b8ef2feda8ce8a77d3d5565a773bb393f0f1a94fac17c5f3c0ca",
+        "tailwind.config.cjs": "696e933205a491ab4f81d30fb8af32de51491381c5292f537023007b0cedad9c",
+        "tailwind.css": "b260ea61d89841d4dc626d3831ecd92b3901e84f45ff920ab47766967b62a481"
       }
     }
   }

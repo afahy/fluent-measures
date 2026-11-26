@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" id="top">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -9,15 +9,15 @@
       content="A JavaScript and TypeScript library that parses height and weight text, converts metric and imperial units, and reads numbers in words. No dependencies."
     />
     <link rel="canonical" href="https://afahy.github.io/fluent-measures/" />
-    <link rel="alternate" type="text/markdown" href="https://afahy.github.io/fluent-measures/versions/0.3.0/README.md" title="View Markdown" />
-    <link rel="describedby" type="text/plain" href="https://afahy.github.io/fluent-measures/versions/0.3.0/llms.txt" title="Agent index" />
-    <meta name="theme-color" content="#fafbfc" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)" />
+    <link rel="alternate" type="text/markdown" href="https://afahy.github.io/fluent-measures/versions/0.3.1/README.md" title="View Markdown" />
+    <link rel="describedby" type="text/plain" href="https://afahy.github.io/fluent-measures/versions/0.3.1/llms.txt" title="Agent index" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0c0c0b" media="(prefers-color-scheme: dark)" />
     <meta name="color-scheme" content="light dark" />
     <link
       rel="icon"
       type="image/svg+xml"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-6 -6 36 36' fill='none' stroke='%23fff' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='-6' y='-6' width='36' height='36' rx='9' fill='%232456b3' stroke='none'/%3E%3Cpath d='M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z'/%3E%3Cpath d='m14.5 12.5 2-2m-5-1 2-2m-5-1 2-2m7 11 2-2'/%3E%3C/svg%3E"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Crect width='24' height='24' rx='5' fill='%23141413'/%3E%3Cpath d='M4 18h16' stroke='%23f5f5f3' stroke-width='1.8' stroke-linecap='square'/%3E%3Cpath d='M6 8v10' stroke='%23ff7a45' stroke-width='2.2' stroke-linecap='square'/%3E%3Cpath d='M10.5 13v5M15 10.5V18M19.5 13v5' stroke='%23f5f5f3' stroke-width='1.8' stroke-linecap='square'/%3E%3C/svg%3E"
     />
 
     <meta property="og:type" content="website" />
@@ -31,7 +31,7 @@
       content="A JavaScript and TypeScript library that parses height and weight text, converts metric and imperial units, and reads numbers in words. No dependencies."
     />
     <meta property="og:url" content="https://afahy.github.io/fluent-measures/" />
-    <meta property="og:image" content="https://afahy.github.io/fluent-measures/versions/0.3.0/og.png" />
+    <meta property="og:image" content="https://afahy.github.io/fluent-measures/versions/0.3.1/og.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta
@@ -40,7 +40,20 @@
     />
     <meta name="twitter:card" content="summary_large_image" />
 
-    <link rel="preload" href="fonts/geist-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link
+      rel="preload"
+      href="fonts/ibm-plex-sans-latin.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="fonts/ibm-plex-mono-400-latin.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
 
     <!--
       The page's styles. tailwind.config.cjs builds this file from site.css; CONTRIBUTING.md says
@@ -56,58 +69,53 @@
     <style media="(prefers-color-scheme: dark)" data-dark-theme>
       :root {
         color-scheme: dark;
-        --bg: #0f1115;
-        --bg-tint: #12161c;
-        --surface: #15181e;
-        --surface-muted: #1b1f27;
-        --border: #303640;
-        --border-strong: #464c59;
-        --border-control: #7c8795;
-        --heading: #f2f2f4;
-        --result-value: #f2f2f4;
-        --text: #d1d4d9;
-        --text-muted: #afb5bf;
-        --accent: #8db5ff;
-        --accent-hover: #afcbff;
-        --accent-soft: #1f2633;
-        --accent-line: #8db5ff88;
-        --on-accent: #16191e;
-        --inline-code-bg: #212730;
-        --inline-code-text: #e5e8ed;
-        --header-bg: #0f1115;
+        --bg: #0c0c0b;
+        --bg-tint: #141413;
+        --surface: #181816;
+        --surface-muted: #21211e;
+        --border: #2e2e2a;
+        --border-strong: #4e4e47;
+        --border-control: #7d7d74;
+        --heading: #f5f5f3;
+        --result-value: #f5f5f3;
+        --text: #d4d4cf;
+        --text-muted: #a6a69e;
+        --ink-surface: #f5f5f3;
+        --ink-surface-hover: #dcdcd6;
+        --on-ink: #121211;
+        --on-ink-accent: #bf3b0a;
+        --accent: #ff7a45;
+        --accent-hover: #ff986e;
+        --accent-soft: #261a15;
+        --accent-line: #ff7a4588;
+        --on-accent: #121211;
+        --inline-code-bg: rgba(255, 255, 255, 0.055);
+        --inline-code-text: #f5f5f3;
+        --header-bg: #0c0c0b;
         --shadow-card: 0 1px 2px #00000050, 0 12px 32px -16px #00000090;
-        --null: #d7bbdf;
-        --null-soft: #d7bbdf0e;
+        --null: #96aac7;
+        --null-soft: #96aac712;
         --error: #ffb3b0;
         --error-line: #ffb3b066;
         --error-soft: #ffb3b010;
 
-        --code-bg: #191d24;
-        --code-head: #1f242d;
-        --code-border: #373d49;
-        --code-divider: #323843;
-        --code-text: #e5e8ed;
-        --code-muted: #aeb7c2;
-        --code-accent: #8db5ff;
-        --code-accent-line: #8db5ff88;
-        --code-null: #d7bbdf;
+        --code-bg: #151513;
+        --code-head: #1d1d1a;
+        --code-border: #31312d;
+        --code-divider: #292925;
+        --code-text: #ecece8;
+        --code-muted: #a8a8a0;
+        --code-accent: #ff7a45;
+        --code-accent-line: #ff7a4588;
+        --code-null: #96aac7;
         --code-hover: #ffffff0c;
         --code-shadow: 0 8px 20px -8px #00000090;
-        --tok-comment: #aeb7c2;
-        --tok-keyword: #8db5ff;
-        --tok-string: #a0d5bd;
-        --tok-number: #e6b884;
-        --tok-property: #ccd6df;
-        --tok-punctuation: #aeb7c2;
-      }
-
-      .site-header {
-        backdrop-filter: saturate(1.4) blur(12px);
-        -webkit-backdrop-filter: saturate(1.4) blur(12px);
-      }
-
-      .site-header.is-scrolled {
-        box-shadow: 0 8px 20px -12px rgba(0, 0, 0, 0.7);
+        --tok-comment: #a8a8a0;
+        --tok-keyword: #ff7a45;
+        --tok-string: #64d8c0;
+        --tok-number: #8fb8ff;
+        --tok-property: #d4d6d0;
+        --tok-punctuation: #a8a8a0;
       }
 
       .page-scrim {
@@ -142,7 +150,7 @@
           darkSheet.media =
             choice === 'system' ? '(prefers-color-scheme: dark)' : dark ? 'all' : 'not all';
           document.querySelectorAll('meta[name="theme-color"]').forEach(meta => {
-            meta.content = dark ? '#0f1115' : '#fafbfc';
+            meta.content = dark ? '#0c0c0b' : '#ffffff';
           });
         };
         apply();
@@ -150,8 +158,8 @@
         window.fluentMeasuresTheme = apply;
       })();
     </script>
-  <meta name="docs-source-revision" content="cb98f756d473517d4c9e9347d27b4142968a83b9" />
-<meta name="docs-package-version" content="0.3.0" />
+  <meta name="docs-source-revision" content="89c9a2b437c7c93e5738cfc89303bee6647b3eef" />
+<meta name="docs-package-version" content="0.3.1" />
 <style data-release-layout>
 /* Exact-version install commands wrap visually, without changing the copied shell command. */
 .code pre:has(.code-cmd) { white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -163,31 +171,19 @@
     <a class="skip-link skip-navigation" href="#page-navigation">Skip to page navigation</a>
 
     <svg class="sprite" aria-hidden="true">
-      <symbol id="i-ruler" viewBox="0 0 24 24">
+      <symbol id="i-ruler" viewBox="0 0 16 16">
+        <path d="M2 12.5H14" stroke-width="1.35" stroke-linecap="square" />
         <path
-          d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z"
+          d="M3.5 5V12.5"
+          stroke="var(--on-ink-accent)"
+          stroke-width="1.65"
+          stroke-linecap="square"
         />
-        <path d="m14.5 12.5 2-2" />
-        <path d="m11.5 9.5 2-2" />
-        <path d="m8.5 6.5 2-2" />
-        <path d="m17.5 15.5 2-2" />
-      </symbol>
-      <symbol id="i-measure" viewBox="0 0 24 24">
-        <path d="M2 8V4" />
-        <path d="M22 6H2" />
-        <path d="M22 8V4" />
-        <rect x="2" y="12" width="20" height="8" rx="2" />
-        <path d="M6 15v-3" />
-        <path d="M10 15v-3" />
-        <path d="M14 15v-3" />
-        <path d="M18 15v-3" />
-      </symbol>
-      <symbol id="i-numbers" viewBox="0 0 24 24">
-        <circle cx="7" cy="12" r="3" />
-        <path d="M10 9v6" />
-        <circle cx="17" cy="12" r="3" />
-        <path d="M14 7v8" />
-        <path d="M22 17v1c0 .5-.5 1-1 1H3c-.5 0-1-.5-1-1v-1" />
+        <path
+          d="M6.8 8.5V12.5M10.1 6.75V12.5M13.4 8.5V12.5"
+          stroke-width="1.35"
+          stroke-linecap="square"
+        />
       </symbol>
       <symbol id="i-chevron" viewBox="0 0 24 24">
         <path d="m6 9 6 6 6-6" />
@@ -199,14 +195,6 @@
         <path d="M8 12h13" />
         <path d="M8 18h13" />
         <path d="M8 6h13" />
-      </symbol>
-      <symbol id="i-package" viewBox="0 0 24 24">
-        <path
-          d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"
-        />
-        <path d="M12 22V12" />
-        <path d="m3.3 7 7.7 4.73a2 2 0 0 0 2 0L20.7 7" />
-        <path d="m7.5 4.27 9 5.15" />
       </symbol>
       <symbol id="i-tag" viewBox="0 0 24 24">
         <path
@@ -226,12 +214,6 @@
       <symbol id="i-external" viewBox="0 0 24 24">
         <path d="M7 7h10v10" />
         <path d="M7 17 17 7" />
-      </symbol>
-      <symbol id="i-pen" viewBox="0 0 24 24">
-        <path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-        <path
-          d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"
-        />
       </symbol>
       <symbol id="i-copy" viewBox="0 0 24 24">
         <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
@@ -306,7 +288,7 @@
             <li><a href="#install">Install</a></li>
             <li><a href="#usage">Usage</a></li>
             <li><a href="#api">API</a></li>
-            <li><a href="#units">Supported units</a></li>
+            <li><a href="#units">Units</a></li>
             <li><a href="#limits">Limits</a></li>
             <li><a href="#troubleshooting">Troubleshooting</a></li>
           </ul>
@@ -406,7 +388,7 @@
                       </li>
                     </ul>
                   </li>
-                  <li><a href="#units">Supported units</a></li>
+                  <li><a href="#units">Units</a></li>
                   <li><a href="#limits">Limits</a></li>
                   <li><a href="#troubleshooting">Troubleshooting</a></li>
                 </ul>
@@ -435,7 +417,22 @@
             aria-label="Color theme: System. Switch to Dark."
             hidden
           >
-            <svg class="icon" aria-hidden="true"><use href="#i-monitor" /></svg>
+            <span class="theme-single" aria-hidden="true">
+              <span class="theme-pos">
+                <svg class="icon theme-icon"><use href="#i-monitor" /></svg>
+              </span>
+            </span>
+            <span class="theme-switch" aria-hidden="true">
+              <span class="theme-pos" data-pos="light" title="Light theme">
+                <svg class="icon"><use href="#i-sun" /></svg>
+              </span>
+              <span class="theme-pos" data-pos="system" title="System theme">
+                <svg class="icon"><use href="#i-monitor" /></svg>
+              </span>
+              <span class="theme-pos" data-pos="dark" title="Dark theme">
+                <svg class="icon"><use href="#i-moon" /></svg>
+              </span>
+            </span>
           </button>
         </div>
       </div>
@@ -443,65 +440,52 @@
     <div class="page-scrim" data-page-scrim hidden></div>
 
     <main id="main">
-      <div class="hero" id="top">
+      <div class="hero">
         <div class="container">
-          <div class="hero-grid">
-            <div>
-              <h1 class="hero-title">
-                Parse <span class="title-long">everyday </span>height and weight text into
-                structured data
-              </h1>
+          <div class="hero-stack">
+            <div class="hero-lead">
+              <h1 class="hero-title">Parse height and weight text into structured data</h1>
               <p class="hero-intro">
-                <span class="intro-long"
-                  >A JavaScript and TypeScript library for health apps, fitness trackers and web
-                  forms. It reads metric and imperial units, and numbers in digits or in words, as
-                  in <strong>5' 11"</strong> or <strong>five feet eleven inches</strong>.</span
-                ><span class="intro-short"
-                  >A JavaScript and TypeScript library for input like <strong>5' 11"</strong> or
-                  <strong>five feet eleven inches</strong>.</span
-                >
+                Use this TypeScript parser in forms and health apps. It reads metric and imperial
+                units in digits or words, such as <strong>5' 11"</strong> or
+                <strong>five feet eleven inches</strong>.
               </p>
-              <div class="install-pill">
-                <code
-                  ><span class="prompt" aria-hidden="true">$</span
-                  ><span id="hero-command"
-                    ><span data-pm-verb>npm install</span>
-                    <span class="nowrap">@afahy/fluent-measures@0.3.0</span></span
-                  ></code
-                >
-                <button
-                  class="copy-button"
-                  hidden
-                  disabled
-                  type="button"
-                  data-copy="#hero-command"
-                  aria-label="Copy install command"
-                >
-                  <svg class="icon icon-sm icon-copy" aria-hidden="true">
-                    <use href="#i-copy" />
-                  </svg>
-                  <svg class="icon icon-sm icon-check" aria-hidden="true">
-                    <use href="#i-check" /></svg
-                  ><span data-copy-label>Copied</span>
-                </button>
-              </div>
-              <div class="hero-actions">
+              <div class="hero-bar">
+                <div class="install-pill">
+                  <code
+                    ><span class="prompt" aria-hidden="true">$</span
+                    ><span id="hero-command"
+                      ><span data-pm-verb>npm install</span>
+                      <span class="nowrap">@afahy/fluent-measures@0.3.1</span></span
+                    ></code
+                  >
+                  <button
+                    class="copy-button"
+                    hidden
+                    disabled
+                    type="button"
+                    data-copy="#hero-command"
+                    aria-label="Copy install command"
+                  >
+                    <svg class="icon icon-sm icon-copy" aria-hidden="true">
+                      <use href="#i-copy" />
+                    </svg>
+                    <svg class="icon icon-sm icon-check" aria-hidden="true">
+                      <use href="#i-check" /></svg
+                    ><span data-copy-label>Copied</span>
+                  </button>
+                </div>
                 <a class="btn btn-primary" href="#quick-start">
                   Get started
                   <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg>
                 </a>
-                <a
-                  class="btn btn-secondary"
-                  href="https://www.npmjs.com/package/@afahy/fluent-measures"
-                >
-                  <svg class="icon icon-sm" aria-hidden="true"><use href="#i-package" /></svg>
-                  View on npm
-                  <svg class="icon ext" aria-hidden="true"><use href="#i-external" /></svg>
-                </a>
               </div>
               <div class="docs-resources">
-                <a href="https://afahy.github.io/fluent-measures/versions/0.3.0/README.md">View Markdown</a>
-                <a href="https://afahy.github.io/fluent-measures/versions/0.3.0/llms.txt">Agent index (llms.txt)</a>
+                <a href="https://www.npmjs.com/package/@afahy/fluent-measures"
+                  >npm<svg class="icon ext" aria-hidden="true"><use href="#i-external" /></svg
+                ></a>
+                <a href="https://afahy.github.io/fluent-measures/versions/0.3.1/README.md">View Markdown</a>
+                <a href="https://afahy.github.io/fluent-measures/versions/0.3.1/llms.txt">Agent index (llms.txt)</a>
                 <a href="#versions">Docs for your version</a>
               </div>
             </div>
@@ -628,28 +612,6 @@
               </figcaption>
             </figure>
           </div>
-
-          <ul class="features" aria-label="Parsing capabilities">
-            <li>
-              <span class="feature-icon" aria-hidden="true"
-                ><svg class="icon"><use href="#i-measure" /></svg
-              ></span>
-              <p>
-                <strong class="feature-title">Metric and imperial:</strong>
-                ft, in, cm, m, lb and kg; convert with <code>normalizedUnit</code>.
-              </p>
-            </li>
-            <li>
-              <span class="feature-icon" aria-hidden="true"
-                ><svg class="icon"><use href="#i-numbers" /></svg
-              ></span>
-              <p>
-                <strong class="feature-title">Flexible input:</strong>
-                Digits or words, thousands separators and decimal commas; allow a unit typo with
-                <code>fuzzy</code>.
-              </p>
-            </li>
-          </ul>
         </div>
       </div>
 
@@ -724,7 +686,7 @@
                   <p class="code-head code-label" id="label-npm" data-example-label>npm</p>
                   <pre
                     tabindex="0"
-                  ><code class="language-bash code-cmd">npm install @afahy/fluent-measures@0.3.0</code></pre>
+                  ><code class="language-bash code-cmd">npm install @afahy/fluent-measures@0.3.1</code></pre>
                 </div>
                 <div
                   role="group"
@@ -736,7 +698,7 @@
                   <p class="code-head code-label" id="label-yarn" data-example-label>yarn</p>
                   <pre
                     tabindex="0"
-                  ><code class="language-bash code-cmd">yarn add @afahy/fluent-measures@0.3.0</code></pre>
+                  ><code class="language-bash code-cmd">yarn add @afahy/fluent-measures@0.3.1</code></pre>
                 </div>
                 <div
                   role="group"
@@ -748,7 +710,7 @@
                   <p class="code-head code-label" id="label-pnpm" data-example-label>pnpm</p>
                   <pre
                     tabindex="0"
-                  ><code class="language-bash code-cmd">pnpm add @afahy/fluent-measures@0.3.0</code></pre>
+                  ><code class="language-bash code-cmd">pnpm add @afahy/fluent-measures@0.3.1</code></pre>
                 </div>
               </div>
               <p class="code-note">
@@ -880,26 +842,12 @@ if (result) {
   console.log(result);
 }</code></pre>
                 </div>
-                <div class="returns">
+                <div class="returns full-object" data-full-object hidden>
                   <div class="returns-label">
                     <svg class="icon icon-sm" aria-hidden="true"><use href="#i-return" /></svg>
                     Returns
                   </div>
-                  <div class="summary-grid">
-                    <p class="summary">
-                      <span class="summary-key">result</span><span><b>6</b> ft</span
-                      ><span class="summary-note">a height</span>
-                    </p>
-                  </div>
-                  <details class="full-object" open data-full-object hidden>
-                    <summary>
-                      <svg class="icon icon-sm chevron" aria-hidden="true">
-                        <use href="#i-chevron" />
-                      </svg>
-                      Full returned object
-                    </summary>
-                    <pre tabindex="0"><code class="language-typescript"></code></pre>
-                  </details>
+                  <pre tabindex="0"><code class="language-typescript"></code></pre>
                 </div>
               </div>
               <p class="measure">
@@ -937,7 +885,7 @@ if (result) {
 
             <p class="measure">
               Adapt the parser to your field: restrict its type, convert the result, accept a number
-              without a unit, or allow spelling errors.
+              without a unit, or accept spelling errors.
             </p>
             <nav class="local-index" aria-label="Usage tasks">
               <p class="local-index-label" aria-hidden="true">Tasks</p>
@@ -1223,7 +1171,7 @@ const rejected = parseMeasurement(
                     <dd><b>70</b> in</dd>
                   </div>
                 </dl>
-                <p><code>matches</code> keeps 5 ft and 10 in, just as it keeps the parts above.</p>
+                <p><code>matches</code> keeps 5 ft and 10 in, as in the example above.</p>
               </article>
               <article class="example" aria-labelledby="ex-unqualified">
                 <div class="hd hd-3">
@@ -1303,8 +1251,10 @@ const rejected = parseMeasurement(
                   has one spelling error. Without it, a unit name must be exact, so the same text
                   returns <code>null</code>. One letter added, removed or changed is one error. An
                   ordinary word one letter from a unit name, such as <code>feat</code>, reads as
-                  that unit too. <a href="#limits">Limits</a> says what fuzzy matching can get
-                  wrong.
+                  that unit too. It also reads a few common typos that this rule skips, such as the
+                  number word <code>fourty</code>, which PARSING.md lists.
+                  <!-- cspell:ignore fourty -->
+                  <a href="#limits">Limits</a> says what fuzzy matching can get wrong.
                 </p>
                 <div class="code on-code">
                   <div class="code-head">
@@ -1526,7 +1476,7 @@ const strict = parseMeasurement(
                       <div>
                         <dt>Constraints</dt>
                         <dd>
-                          Also selects the measurement type, so a weight unit reads only a weight. A
+                          Also sets the measurement type, so a weight unit reads only a weight. A
                           <code>type</code> that contradicts it throws an error. Shorthand such as
                           <code>5-11</code> still needs <code>type</code>. This option never
                           supplies a source unit for a bare number.
@@ -1652,7 +1602,8 @@ const strict = parseMeasurement(
                   <dt>
                     <span class="name">matches</span
                     ><span class="type"
-                      >Array&lt;{ value: number; unit: <a href="#unit-type">Unit</a> | null
+                      >Array&lt;{ <span class="type-line">value: number; </span>
+                      <span class="type-line">unit: <a href="#unit-type">Unit</a> | null; </span>
                       }&gt;</span
                     >
                   </dt>
@@ -1694,7 +1645,7 @@ const strict = parseMeasurement(
               </div>
               <p class="measure">
                 The canonical unit names. Input can use other spellings; see
-                <a href="#units">Supported units</a> for the accepted aliases.
+                <a href="#units">Units</a> for the accepted aliases.
               </p>
             </div>
 
@@ -1729,8 +1680,8 @@ const strict = parseMeasurement(
 
           <section class="doc-section" aria-labelledby="units">
             <div class="hd hd-2">
-              <h2 id="units">Supported units</h2>
-              <a class="anchor" href="#units" aria-label="Link to Supported units"
+              <h2 id="units">Units</h2>
+              <a class="anchor" href="#units" aria-label="Link to Units"
                 ><svg class="icon" aria-hidden="true"><use href="#i-link" /></svg
               ></a>
             </div>
@@ -1847,7 +1798,7 @@ const strict = parseMeasurement(
               forms <code>in</code> and <code>m</code> can come first only as a label, because
               before a number they are usually ordinary words.
               <a
-                href="https://afahy.github.io/fluent-measures/versions/0.3.0/PARSING.md#units-before-a-number"
+                href="https://afahy.github.io/fluent-measures/versions/0.3.1/PARSING.md#units-before-a-number"
                 >PARSING.md<svg class="icon ext" aria-hidden="true">
                   <use href="#i-external" /></svg
               ></a>
@@ -1863,9 +1814,7 @@ const strict = parseMeasurement(
               ></a>
             </div>
             <div class="stack">
-              <p class="measure">
-                Some text returns <code>null</code>, or a result that you might not expect.
-              </p>
+              <p class="measure">Some text returns <code>null</code>, or an unexpected result.</p>
               <div class="table-wrap">
                 <table class="cases">
                   <thead>
@@ -1880,7 +1829,7 @@ const strict = parseMeasurement(
                       <td>
                         <div class="res-note">
                           <span class="result result-null">null</span
-                          ><span class="note">Stone, ounces and grams aren't supported</span>
+                          ><span class="note">Unsupported units: stone, ounces and grams</span>
                         </div>
                       </td>
                     </tr>
@@ -1889,7 +1838,7 @@ const strict = parseMeasurement(
                       <td>
                         <div class="res-note">
                           <span class="result result-null">null</span
-                          ><span class="note">A range isn't one measurement</span>
+                          ><span class="note">A range is not one measurement</span>
                         </div>
                       </td>
                     </tr>
@@ -1918,27 +1867,27 @@ const strict = parseMeasurement(
                 The whole entry must be one complete measurement, including supported compounds such
                 as <code>5 ft 11 in</code>. Two heights or two weights return <code>null</code>,
                 even when they agree. For exactly one complete height and one complete weight, set
-                <a href="#ex-type"><code>type</code></a> or <code>normalizedUnit</code> to select
+                <a href="#ex-type"><code>type</code></a> or <code>normalizedUnit</code> to choose
                 one. Both expressions must be valid; without a selector the result is
                 <code>null</code>.
               </p>
               <div class="callout is-caution">
                 <svg class="icon" aria-hidden="true"><use href="#i-alert" /></svg>
                 <div class="callout-body">
-                  <p class="callout-title">Only a few words may surround a measurement</p>
+                  <p class="callout-title">Only a few words can surround a measurement</p>
                   <p>
-                    <code>I'm five foot eleven tall</code> and <code>about 180 cm</code> are
-                    supported. Unrelated prose is not: <code>Top 10 in the class</code> returns
-                    <code>null</code>. Quotation marks and brackets around the entry or a number are
-                    not supported either: <code>(180 cm)</code> returns <code>null</code>. Fuzzy
-                    matching does not discard leftover text, but with <code>fuzzy: true</code> an
-                    ordinary word one letter from a unit name reads as that unit, before or after a
-                    number: <code>6 food</code> returns 6 ft.
+                    The parser accepts short phrases such as
+                    <code>I'm five foot eleven tall</code> and <code>about 180 cm</code>. It rejects
+                    unrelated prose, so <code>Top 10 in the class</code> returns <code>null</code>.
+                    It also rejects quotation marks and brackets around an entry or number, so
+                    <code>(180 cm)</code> returns <code>null</code>. Fuzzy matching does not discard
+                    leftover text. With <code>fuzzy: true</code>, a word one letter from a unit
+                    reads as that unit before or after a number: <code>6 food</code> returns 6 ft.
                   </p>
                 </div>
               </div>
               <p class="measure">
-                <a href="https://afahy.github.io/fluent-measures/versions/0.3.0/PARSING.md"
+                <a href="https://afahy.github.io/fluent-measures/versions/0.3.1/PARSING.md"
                   >PARSING.md<svg class="icon ext" aria-hidden="true">
                     <use href="#i-external" /></svg
                 ></a>
@@ -1960,9 +1909,9 @@ const strict = parseMeasurement(
                   If <code>parseMeasurement</code> returns <code>null</code>, look for these causes:
                 </p>
                 <ol>
-                  <li>The unit isn't supported. See <a href="#units">Supported units</a>.</li>
+                  <li>The parser does not support the unit. See <a href="#units">Units</a>.</li>
                   <li>
-                    The text doesn't say whether it is a height or a weight. Set
+                    The text does not say whether it is a height or a weight. Set
                     <a href="#ex-type"><code>type</code></a
                     >.
                   </li>
@@ -1981,8 +1930,8 @@ const strict = parseMeasurement(
                     <a href="#limits">Limits</a>.
                   </li>
                   <li>
-                    The input isn't a string. Non-string input returns <code>null</code> at runtime;
-                    the TypeScript parameter remains <code>string</code>.
+                    The input is not a string. Non-string input returns <code>null</code> at
+                    runtime; the TypeScript parameter remains <code>string</code>.
                   </li>
                   <li>
                     The raw <code>input.length</code>, before trimming, exceeds
@@ -2031,71 +1980,30 @@ const strict = parseMeasurement(
               </div>
             </div>
           </section>
-
-          <p class="edit-page">
-            <a href="https://github.com/afahy/fluent-measures/edit/main/docs/index.html">
-              <svg class="icon icon-sm" aria-hidden="true"><use href="#i-pen" /></svg>
-              Edit this page on GitHub
-              <svg class="icon ext" aria-hidden="true"><use href="#i-external" /></svg>
-            </a>
-          </p>
         </div>
 
         <aside class="toc-col">
           <nav class="toc" id="page-navigation" tabindex="-1" aria-label="On this page">
             <p class="toc-title">On this page</p>
             <ul>
-              <li class="toc-group">
-                <div class="toc-row">
-                  <a href="#install">Install</a>
-                  <button
-                    class="toc-toggle"
-                    type="button"
-                    aria-expanded="true"
-                    aria-controls="rail-install"
-                    aria-label="Install topics"
-                  >
-                    <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chevron" /></svg>
-                  </button>
-                </div>
-                <ul id="rail-install">
+              <li>
+                <a href="#install">Install</a>
+                <ul>
                   <li><a href="#quick-start">Quick start</a></li>
                 </ul>
               </li>
-              <li class="toc-group">
-                <div class="toc-row">
-                  <a href="#usage">Usage</a>
-                  <button
-                    class="toc-toggle"
-                    type="button"
-                    aria-expanded="true"
-                    aria-controls="rail-usage"
-                    aria-label="Usage tasks"
-                  >
-                    <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chevron" /></svg>
-                  </button>
-                </div>
-                <ul id="rail-usage">
+              <li>
+                <a href="#usage">Usage</a>
+                <ul>
                   <li><a href="#ex-type">Read only one type</a></li>
                   <li><a href="#ex-convert">Convert to one unit</a></li>
                   <li><a href="#ex-unqualified">Numbers without a unit</a></li>
                   <li><a href="#ex-fuzzy">Spelling errors in units</a></li>
                 </ul>
               </li>
-              <li class="toc-group">
-                <div class="toc-row">
-                  <a href="#api">API</a>
-                  <button
-                    class="toc-toggle"
-                    type="button"
-                    aria-expanded="true"
-                    aria-controls="rail-api"
-                    aria-label="API reference"
-                  >
-                    <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chevron" /></svg>
-                  </button>
-                </div>
-                <ul id="rail-api">
+              <li>
+                <a href="#api">API</a>
+                <ul>
                   <li>
                     <a href="#parse-measurement"><code>parseMeasurement</code></a>
                   </li>
@@ -2113,7 +2021,7 @@ const strict = parseMeasurement(
                   </li>
                 </ul>
               </li>
-              <li><a href="#units">Supported units</a></li>
+              <li><a href="#units">Units</a></li>
               <li><a href="#limits">Limits</a></li>
               <li><a href="#troubleshooting">Troubleshooting</a></li>
             </ul>
@@ -2123,27 +2031,38 @@ const strict = parseMeasurement(
     </main>
 
     <footer class="site-footer">
-      <div class="container footer-inner">
-        <div>
-          <p>
-            Documentation for <code>@afahy/fluent-measures@0.3.0</code>. Source: <a href="https://github.com/afahy/fluent-measures/tree/cb98f756d473517d4c9e9347d27b4142968a83b9">cb98f75</a>.
-          </p>
-          <p>Released under the MIT License. © 2025 <span class="nowrap">Adam Fahy</span>.</p>
+      <div class="container">
+        <div class="footer-inner">
+          <div class="footer-colophon">
+            <p class="footer-spec">
+              @afahy/fluent-measures <span>· MIT License · 0 dependencies</span>
+            </p>
+            <p>
+              Documentation for <code>@afahy/fluent-measures@0.3.1</code>. Source: <a href="https://github.com/afahy/fluent-measures/tree/89c9a2b437c7c93e5738cfc89303bee6647b3eef">89c9a2b</a>. © 2025
+              <span class="nowrap">Adam Fahy</span>.
+            </p>
+          </div>
+          <ul>
+            <li>
+              <a href="https://github.com/afahy/fluent-measures">GitHub</a>
+            </li>
+            <li>
+              <a href="https://www.npmjs.com/package/@afahy/fluent-measures">npm</a>
+            </li>
+            <li>
+              <a href="https://github.com/afahy/fluent-measures/issues">Issues</a>
+            </li>
+            <li>
+              <a href="https://github.com/afahy/fluent-measures/blob/89c9a2b437c7c93e5738cfc89303bee6647b3eef/LICENSE">License</a>
+            </li>
+            <li>
+              <a href="https://afahy.github.io/fluent-measures/versions/0.3.1/README.md">README.md</a>
+            </li>
+            <li>
+              <a href="https://afahy.github.io/fluent-measures/versions/0.3.1/llms.txt">llms.txt</a>
+            </li>
+          </ul>
         </div>
-        <ul>
-          <li>
-            <a href="https://github.com/afahy/fluent-measures">GitHub</a>
-          </li>
-          <li>
-            <a href="https://www.npmjs.com/package/@afahy/fluent-measures">npm</a>
-          </li>
-          <li>
-            <a href="https://github.com/afahy/fluent-measures/issues">Issues</a>
-          </li>
-          <li>
-            <a href="https://github.com/afahy/fluent-measures/blob/cb98f756d473517d4c9e9347d27b4142968a83b9/LICENSE">License</a>
-          </li>
-        </ul>
       </div>
     </footer>
 
@@ -2347,10 +2266,6 @@ const strict = parseMeasurement(
           codeObserver.observe(el);
         });
 
-        document.querySelectorAll('details.full-object').forEach(details => {
-          details.addEventListener('toggle', () => updateOverflow(details));
-        });
-
         // Four curated examples at every width; append the remaining four on request.
         const demo = document.querySelector('[data-demo]');
         const demoMore = demo?.querySelector('[data-demo-more]');
@@ -2536,11 +2451,14 @@ const strict = parseMeasurement(
           const label = `Color theme: ${current.label}. Switch to ${next.label}.`;
           themeButton.setAttribute('aria-label', label);
           themeButton.title = label;
-          themeButton.querySelector('use').setAttribute('href', current.icon);
+          themeButton.querySelector('.theme-icon use').setAttribute('href', current.icon);
         }
 
-        themeButton.addEventListener('click', () => {
-          themeIndex = (themeIndex + 1) % themes.length;
+        themeButton.addEventListener('click', event => {
+          const picked = event.target?.closest?.('[data-pos]')?.dataset.pos;
+          if (event.target?.closest?.('.theme-switch') && !picked) return;
+          const pickedIndex = picked ? themes.findIndex(theme => theme.value === picked) : -1;
+          themeIndex = pickedIndex >= 0 ? pickedIndex : (themeIndex + 1) % themes.length;
           const choice = themes[themeIndex].value;
           root.dataset.themePref = choice;
           if (choice === 'system') storage.remove('fluent-measures:theme');
