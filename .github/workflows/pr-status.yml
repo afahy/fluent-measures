@@ -23,9 +23,8 @@ on:
   workflow_run:
     workflows: [CI, Commitlint, Regression test, Evidence]
     types: [in_progress, completed]
-  # A bot's or CI's time running out sends no event, and nor does Codex's 👍 or 👀, so check
-  # every open PR now and then. Each PR costs about 13 requests of the token's 1,000 an hour,
-  # so not more often than this.
+  # A missing CI run sends no event when the startup window ends. Check each open PR on a
+  # schedule to report that case and refresh commit statuses.
   schedule:
     - cron: '*/30 * * * *'
   workflow_dispatch:

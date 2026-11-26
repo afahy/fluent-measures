@@ -39,9 +39,7 @@ function check(model: ReviewModel): void {
     summaries: unansweredClaudeSummaries(snapshot).map(c => c.id),
     threads: unansweredBotThreads(snapshot.reviewComments).map(c => c.id),
     followUps: botFollowUps(snapshot.reviewComments).map(c => c.id),
-    codex: status.codex.state,
     state: status.state,
-    actions: status.actions,
   }).toEqual(expected);
 }
 
@@ -183,22 +181,15 @@ describe('review obligation sequences (AFA-199)', () => {
     expect(botChangeRequests(model.snapshot()).map(r => r.id)).toEqual([1]);
   });
 
-  it('does not count late reviews of an old head as head completion, and keeps Claude summaries', () => {
+  it('keeps late review findings and Claude summaries until they are answered', () => {
     const model = run([review(), { kind: 'summary' }, { kind: 'push' }, review('codex', true)]);
-    // Current policy keys change requests by submission time, completion by commit. The late
-    // old-head request still needs an answer; the earlier request does not survive the push.
-    expect(model.expected()).toMatchObject({ reviews: [12], summaries: [1], codex: 'pending' });
+    // The old-head request submitted after the push still needs an answer.
+    expect(model.expected()).toMatchObject({ reviews: [12], summaries: [1], state: 'needs-agent' });
     model.step(say(1));
     check(model);
     model.step(say(0, { slot: 1, to: 'summary' }));
     check(model);
-    expect(classify(model.snapshot(), model.now()).state).toBe('waiting');
-    model.step({ kind: 'age', minutes: 30 });
-    check(model);
-    expect(classify(model.snapshot(), model.now()).actions).toEqual(['Post `@codex review`']);
-    model.step({ kind: 'age', minutes: 120 });
-    check(model);
-    expect(classify(model.snapshot(), model.now()).state).toBe('waiting-human');
+    expect(classify(model.snapshot(), model.now()).state).toBe('ready');
   });
 
   it('checks every generated transition against the independent obligation ledger', () => {

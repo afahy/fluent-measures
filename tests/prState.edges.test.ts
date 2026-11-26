@@ -7,8 +7,6 @@ import {
   ciSummary,
   classify,
   clockStart,
-  codexState,
-  codexSummaryRows,
   collect,
   createClient,
   digest,
@@ -178,18 +176,6 @@ describe('ciSummary edges', () => {
   });
 });
 
-describe('codexSummaryRows edges', () => {
-  it('skips a row whose status is not bold, and reads a row with no commit', () => {
-    const body = [
-      '| **Code Review** | Completed | `abc1234` | x |',
-      '| **Security Review** | **Queued** | — | x |',
-    ].join('\n');
-    expect(codexSummaryRows(body)).toEqual([
-      { review: 'Security Review', status: 'Queued', commit: null },
-    ]);
-  });
-});
-
 describe('bot threads', () => {
   it('counts only Codex and Claude threads, and only replies from people as answers', () => {
     const comments = [
@@ -240,141 +226,6 @@ describe('bot threads', () => {
       ),
     ];
     expect(botFollowUps(comments).map(c => c.id)).toEqual([32, 12]);
-  });
-});
-
-describe('codexState edges', () => {
-  it('reports the full state for each stage of the wait', () => {
-    const snapshot = fixture('pr-66');
-    expect(codexState(snapshot, at('2026-10-07T15:20:00Z'))).toEqual({
-      state: 'pending',
-      detail: "Codex hasn't started on c7ad2f4; its last review was of 91a5d29",
-      until: '2026-10-07T15:30:44.000Z',
-    });
-    expect(codexState(snapshot, at('2026-10-07T15:31:00Z'))).toEqual({
-      state: 'not-requested',
-      detail:
-        "Codex hasn't reviewed c7ad2f4 30 minutes after it could start; its last review was of 91a5d29",
-      action: 'Post `@codex review`',
-    });
-    expect(codexState(snapshot, at('2026-10-07T17:01:00Z'))).toEqual({
-      state: 'gave-up',
-      detail:
-        "Codex hasn't reviewed c7ad2f4 in the 2 hours it has had; its last review was of 91a5d29",
-    });
-  });
-
-  it("reads Codex's no-findings comment for the head as done, and its review of the head too", () => {
-    const snapshot = fixture('pr-66');
-    // The text of Codex's comment on #57, with the head's short SHA.
-    snapshot.issueComments.push(
-      comment(
-        9,
-        codexBot,
-        "Codex Review: Didn't find any major issues. :rocket:\n\n**Reviewed commit:** `c7ad2f4b90`",
-        '2026-10-07T15:20:00Z'
-      )
-    );
-    expect(codexState(snapshot, at('2026-10-07T15:40:00Z'))).toEqual({
-      state: 'done',
-      detail: 'Codex reviewed c7ad2f4 and found no major issues',
-    });
-    snapshot.reviews.push({
-      ...review(5, codexBot, 'COMMENTED', null, '2026-10-07T15:21:00Z'),
-      commit_id: snapshot.pull.head.sha,
-    });
-    expect(codexState(snapshot, at('2026-10-07T15:40:00Z'))).toEqual({
-      state: 'done',
-      detail: 'Codex reviewed c7ad2f4 and left comments',
-    });
-  });
-
-  it("ignores a no-findings comment for another commit, or from someone who isn't Codex", () => {
-    const snapshot = fixture('pr-66');
-    snapshot.issueComments.push(
-      comment(9, codexBot, '**Reviewed commit:** `91a5d29c8f`', '2026-10-07T15:20:00Z'),
-      comment(10, human, '**Reviewed commit:** `c7ad2f4b90`', '2026-10-07T15:21:00Z')
-    );
-    expect(codexState(snapshot, at('2026-10-07T15:40:00Z')).state).toBe('not-requested');
-  });
-
-  it("treats a failed review of the head as no review, and ignores a person's 👀", () => {
-    const snapshot = fixture('pr-66');
-    const summary = snapshot.issueComments.find(c => c.user?.login === codexBot.login)!;
-    summary.body = summary
-      .body!.replace('✅ **Completed**', '❌ **Failed**')
-      .replace('`91a5d29`', '`c7ad2f4`');
-    snapshot.reactions.push({ user: human, content: 'eyes', created_at: '2026-10-07T15:10:00Z' });
-    expect(codexState(snapshot, at('2026-10-07T15:40:00Z'))).toEqual({
-      state: 'not-requested',
-      detail:
-        "Codex hasn't reviewed c7ad2f4 30 minutes after it could start; its review of c7ad2f4 ended as Failed",
-      action: 'Post `@codex review`',
-    });
-  });
-
-  it('ignores a 👀 from before the push, which was for an earlier commit', () => {
-    const snapshot = fixture('pr-66');
-    snapshot.reactions.push({
-      user: codexBot,
-      content: 'eyes',
-      created_at: '2026-10-07T15:00:43Z',
-    });
-    expect(codexState(snapshot, at('2026-10-07T15:40:00Z')).state).toBe('not-requested');
-    snapshot.reactions.push({
-      user: codexBot,
-      content: 'eyes',
-      created_at: '2026-10-07T15:00:44Z',
-    });
-    expect(codexState(snapshot, at('2026-10-07T15:40:00Z')).state).toBe('running');
-  });
-
-  it("gives up after 2 hours even if Codex's review never stops running", () => {
-    const snapshot = fixture('pr-66');
-    const summary = snapshot.issueComments.find(c => c.user?.login === codexBot.login)!;
-    summary.body = summary
-      .body!.replace('✅ **Completed**', '🔄 **Running**')
-      .replace('`91a5d29`', '`c7ad2f4`');
-    snapshot.reactions.push({
-      user: codexBot,
-      content: 'eyes',
-      created_at: '2026-10-07T15:01:00Z',
-    });
-    expect(codexState(snapshot, at('2026-10-07T17:00:43Z')).state).toBe('running');
-    expect(codexState(snapshot, at('2026-10-07T17:00:44Z'))).toEqual({
-      state: 'gave-up',
-      detail:
-        "Codex hasn't reviewed c7ad2f4 in the 2 hours it has had; its review of c7ad2f4 ended as Running",
-    });
-  });
-
-  it('counts only requests from people, made at or after the push, and names the first', () => {
-    const snapshot = fixture('pr-66');
-    snapshot.issueComments.push(
-      // Codex's own comments quote the command.
-      comment(1, codexBot, 'Comment "@codex review".', '2026-10-07T15:10:00Z'),
-      comment(2, human, '@codex review', '2026-10-07T15:00:43Z')
-    );
-    expect(codexState(snapshot, at('2026-10-07T15:40:00Z')).state).toBe('not-requested');
-    snapshot.issueComments.push(comment(4, human, '@codex  review', '2026-10-07T15:36:00Z'));
-    expect(codexState(snapshot, at('2026-10-07T15:40:00Z')).detail).toBe(
-      'Asked at 2026-10-07T15:36:00Z for a review of c7ad2f4; its last review was of 91a5d29'
-    );
-    snapshot.issueComments.push(comment(3, human, '@codex review', '2026-10-07T15:00:44Z'));
-    expect(codexState(snapshot, at('2026-10-07T15:40:00Z')).detail).toBe(
-      'Asked at 2026-10-07T15:00:44Z for a review of c7ad2f4; its last review was of 91a5d29'
-    );
-  });
-
-  it('leaves out the last review when the summary names none', () => {
-    const snapshot = fixture('pr-67');
-    snapshot.issueComments = [];
-    snapshot.reactions = [];
-    expect(codexState(snapshot, at('2026-10-07T15:00:00Z'))).toEqual({
-      state: 'pending',
-      detail: "Codex hasn't started on 318c1b7",
-      until: '2026-10-07T15:21:34.000Z',
-    });
   });
 });
 
@@ -575,12 +426,11 @@ describe('botOutputSincePush', () => {
 });
 
 describe('classify edges', () => {
-  it("reports a closed PR as closed and doesn't check the bots", () => {
+  it('reports a closed PR as closed', () => {
     const snapshot = fixture('pr-67');
     snapshot.pull.state = 'closed';
     const status = classify(snapshot, at('2026-10-07T15:00:00Z'));
     expect(status.state).toBe('closed');
-    expect(status.codex).toEqual({ state: 'skipped', detail: 'The PR is closed' });
   });
 
   it('reports a PR with only merged_at as merged', () => {
@@ -607,24 +457,13 @@ describe('classify edges', () => {
     expect(status.waits).toEqual(['CI is running: package (22), package (24)']);
   });
 
-  it('lists a Codex that it gave up on in the notes', () => {
-    const status = classify(fixture('pr-66'), at('2026-10-07T17:01:00Z'));
-    expect(status.notes).toEqual([
-      "Codex hasn't reviewed c7ad2f4 in the 2 hours it has had; its last review was of 91a5d29",
-    ]);
-  });
-
-  it('lists a waiting Codex under waits, and says when GitHub has no merge state yet', () => {
+  it('waits when GitHub has no merge state yet', () => {
     const snapshot = fixture('pr-67');
     snapshot.pull.mergeable_state = null;
     snapshot.issueComments = [comment(1, human, '@codex review', '2026-10-07T15:00:00Z')];
-    snapshot.reactions = [];
     const status = classify(snapshot, at('2026-10-07T15:51:00Z'));
     expect(status.mergeableState).toBeNull();
-    expect(status.waits).toEqual([
-      'Asked at 2026-10-07T15:00:00Z for a review of 318c1b7 (until 2026-10-07T16:51:34.000Z)',
-      'GitHub is still working out whether the PR can merge',
-    ]);
+    expect(status.waits).toEqual(['GitHub is still working out whether the PR can merge']);
   });
 
   it('names the person in a reason, and says so for a deleted account', () => {
@@ -656,20 +495,18 @@ describe('mostUrgent and digest', () => {
     expect(mostUrgent([])).toBe('waiting');
   });
 
-  it('changes with the state, head, reasons, actions or notes, but not with the waits', () => {
+  it('changes with the state, head, reasons or notes, but not with the waits', () => {
     const status = classify(fixture('pr-66'), at('2026-10-07T15:20:00Z'));
     const same = digest(status);
-    expect(digest({ ...status, waits: [] })).toBe(same);
+    expect(digest({ ...status, waits: ['x'] })).toBe(same);
     expect(digest({ ...status, notes: ['x'] })).not.toBe(same);
     expect(digest({ ...status, reasons: ['x'] })).not.toBe(same);
-    expect(digest({ ...status, actions: ['x'] })).not.toBe(same);
-    expect(digest({ ...status, state: 'ready' })).not.toBe(same);
+    expect(digest({ ...status, state: 'waiting' })).not.toBe(same);
     expect(digest({ ...status, head: 'x' })).not.toBe(same);
     expect(JSON.parse(same)).toEqual({
-      state: 'waiting',
+      state: 'ready',
       head: 'c7ad2f4b90595f059840e8a95dfa50f82b9a0593',
       reasons: [],
-      actions: [],
       notes: [],
     });
   });
@@ -803,7 +640,6 @@ describe('collect', () => {
       'all /repos/o/r/issues/7/comments',
       'all /repos/o/r/pulls/7/reviews',
       'all /repos/o/r/pulls/7/comments',
-      'all /repos/o/r/issues/7/reactions',
     ]);
     expect(snapshot).toEqual({
       pull,
@@ -815,7 +651,6 @@ describe('collect', () => {
       issueComments: ['/repos/o/r/issues/7/comments'],
       reviews: ['/repos/o/r/pulls/7/reviews'],
       reviewComments: ['/repos/o/r/pulls/7/comments'],
-      reactions: ['/repos/o/r/issues/7/reactions'],
     });
   });
 
@@ -832,47 +667,16 @@ describe('collect', () => {
 
 // Cases from mutation testing: each pins down a behavior that no test above checks.
 describe('pr-state.mjs details', () => {
-  it("doesn't crash on comments and reactions from deleted accounts", () => {
+  it("doesn't crash on comments and reviews from deleted accounts", () => {
     const snapshot = fixture('pr-66');
     snapshot.issueComments.push(comment(90, null, '@codex review', '2026-10-07T15:10:00Z'));
-    snapshot.reactions.push({ user: null, content: 'eyes', created_at: '2026-10-07T15:10:00Z' });
     snapshot.reviews.push(
       review(91, null, 'COMMENTED', 'Nitpick comments (2)', '2026-10-07T15:10:00Z')
     );
     snapshot.reviewComments.push(threadComment(92, null, '2026-10-07T15:10:00Z'));
     const status = classify(snapshot, at('2026-10-07T15:40:00Z'));
-    // A deleted account's request still counts as a person's.
-    expect(status.codex.state).toBe('requested');
-  });
-
-  it("ignores a person's copy of Codex's summary, and finds the summary after other Codex comments", () => {
-    const snapshot = fixture('pr-66');
-    const summary = snapshot.issueComments.find(c => c.user?.login === codexBot.login)!;
-    const fake = summary.body!.replace('`91a5d29`', '`c7ad2f4`');
-    snapshot.issueComments.unshift(
-      comment(80, human, fake, '2026-10-07T14:40:00Z'),
-      comment(81, codexBot, '**Reviewed commit:** `91a5d29c8f`', '2026-10-07T14:41:00Z')
-    );
-    expect(codexState(snapshot, at('2026-10-07T15:40:00Z')).detail).toBe(
-      "Codex hasn't reviewed c7ad2f4 30 minutes after it could start; its last review was of 91a5d29"
-    );
-  });
-
-  it('names the completed review and the 👀 in their details', () => {
-    expect(codexState(fixture('pr-67'), at('2026-10-07T15:00:00Z'))).toEqual({
-      state: 'done',
-      detail: 'Codex completed its review of 318c1b7',
-    });
-    const snapshot = fixture('pr-66');
-    snapshot.reactions.push({
-      user: codexBot,
-      content: 'eyes',
-      created_at: '2026-10-07T15:10:00Z',
-    });
-    expect(codexState(snapshot, at('2026-10-07T15:40:00Z'))).toEqual({
-      state: 'running',
-      detail: 'Codex is reviewing (👀)',
-    });
+    expect(status.state).toBe('ready');
+    expect(status.reasons).toEqual([]);
   });
 
   it('treats only a comment that is nothing but a bot command as no answer', () => {
@@ -920,19 +724,10 @@ describe('pr-state.mjs details', () => {
     ];
     expect(unansweredBotThreads(comments).map(c => c.id)).toEqual([1]);
   });
-
-  it('explains why the bots skip a draft', () => {
-    const snapshot = fixture('pr-67');
-    snapshot.pull.draft = true;
-    expect(classify(snapshot, at('2026-10-07T15:00:00Z')).codex).toEqual({
-      state: 'skipped',
-      detail: "The bots don't review drafts",
-    });
-  });
 });
 
 describe('files that CODEOWNERS covers', () => {
-  it('lets an agent merge a PR that changes them when nothing else holds it', () => {
+  it('reports a PR that changes them as ready when nothing else holds it', () => {
     // A PR's changed files and the CODEOWNERS text don't affect its state, even when they
     // show that the PR changes AGENTS.md, .github/ and .size-limit.cjs.
     const snapshot = Object.assign(fixture('pr-67'), {
@@ -942,32 +737,5 @@ describe('files that CODEOWNERS covers', () => {
     const status = classify(snapshot, at('2026-10-07T16:00:00Z'));
     expect(status.state).toBe('ready');
     expect(status.reasons).toEqual([]);
-  });
-});
-
-describe("Codex's 👍 and the review rounds", () => {
-  it('counts a 👍 from Codex after the push as a finished review, but not a person’s', () => {
-    const snapshot = fixture('pr-66');
-    snapshot.reactions.push({ user: human, content: '+1', created_at: '2026-10-07T15:10:00Z' });
-    expect(codexState(snapshot, at('2026-10-07T15:40:00Z')).state).toBe('not-requested');
-    snapshot.reactions.push({ user: codexBot, content: '+1', created_at: '2026-10-07T15:00:44Z' });
-    expect(codexState(snapshot, at('2026-10-07T15:40:00Z'))).toEqual({
-      state: 'done',
-      detail: 'Codex reacted 👍 after c7ad2f4 was pushed',
-    });
-  });
-
-  it('waits for Codex instead of asking it when the review rounds are used up', () => {
-    const status = classify(fixture('pr-66'), at('2026-10-07T15:31:00Z'), { requests: false });
-    expect(status.state).toBe('waiting');
-    expect(status.actions).toEqual([]);
-    expect(status.codex).toEqual({
-      state: 'pending',
-      detail:
-        "Codex hasn't reviewed c7ad2f4 30 minutes after it could start; its last review was of 91a5d29, and the review rounds are used up",
-      until: '2026-10-07T17:00:44.000Z',
-    });
-    const later = classify(fixture('pr-66'), at('2026-10-07T17:00:44Z'), { requests: false });
-    expect(later.state).toBe('waiting-human');
   });
 });

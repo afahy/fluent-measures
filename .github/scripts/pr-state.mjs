@@ -3,20 +3,9 @@
 // pr-status.mjs prints the result. GraphQL is blocked in Claude Code cloud sessions, so this
 // uses only the REST API.
 //
-// The rules come from AGENTS.md ("Handle findings and CI" and "Merge your own PR") and from
-// mistakes that watchers made on earlier PRs (AFA-98):
-//   - Every check is for the PR's current head commit. A 👍 or a review of an earlier commit
-//     doesn't count.
-//   - Codex is done when it reviews the head commit, comments that it found no major issues in
-//     it, its summary comment says the review of the head commit is Completed, or it reacts 👍
-//     to the PR after the head commit was pushed. 👀 means it's still running.
-//   - pr:status never asks Claude to review, and waits for it only as the `Claude review` check.
-//     Claude's threads and its requested changes need the agent. Claude reviews once per PR and
-//     puts each finding that isn't on a diff line in its summary comment, so the summary needs an
-//     answer, also after a later push.
-//   - Bots name commits by short SHAs, so a SHA matches any prefix of 7 or more characters.
-//   - A commit's own date can be hours before its push, and bots and CI start only once the PR
-//     is open and ready for review. Timers count from the latest of those times.
+// AGENTS.md defines what blocks a PR. Existing review findings still need an answer, including
+// Claude summaries from earlier pushes. The CI startup timer uses the latest of the head push,
+// the PR's creation and its last move out of draft.
 
 /** The bots whose findings AGENTS.md asks agents to act on. */
 export const CODEX = 'chatgpt-codex-connector[bot]';
@@ -34,13 +23,6 @@ export const OWN_STATUS = 'pr-status';
 export const OWN_CHECK = 'Set the PR status';
 
 const MINUTE = 60 * 1000;
-/** How long a bot gets to start before the agent asks it (AGENTS.md). */
-export const BOT_START_WAIT = 30 * MINUTE;
-/**
- * How long to wait for a bot in all. AGENTS.md says that pr:status "stops waiting for Codex after
- * two hours".
- */
-export const BOT_MAX_WAIT = 120 * MINUTE;
 /** How long CI gets to start before a missing run is reported. */
 export const CI_START_WAIT = 30 * MINUTE;
 
@@ -63,20 +45,6 @@ export const STATES = {
   'waiting-human': 30,
   waiting: 20,
 };
-
-/**
- * Whether two commit SHAs name the same commit. Either may be a short SHA of 7 or more
- * characters.
- *
- * @param {string | null | undefined} a
- * @param {string | null | undefined} b
- * @returns {boolean}
- */
-export function shaMatches(a, b) {
-  if (!a || !b) return false;
-  const [short, long] = a.length <= b.length ? [a, b] : [b, a];
-  return short.length >= 7 && long.toLowerCase().startsWith(short.toLowerCase());
-}
 
 /**
  * @param {{ user?: { login?: string, type?: string } | null }} item
@@ -140,7 +108,7 @@ export function pushedAt(snapshot) {
 }
 
 /**
- * When CI and the bots could start on the head commit: the latest of the push, the PR's
+ * When CI could start on the head commit: the latest of the push, the PR's
  * creation, and its last move from draft to ready for review.
  *
  * @param {import('./pr-state.d.mts').Snapshot} snapshot
@@ -153,7 +121,7 @@ export function clockStart(snapshot) {
 
 /**
  * Sums up CI on the head commit: the latest run of each check, and the latest status for each
- * context. pr-status.yml's own status and check aren't CI. A workflow that runs again, for
+ * context. Exclude the PR status and the old Claude review check. A workflow that runs again, for
  * example when the PR's title is edited, starts a new check suite, so a check's latest run is its
  * latest in any suite.
  *
@@ -165,7 +133,7 @@ export function ciSummary(checkRuns, statuses) {
   /** @type {Map<string, import('./pr-state.d.mts').CheckRun>} */
   const runs = new Map();
   for (const run of checkRuns) {
-    if (run.name === OWN_CHECK) continue;
+    if (run.name === OWN_CHECK || run.name === 'Claude review') continue;
     const key = `${run.app?.slug ?? ''}\u0000${run.name}`;
     const seen = runs.get(key);
     if (!seen || run.id > seen.id) runs.set(key, run);
@@ -194,130 +162,8 @@ export function ciSummary(checkRuns, statuses) {
   return summary;
 }
 
-/**
- * Reads the review rows in Codex's summary comment. Each row names a review, its status and
- * the short SHA it's for, as in:
- *   | 📝 **Code Review** | ✅ **Completed** <relative-time ...> | `333a541` | New commits |
- *
- * @param {string} body
- * @returns {{ review: string, status: string, commit: string | null }[]}
- */
-export function codexSummaryRows(body) {
-  /** @type {{ review: string, status: string, commit: string | null }[]} */
-  const rows = [];
-  for (const line of body.split('\n')) {
-    const cells = line.split('|').map(cell => cell.trim());
-    // A row has an empty cell before the first | and after the last one.
-    if (cells.length < 6) continue;
-    const review = /\*\*([^*]+)\*\*/.exec(cells[1])?.[1];
-    const status = /\*\*([^*]+)\*\*/.exec(cells[2])?.[1];
-    if (!review || !status) continue;
-    rows.push({ review, status, commit: /`([0-9a-f]{7,40})`/i.exec(cells[3])?.[1] ?? null });
-  }
-  return rows;
-}
-
 /** A comment that only asks a bot to do something, such as "Agent: @codex review". */
 const BOT_COMMAND = /^\s*(?:agent:\s*)?@codex\s+\S+[\s.]*$/i;
-
-/**
- * The comments in which a person, not a bot, asked a bot to review since the head was pushed.
- *
- * @param {import('./pr-state.d.mts').IssueComment[]} comments
- * @param {RegExp} command
- * @param {string} since
- */
-function requests(comments, command, since) {
-  return comments
-    .filter(c => !byBot(c) && command.test(c.body ?? '') && byTime(c.created_at, since) >= 0)
-    .sort((a, b) => byTime(a.created_at, b.created_at));
-}
-
-/**
- * @param {number} start
- * @param {number} wait
- * @returns {string}
- */
-function after(start, wait) {
-  return new Date(start + wait).toISOString();
-}
-
-/**
- * Codex's state for the head commit.
- *
- * @param {import('./pr-state.d.mts').Snapshot} snapshot
- * @param {number} now
- * @returns {import('./pr-state.d.mts').BotState}
- */
-export function codexState(snapshot, now) {
-  const head = snapshot.pull.head.sha;
-  const short = head.slice(0, 7);
-  const pushed = pushedAt(snapshot);
-  const start = Date.parse(clockStart(snapshot));
-  if (snapshot.reviews.some(r => r.user?.login === CODEX && shaMatches(r.commit_id, head))) {
-    return { state: 'done', detail: `Codex reviewed ${short} and left comments` };
-  }
-  // With no findings, Codex may instead comment "Codex Review: Didn't find any major issues"
-  // with a "Reviewed commit" line.
-  const clean = snapshot.issueComments.some(
-    c =>
-      c.user?.login === CODEX &&
-      shaMatches(/Reviewed commit:\**\s*`([0-9a-f]{7,40})`/i.exec(c.body ?? '')?.[1], head)
-  );
-  if (clean) return { state: 'done', detail: `Codex reviewed ${short} and found no major issues` };
-  const summary = snapshot.issueComments.find(
-    c => c.user?.login === CODEX && (c.body ?? '').includes('codex-pull-request-review-summary')
-  );
-  const row = codexSummaryRows(summary?.body ?? '').find(r => /code review/i.test(r.review));
-  const ofHead = row && shaMatches(row.commit, head);
-  if (ofHead && /completed/i.test(row.status)) {
-    return { state: 'done', detail: `Codex completed its review of ${short}` };
-  }
-  // Codex reacts 👍 when its reviews finish with no findings. The reaction is on the PR, not a
-  // commit, so only one from after the push is about the head commit.
-  const thumbs = snapshot.reactions.some(
-    r => r.user?.login === CODEX && r.content === '+1' && byTime(r.created_at, pushed) >= 0
-  );
-  if (thumbs) return { state: 'done', detail: `Codex reacted 👍 after ${short} was pushed` };
-  const last = ofHead
-    ? `; its review of ${short} ended as ${row.status}`
-    : row?.commit
-      ? `; its last review was of ${row.commit}`
-      : '';
-  if (now - start >= BOT_MAX_WAIT) {
-    return {
-      state: 'gave-up',
-      detail: `Codex hasn't reviewed ${short} in the 2 hours it has had${last}`,
-    };
-  }
-  if (ofHead && /running|queued|pending|progress/i.test(row.status)) {
-    return { state: 'running', detail: `Codex's review of ${short} is ${row.status}` };
-  }
-  const eyes = snapshot.reactions.some(
-    r => r.user?.login === CODEX && r.content === 'eyes' && byTime(r.created_at, pushed) >= 0
-  );
-  if (eyes) return { state: 'running', detail: 'Codex is reviewing (👀)' };
-  const asked = requests(snapshot.issueComments, /@codex\s+review\b/i, pushed);
-  if (asked.length > 0) {
-    return {
-      state: 'requested',
-      detail: `Asked at ${asked[0].created_at} for a review of ${short}${last}`,
-      until: after(start, BOT_MAX_WAIT),
-    };
-  }
-  if (now - start < BOT_START_WAIT) {
-    return {
-      state: 'pending',
-      detail: `Codex hasn't started on ${short}${last}`,
-      until: after(start, BOT_START_WAIT),
-    };
-  }
-  return {
-    state: 'not-requested',
-    detail: `Codex hasn't reviewed ${short} 30 minutes after it could start${last}`,
-    action: 'Post `@codex review`',
-  };
-}
 
 /**
  * The IDs of the review comments that start a thread with a person's reply in it.
@@ -488,12 +334,9 @@ function changesRequested(reviews) {
  *
  * @param {import('./pr-state.d.mts').Snapshot} snapshot
  * @param {number} [now] Milliseconds since the epoch.
- * @param {{ requests?: boolean }} [options] With `requests: false`, as after the third review
- *   round in AGENTS.md, a Codex that hasn't reviewed isn't something to ask: the PR waits for it
- *   until its 2 hours are up.
  * @returns {import('./pr-state.d.mts').PrStatus}
  */
-export function classify(snapshot, now = Date.now(), { requests = true } = {}) {
+export function classify(snapshot, now = Date.now()) {
   const { pull } = snapshot;
   const head = pull.head.sha;
   const pushed = pushedAt(snapshot);
@@ -502,26 +345,9 @@ export function classify(snapshot, now = Date.now(), { requests = true } = {}) {
   /** @type {string[]} */
   const reasons = [];
   /** @type {string[]} */
-  const actions = [];
-  /** @type {string[]} */
   const notes = [];
   /** @type {string[]} */
   const waits = [];
-  const closed = Boolean(pull.merged || pull.merged_at) || pull.state === 'closed';
-  /** @type {import('./pr-state.d.mts').BotState} */
-  const skipped = closed
-    ? { state: 'skipped', detail: 'The PR is closed' }
-    : { state: 'skipped', detail: "The bots don't review drafts" };
-  /** @param {import('./pr-state.d.mts').BotState} bot */
-  const unasked = bot =>
-    !requests && bot.state === 'not-requested'
-      ? {
-          state: /** @type {const} */ ('pending'),
-          detail: `${bot.detail}, and the review rounds are used up`,
-          until: after(Date.parse(start), BOT_MAX_WAIT),
-        }
-      : bot;
-  const codex = closed || pull.draft ? skipped : unasked(codexState(snapshot, now));
   const result = (/** @type {import('./pr-state.d.mts').PrState} */ state) => ({
     pr: pull.number,
     title: pull.title,
@@ -531,11 +357,9 @@ export function classify(snapshot, now = Date.now(), { requests = true } = {}) {
     pushedAt: pushed,
     mergeableState: pull.mergeable_state ?? null,
     reasons,
-    actions,
     notes,
     waits,
     ci,
-    codex,
   });
 
   // A closed PR still lists unanswered threads and summaries, for the final comment check after a
@@ -572,13 +396,6 @@ export function classify(snapshot, now = Date.now(), { requests = true } = {}) {
     reasons.push(`${who(review)} requested changes: ${review.html_url}`);
   }
   if (pull.mergeable_state === 'dirty') reasons.push('The PR has a merge conflict with its base');
-  if (codex.state === 'not-requested') reasons.push(codex.detail);
-  if (codex.action) actions.push(codex.action);
-  if (codex.state === 'gave-up') notes.push(codex.detail);
-  if (['pending', 'running', 'requested'].includes(codex.state)) {
-    const until = codex.until ? ` (until ${codex.until})` : '';
-    waits.push(`${codex.detail}${until}`);
-  }
   if (ci.pending.length > 0) waits.push(`CI is running: ${ci.pending.join(', ')}`);
   if (!pull.mergeable_state || pull.mergeable_state === 'unknown') {
     waits.push('GitHub is still working out whether the PR can merge');
@@ -591,11 +408,6 @@ export function classify(snapshot, now = Date.now(), { requests = true } = {}) {
   }
   if (waits.length > 0) return result('waiting');
 
-  if (codex.state === 'gave-up') {
-    // AGENTS.md lets an agent merge only after Codex reviews the last commit.
-    reasons.push('Codex never reviewed the head commit, so only the maintainer can merge it');
-    return result('waiting-human');
-  }
   if (pull.mergeable_state === 'blocked') {
     reasons.push('GitHub blocks the merge, usually until a required review');
     return result('waiting-human');
@@ -620,8 +432,8 @@ export function mostUrgent(states) {
  * @returns {string}
  */
 export function digest(status) {
-  const { state, head, reasons, actions, notes } = status;
-  return JSON.stringify({ state, head, reasons, actions, notes });
+  const { state, head, reasons, notes } = status;
+  return JSON.stringify({ state, head, reasons, notes });
 }
 
 /**
@@ -799,27 +611,17 @@ export async function collect(api, repo, number) {
   // The branch's pushes. A deleted fork has no repository to read them from.
   const headRepo = pull.head.repo?.full_name;
   const branch = encodeURIComponent(ref);
-  const [
-    headCommit,
-    pushes,
-    events,
-    checkRuns,
-    statuses,
-    issueComments,
-    reviews,
-    reviewComments,
-    reactions,
-  ] = await Promise.all([
-    api.get(`${base}/git/commits/${sha}`),
-    headRepo ? api.get(`/repos/${headRepo}/activity?ref=${branch}&per_page=100`) : [],
-    api.getAll(`${base}/issues/${number}/events`),
-    api.getAll(`${base}/commits/${sha}/check-runs`, 'check_runs'),
-    api.getAll(`${base}/commits/${sha}/statuses`),
-    api.getAll(`${base}/issues/${number}/comments`),
-    api.getAll(`${base}/pulls/${number}/reviews`),
-    api.getAll(`${base}/pulls/${number}/comments`),
-    api.getAll(`${base}/issues/${number}/reactions`),
-  ]);
+  const [headCommit, pushes, events, checkRuns, statuses, issueComments, reviews, reviewComments] =
+    await Promise.all([
+      api.get(`${base}/git/commits/${sha}`),
+      headRepo ? api.get(`/repos/${headRepo}/activity?ref=${branch}&per_page=100`) : [],
+      api.getAll(`${base}/issues/${number}/events`),
+      api.getAll(`${base}/commits/${sha}/check-runs`, 'check_runs'),
+      api.getAll(`${base}/commits/${sha}/statuses`),
+      api.getAll(`${base}/issues/${number}/comments`),
+      api.getAll(`${base}/pulls/${number}/reviews`),
+      api.getAll(`${base}/pulls/${number}/comments`),
+    ]);
   return /** @type {import('./pr-state.d.mts').Snapshot} */ ({
     pull,
     headCommit,
@@ -830,6 +632,5 @@ export async function collect(api, repo, number) {
     issueComments,
     reviews,
     reviewComments,
-    reactions,
   });
 }

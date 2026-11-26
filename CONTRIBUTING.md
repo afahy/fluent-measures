@@ -324,20 +324,12 @@ pnpm lint:format:fix
 6. Fill in every section of the pull request template (`.github/pull_request_template.md`), including the related issue or Linear ticket and the tests you ran. Don't replace the template with a different format
 7. The PR will be merged once you have the sign-off of at least one maintainer
 
-### Automated Reviews
+### Bot Reviews
 
-Codex reviews each push to a pull request. Claude reviews when a pull request opens, and each time
-it becomes ready for review (`.github/workflows/claude-review.yml`). The Claude review posts comments
-only and blocks no merge. Claude posts its inline comments, and `github-actions` posts its summary.
-
-A pull request from a fork or from Dependabot gets no Claude review because the required secret
-isn't available; the check stays green.
-
-<!-- cspell:ignore anthropics -->
-
-The Claude review doesn't run on a pull request that changes `claude-review.yml`, because
-`anthropics/claude-code-action` stops when that file differs from the one on `main`. The check stays
-green. Put a change to the workflow in its own pull request, so that the other changes get a review.
+Turn off automatic Codex reviews for this repository in Codex settings. Keep the `Claude review`
+workflow disabled in GitHub Actions. The maintainer can request a Codex review when needed.
+`pnpm pr:status` reports review findings that have already been posted. PRs can become ready
+for maintainer review and merge as soon as CI passes and outstanding findings are addressed.
 
 ## Key Modules
 

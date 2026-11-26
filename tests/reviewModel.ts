@@ -169,9 +169,7 @@ export class ReviewModel {
     summaries: number[];
     threads: number[];
     followUps: number[];
-    codex: string;
     state: string;
-    actions: string[];
   } {
     const answered = (kind: 'review' | 'summary', subject: Summary): boolean =>
       [...this.answers.values()].some(
@@ -204,25 +202,8 @@ export class ReviewModel {
           !this.replies.slice(index + 1).some(later => later.thread === r.thread)
       )
       .map(r => r.id);
-    const done = this.reviews.some(r => r.author === 'codex' && r.head === this.head);
-    const age = this.tick - this.pushed;
-    const codex = done
-      ? 'done'
-      : age >= 7200
-        ? 'gave-up'
-        : age >= 1800
-          ? 'not-requested'
-          : 'pending';
-    const actions = codex === 'not-requested' ? ['Post `@codex review`'] : [];
-    const state =
-      reviews.length + summaries.length + threads.length + actions.length > 0
-        ? 'needs-agent'
-        : done
-          ? 'ready'
-          : codex === 'gave-up'
-            ? 'waiting-human'
-            : 'waiting';
-    return { reviews, summaries, threads, followUps, codex, state, actions };
+    const state = reviews.length + summaries.length + threads.length > 0 ? 'needs-agent' : 'ready';
+    return { reviews, summaries, threads, followUps, state };
   }
 
   now(): number {
@@ -251,15 +232,16 @@ export class ReviewModel {
       headCommit: { committer: { date: time(0) } },
       pushes: [{ activity_type: 'push', after: sha(this.head), timestamp: time(this.pushed) }],
       events: [],
-      checkRuns: ['ci-ok', 'Claude review'].map((name, i) => ({
-        id: i + 1,
-        name,
-        status: 'completed',
-        conclusion: 'success',
-        started_at: time(this.pushed),
-      })),
+      checkRuns: [
+        {
+          id: 1,
+          name: 'ci-ok',
+          status: 'completed',
+          conclusion: 'success',
+          started_at: time(this.pushed),
+        },
+      ],
       statuses: [],
-      reactions: [],
       reviews: [
         ...this.reviews.map(r => ({
           id: r.id,
