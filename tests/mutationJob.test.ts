@@ -381,10 +381,14 @@ const cacheFiles = [
   ),
 ];
 
-function cacheFixture(): string {
+// Manifest and workflow edits need only the two projection inputs and the script CI runs.
+// File-content cases use the complete fixture so their hash comparisons include the other inputs.
+function cacheFixture(
+  files = ['package.json', '.github/workflows/ci.yml', '.github/scripts/mutation-cache-inputs.mjs']
+): string {
   const directory = mkdtempSync(join(tmpdir(), 'fluent-measures-cache-'));
   cacheDirectories.push(directory);
-  for (const file of cacheFiles) {
+  for (const file of files) {
     mkdirSync(join(directory, file, '..'), { recursive: true });
     copyFileSync(file, join(directory, file));
   }
@@ -468,6 +472,18 @@ describe('mutation cache key behavior', () => {
     const hash = steps.findIndex(step => field(step, 'id') === 'inputs');
     expect(select).toBeGreaterThanOrEqual(0);
     expect(select).toBeLessThan(hash);
+  });
+
+  it('checks a module-field edit without copying unrelated test fixtures', () => {
+    const directory = cacheFixture();
+    const before = cacheKeys(directory);
+    editManifest(directory, manifest => {
+      manifest.module = './different-entry.js';
+    });
+    const after = cacheKeys(directory);
+    expect(after.hash).not.toBe(before.hash);
+    expect(after.tools).not.toBe(before.tools);
+    expect(existsSync(join(directory, 'tests'))).toBe(false);
   });
 
   it.each([
@@ -660,7 +676,7 @@ describe('mutation cache key behavior', () => {
       .map(file => `tests/fixtures/mutation/${file}`)
       .filter(file => statSync(file).isFile()),
   ])('keeps both keys for the known tooling fixture %s', file => {
-    const directory = cacheFixture();
+    const directory = cacheFixture(cacheFiles);
     const before = cacheKeys(directory);
     writeFileSync(join(directory, file), 'changed tooling fixture');
     expect(cacheKeys(directory)).toEqual(before);
@@ -688,7 +704,7 @@ describe('mutation cache key behavior', () => {
     '.github/scripts/changed-lines.mjs',
     '.github/scripts/workflow-commands.mjs',
   ])('changes the PR key for source-test or execution input %s', file => {
-    const directory = cacheFixture();
+    const directory = cacheFixture(cacheFiles);
     const before = cacheKeys(directory);
     // A comment also leaves executable scripts valid, so this checks the hash rather than a crash.
     const content = existsSync(join(directory, file))
@@ -703,7 +719,7 @@ describe('mutation cache key behavior', () => {
   it.each(['pnpm-lock.yaml', 'tsconfig.json', 'stryker.config.json', 'vitest.config.ts'])(
     'changes both keys for tool input %s',
     file => {
-      const directory = cacheFixture();
+      const directory = cacheFixture(cacheFiles);
       const before = cacheKeys(directory);
       writeFileSync(join(directory, file), 'changed tool input');
       const after = cacheKeys(directory);
