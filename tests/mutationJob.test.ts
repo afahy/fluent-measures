@@ -489,6 +489,8 @@ describe('mutation cache key behavior', () => {
   it.each([
     'release',
     'release:changeset',
+    'release:fetch',
+    'release:resume',
     'release:publish',
     'release:validate',
     'release:version',

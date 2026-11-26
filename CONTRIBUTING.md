@@ -267,7 +267,7 @@ Run them separately with `pnpm exec node .github/scripts/docs-controls.mjs [page
 
 ## Development Setup
 
-Use Node.js 22.22.1 or later in 22.x, 24.11 or later in 24.x, or 26 or later. Use Git 2.32.0 or later. CI runs on Node.js 22 and 24. These development dependencies need these versions:
+Use Node.js 22.22.1 or later in 22.x, 24.11 or later in 24.x, or 26 or later. Use Git 2.32.0 or later. Pull requests and pushes to main run the full test job on Node.js 24 and test the installed package on Node.js 22 and 24. Nightly runs the full test job on both versions. These development dependencies need these versions:
 
 - Stryker's Babel packages: Node.js `^22.18.0 || >=24.11.0`.
 - ESLint 10: Node.js `^20.19.0 || ^22.13.0 || >=24`.

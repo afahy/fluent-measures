@@ -7,6 +7,8 @@ for (const field of ['description', 'keywords', 'author']) delete manifest[field
 const releaseOnly = new Set([
   'release',
   'release:changeset',
+  'release:fetch',
+  'release:resume',
   'release:publish',
   'release:validate',
   'release:version',
