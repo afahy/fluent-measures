@@ -4,10 +4,8 @@ import {
   botFollowUps,
   ciSummary,
   classify,
-  codexSummaryRows,
   createClient,
   mostUrgent,
-  shaMatches,
   unansweredBotThreads,
   type CheckRun,
   type IssueComment,
@@ -24,7 +22,7 @@ import {
 //   pr-66          #66 at 2026-10-07T15:51Z. Codex reviewed 91a5d29 when the PR opened but not
 //                  the head c7ad2f4, pushed at 15:00:44.
 //   pr-67          #67 at 2026-10-07T15:51Z. The branch was pushed at 14:43:10 and the PR opened
-//                  at 14:51:34, so the bots could start then. Codex completed a review of the
+//                  at 14:51:34, so CI could start then. Codex completed a review of the
 //                  head 318c1b7.
 // The fixtures also hold CodeRabbit's comments, reviews and commit statuses. CodeRabbit isn't a
 // review bot, so only its commit statuses count, as CI. Every expected value below was worked
@@ -87,46 +85,6 @@ function thread(
     html_url: `${pr}#discussion_r${id}`,
   };
 }
-
-describe('shaMatches', () => {
-  const full = '333a541a23a7202e471f558968e08b42f8cd6468';
-
-  it('matches a short SHA of 7 or more characters against the full SHA, either way round', () => {
-    expect(shaMatches('333a541', full)).toBe(true);
-    expect(shaMatches(full, '333A541A23')).toBe(true);
-    expect(shaMatches(full, full)).toBe(true);
-  });
-
-  it('rejects a prefix shorter than 7 characters, another commit, or no SHA', () => {
-    expect(shaMatches('333a54', full)).toBe(false);
-    expect(shaMatches('333a542', full)).toBe(false);
-    expect(shaMatches(null, full)).toBe(false);
-    expect(shaMatches(full, '')).toBe(false);
-  });
-});
-
-describe('codexSummaryRows', () => {
-  it("reads the review, its status and its commit from Codex's summary comment", () => {
-    const body = fixture('pr-43-at-1810').issueComments.find(c =>
-      c.body?.includes('codex-pull-request-review-summary')
-    )?.body;
-    expect(codexSummaryRows(body ?? '')).toEqual([
-      { review: 'Code Review', status: 'Completed', commit: '333a541' },
-    ]);
-  });
-
-  it('reads a running review, and skips lines that are not review rows', () => {
-    const body = [
-      '| Review | Status | Commit | Review trigger |',
-      '| --- | --- | --- | --- |',
-      '| 📝 **Code Review** | 🔄 **Running** since 2026-10-05T02:50:32Z | `b92e3aa` | New commits |',
-      'Reviews are triggered when you',
-    ].join('\n');
-    expect(codexSummaryRows(body)).toEqual([
-      { review: 'Code Review', status: 'Running', commit: 'b92e3aa' },
-    ]);
-  });
-});
 
 describe('ciSummary', () => {
   const run = (id: number, name: string, status: string, conclusion: string | null): CheckRun => ({
@@ -196,6 +154,16 @@ describe('unansweredBotThreads and botFollowUps', () => {
 });
 
 describe('classify', () => {
+  it.each(['2026-10-07T15:20:00Z', '2026-10-07T15:31:00Z', '2026-10-07T17:01:00Z'])(
+    'is ready with passing CI and no Codex review of the head at %s',
+    time => {
+      const status = classify(fixture('pr-66'), at(time));
+      expect(status.state).toBe('ready');
+      expect(status.reasons).toEqual([]);
+      expect(status.waits).toEqual([]);
+    }
+  );
+
   it('needs the agent when bot threads have no reply (#43 at 18:10)', () => {
     const status = classify(fixture('pr-43-at-1810'), at('2026-10-05T18:10:00Z'));
     expect(status.state).toBe('needs-agent');
@@ -204,11 +172,9 @@ describe('classify', () => {
     // 13 runs, but two checks ran twice after title edits, so 11 checks. CodeRabbit's commit
     // status is a 12th.
     expect(status.ci.passed).toHaveLength(12);
-    expect(status.codex.state).toBe('done');
     expect(status.reasons).toEqual([
       'chatgpt-codex-connector[bot] left a thread with no reply: https://github.com/afahy/fluent-measures/pull/43#discussion_r4187121862',
     ]);
-    expect(status.actions).toEqual([]);
   });
 
   it('reports a merged PR as merged, with any bot reply to read', () => {
@@ -226,44 +192,7 @@ describe('classify', () => {
     expect(status.notes).toEqual([`claude[bot] replied after your reply: ${pr43}#discussion_r3`]);
   });
 
-  it('waits only for Codex to start (#66 at 15:20)', () => {
-    const status = classify(fixture('pr-66'), at('2026-10-07T15:20:00Z'));
-    expect(status.state).toBe('waiting');
-    expect(status.pushedAt).toBe('2026-10-07T15:00:44Z');
-    // 12 checks, and CodeRabbit's commit status.
-    expect(status.ci.passed).toHaveLength(13);
-    expect(status.codex.state).toBe('pending');
-    expect(status.waits).toEqual([
-      "Codex hasn't started on c7ad2f4; its last review was of 91a5d29 (until 2026-10-07T15:30:44.000Z)",
-    ]);
-    expect(status.notes).toEqual([]);
-  });
-
-  it('asks for a Codex review 30 minutes after the push (#66 at 15:31)', () => {
-    const before = classify(fixture('pr-66'), at('2026-10-07T15:30:43Z'));
-    expect(before.state).toBe('waiting');
-    const status = classify(fixture('pr-66'), at('2026-10-07T15:30:44Z'));
-    expect(status.state).toBe('needs-agent');
-    expect(status.reasons).toEqual([
-      "Codex hasn't reviewed c7ad2f4 30 minutes after it could start; its last review was of 91a5d29",
-    ]);
-    expect(status.actions).toEqual(['Post `@codex review`']);
-  });
-
-  it('leaves the merge to the maintainer when Codex never reviews the head in 2 hours', () => {
-    // 15:00:44 plus 2 hours.
-    const before = classify(fixture('pr-66'), at('2026-10-07T17:00:43Z'));
-    expect(before.codex.state).toBe('not-requested');
-    const status = classify(fixture('pr-66'), at('2026-10-07T17:00:44Z'));
-    expect(status.state).toBe('waiting-human');
-    expect(status.codex.state).toBe('gave-up');
-    expect(status.reasons).toEqual([
-      'Codex never reviewed the head commit, so only the maintainer can merge it',
-    ]);
-    expect(status.actions).toEqual([]);
-  });
-
-  it('treats a running Codex review of the head as running', () => {
+  it('is ready while a manually requested Codex review runs', () => {
     const snapshot = fixture('pr-66');
     const summary = snapshot.issueComments.find(c => c.user?.login.startsWith('chatgpt-codex'));
     // Replace the completed review of 91a5d29 with a running review of the head.
@@ -272,64 +201,37 @@ describe('classify', () => {
       .body!.replace(/✅ \*\*Completed\*\*/, '🔄 **Running**')
       .replace('`91a5d29`', '`c7ad2f4`');
     const status = classify(snapshot, at('2026-10-07T15:40:00Z'));
-    expect(status.codex).toEqual({
-      state: 'running',
-      detail: "Codex's review of c7ad2f4 is Running",
-    });
-    expect(status.state).toBe('waiting');
+    expect(status.state).toBe('ready');
+    expect(status.waits).toEqual([]);
   });
 
-  it("treats Codex's 👀 reaction as a review in progress, not a finished one", () => {
+  it.each([
+    ['in_progress', null],
+    ['completed', 'failure'],
+  ])('ignores a Claude review check with status %s and conclusion %s', (status, conclusion) => {
     const snapshot = fixture('pr-66');
-    snapshot.reactions.push({
-      user: { login: 'chatgpt-codex-connector[bot]', type: 'Bot' },
-      content: 'eyes',
-      created_at: '2026-10-07T15:35:00Z',
-    });
-    const status = classify(snapshot, at('2026-10-07T15:40:00Z'));
-    expect(status.codex.state).toBe('running');
-    expect(status.state).toBe('waiting');
-  });
-
-  it('counts a Codex review of the head as done, and not a review of an earlier commit', () => {
-    const snapshot = fixture('pr-66');
-    const review = (commit: string): Review => ({
-      id: 1,
-      user: { login: 'chatgpt-codex-connector[bot]', type: 'Bot' },
-      state: 'COMMENTED',
-      body: '### 💡 Codex Review',
-      commit_id: commit,
-      submitted_at: '2026-10-07T15:20:00Z',
-      html_url: `${pr66}#pullrequestreview-1`,
-    });
-    snapshot.reviews.push(review('91a5d29c8f62b5cbdececfcdb0a60e77d8209fc6'));
-    expect(classify(snapshot, at('2026-10-07T15:40:00Z')).codex.state).toBe('not-requested');
-    snapshot.reviews.push(review('c7ad2f4b90595f059840e8a95dfa50f82b9a0593'));
-    expect(classify(snapshot, at('2026-10-07T15:40:00Z')).codex.state).toBe('done');
-  });
-
-  it('waits up to 2 hours after asking a bot once', () => {
-    const snapshot = fixture('pr-66');
-    const ask: IssueComment = {
-      id: 1,
-      user: { login: 'afahy', type: 'User' },
-      body: 'Agent: @codex review',
-      created_at: '2026-10-07T15:35:00Z',
-      updated_at: '2026-10-07T15:35:00Z',
-      html_url: `${pr66}#issuecomment-1`,
+    const reviewCheck = {
+      id: 99,
+      name: 'Claude review',
+      status,
+      conclusion,
+      started_at: '2026-10-07T15:10:00Z',
+      app: { slug: 'github-actions' },
     };
-    snapshot.issueComments.push(ask);
-    const status = classify(snapshot, at('2026-10-07T15:40:00Z'));
-    expect(status.codex).toEqual({
-      state: 'requested',
-      detail:
-        'Asked at 2026-10-07T15:35:00Z for a review of c7ad2f4; its last review was of 91a5d29',
-      until: '2026-10-07T17:00:44.000Z',
-    });
-    expect(status.state).toBe('waiting');
+    snapshot.checkRuns.push(reviewCheck);
+    const ready = classify(snapshot, at('2026-10-07T15:40:00Z'));
+    expect(ready.state).toBe('ready');
+    expect(ready.ci).toMatchObject({ pending: [], failed: [] });
+
+    snapshot.checkRuns = [reviewCheck];
+    snapshot.statuses = [];
+    const missing = classify(snapshot, at('2026-10-07T15:40:00Z'));
+    expect(missing.reasons).toEqual([
+      'No CI ran on c7ad2f4 in the 30 minutes after it could start',
+    ]);
   });
 
-  it('is ready when CI passed, Codex reviewed the head and GitHub allows the merge', () => {
+  it('is ready when CI passed and GitHub allows the merge', () => {
     const snapshot = fixture('pr-67');
     expect(classify(snapshot, at('2026-10-07T16:00:00Z')).state).toBe('ready');
     snapshot.pull.mergeable_state = 'blocked';
@@ -376,14 +278,12 @@ describe('classify', () => {
     );
   });
 
-  it("puts a draft on hold for a person, and doesn't ask the bots to review it", () => {
+  it('puts a draft on hold for a person', () => {
     const snapshot = fixture('pr-66');
     snapshot.pull.draft = true;
     const status = classify(snapshot, at('2026-10-07T16:30:00Z'));
     expect(status.state).toBe('waiting-human');
     expect(status.reasons).toEqual(['The PR is a draft']);
-    expect(status.actions).toEqual([]);
-    expect(status.codex.state).toBe('skipped');
   });
 
   it('keeps a draft on hold while its CI runs, and needs the agent when CI fails', () => {
@@ -507,7 +407,6 @@ describe('classify', () => {
     expect(status.reasons).toEqual([
       `claude[bot] left a thread with no reply: ${pr67}#discussion_r10`,
     ]);
-    expect(status.actions).toEqual([]);
     expect(status.waits).toEqual([]);
     snapshot.reviewComments.push(thread(pr67, 11, human, '2026-10-07T15:58:00Z', 10));
     const answered = classify(snapshot, at('2026-10-07T16:00:00Z'));
@@ -527,7 +426,6 @@ describe('classify', () => {
     ]);
     // The summary isn't a note.
     expect(status.notes).toEqual([]);
-    expect(status.actions).toEqual([]);
   });
 
   it("needs an answer to a summary from before the push, and takes only a person's (#140)", () => {
@@ -548,8 +446,7 @@ describe('classify', () => {
     expect(classify(snapshot, at('2026-10-07T15:20:00Z')).reasons).toEqual(reason);
     snapshot.issueComments.push(postedAt(answer140, '2026-10-07T15:10:00Z'));
     const answered = classify(snapshot, at('2026-10-07T15:20:00Z'));
-    // Codex still hasn't started on the head.
-    expect(answered.state).toBe('waiting');
+    expect(answered.state).toBe('ready');
     expect(answered.reasons).toEqual([]);
   });
 

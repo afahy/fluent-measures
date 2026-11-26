@@ -5,11 +5,9 @@
 // CI that reports with commit statuses shows its end at the next 30-minute run.
 //
 // The status is `success` when the PR is ready, `failure` when it needs the agent, and
-// `pending` while it waits on CI or a bot. When nothing else is open and the PR waits only for
-// the maintainer, it's `success` too, with a description that starts "waiting-human:". So it
-// doesn't look like a run that is still going (AFA-125). It isn't a required check, so `success`
-// merges nothing. The script sets it only when it changes, so a run that finds no news writes
-// nothing.
+// `pending` while it waits on CI or a mergeability check. When the PR waits only for the
+// maintainer, it's `success` too, with a description that starts "waiting-human:" (AFA-125).
+// This status is informational. The script writes it only when it changes.
 
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
@@ -51,7 +49,7 @@ export function describeStatus(status) {
   const more = items.length > 1 ? ` (+${items.length - 1} more)` : '';
   const text =
     status.state === 'ready'
-      ? 'ready: Nothing is left for the agent'
+      ? 'ready: Maintainer review and merge'
       : `${status.state}${first ? `: ${first}` : ''}${more}`;
   // Each character that is left is one UTF-16 unit, so the cut can't split one.
   return text.length > MAX_DESCRIPTION ? `${text.slice(0, MAX_DESCRIPTION - 1)}…` : text;
@@ -86,7 +84,7 @@ export async function prsForEvent(api, repo, name, event) {
       );
       return pulls.map(p => p.number);
     }
-    // Bots' and CI's timers run out without an event, so a schedule checks every open PR.
+    // A missing CI run sends no event when the startup window ends.
     case 'schedule':
     case 'workflow_dispatch': {
       const pulls = /** @type {{ number: number }[]} */ (

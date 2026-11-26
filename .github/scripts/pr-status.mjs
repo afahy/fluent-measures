@@ -2,17 +2,16 @@
 // write its own checks (AFA-98). pr-state.mjs holds the rules.
 //
 // Usage: pnpm pr:status <pr>... [--json] [--wait] [--timeout <minutes>] [--interval <seconds>]
-//                               [--no-requests] [--repo <owner/name>]
+//                               [--repo <owner/name>]
 //
 // The state of each PR, from most to least urgent, with the exit code:
 //   needs-agent    10  The agent has something to do: failed CI, a bot thread or a Claude
-//                      summary with no answer, a merge conflict, or a bot review to ask for.
-//                      "Do" lists the requests.
-//   ready           0  Nothing is left for the agent. Merge it if AGENTS.md lets you.
+//                      summary with no answer, or a merge conflict.
+//   ready           0  Ready for maintainer review and merge.
 //   merged         40
 //   closed         41
 //   waiting-human  30  Only a person can move it, such as a draft or a merge GitHub blocks.
-//   waiting        20  CI or a bot review is still running.
+//   waiting        20  CI is still running or GitHub is checking mergeability.
 // With several PRs, the exit code is that of the most urgent state. A bad argument exits with
 // 2, a token that GitHub refuses with 3, and another API error with 1.
 //
@@ -25,10 +24,6 @@
 // waiting-human PR gets news, such as a bot reply. It stops after --timeout minutes (default 100,
 // under the 2-hour limit for a background command). 304 answers to its polls don't count against
 // GitHub's rate limit.
-//
-// --no-requests is for after the third review round, when AGENTS.md says not to ask Codex
-// again: a Codex that hasn't reviewed is waited for until its 2 hours are up, not asked.
-// Claude is never asked to review, and it is waited for only as the `Claude review` check.
 //
 // The token comes from GH_TOKEN, GITHUB_TOKEN or `gh auth token`. The repository comes from
 // --repo, GITHUB_REPOSITORY or the origin remote.
@@ -52,13 +47,13 @@ if ((process.env.HTTPS_PROXY || process.env.https_proxy) && !process.env.NODE_US
 
 const USAGE =
   'Usage: pnpm pr:status <pr>... [--json] [--wait] [--timeout <minutes>] ' +
-  '[--interval <seconds>] [--no-requests] [--repo <owner/name>]';
+  '[--interval <seconds>] [--repo <owner/name>]';
 
 /**
  * @param {string[]} args
  */
 function parseArgs(args) {
-  const options = { prs: /** @type {number[]} */ ([]), json: false, wait: false, requests: true };
+  const options = { prs: /** @type {number[]} */ ([]), json: false, wait: false };
   let timeout = 100;
   let interval = 60;
   let repo = '';
@@ -66,7 +61,6 @@ function parseArgs(args) {
     const arg = args[i];
     if (arg === '--json') options.json = true;
     else if (arg === '--wait') options.wait = true;
-    else if (arg === '--no-requests') options.requests = false;
     else if (arg === '--timeout') timeout = Number(args[++i]);
     else if (arg === '--interval') interval = Number(args[++i]);
     else if (arg === '--repo') repo = args[++i] ?? '';
@@ -112,10 +106,8 @@ function describe(status) {
   if (pending.length) ci.push(`${pending.length} running (${pending.join(', ')})`);
   if (failed.length) ci.push(`${failed.length} failed (${failed.join(', ')})`);
   lines.push(`  CI: ${ci.join(', ')}`);
-  lines.push(`  Codex: ${status.codex.state}. ${status.codex.detail}`);
   for (const [title, items] of /** @type {const} */ ([
     ['Why', status.reasons],
-    ['Do', status.actions],
     ['Waiting on', status.waits],
     ['Notes', status.notes],
   ])) {
@@ -143,7 +135,7 @@ try {
   console.error(/** @type {Error} */ (error).message);
   process.exit(2);
 }
-const { prs, json, repo, requests } = options;
+const { prs, json, repo } = options;
 const token = findToken();
 
 try {
@@ -152,9 +144,7 @@ try {
     apiUrl: process.env.GITHUB_API_URL || 'https://api.github.com',
   });
   const check = async () =>
-    Promise.all(
-      prs.map(async pr => classify(await collect(api, repo, pr), Date.now(), { requests }))
-    );
+    Promise.all(prs.map(async pr => classify(await collect(api, repo, pr))));
   await pollStatuses(options, {
     check,
     finish: (statuses, heading) => finish(statuses, json, heading),

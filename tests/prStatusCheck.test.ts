@@ -36,16 +36,7 @@ describe('describeStatus', () => {
       'needs-agent: chatgpt-codex-connector[bot] left a thread with no reply (+1 more)'
     );
     expect(describeStatus(classify(fixture('pr-66'), at('2026-10-07T15:31:00Z')))).toBe(
-      "needs-agent: Codex hasn't reviewed c7ad2f4 30 minutes after it could start; its last review was of 91a5d29"
-    );
-    expect(describeStatus(classify(fixture('pr-66'), at('2026-10-07T15:20:00Z')))).toBe(
-      "waiting: Codex hasn't started on c7ad2f4; its last review was of 91a5d29 (until 2026-10-07T15:30:44.000Z)"
-    );
-    expect(describeStatus(classify(fixture('pr-66'), at('2026-10-07T17:01:00Z')))).toBe(
-      'waiting-human: Codex never reviewed the head commit, so only the maintainer can merge it'
-    );
-    expect(describeStatus(classify(fixture('pr-67'), at('2026-10-07T16:00:00Z')))).toBe(
-      'ready: Nothing is left for the agent'
+      'ready: Maintainer review and merge'
     );
   });
 
@@ -85,17 +76,6 @@ describe('describeStatus', () => {
   // GitHub answered 422, "Description doesn't accept 4-byte Unicode", to a status with the 👀
   // (AFA-108).
   it('drops each character outside the Basic Multilingual Plane, and the brackets around it', () => {
-    const snapshot = fixture('pr-66');
-    snapshot.reactions.push({
-      user: { login: 'chatgpt-codex-connector[bot]', type: 'Bot' },
-      content: 'eyes',
-      created_at: '2026-10-07T15:10:00Z',
-    });
-    // At 15:20 the first wait was "Codex hasn't started" (above). After the 👀, it is
-    // "Codex is reviewing (👀)".
-    expect(describeStatus(classify(snapshot, at('2026-10-07T15:20:00Z')))).toBe(
-      'waiting: Codex is reviewing'
-    );
     const status = classify(fixture('pr-67'), at('2026-10-07T16:00:00Z'));
     const emoji: PrStatus = { ...status, state: 'waiting-human', reasons: ['👍'.repeat(200)] };
     expect(describeStatus(emoji)).toBe('waiting-human');
@@ -216,7 +196,6 @@ describe('setStatus', () => {
         if (path.endsWith('/check-runs')) return snapshot.checkRuns;
         if (path.endsWith('/statuses')) return snapshot.statuses;
         if (path.endsWith('/reviews')) return snapshot.reviews;
-        if (path.endsWith('/reactions')) return snapshot.reactions;
         if (path.includes('/pulls/')) return snapshot.reviewComments;
         return snapshot.issueComments;
       },
@@ -240,14 +219,14 @@ describe('setStatus', () => {
       67,
       at('2026-10-07T16:00:00Z')
     );
-    expect(set).toEqual({ state: 'success', description: 'ready: Nothing is left for the agent' });
+    expect(set).toEqual({ state: 'success', description: 'ready: Maintainer review and merge' });
     expect(posts).toEqual([
       [
         `/repos/${repo}/statuses/318c1b7f27c418c6a53ecf1c3de26c32ea207cb0`,
         {
           state: 'success',
           context: 'pr-status',
-          description: 'ready: Nothing is left for the agent',
+          description: 'ready: Maintainer review and merge',
           target_url: 'https://github.com/afahy/fluent-measures/pull/67',
         },
       ],
@@ -266,7 +245,7 @@ describe('setStatus', () => {
       {
         context: 'pr-status',
         state: 'success',
-        description: 'ready: Nothing is left for the agent',
+        description: 'ready: Maintainer review and merge',
         created_at: '2026-10-07T15:59:00Z',
       },
       // A newer status from another context isn't the PR's status.
@@ -331,7 +310,7 @@ describe('setStatus', () => {
     snapshot.statuses.push({
       context: 'pr-status',
       state: 'pending',
-      description: 'ready: Nothing is left for the agent',
+      description: 'ready: Maintainer review and merge',
       created_at: '2026-10-07T15:59:30Z',
     });
     await setStatus(fakeApi(snapshot), post, repo, 67, at('2026-10-07T16:00:00Z'));
@@ -346,20 +325,7 @@ describe('setStatus', () => {
       'failure',
       'needs-agent: chatgpt-codex-connector[bot] left a thread with no reply',
     ],
-    [
-      'pr-66',
-      '2026-10-07T15:20:00Z',
-      'pending',
-      "waiting: Codex hasn't started on c7ad2f4; its last review was of 91a5d29 (until 2026-10-07T15:30:44.000Z)",
-    ],
-    // AFA-125: a PR that waits only for the maintainer shows a green check, and the description
-    // says what the maintainer needs to do.
-    [
-      'pr-66',
-      '2026-10-07T17:01:00Z',
-      'success',
-      'waiting-human: Codex never reviewed the head commit, so only the maintainer can merge it',
-    ],
+    ['pr-66', '2026-10-07T15:20:00Z', 'success', 'ready: Maintainer review and merge'],
   ])('sets %s at %s to %s', async (name, time, state, description) => {
     const { posts, post } = recorder();
     const snapshot = fixture(name);
@@ -436,7 +402,6 @@ describe('pr-status-check.mjs', () => {
       [`${base}/issues/67/comments`]: snapshot.issueComments,
       [`${base}/pulls/67/reviews`]: snapshot.reviews,
       [`${base}/pulls/67/comments`]: snapshot.reviewComments,
-      [`${base}/issues/67/reactions`]: snapshot.reactions,
     };
     const posts: { path: string; headers: IncomingHttpHeaders; body: unknown }[] = [];
     const server = createServer((request, response) => {
@@ -493,7 +458,7 @@ describe('pr-status-check.mjs', () => {
     const api = await serve(201);
     const result = await run(api.url);
     expect(result.code).toBe(0);
-    expect(result.stdout).toBe('#67: success, ready: Nothing is left for the agent\n');
+    expect(result.stdout).toBe('#67: success, ready: Maintainer review and merge\n');
     expect(api.posts).toHaveLength(1);
     const [sent] = api.posts;
     expect(sent.path).toBe(`/repos/${repo}/statuses/318c1b7f27c418c6a53ecf1c3de26c32ea207cb0`);
@@ -506,7 +471,7 @@ describe('pr-status-check.mjs', () => {
     expect(sent.body).toEqual({
       state: 'success',
       context: 'pr-status',
-      description: 'ready: Nothing is left for the agent',
+      description: 'ready: Maintainer review and merge',
       target_url: 'https://github.com/afahy/fluent-measures/pull/67',
     });
   });
@@ -515,7 +480,7 @@ describe('pr-status-check.mjs', () => {
     const api = await serve(201);
     const result = await run(api.url, 'schedule', {});
     expect(result.code).toBe(1);
-    expect(result.stdout).toBe('#67: success, ready: Nothing is left for the agent\n');
+    expect(result.stdout).toBe('#67: success, ready: Maintainer review and merge\n');
     expect(result.stderr).toContain(
       `#66: GitHub answered 404 for ${api.url}/repos/${repo}/pulls/66`
     );

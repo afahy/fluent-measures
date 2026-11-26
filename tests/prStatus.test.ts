@@ -65,7 +65,6 @@ async function serve(
       [`${base}/issues/43/comments`]: s?.issueComments,
       [`${base}/pulls/43/reviews`]: s?.reviews,
       [`${base}/pulls/43/comments`]: s?.reviewComments,
-      [`${base}/issues/43/reactions`]: s?.reactions,
     };
     const body = routes[path];
     response.writeHead(body === undefined ? 404 : 200, { 'Content-Type': 'application/json' });
@@ -126,9 +125,11 @@ describe('pr-status.mjs', () => {
   });
 
   it('prints JSON with --json', async () => {
-    const api = await serve([answered()]);
+    const snapshot = answered();
+    snapshot.reviews = [];
+    snapshot.issueComments = [];
+    const api = await serve([snapshot]);
     const result = await run(api.url, ['#43', '--json']);
-    // Codex reviewed 333a541 and CI passed, so nothing is left for the agent.
     expect(result.code).toBe(0);
     expect(JSON.parse(result.stdout)).toEqual([
       expect.objectContaining({
@@ -153,12 +154,6 @@ describe('pr-status.mjs', () => {
     expect(result.code).toBe(40);
     expect(api.polls()).toBe(3);
     expect(result.stdout.split('\n')[0]).toBe('After 0 min: #43 is now merged.');
-  });
-
-  it('accepts --no-requests', async () => {
-    const api = await serve([fixture('pr-43-at-1810')]);
-    const result = await run(api.url, ['43', '--no-requests']);
-    expect(result.code).toBe(10);
   });
 
   it('with --wait, returns at once when the PR already needs the agent', async () => {

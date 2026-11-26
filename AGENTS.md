@@ -107,17 +107,16 @@ In agent tooling, report only the problems that "Handle findings and CI" says ar
 Judge each action by how easy it is to undo:
 
 - **Two-way door:** easy to undo. Examples are file edits, local commits, pushes to a
-  feature branch, PRs and PR comments, merges that "Merge your own PR" allows, and Linear
-  tickets, comments, labels and statuses. Take these actions without asking. In your report,
-  list them and say how to undo any that aren't obvious.
-- **One-way door:** hard or impossible to undo. Examples are pushes to `main`, other merges,
+  feature branch, PRs and PR comments, and Linear tickets, comments, labels and statuses.
+  Take these actions without asking. In your report, list them and say how to undo any that
+  aren't obvious.
+- **One-way door:** hard or impossible to undo. Examples are pushes to `main`, merges,
   force-pushes, deleting work that isn't on `main`, publishing a package, and changes to
   repository settings or secrets. Ask the maintainer first, or leave the action to them.
 - If you aren't sure which kind an action is, treat it as a one-way door.
 
 "Stop and ask" is the exception. Those changes are easy to undo, but the maintainer keeps
-the decision. The maintainer reviews each PR that you can't merge yourself before it merges,
-and the others after they merge.
+the decision. The maintainer reviews each PR before it merges.
 
 ### Standing approvals
 
@@ -129,10 +128,8 @@ answer:
 - File, claim, label, comment on and move Linear tickets.
 - Create a branch and a worktree for each ticket, commit, push to the ticket's branch, and
   merge `main` into it.
-- Open PRs, post `Agent:` comments and Codex review requests, reply to and resolve threads,
-  and convert a PR to a draft.
+- Open PRs, post `Agent:` comments, reply to and resolve threads, and convert a PR to a draft.
 - Re-run CI jobs that no runner picked up, or that an Actions incident stopped.
-- Merge a PR with `gh pr merge <number> --squash` when "Merge your own PR" allows it.
 - Pull `main` after a merge, and remove the merged PR's worktree and local branch.
 - Raise a limit in `.size-limit.cjs` by 0.5 kB.
 - Start subagents that build a ticket in its own worktree, review a branch or watch PRs.
@@ -222,19 +219,12 @@ and continue with other work. Don't look for another way around the check.
     The fix PR adds that check or makes it stronger, so that the same kind of bug fails CI.
 - Start each comment that you post with `Agent:`. Reply to each bot thread, and resolve
   each thread that a pushed commit fixes.
-- After each push, watch CI and the bot reviews as `.claude/skills/steward/SKILL.md` says.
-  Don't ask whether to watch. Post each Codex review request that `pnpm pr:status` lists, and
-  note each Codex gap in your report.
-- The Claude review runs when a PR opens and each time it becomes ready for review. Don't ask
-  it to review again.
+- After each push, watch CI and check for review findings as `.claude/skills/steward/SKILL.md`
+  says. Request a GitHub bot review only when the maintainer asks for one. Base PR readiness
+  on CI and findings already posted.
 - If a CI job fails because no runner picked it up, re-run the failed jobs. If GitHub
   reports an Actions incident, re-run them when it ends. Fix all other CI failures on the
   branch.
-- A review round is one push and the bot reviews of that push. Codex reviews every push, so
-  the rounds don't stop by themselves. After three rounds, don't ask Codex for more reviews,
-  and use `--no-requests` as the steward skill says. After the third round, fix only
-  showstoppers. File the other findings that are valid and worth fixing together as one
-  ticket, reply on each thread with its ID, and list them in your report.
 - A showstopper is a finding that does one of these:
   - It gives a wrong result for an input that the README, `PARSING.md`, the tests or the
     ticket contains.
@@ -252,19 +242,17 @@ and continue with other work. Don't look for another way around the check.
   must also pass: `ci-ok`, `Validate commits and PR title`, `Regression test fails
 without the fix` and `Evidence of changed results`. A skipped check counts as passed.
 - Right before you merge or close a PR, check its comments one last time. A bot can post a
-  finding after you report a PR as ready, such as Codex's review of the last commit. Run
-  `pnpm pr:status <pr>`, which lists bot threads with no reply. Then read all review
+  finding after you report a PR as ready. Run `pnpm pr:status <pr>` to list bot threads
+  with no reply. Then read all review
   threads, reviews and PR comments with `gh api --paginate`. Judge each finding
   that you haven't answered as "Handle findings and CI" says. Then:
-  - If it is a showstopper, don't merge or close the PR. Fix it, even after the third
-    round, and do this check again after the fix.
+  - If it is a showstopper, fix it and do this check again before merging or closing the PR.
   - If it is valid and worth fixing, file it. Put the new findings from this check in one
     ticket, unless an open ticket already covers them. Reply on each thread with the ticket
     ID.
   - If not, reply on its thread with the reason.
-  - Then merge or close the PR.
-- If "Merge your own PR" allows it, merge the PR. If not, wait for the maintainer as the
-  steward skill says.
+  - Then merge or close the PR if the maintainer authorized it.
+- When the PR is ready, wait for the maintainer as the steward skill says.
 - When the maintainer merges or closes the PR, do the same comment check at once. File
   each new finding that is valid and worth fixing. If one is a showstopper, give its ticket
   Urgent priority, and tell the maintainer in your report.
@@ -273,25 +261,15 @@ without the fix` and `Evidence of changed results`. A skipped check counts as pa
 - Watch CI on `main` as the steward skill says. If it fails for a reason other than a
   missing runner, report the failure and stop.
 
-### Merge your own PR
+### Maintainer merges
 
-A squash merge is a two-way door: a revert PR undoes it. A merge to `main` publishes no
-package, and the next docs deploy replaces the one that it starts. Merge a PR yourself only
-when all of these are true:
-
-- It is ready to merge, as "Finish the PR" says, and the last comment check found no
-  showstopper.
-- `pnpm pr:status <pr>` reports it as `ready`: CI passed, and Codex has completed a review
-  of its last commit.
-- Its last review round found nothing new, or it has had three rounds.
-- It needs no "Stop and ask" decision.
-- The PR body and a ticket comment list each result that it changes from `main` beyond the
-  ticket (decision rule 3).
-
-Merge with `gh pr merge <number> --squash`. Never add `--admin` or `--auto`. Then add a
-ticket comment with the PR link and each decision that the maintainer may want to change. To
-undo a merge, open a revert PR. If a workflow starts to publish the package when `main`
-changes, merges become one-way doors: stop merging, and tell the maintainer.
+The maintainer merges PRs by default. If the maintainer explicitly asks you to merge a specific
+PR, complete "Finish the PR", confirm `pnpm pr:status <pr>` reports `ready` and resolve any
+"Stop and ask" decisions first. Record each out-of-ticket result change in the PR body and a
+ticket comment (decision rule 3). Use `gh pr merge <number> --squash`. Never add `--admin` or
+`--auto`. Then add a ticket comment with the PR link and each decision that the maintainer may
+want to change. To undo a merge, open a revert PR. If merging starts to publish the package,
+stop and tell the maintainer.
 
 ### Finish your task
 

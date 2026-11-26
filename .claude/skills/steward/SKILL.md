@@ -6,45 +6,28 @@ description: Watch this repository's pull requests until they merge. Use after e
 # Watching a pull request
 
 `pnpm pr:status <pr>...` decides what a PR needs. It reads GitHub's REST API for the PR's head
-commit and reports CI, the bot reviews, bot threads with no reply and the merge state. Don't
-write your own checks for any of these. Earlier sessions wrote about 50 watchers of their own,
-and most of them misjudged the head commit or Codex's 👀. If
-`pr:status` gets something wrong, don't change it in the PR you're watching. File a ticket for
-`.github/scripts/pr-state.mjs` with a test built from the PR's real API responses.
+commit and reports CI, unanswered review findings and the merge state. Don't write your own
+checks for these. If `pr:status` gets something wrong, file a ticket for
+`.github/scripts/pr-state.mjs` with a test built from the PR's real API responses. Keep that fix
+in its own PR.
 
 ## Each time you look at a PR
 
 Run `pnpm pr:status <pr>` (or `pnpm pr:status 61 62 63` for several) and act on the state it
-prints. Add `--json` if you need to parse the output. After a PR's third review round (AGENTS.md
-"Handle findings and CI"), add `--no-requests`, so it waits for Codex instead of telling you to
-ask it again. The flag applies to every PR in the call, so check PRs past their third round in a
-separate call.
+prints. Add `--json` if you need to parse the output.
 
 | State           | Exit code | What to do                                                                                                                                 |
 | --------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `needs-agent`   | 10        | Do each item under "Do", and handle each item under "Why" as AGENTS.md "Handle findings and CI" says. Push if you changed code, then wait. |
+| `needs-agent`   | 10        | Handle each item under "Why" as AGENTS.md "Handle findings and CI" says. Push if you changed code, then wait.                              |
 | `waiting`       | 20        | Wait, as the next section says.                                                                                                            |
 | `waiting-human` | 30        | Say once, in one line, what the maintainer needs to do. Then wait for the maintainer, as the next section says.                            |
-| `ready`         | 0         | Do "Finish the PR" in AGENTS.md, then merge as "Merge your own PR" says.                                                                   |
+| `ready`         | 0         | Do "Finish the PR" in AGENTS.md, then wait for the maintainer.                                                                             |
 | `merged`        | 40        | Do the comment check from "Finish the PR" at once. `pr:status` still lists bot threads with no reply. Then do the rest of "Finish the PR". |
 | `closed`        | 41        | The same as `merged`.                                                                                                                      |
 
-Read "Notes" as well. They list bot replies after yours, nitpicks, other bot comments since the
-push, and bots that never reviewed the head commit. Act on findings as AGENTS.md says, and list
-each Codex gap in your report.
-
-## Bot reviews
-
-`pr:status` doesn't post anything. When "Do" lists `Post @codex review`, post that comment
-yourself, as `Agent: @codex review`. Codex acts on a request with the `Agent:` prefix. Don't
-offer to post it. `pr:status` lists a request when Codex hasn't started 30 minutes after it
-could, once for each commit. It stops waiting for Codex 2 hours after it could start. A PR that
-Codex never reviewed then waits on the maintainer. Say so in your report.
-
-The Claude review runs when a PR opens and each time it becomes ready for review. Its
-`Claude review` check counts as CI, and `pr:status` never asks it to review. It posts inline
-comments as `claude[bot]` and a summary comment as `github-actions[bot]`. Read both, and handle
-each finding as AGENTS.md says.
+Read "Notes" for bot replies and other recent comments. Handle findings as AGENTS.md says.
+Review requests and in-progress bot reviews do not affect the status. Existing Codex and Claude
+findings, including Claude summaries posted by `github-actions[bot]`, still need an answer.
 
 ## Waiting
 
@@ -59,13 +42,11 @@ that's `waiting` or `waiting-human`. There are two exceptions:
 - When the timed check-ins in step 3 run out, say so in your report and stop.
 
 1. If the session can run a background command, run `pnpm pr:status <pr>... --wait` in the
-   background. Put the PRs that you're watching in one call, and the PRs past their third review
-   round in a second call with `--no-requests`. It polls without spending tokens. It returns when
-   a PR needs you, is ready or closes, or when a PR that waits on the maintainer gets news. It
-   gives up after `--timeout` minutes, 100 by default. Give the background command a longer
-   timeout than that: Claude Code stops a background command after 30 minutes unless you set a
-   timeout, up to 2 hours. When a call returns with a state, or with "Nothing changed in …
-   min.", act on what it printed. Then run that call again, and leave the other call running.
+   background. It polls until a PR needs you, is ready or closes, or until a PR waiting on a
+   person gets news. It gives up after `--timeout` minutes, 100 by default. Give the background
+   command a longer timeout. Claude Code stops a background command after 30 minutes unless you
+   set a timeout, up to 2 hours. When a call returns with a state, or with "Nothing changed in …
+   min.", act on what it printed, then run the call again for any PRs still waiting on CI.
    A call can also end with an error, or Claude Code can stop it at its timeout. Then read what
    it printed. Exit code 3 means that GitHub refused the token, and 2 that an argument is wrong.
    With code 1 after a 404 or 422, a PR number or the repository is wrong. Fix these before you
@@ -74,25 +55,18 @@ that's `waiting` or `waiting-human`. There are two exceptions:
    and also prints its last result if it has one. After an error, run the call again after 10
    minutes, or after the rate limit resets. Do this also when "Nothing changed" names an error.
    Arm a timed check-in for that time, such as a scheduled wake-up. When you run a call again,
-   leave out each PR that merged or closed. Also leave out each `ready` PR that only the
-   maintainer may merge, because `--wait` returns at once for it. Once every PR in both calls is
-   `waiting-human`, don't run them again, and stop the call that is still running. Each return
-   wakes you past the prompt cache, so wait as step 3 says instead.
+   leave out each PR that merged or closed and each `ready` PR, because `--wait` returns
+   at once for those states. If every remaining PR is `waiting-human`, follow step 3.
 2. In a cloud session, also subscribe to the PR's GitHub events. The container can stop and take
    the background command with it. On each event or check-in, run `pnpm pr:status <pr>...`
-   first, as "Each time you look at a PR" says. Then start the `--wait` calls again if they
-   aren't running, unless every PR that they would watch is `waiting-human`. If the output is the
-   same as last time, end the turn in one short line.
+   first, as "Each time you look at a PR" says. Restart `--wait` if it stopped and a PR is
+   still waiting on CI. If the output is the same as last time, end the turn in one short line.
 3. Use a timed check-in (`send_later`, a scheduled wake-up or cron) when neither of those can
    wake you. Use one also for each PR that waits on the maintainer and that `--wait` doesn't
-   watch, even when a background command could run. One such PR is a `ready` PR that only the
-   maintainer may merge. Leave it out of `--wait`, which returns at once for it. The others are
-   the `waiting-human` PRs after step 1 stops the `--wait` calls. Each check-in that misses the
-   1-hour prompt cache rewrites the whole conversation, which cost $1 to $3 a wake in earlier
-   sessions. Hourly check-ins fire just past the cache's hour, so they always miss it.
+   watch, including a `ready` PR awaiting merge.
    - While a PR is `waiting`, check in 40 to 50 minutes after the last turn, so the cache is
-     still warm. After 3 check-ins in a row that find nothing new, Codex's 2 hours are over.
-     If CI is still running then, report that it's stuck and stop.
+     still warm. After three check-ins in a row with CI still running, report that it is stuck
+     and stop.
    - For a PR that waits on the maintainer, check in every 4 hours, for up to 24 hours. Don't
      ask the maintainer to tell you when they merge.
 

@@ -105,11 +105,9 @@ function statuses(event: Result): PrStatus[] {
       pushedAt: '2026-11-04T12:00:00Z',
       mergeableState: 'clean',
       reasons: [],
-      actions: [],
       notes: [`news-${event.news}`],
       waits: [],
       ci: { passed: ['ci-ok'], pending: [], failed: [] },
-      codex: { state: 'done', detail: 'Reviewed' },
     },
   ];
 }

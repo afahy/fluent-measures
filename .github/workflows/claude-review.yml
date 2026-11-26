@@ -1,10 +1,11 @@
 name: Claude review
 
+# This workflow is disabled in GitHub Actions. Keep it disabled for this repository.
 # Asks Claude for a code review of a PR when it opens or becomes ready for review (AFA-28). It runs
 # on the maintainer's Claude subscription through the CLAUDE_CODE_OAUTH_TOKEN secret, which
 # `claude setup-token` prints and which lasts one year. The agent sessions share that
 # subscription's usage limits, so it doesn't review each push. Claude only posts comments, and a
-# failed review fails no PR. CONTRIBUTING.md says how to set it up.
+# failed review fails no PR.
 on:
   pull_request:
     types: [opened, ready_for_review]
@@ -38,9 +39,8 @@ jobs:
       # skipped.
       HAS_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}
     steps:
-      # `pnpm pr:status` counts this check, and an agent can't fix a failed review, for example
-      # at the subscription's usage limit or after a network error. So a failed step leaves the
-      # check green.
+      # An agent can't fix a failed review, for example at the subscription's usage limit or
+      # after a network error. A failed step leaves the check green.
       # The base commit, not the PR's, so a PR can't change the AGENTS.md that it's reviewed by.
       # Each action is pinned to the commit of its tag, because a moved tag could change what
       # runs in the job that holds the secret.
