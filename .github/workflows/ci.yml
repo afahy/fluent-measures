@@ -79,7 +79,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [22, 24]
+        # Nightly calls this workflow on a schedule or by hand.
+        node-version: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '[22,24]' || '[24]') }}
     steps:
       - uses: actions/checkout@v4
 

@@ -67,6 +67,13 @@ describe('CI on a push to main', () => {
     expect(jobIf(name)).toBeUndefined();
   });
 
+  it('runs full tests on Node 24, adds Node 22 in Nightly and always checks both packages', () => {
+    expect(job('test')).toContain(
+      "node-version: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '[22,24]' || '[24]') }}"
+    );
+    expect(job('package')).toContain('node-version: [22, 24]');
+  });
+
   it('requires every job through ci-ok, which reads each result', () => {
     expect(jobIf('ci-ok')).toBe('always()');
     expect(okStep).toContain(

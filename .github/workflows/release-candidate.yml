@@ -1,0 +1,81 @@
+name: Prepare release candidate
+on:
+  workflow_run:
+    workflows: [CI]
+    branches: [main]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  candidate:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Detect a version change in the merged commit
+        id: release
+        run: |
+          previous=$(git show HEAD^1:package.json | jq -er .version)
+          version=$(jq -er .version package.json)
+          if [[ "$version" != "$previous" ]]; then
+            node --input-type=module -e "import { releaseVersion } from './.github/scripts/docs-release.mjs'; releaseVersion(process.argv[1])" "$version"
+            echo "version=$version" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+        if: steps.release.outputs.version
+      - uses: actions/setup-node@v4
+        if: steps.release.outputs.version
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Validate the release checkout and stage its tested archive
+        if: steps.release.outputs.version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          node .github/scripts/release.mjs validate "$VERSION" "$RELEASE_SHA"
+          candidate="$(git rev-parse --absolute-git-dir)/release-artifacts/$RELEASE_SHA"
+          cp -R "$candidate" "$RUNNER_TEMP/candidate"
+
+      - uses: actions/upload-artifact@v4
+        if: steps.release.outputs.version
+        with:
+          name: release-${{ env.RELEASE_SHA }}
+          path: ${{ runner.temp }}/candidate/
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 14
+
+      - name: Record the candidate for maintainer approval
+        if: steps.release.outputs.version
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          CI_URL: ${{ github.event.workflow_run.html_url }}
+        run: |
+          digest=$(jq -er .integrity "$RUNNER_TEMP/candidate/validated.json")
+          {
+            echo "Validated @afahy/fluent-measures@$VERSION from \`$RELEASE_SHA\`."
+            echo
+            echo "SHA-512: \`$digest\`"
+            echo
+            echo "[Exact main CI]($CI_URL) · [Candidate run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)"
+            echo
+            echo "In the detached release checkout, run \`pnpm release:fetch $VERSION $RELEASE_SHA $GITHUB_RUN_ID $digest\`."
+          } >> "$GITHUB_STEP_SUMMARY"

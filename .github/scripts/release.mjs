@@ -1,10 +1,11 @@
 // Single-package release guard. Approval is a maintainer decision recorded outside this CLI;
 // --approved only acknowledges it. See RELEASING.md before running the publish command.
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
 import { verifyPackage } from './docs-release.mjs';
 
 const packageName = '@afahy/fluent-measures';
@@ -143,6 +144,13 @@ function prepareArtifact(directory, staging) {
 
   const record = { name: packageName, version, revision, integrity };
   writeFileSync(join(candidate, 'validated.json'), JSON.stringify(record));
+  retainArtifact(candidate, directory, integrity);
+  console.log(
+    `Validated ${packageName}@${version} from ${revision}. Tarball integrity: ${integrity}`
+  );
+}
+
+function retainArtifact(candidate, directory, integrity) {
   // Promote both files together. A second validation in this checkout may confirm the
   // same bytes, but cannot replace an archive already recorded for approval.
   try {
@@ -155,9 +163,6 @@ function prepareArtifact(directory, staging) {
       'Another tarball was already validated here; use a fresh release clone'
     );
   }
-  console.log(
-    `Validated ${packageName}@${version} from ${revision}. Tarball integrity: ${integrity}`
-  );
 }
 
 function readValidatedArtifact(directory) {
@@ -172,58 +177,49 @@ function readValidatedArtifact(directory) {
   return { bytes, integrity };
 }
 
-function validatedUpload(directory, staging) {
-  const { bytes, integrity } = readValidatedArtifact(directory);
-  // Give npm a private snapshot of exactly the bytes just checked, including on retries.
-  const tarball = join(staging, 'package.tgz');
-  writeFileSync(tarball, bytes, { mode: 0o400 });
-  return { tarball, integrity };
+// The workflow runs on completed CI. Its own head SHA can be newer than the CI
+// commit. The workflow checks out the triggering SHA and names its artifact after it.
+function fetchCandidate(runId, directory, staging) {
+  const candidateRun = JSON.parse(
+    capture('gh', ['api', `repos/${repository}/actions/runs/${runId}`])
+  );
+  assert.ok(
+    candidateRun.path === '.github/workflows/release-candidate.yml' &&
+      candidateRun.event === 'workflow_run' &&
+      candidateRun.head_branch === 'main' &&
+      candidateRun.status === 'completed' &&
+      candidateRun.conclusion === 'success',
+    'Select a successful Prepare release candidate run on main'
+  );
+  const candidate = join(staging, 'candidate');
+  run('gh', [
+    'run',
+    'download',
+    runId,
+    '--repo',
+    repository,
+    '--name',
+    `release-${revision}`,
+    '--dir',
+    candidate,
+  ]);
+  const { integrity } = readValidatedArtifact(candidate);
+  assert.equal(integrity, expectedIntegrity, 'Downloaded tarball differs from the release summary');
+  retainArtifact(candidate, directory, integrity);
+  console.log(
+    `Ready for maintainer approval: ${packageName}@${version} from ${revision}, ${integrity}`
+  );
 }
 
-let staging;
-let publicationStarted = false;
-try {
-  assert.ok(
-    ['validate', 'publish'].includes(mode) &&
-      /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version ?? '') &&
-      /^[a-f0-9]{40}$/.test(revision ?? '') &&
-      (expectedIntegrity === undefined ||
-        (mode === 'publish' && /^sha512-[A-Za-z0-9+/]{86}==$/.test(expectedIntegrity))) &&
-      extra.length === 0 &&
-      (mode === 'publish' ? approval === '--approved' : approval === undefined),
-    'Usage: pnpm release:validate <version> <full-sha> OR pnpm release:publish <version> <full-sha> --approved [sha512-integrity] (only after maintainer approval; RELEASING.md)'
-  );
-  checkout();
-  merged();
-  successfulCI();
-  unpublished();
-  const root = join(capture('git', ['rev-parse', '--absolute-git-dir']), 'release-artifacts');
-  const directory = join(root, revision);
-  mkdirSync(root, { recursive: true, mode: 0o700 });
-  staging = mkdtempSync(join(root, 'stage-'));
-  if (mode === 'validate') {
-    prepareArtifact(directory, staging);
-  } else {
-    const { tarball, integrity } = validatedUpload(directory, staging);
-    if (expectedIntegrity !== undefined) {
-      assert.equal(
-        integrity,
-        expectedIntegrity,
-        'Tarball differs from the digest on the release ticket'
-      );
-    }
-    publicationStarted = true;
-    run('npm', [
-      'publish',
-      tarball,
-      '--ignore-scripts',
-      '--access=public',
-      '--tag=latest',
-      `--registry=${registry}`,
-    ]);
-    checkout();
-    const published = JSON.parse(
-      capture('npm', [
+async function waitForRegistry(integrity) {
+  // npm accepts the upload before all reads can see it. Retry only exact-version
+  // reads reporting E404. Bound each read as well as the backoff.
+  const deadline = Date.now() + 5 * 60_000;
+  let wait = 1_000;
+  while (Date.now() < deadline) {
+    const lookup = spawnSync(
+      'npm',
+      [
         'view',
         `${packageName}@${version}`,
         'version',
@@ -231,38 +227,160 @@ try {
         '--json',
         '--prefer-online',
         `--registry=${registry}`,
-      ])
+      ],
+      {
+        encoding: 'utf8',
+        timeout: Math.min(20_000, Math.max(1, deadline - Date.now())),
+        env: { ...process.env, npm_config_fetch_retries: '0' },
+      }
     );
-    assert.equal(
-      published.version,
-      version,
-      'Publication did not make the exact version available on npm'
+    if (lookup.error) throw lookup.error;
+    if (lookup.status === 0) {
+      const published = JSON.parse(lookup.stdout);
+      assert.equal(
+        published.version,
+        version,
+        'Publication did not make the exact version available on npm'
+      );
+      assert.equal(published['dist.integrity'], integrity, 'Published tarball integrity mismatch');
+      return;
+    }
+    if (!/\bE404\b/.test(lookup.stderr + lookup.stdout)) {
+      throw new Error(`Registry lookup failed: ${lookup.stderr || lookup.stdout}`);
+    }
+    console.log(`Waiting for npm to serve ${packageName}@${version}.`);
+    await delay(Math.min(wait, Math.max(0, deadline - Date.now())));
+    wait = Math.min(2 * wait, 15_000);
+  }
+  throw new Error(
+    'Timed out waiting for the published version. Use release:resume with the recorded digest.'
+  );
+}
+
+function finishTag() {
+  const local = capture('git', ['tag', '--list', `v${version}`]);
+  if (local)
+    assert.equal(capture('git', ['rev-parse', `${tag}^{commit}`]), revision, 'Local tag mismatch');
+  const remote = capture('git', ['ls-remote', 'origin', tag, `${tag}^{}`]);
+  if (remote) {
+    const refs = new Map(remote.split('\n').map(line => line.split('\t').reverse()));
+    assert.equal(refs.get(`${tag}^{}`) ?? refs.get(tag), revision, 'Remote tag mismatch');
+    return;
+  }
+  if (!local) run('git', ['tag', '-a', `v${version}`, '-m', `v${version}`, revision]);
+  assert.equal(
+    capture('git', ['rev-parse', '--verify', `${tag}^{commit}`]),
+    revision,
+    `${tag} must exist and resolve to the approved SHA`
+  );
+  run('git', [
+    '-c',
+    'push.followTags=false',
+    'push',
+    '--no-follow-tags',
+    '--no-verify',
+    'origin',
+    `${tag}:${tag}`,
+  ]);
+}
+
+let staging;
+let publicationStarted = false;
+try {
+  const validDigest = /^sha512-[A-Za-z0-9+/]{86}==$/.test(expectedIntegrity ?? '');
+  const argumentsValid = {
+    validate: approval === undefined && expectedIntegrity === undefined,
+    fetch: /^[1-9]\d*$/.test(approval ?? '') && validDigest,
+    publish: approval === '--approved' && (expectedIntegrity === undefined || validDigest),
+    resume: approval === '--approved' && validDigest,
+  };
+  assert.ok(
+    Object.hasOwn(argumentsValid, mode) &&
+      argumentsValid[mode] &&
+      /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version ?? '') &&
+      /^[a-f0-9]{40}$/.test(revision ?? '') &&
+      extra.length === 0,
+    'Usage: release:validate VERSION SHA | release:fetch VERSION SHA RUN_ID DIGEST | release:publish VERSION SHA --approved [DIGEST] | release:resume VERSION SHA --approved DIGEST (maintainer approval required)'
+  );
+  if (mode === 'publish') {
+    assert.ok(
+      process.stdin.isTTY && process.stdout.isTTY && process.stderr.isTTY,
+      'npm authentication needs an interactive terminal with stdin, stdout and stderr attached'
     );
-    assert.equal(published['dist.integrity'], integrity, 'Published tarball integrity mismatch');
-    run('git', ['tag', '-a', `v${version}`, '-m', `v${version}`, revision]);
-    assert.equal(
-      capture('git', ['rev-parse', '--verify', `${tag}^{commit}`]),
-      revision,
-      `${tag} must exist and resolve to the approved SHA`
-    );
-    run('git', [
-      '-c',
-      'push.followTags=false',
-      'push',
-      '--no-follow-tags',
-      '--no-verify',
-      'origin',
-      `${tag}:${tag}`,
-    ]);
+  }
+  checkout();
+  merged();
+  successfulCI();
+  if (mode === 'validate' || mode === 'publish') unpublished();
+  const root = join(capture('git', ['rev-parse', '--absolute-git-dir']), 'release-artifacts');
+  const directory = join(root, revision);
+  mkdirSync(root, { recursive: true, mode: 0o700 });
+  staging = mkdtempSync(join(root, 'stage-'));
+  if (mode === 'validate') {
+    prepareArtifact(directory, staging);
+  } else if (mode === 'fetch') {
+    fetchCandidate(approval, directory, staging);
+  } else {
+    const { bytes, integrity } = readValidatedArtifact(directory);
+    if (expectedIntegrity !== undefined) {
+      assert.equal(
+        integrity,
+        expectedIntegrity,
+        'Tarball differs from the digest on the release ticket'
+      );
+    }
+    if (mode === 'publish') {
+      const tarball = join(staging, 'package.tgz');
+      writeFileSync(tarball, bytes, { mode: 0o400 });
+      publicationStarted = true;
+      run(
+        'npm',
+        [
+          'publish',
+          tarball,
+          '--ignore-scripts',
+          '--access=public',
+          '--tag=latest',
+          `--registry=${registry}`,
+        ],
+        {
+          env: {
+            ...(process.platform === 'darwin' ? { npm_config_browser: 'Google Chrome' } : {}),
+            ...process.env,
+          },
+        }
+      );
+    }
+    await waitForRegistry(integrity);
+    if (mode === 'resume') {
+      // Verify the registry archive itself before finishing a partially completed release.
+      run('npm', [
+        'pack',
+        `${packageName}@${version}`,
+        '--ignore-scripts',
+        '--prefer-online',
+        `--registry=${registry}`,
+        '--pack-destination',
+        staging,
+      ]);
+      const registryTarball = join(staging, `afahy-fluent-measures-${version}.tgz`);
+      assert.equal(
+        integrityOf(readFileSync(registryTarball)),
+        integrity,
+        'Downloaded npm tarball integrity mismatch'
+      );
+    }
+    checkout();
+    finishTag();
     console.log(
-      `Published ${packageName}@${version} from ${revision} and pushed only ${tag}. Verify documentation using RELEASING.md.`
+      `Verified ${packageName}@${version} from ${revision} and ${tag}. Verify documentation using RELEASING.md.`
     );
   }
 } catch (error) {
   console.error(error.message);
   if (publicationStarted) {
     console.error(
-      'npm may already contain this version. Do not repeat publication blindly or move a tag. Follow recovery in RELEASING.md.'
+      'npm may already contain this version. Use release:resume to verify and finish tagging. See recovery in RELEASING.md.'
     );
   }
   process.exitCode = 1;

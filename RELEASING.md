@@ -89,32 +89,35 @@ gh run list --repo afahy/fluent-measures --workflow nightly.yml --branch main --
 If the latest such run failed, fix the failure through a PR before you release. If none has run
 since the release commit, start one with `gh workflow run nightly.yml --ref main` and wait for it.
 
-## 3. Validate a clean checkout of that release commit
+## 3. Fetch the validated release candidate
 
-Use a fresh clone for publication so ignored build output and dependencies from development
-cannot carry over. Keep the version and SHA variables above in the same shell. Pick a new,
-empty destination:
+After CI passes on the merged version commit, **Prepare release candidate** checks out that exact
+SHA on a clean runner. It runs the frozen install and full `pnpm check`, packs the build, installs
+the archive in an empty consumer, checks its files and metadata, and tests the installed package.
+The run summary names the version, source SHA, npm SHA-512 digest, main CI run and candidate run.
+Only a version change on main produces an artifact. Nightly verification in step 2 still applies.
+
+Open the successful candidate summary for the version PR's merge SHA. Copy the candidate run ID
+into `candidate_run` and the displayed SHA-512 into `release_integrity`. Record both on the
+release ticket with the summary link. From a new clone, use the command from that summary:
 
 ```bash
 release_checkout="../fluent-measures-release-$release_version"
 git clone https://github.com/afahy/fluent-measures.git "$release_checkout"
 cd "$release_checkout"
 git switch --detach "$release_sha"
-pnpm release:validate "$release_version" "$release_sha"
+pnpm release:fetch "$release_version" "$release_sha" "$candidate_run" "$release_integrity"
 ```
 
-The guard checks HEAD, the package name/version, tracked and untracked cleanliness, fresh
-`origin/main` ancestry, and successful CI for the recorded SHA. It refuses any existing release
-tag locally or on origin, and any version already in npm. Registry/network errors stop the
-release; they are not evidence that a version is unpublished.
+The fetch checks the clean source, main ancestry, exact-SHA main CI and candidate workflow run.
+It verifies the downloaded package name, version, commit and archive bytes against the digest,
+then saves the tarball and record together in the checkout's Git directory. Keep this checkout
+for publication. If the 14-day artifact expires, re-run the successful candidate workflow and
+check its digest against the release record. A failed candidate needs investigation before release.
 
-The guard cleans the checkout, installs the frozen lockfile and runs the full `pnpm check`.
-It packs that build with lifecycle scripts disabled, installs the archive into an empty consumer
-project, compares the installed files and metadata to the build and runs the package result tests
-against the installed archive. After checking the checkout again, it saves `package.tgz` and
-`validated.json` together under `release-artifacts/<full SHA>/` in the checkout's Git directory.
-Record the printed SHA-512 integrity and validation output on the release ticket. Set `release_integrity` to that recorded value. Keep this
-checkout for publication and retries.
+For manual clean-checkout validation, run `pnpm release:validate "$release_version" "$release_sha"`.
+It performs the same checks and saves the same files. Record the output and digest on the ticket.
+Use this fallback for a version commit that predates the candidate workflow.
 
 For a reviewed version commit that predates artifact preparation (including 0.3.1), use the
 guard from a separate clean checkout of its reviewed, merged tooling commit. Run both commands
@@ -136,15 +139,21 @@ Include the PR/CI links, validation result and tarball integrity. Wait for an ex
 earlier version or SHA does not cover a different one. After approval, from the same checkout:
 
 ```bash
-pnpm release:publish "$release_version" "$release_sha" --approved "$release_integrity"
+# On the maintainer's Mac, use the signed-in Google Chrome profile for npm 2FA.
+npm_config_browser='Google Chrome' pnpm release:publish "$release_version" "$release_sha" --approved "$release_integrity"
 ```
 
-Run publication in an interactive terminal with input and output attached so npm can open its
-browser verification prompt. The guard rechecks the clean source, main ancestry, exact-SHA CI
+Run publication with terminal input, output and error attached. Redirecting output or piping it
+through `tee` prevents interactive authentication. On macOS the guard defaults to Google Chrome;
+set `npm_config_browser` to override it. Elsewhere, omit the macOS browser setting to use
+npm's normal browser. Press Enter when npm prompts and complete 2FA in the signed-in browser.
+
+The guard rechecks the clean source, main ancestry, exact-SHA CI
 and version/tag availability. It verifies the stored archive against the recorded package,
 version, commit and SHA-512 digest, then passes those exact bytes to `npm publish` with
 lifecycle scripts disabled. It verifies the version and integrity reported by the public
-registry before creating an annotated tag on the approved commit.
+registry before creating an annotated tag on the approved commit. While npm processes an accepted
+upload, the guard retries exact-version 404 reads with backoff for up to five minutes.
 
 Only that exact tag is pushed, with an explicit source/destination ref and `--no-follow-tags`
 even if local Git configuration enables following tags. No branch is pushed. The tag push skips
@@ -217,38 +226,19 @@ and obtain approval for its new SHA. If the version exists, proceed below; do no
 
 ### npm succeeded but the tag is missing or has not been pushed
 
-Use the recorded version/SHA and clean release checkout. Inspect existing local and remote tags:
+Use the validated checkout and the digest recorded before upload. If you lost the checkout,
+repeat `release:fetch` in a clean clone to restore the CI validation record and archive.
+Fetch works after publication. Resume requires the local record to bind the archive to the
+approved commit.
 
 ```bash
-git fetch --no-tags origin main
-git tag --list "v$release_version"
-git ls-remote origin "refs/tags/v$release_version" "refs/tags/v$release_version^{}"
+pnpm release:resume "$release_version" "$release_sha" --approved "$release_integrity"
 ```
 
-Compare npm’s `dist.integrity` for the exact version with the digest recorded in step 3. Stop
-on a mismatch. If a tag exists, verify its peeled commit is exactly the recorded SHA. Stop on any mismatch;
-do not force, delete or move it. If the tag is absent locally and remotely, create only this
-local tag on the approved commit (this command does not publish):
-
-```bash
-test "$(git rev-parse HEAD)" = "$release_sha" &&
-test "$(git status --porcelain --untracked-files=all)" = "" &&
-git merge-base --is-ancestor "$release_sha" origin/main &&
-git tag -a "v$release_version" "$release_sha" -m "v$release_version"
-```
-
-Before pushing an absent remote tag, verify the published artifact against that source:
-
-```bash
-test "$(git rev-parse "refs/tags/v$release_version^{commit}")" = "$release_sha" &&
-node .github/scripts/docs-release.mjs "$release_version" &&
-git -c push.followTags=false push --no-follow-tags --no-verify origin \
-  "refs/tags/v$release_version:refs/tags/v$release_version"
-```
-
-The verification command builds/checks already published bytes and never publishes npm. Stop
-if it fails. If the correct tag is already remote, skip the push and retry docs directly. Do not
-use `release:publish` for tag recovery: it deliberately refuses existing versions and tags.
+Resume performs registry reads, checks the actual downloaded npm tarball against the approved
+digest, and finishes the single release tag. It never uploads a package. A matching remote tag
+completes the command. An existing local tag and any remote tag must resolve to the approved SHA. A mismatch stops recovery. If the registry still reports the version missing, leave
+the release pending and retry resume later. Continue with the docs checks in step 5.
 
 ### Docs verification, deployment or public verification failed
 

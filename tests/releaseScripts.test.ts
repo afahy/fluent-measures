@@ -1,7 +1,16 @@
 import { execFileSync, spawnSync, type SpawnSyncReturns } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { withoutGitRepository } from './gitEnvironment';
 
@@ -37,6 +46,9 @@ interface Options {
   publishedVersion?: string;
   publishedIntegrity?: string;
   failFirstPublish?: boolean;
+  redirected?: 'stdin' | 'stdout' | 'stderr';
+  pendingReads?: number;
+  candidateEvent?: string;
 }
 
 // No real package manager, GitHub or registry calls. Every Git remote is a temporary local
@@ -49,6 +61,7 @@ function fixture(options: Options = {}): {
   events: () => string[];
   validate: () => SpawnSyncReturns<string>;
   artifact: string;
+  hostedArtifact: string;
   run: (script?: string, args?: string[]) => SpawnSyncReturns<string>;
 } {
   const remote = directory();
@@ -94,6 +107,14 @@ function fixture(options: Options = {}): {
   git(other, 'config', 'user.email', 'other-test@example.invalid');
   const bin = directory();
   const log = resolve(bin, 'events');
+  // Give the CLI terminal descriptors in the fixture. The redirected case uses the real pipes.
+  const terminal = resolve(bin, 'terminal.mjs');
+  writeFileSync(
+    terminal,
+    `for (const name of ['stdin', 'stdout', 'stderr']) {
+      if (name !== ${JSON.stringify(options.redirected ?? '')}) Object.defineProperty(process[name], 'isTTY', { value: true });
+    }`
+  );
   if (options.tag) {
     const realGit = execFileSync('sh', ['-c', 'command -v git'], { encoding: 'utf8' }).trim();
     writeFileSync(
@@ -112,7 +133,7 @@ exec "${realGit}" "$@"
       resolve(bin, tool),
       `#!/usr/bin/env node
 const { execFileSync } = require('node:child_process');
-const { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } = require('node:fs');
+const { appendFileSync, cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } = require('node:fs');
 const { join, dirname } = require('node:path');
 const { createHash } = require('node:crypto');
 const digest = bytes => 'sha512-' + createHash('sha512').update(bytes).digest('base64');
@@ -125,7 +146,14 @@ const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
 appendFileSync(log, tool + ' ' + args.join(' ') + '\\n');
 const publishing = tool === 'npm' && args[0] === 'publish';
 if (options.fail === tool || (tool === 'pnpm' && options.fail === args[0]) || (publishing && options.fail === 'publish')) process.exit(37);
-if (tool === 'gh') console.log(JSON.stringify(options.ci === null ? [] : [{ headSha: revision, headBranch: 'main', event: 'push', status: 'completed', conclusion: 'success', url: 'https://example.invalid/ci', ...options.ci }]));
+if (tool === 'gh' && args[0] === 'api') console.log(JSON.stringify({
+  path: '.github/workflows/release-candidate.yml', event: options.candidateEvent ?? 'workflow_run', head_branch: 'main', status: 'completed', conclusion: 'success'
+}));
+if (tool === 'gh' && args[1] === 'download') {
+  if (args[2] !== '123' || args[args.indexOf('--name') + 1] !== 'release-' + revision) process.exit(1);
+  cpSync(log + '-candidate', args.at(-1), { recursive: true });
+}
+if (tool === 'gh' && args[1] === 'list') console.log(JSON.stringify(options.ci === null ? [] : [{ headSha: revision, headBranch: 'main', event: 'push', status: 'completed', conclusion: 'success', url: 'https://example.invalid/ci', ...options.ci }]));
 if (tool === 'pnpm' && args.includes('pack')) {
   const files = ['package.json', 'README.md', 'LICENSE', 'dist/index.js'];
   const entries = files.map(file => [file, readFileSync(file, 'utf8')]);
@@ -145,6 +173,10 @@ if (tool === 'npm' && args[0] === 'install') {
 if (tool === 'pnpm' && args[0] === 'test:package' &&
     !existsSync(join(process.env.FLUENT_MEASURES_PACKAGE_DIR, 'node_modules/@afahy/fluent-measures/dist/index.js'))) process.exit(42);
 if (tool === 'npm' && args[0] === 'view') {
+  if (args[2] !== 'versions' && readFileSync(log, 'utf8').split('\\n').filter(line => line.startsWith('npm view @afahy/fluent-measures@')).length <= (options.pendingReads ?? 0)) {
+    console.log(JSON.stringify({ error: { code: 'E404' } }));
+    process.exit(1);
+  }
   const metadata = args[2] === 'versions' ? (options.publishedVersions ?? ['0.2.0']) : {
     version: options.publishedVersion ?? '9.9.9',
     'dist.integrity': options.publishedIntegrity ?? readFileSync(log + '-uploaded', 'utf8')
@@ -155,11 +187,13 @@ if (tool === 'pnpm' && args[0] === 'check') {
   if (options.changeDuringCheck === 'dirty') writeFileSync('unexpected', 'dirty');
   if (options.changeDuringCheck === 'head') git('commit', '--allow-empty', '-m', 'chore: changed');
 }
+if (tool === 'npm' && args[0] === 'pack') cpSync(log + '-bytes', join(args.at(-1), 'afahy-fluent-measures-9.9.9.tgz'));
 if (publishing) {
   if (options.failFirstPublish && !existsSync(log + '-attempted')) {
     writeFileSync(log + '-attempted', 'EOTP');
     process.exit(37);
   }
+  cpSync(args[1], log + '-bytes');
   writeFileSync(log + '-uploaded', digest(readFileSync(args[1])));
   if (options.mergeDuringPublish) {
     process.chdir(${JSON.stringify(other)});
@@ -179,7 +213,11 @@ if (publishing) {
     spawnSync('sh', ['-c', `${scripts[script]} "$@"`, 'release-test', ...args], {
       cwd: repository,
       encoding: 'utf8',
-      env: { ...env, PATH: `${bin}${delimiter}${env.PATH}` },
+      env: {
+        ...env,
+        PATH: `${bin}${delimiter}${env.PATH}`,
+        NODE_OPTIONS: `--import=${pathToFileURL(terminal).href}`,
+      },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
   return {
@@ -189,6 +227,7 @@ if (publishing) {
     initial,
     run,
     validate: () => run('release:validate', ['9.9.9', revision]),
+    hostedArtifact: log + '-candidate',
     artifact: resolve(repository, '.git/release-artifacts', revision),
     events: () => (existsSync(log) ? readFileSync(log, 'utf8').trim().split('\n') : []),
   };
@@ -380,6 +419,84 @@ describe('guarded release commands', () => {
     expect(test.events().filter(event => event.includes(' pack --out '))).toHaveLength(1);
     expect(test.events().filter(event => event.startsWith('npm publish '))).toHaveLength(2);
     expect(git(test.remote, 'rev-parse', 'v9.9.9^{commit}')).toBe(test.revision);
+  });
+
+  it.each(['stdin', 'stdout', 'stderr'] as const)(
+    'refuses redirected npm %s before registry access',
+    redirected => {
+      const test = fixture({ redirected });
+      expect(test.validate().status).toBe(0);
+      const before = test.events().length;
+      expect(test.run().status).not.toBe(0);
+      expect(test.events().slice(before)).toEqual([]);
+      expectNoPublication(test);
+    }
+  );
+
+  it('waits for an initially missing version after a successful upload', () => {
+    const test = fixture({ pendingReads: 1 });
+    expect(test.validate().status).toBe(0);
+    const result = test.run();
+    expect(result.status, result.stderr).toBe(0);
+    expect(test.events().filter(line => line.startsWith('npm publish '))).toHaveLength(1);
+    expect(git(test.remote, 'rev-parse', 'v9.9.9^{commit}')).toBe(test.revision);
+  });
+
+  it('fetches the exact CI tarball into a clean checkout without rebuilding it', () => {
+    const test = fixture();
+    expect(test.validate().status).toBe(0);
+    const record = JSON.parse(readFileSync(resolve(test.artifact, 'validated.json'), 'utf8')) as {
+      integrity: string;
+    };
+    renameSync(test.artifact, test.hostedArtifact);
+    const args = ['9.9.9', test.revision, '123', record.integrity];
+    expect(
+      test.run('release:fetch', [...args.slice(0, 3), `sha512-${'A'.repeat(86)}==`]).status
+    ).not.toBe(0);
+    expect(existsSync(test.artifact)).toBe(false);
+    const before = test.events().length;
+    const result = test.run('release:fetch', args);
+    expect(result.status, result.stderr).toBe(0);
+    expect(test.events().slice(before).join(' ')).not.toMatch(/pnpm check|npm publish/);
+    expect(readFileSync(resolve(test.artifact, 'package.tgz'))).toEqual(
+      readFileSync(resolve(test.hostedArtifact, 'package.tgz'))
+    );
+  });
+
+  it('rejects a pull request run before downloading an artifact', () => {
+    const test = fixture({ candidateEvent: 'pull_request' });
+    const result = test.run('release:fetch', [
+      '9.9.9',
+      test.revision,
+      '123',
+      `sha512-${'A'.repeat(86)}==`,
+    ]);
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('successful Prepare release candidate');
+    expect(test.events().join(' ')).not.toContain('gh run download');
+  });
+
+  it('resumes a failed tag push after restoring the candidate without a second upload', () => {
+    const test = fixture();
+    const reject = resolve(test.remote, 'hooks/pre-receive');
+    writeFileSync(reject, '#!/bin/sh\nexit 1\n', { mode: 0o755 });
+    expect(test.validate().status).toBe(0);
+    const { integrity } = JSON.parse(
+      readFileSync(resolve(test.artifact, 'validated.json'), 'utf8')
+    ) as { integrity: string };
+    expect(test.run().status).not.toBe(0);
+    rmSync(reject);
+    renameSync(test.artifact, test.hostedArtifact);
+    expect(test.run('release:fetch', ['9.9.9', test.revision, '123', integrity]).status).toBe(0);
+    const args = ['9.9.9', test.revision, '--approved', integrity];
+    const result = test.run('release:resume', args);
+    expect(result.status, result.stderr).toBe(0);
+    expect(git(test.remote, 'rev-parse', 'v9.9.9^{commit}')).toBe(test.revision);
+    expect(test.run('release:resume', args).status).toBe(0);
+    git(test.remote, 'tag', '-f', 'v9.9.9', test.initial);
+    expect(test.run('release:resume', args).stderr).toContain('Remote tag mismatch');
+    expect(git(test.remote, 'rev-parse', 'v9.9.9')).toBe(test.initial);
+    expect(test.events().filter(line => line.startsWith('npm publish '))).toHaveLength(1);
   });
 
   it('stops before tagging when registry bytes differ', () => {
