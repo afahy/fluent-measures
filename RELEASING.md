@@ -17,7 +17,7 @@ site can continue to identify the previous verified release while npm has the ne
   in this repository or pass them to an agent. Check that npm's default and `@afahy` scope
   registry configuration select `https://registry.npmjs.org` before publication.
 - Keep the release ticket's record of the version PR, full merged SHA, successful main CI URL,
-  local validation, explicit publication approval, registry result, tag and docs run URL.
+  local validation and tarball integrity, explicit publication approval, registry result, tag and docs run URL.
 - Agents may prepare the version PR and run validation. **Publishing npm needs separate,
   explicit maintainer approval naming the exact version and full commit SHA.** Permission to
   implement a ticket, merge a PR or follow this runbook is not publication approval.
@@ -28,7 +28,8 @@ site can continue to identify the previous verified release while npm has the ne
 The bounded guard supports stable `X.Y.Z` versions and full 40-character commit SHAs.
 `pnpm release <version> <sha>` is an alias for **validation only**. It no longer publishes.
 `release:publish` requires the same inputs and `--approved`; that flag acknowledges recorded
-approval and does not grant it. No command creates a version PR or changes repository settings.
+approval and does not grant it. Pass the integrity from the release ticket after this flag
+to pin the upload to that independent record. No command creates a version PR or changes repository settings.
 
 ## 1. Prepare and review a version PR
 
@@ -99,7 +100,6 @@ release_checkout="../fluent-measures-release-$release_version"
 git clone https://github.com/afahy/fluent-measures.git "$release_checkout"
 cd "$release_checkout"
 git switch --detach "$release_sha"
-pnpm install --frozen-lockfile
 pnpm release:validate "$release_version" "$release_sha"
 ```
 
@@ -108,11 +108,22 @@ The guard checks HEAD, the package name/version, tracked and untracked cleanline
 tag locally or on origin, and any version already in npm. Registry/network errors stop the
 release; they are not evidence that a version is unpublished.
 
-It then runs `pnpm clean`, `pnpm install --frozen-lockfile`, and `pnpm check`: lint, unit coverage,
-TypeScript, mutation tests, build, bundle size, API and package result tests. It rechecks the
-checkout afterward. These explicit checks replace the old initial branch push and its pre-push
-hook. Installed package/tarball checks also run in the exact-SHA main CI. Keep the validation
-output with the ticket. If anything fails, stop before npm and repair through a PR as needed.
+The guard cleans the checkout, installs the frozen lockfile and runs the full `pnpm check`.
+It packs that build with lifecycle scripts disabled, installs the archive into an empty consumer
+project, compares the installed files and metadata to the build and runs the package result tests
+against the installed archive. After checking the checkout again, it saves `package.tgz` and
+`validated.json` together under `release-artifacts/<full SHA>/` in the checkout's Git directory.
+Record the printed SHA-512 integrity and validation output on the release ticket. Set `release_integrity` to that recorded value. Keep this
+checkout for publication and retries.
+
+For a reviewed version commit that predates artifact preparation (including 0.3.1), use the
+guard from a separate clean checkout of its reviewed, merged tooling commit. Run both commands
+from the detached release checkout. Set `release_guard` to the absolute path of
+`.github/scripts/release.mjs` in the tooling checkout and use
+`node "$release_guard" validate "$release_version" "$release_sha"` in this step and
+`node "$release_guard" publish "$release_version" "$release_sha" --approved "$release_integrity"` in step 4.
+All builds, tests, Git checks and packing use the release checkout as their working directory.
+Record the tooling SHA with the release record.
 
 ## 4. Obtain publication approval, then publish
 
@@ -121,18 +132,19 @@ Ask the maintainer to approve this concrete statement on the release ticket:
 > Publish `@afahy/fluent-measures@<version>` to npm from `<full merged SHA>`. The version PR is
 > merged, the exact main CI run succeeded, and the clean release checkout passed validation.
 
-Include the PR/CI links and validation result. Wait for an explicit answer. Approval for an
+Include the PR/CI links, validation result and tarball integrity. Wait for an explicit answer. Approval for an
 earlier version or SHA does not cover a different one. After approval, from the same checkout:
 
 ```bash
-pnpm release:publish "$release_version" "$release_sha" --approved
+pnpm release:publish "$release_version" "$release_sha" --approved "$release_integrity"
 ```
 
-This repeats preflight and full local validation. Immediately before publication it rechecks
-main ancestry, exact-SHA CI and the unpublished version/tag state. Then it runs Changesets
-publish, confirms the exact npm version exists, and checks that the local `vX.Y.Z` tag resolves
-to the approved SHA. Changesets 3 creates local release tags; its successful exit alone does
-not prove that tag creation succeeded.
+Run publication in an interactive terminal with input and output attached so npm can open its
+browser verification prompt. The guard rechecks the clean source, main ancestry, exact-SHA CI
+and version/tag availability. It verifies the stored archive against the recorded package,
+version, commit and SHA-512 digest, then passes those exact bytes to `npm publish` with
+lifecycle scripts disabled. It verifies the version and integrity reported by the public
+registry before creating an annotated tag on the approved commit.
 
 Only that exact tag is pushed, with an explicit source/destination ref and `--no-follow-tags`
 even if local Git configuration enables following tags. No branch is pushed. The tag push skips
@@ -199,7 +211,8 @@ npm view "@afahy/fluent-measures@$release_version" --json --registry=https://reg
 A timeout or authentication/network error does not establish absence. Confirm the registry is
 reachable and its version list does not contain the intended version. Only if publication truly
 did not happen may the maintainer authorize another attempt for the same version/SHA after the
-cause is fixed and validation passes. If source changes are needed, prepare a reviewed commit
+cause is fixed. Reuse the validated archive from step 3. If its files are missing or damaged,
+repeat step 3 in a fresh checkout and check the digest against the release record. If source changes are needed, prepare a reviewed commit
 and obtain approval for its new SHA. If the version exists, proceed below; do not rerun publish.
 
 ### npm succeeded but the tag is missing or has not been pushed
@@ -212,7 +225,8 @@ git tag --list "v$release_version"
 git ls-remote origin "refs/tags/v$release_version" "refs/tags/v$release_version^{}"
 ```
 
-If a tag exists, verify its peeled commit is exactly the recorded SHA. Stop on any mismatch;
+Compare npm’s `dist.integrity` for the exact version with the digest recorded in step 3. Stop
+on a mismatch. If a tag exists, verify its peeled commit is exactly the recorded SHA. Stop on any mismatch;
 do not force, delete or move it. If the tag is absent locally and remotely, create only this
 local tag on the approved commit (this command does not publish):
 
@@ -278,9 +292,9 @@ version, move a released tag, or edit an archived version to make verification p
 
 - [ ] Reviewed version/changelog/lockfile PR merged; version and full release SHA recorded.
 - [ ] Latest main push CI for that exact SHA succeeded; URL recorded.
-- [ ] Fresh clean release checkout passed full local and package validation.
+- [ ] Fresh clean release checkout passed full validation; tested tarball integrity recorded.
 - [ ] Explicit maintainer npm approval names the version and SHA.
-- [ ] npm contains that exact version; only its matching release tag was pushed.
+- [ ] npm serves the recorded tarball integrity at that version; only its matching release tag was pushed.
 - [ ] Matching docs dispatch/deploy and public verification succeeded; run URLs recorded.
 - [ ] Root and versioned `release.json`/`llms.txt` identify the expected version and source.
 - [ ] Release ticket records completion or the precise recovery stage still outstanding.
